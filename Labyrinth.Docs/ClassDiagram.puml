@@ -1,0 +1,85 @@
+@startuml
+title Das verrückte Labyrinth - Klassendiagramm (mit Graph)
+
+skinparam dpi 150
+skinparam shadowing true
+skinparam roundCorner 10
+skinparam linetype ortho
+skinparam classAttributeIconSize 0
+hide empty members
+
+'----------------------------
+' Haupt-Entities
+'----------------------------
+class Room {
+  - roomCode : String
+  - maxPlayers : int [2..4]
+  - board : Board
+  + join(player: Player)
+  + startGame()
+}
+
+class Player {
+  - id : String
+  - name : String
+  - collectedTreasures : List<TreasureCard>
+  - currentPosition : Position
+  - reachableTiles : Set<Tile> ' optional Cache
+  + moveTo(tile: Tile)
+  + collectTreasure()
+}
+
+class Board {
+  - width : int
+  - height : int
+  - tiles : Tile[][]
+  - graph : Graph
+  + shiftRow(index: int, direction: Direction)
+  + shiftColumn(index: int, direction: Direction)
+  + getReachableTiles(player: Player) : Set<Tile>
+}
+
+class Graph {
+  - adjacencyList : Map<Tile, Set<Tile>>
+  + getNeighbors(tile: Tile) : Set<Tile>
+  + findReachable(start: Tile) : Set<Tile>
+  + findPath(start: Tile, target: Tile) : List<Tile>
+}
+
+class Tile {
+  - entrances : Set<Direction>  'mind. 2, mind. Eingang/Ausgang
+  - hasTreasure : boolean
+  + rotate()
+  + isConnectedTo(tile: Tile) : boolean
+}
+
+class TreasureCard {
+  - id : String
+  - treasureName : String
+}
+
+class Position {
+  - row : int
+  - column : int
+}
+
+enum Direction {
+  UP
+  DOWN
+  LEFT
+  RIGHT
+}
+
+'----------------------------
+' Beziehungen
+'----------------------------
+Room "1" o-- "*" Player
+Room "1" *-- "1" Board
+Board "1" *-- "*" Tile
+Board "1" *-- "1" Graph
+Graph "1" o-- "*" Tile
+Player "0..*" o-- "1..*" TreasureCard
+Player "1" o-- "1" Position
+Tile --> TreasureCard : optional
+
+@enduml
