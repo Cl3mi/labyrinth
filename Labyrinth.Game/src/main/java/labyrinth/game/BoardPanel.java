@@ -64,7 +64,7 @@ public class BoardPanel extends JPanel {
             Color corridorColor = new Color(235, 235, 220);
             Color wallColor = new Color(50, 50, 50);
             Color reachableBg = new Color(80, 160, 80);   // green highlight
-            Color normalBg = new Color(60, 65, 75);
+            Color normalBg = new Color(100, 100, 100);
             Color playerColor = new Color(200, 80, 80);
             Color fixedBg = new Color(160, 160, 0);
 
@@ -109,13 +109,42 @@ public class BoardPanel extends JPanel {
 
                     g2.fillOval(cx - dotSize / 2, cy - dotSize / 2, dotSize, dotSize);
 
+                    // treasure name
+                    if (tile.getTreasureCard() != null) {
+                        String treasureName = tile.getTreasureCard().getTreasureName();
+                        g2.setColor(Color.BLACK);
+                        FontMetrics fm = g2.getFontMetrics();
+                        int textWidth = fm.stringWidth(treasureName);
+                        int textHeight = fm.getAscent();
 
+                        g2.drawString(treasureName, cx - textWidth / 2, (cy + textHeight / 2) - 20);
+                    }
+                    // Coords
+                    {
+                        String coords = "(" + row + "," + col + ")";
+                        g2.setColor(Color.WHITE);
+                        Font oldFont = g2.getFont();
+                        g2.setFont(new Font("Arial", Font.PLAIN, 10));
+                        g2.drawString(coords, x + 3, y + size - 3);
+                        g2.setFont(oldFont);
+                    }
+                    
                     // Player position (red circle)
                     if (player != null && player.getCurrentPosition().getRow() == row &&
                             player.getCurrentPosition().getColumn() == col) {
-                        int r = size / 3;
+
+                        Font oldFont = g2.getFont();
+                        g2.setFont(new Font("Arial", Font.BOLD, 30));
+                        FontMetrics fm = g2.getFontMetrics();
+
+                        String text = "P";
+                        int textWidth = fm.stringWidth(text);
+                        int textHeight = fm.getAscent();
+
                         g2.setColor(playerColor);
-                        g2.fillOval(cx - r / 2, cy - r / 2, r, r);
+                        g2.drawString(text, cx - textWidth / 2, cy + textHeight / 2 - fm.getDescent());
+
+                        g2.setFont(oldFont);
                     }
 
                     // Border

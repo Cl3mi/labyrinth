@@ -206,94 +206,31 @@ public class Board {
     }
 
 
-    /**
-     * Prints a simple ASCII representation of the board to the console.
-     * Each tile's shape depends on its entrances.
-     */
-    public void drawToConsole() {
-        for (int row = 0; row < height; row++) {
-            for (int col = 0; col < width; col++) {
-                Tile tile = tiles[row][col];
-                System.out.print(getTileSymbol(tile) + " ");
-            }
-            System.out.println();
-        }
+    public void placeRandomTreasure(TreasureCard treasureCard) {
+        Random random = new Random();
+        Tile tile;
+        int row, col;
+        do {
+            row = random.nextInt(tiles.length);
+            col = random.nextInt(tiles[0].length);
+
+            tile = tiles[row][col];
+        } while (isCornerCoordinate(row, col));
+        System.out.println("Placing " + treasureCard.getTreasureName() + " at " + row + "/" + col);
+
+        tile.setTreasureCard(treasureCard);
     }
 
-    /**
-     * Determines a printable symbol for a given tile based on its entrances.
-     */
-    private String getTileSymbol(Tile tile) {
-        var e = tile.getEntrances();
-        boolean up = e.contains(Direction.UP);
-        boolean down = e.contains(Direction.DOWN);
-        boolean left = e.contains(Direction.LEFT);
-        boolean right = e.contains(Direction.RIGHT);
+    public boolean isCornerCoordinate(int row, int col) {
+        int height = tiles.length;
+        int width = tiles[0].length;
 
-        // Corner pieces
-        if (up && right && !down && !left) return "┌";
-        if (up && left && !down && !right) return "┐";
-        if (down && right && !up && !left) return "└";
-        if (down && left && !up && !right) return "┘";
+        boolean isTopLeft = (row == 0 && col == 0);
+        boolean isTopRight = (row == 0 && col == width - 1);
+        boolean isBottomLeft = (row == height - 1 && col == 0);
+        boolean isBottomRight = (row == height - 1 && col == width - 1);
 
-        // Straight pieces
-        if (up && down && !left && !right) return "│";
-        if (left && right && !up && !down) return "─";
-
-        // T-junctions
-        if (up && left && right && !down) return "┴";
-        if (down && left && right && !up) return "┬";
-        if (left && up && down && !right) return "┤";
-        if (right && up && down && !left) return "├";
-
-        // Cross (shouldn’t happen in labyrinth, but included for completeness)
-        if (up && down && left && right) return "┼";
-
-        // Default fallback
-        return "·";
-    }
-
-    /**
-     * Draws the board as a connected maze using ASCII art.
-     * Each tile is drawn as a 3x3 block to properly visualize corridors.
-     */
-    public void drawPretty() {
-        StringBuilder sb = new StringBuilder();
-
-        for (int row = 0; row < height; row++) {
-            // We build each tile as 3 rows of text
-            StringBuilder top = new StringBuilder();
-            StringBuilder mid = new StringBuilder();
-            StringBuilder bot = new StringBuilder();
-
-            for (int col = 0; col < width; col++) {
-                Tile tile = tiles[row][col];
-                Set<Direction> e = tile.getEntrances();
-                boolean up = e.contains(Direction.UP);
-                boolean down = e.contains(Direction.DOWN);
-                boolean left = e.contains(Direction.LEFT);
-                boolean right = e.contains(Direction.RIGHT);
-
-                // Top row: either corridor or wall
-                top.append(up ? "  |  " : "#####");
-
-                // Middle row: walls left/right + treasure indicator
-                if (left && right) mid.append("  o  ");
-                else if (left)     mid.append("o####");
-                else if (right)    mid.append("####o");
-                else               mid.append("#####");
-
-                // Bottom row: corridor or wall
-                bot.append(down ? "  |  " : "#####");
-            }
-
-            // Add to output
-            sb.append(top).append("\n");
-            sb.append(mid).append("\n");
-            sb.append(bot).append("\n");
-        }
-
-        System.out.println(sb.toString());
+        return isTopLeft || isTopRight || isBottomLeft || isBottomRight;
     }
 
 }

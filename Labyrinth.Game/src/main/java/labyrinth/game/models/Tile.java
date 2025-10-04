@@ -14,6 +14,19 @@ public class Tile {
     private final EnumSet<Direction> entrances;
     private boolean hasTreasure;
     private boolean isFixed;
+    private TreasureCard treasureCard;
+
+    /**
+     * Creates a tile with specified entrances and optional treasure.
+     *
+     * @param entrances    directions where the tile has openings (at least 2)
+     */
+    public Tile(Set<Direction> entrances) {
+        if (entrances.size() < 2) {
+            throw new IllegalArgumentException("A tile must have at least 2 entrances.");
+        }
+        this.entrances = EnumSet.copyOf(entrances);
+    }
 
     /**
      * Creates a tile with specified entrances and optional treasure.
@@ -47,6 +60,14 @@ public class Tile {
 
     public void setIsFixed(boolean isFixed) {
         this.isFixed = isFixed;
+    }
+
+    public TreasureCard getTreasureCard() {
+        return treasureCard ;
+    }
+
+    public void setTreasureCard(TreasureCard treasureCard) {
+        this.treasureCard = treasureCard;
     }
 
     /**
