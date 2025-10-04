@@ -19,8 +19,9 @@ import java.util.Set;
 public class BoardPanel extends JPanel {
 
     private final Board board;
-    private final Player player;
+    private Player currentPlayer;
     private final List<Player> players;
+    private int currentPlayerIndex = 0;
     private final Set<Tile> reachableTiles;
     private final List<ArrowButton> arrowButtons = new ArrayList<>();
 
@@ -89,10 +90,10 @@ public class BoardPanel extends JPanel {
      * If a player is provided, their reachable tiles will be highlighted.
      *
      * @param board  board to render
-     * @param player optional player to highlight reachable tiles
+     * @param currentPlayer optional player to highlight reachable tiles
      */
-    public BoardPanel(Board board, Player player) {
-        this(board, player, player != null ? List.of(player) : List.of());
+    public BoardPanel(Board board, Player currentPlayer) {
+        this(board, currentPlayer, currentPlayer != null ? List.of(currentPlayer) : List.of());
     }
 
     /**
@@ -100,16 +101,16 @@ public class BoardPanel extends JPanel {
      * If a player is provided, their reachable tiles will be highlighted.
      *
      * @param board  board to render
-     * @param player optional player to highlight reachable tiles
+     * @param currentPlayer optional player to highlight reachable tiles
      * @param players list of all players to display
      */
-    public BoardPanel(Board board, Player player, List<Player> players) {
+    public BoardPanel(Board board, Player currentPlayer, List<Player> players) {
         this.board = board;
-        this.player = player;
+        this.currentPlayer = currentPlayer;
         this.players = players != null ? players : List.of();
 
-        if (player != null) {
-            this.reachableTiles = new HashSet<>(board.getReachableTiles(player));
+        if (currentPlayer != null) {
+            this.reachableTiles = new HashSet<>(board.getReachableTiles(currentPlayer));
         } else {
             this.reachableTiles = Set.of();
         }
@@ -137,10 +138,10 @@ public class BoardPanel extends JPanel {
 
                 // Recalculate reachable tiles if player exists
                 reachableTiles.clear();
-                if (player != null) {
-                    Set<Tile> newReachable = board.getReachableTiles(player);
+                if (currentPlayer != null) {
+                    Set<Tile> newReachable = board.getReachableTiles(currentPlayer);
                     System.out.println("=== Debug: Reachable Tiles ===");
-                    System.out.println("Player position: (" + player.getCurrentPosition().getRow() + ", " + player.getCurrentPosition().getColumn() + ")");
+                    System.out.println("Player position: (" + currentPlayer.getCurrentPosition().getRow() + ", " + currentPlayer.getCurrentPosition().getColumn() + ")");
                     System.out.println("Reachable tiles returned: " + (newReachable != null ? newReachable.size() : "null"));
                     if (newReachable != null) {
                         reachableTiles.addAll(newReachable);
@@ -334,5 +335,17 @@ public class BoardPanel extends JPanel {
         } finally {
             g2.dispose();
         }
+    }
+
+    public void switchPlayer(){
+        currentPlayerIndex++;
+        if (currentPlayerIndex >= players.size()) {
+            currentPlayerIndex = 0;
+        }
+        System.out.println("Switching player " + currentPlayerIndex);
+        currentPlayer = players.get(currentPlayerIndex);
+        this.reachableTiles.clear();
+        this.reachableTiles.addAll(board.getReachableTiles(currentPlayer));
+        repaint();
     }
 }

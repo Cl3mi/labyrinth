@@ -39,6 +39,15 @@ public class LabyrinthViewer {
                 }
             });
 
+            frame.addKeyListener(new KeyAdapter() {
+                @Override
+                public void keyPressed(KeyEvent e) {
+                    if (e.getKeyChar() == 'p' || e.getKeyChar() == 'P') {
+                        panel.switchPlayer();
+                    }
+                }
+            });
+
             frame.setFocusable(true);
             frame.requestFocusInWindow();
         });

@@ -18,6 +18,7 @@ public class Room {
     private final Board board;
     private final List<Player> players;
 
+
     /**
      * Creates a new game room.
      *
