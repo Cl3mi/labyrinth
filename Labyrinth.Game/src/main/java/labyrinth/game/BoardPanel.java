@@ -28,8 +28,7 @@ public class BoardPanel extends JPanel {
         this.player = player;
 
         if (player != null) {
-            // Calculate reachable tiles via array method (safer visualization)
-            this.reachableTiles = new HashSet<>(board.getReachableTilesArrayBased(player));
+            this.reachableTiles = new HashSet<>(board.getReachableTiles(player));
         } else {
             this.reachableTiles = Set.of();
         }
