@@ -128,7 +128,7 @@ public class BoardPanel extends JPanel {
                         g2.drawString(coords, x + 3, y + size - 3);
                         g2.setFont(oldFont);
                     }
-                    
+
                     // Player position (red circle)
                     if (player != null && player.getCurrentPosition().getRow() == row &&
                             player.getCurrentPosition().getColumn() == col) {
