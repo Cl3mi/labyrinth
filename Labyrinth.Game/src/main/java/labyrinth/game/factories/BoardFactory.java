@@ -3,6 +3,7 @@ package labyrinth.game.factories;
 import labyrinth.game.models.*;
 import labyrinth.game.enums.*;
 
+import java.security.DigestException;
 import java.util.*;
 
 /**
@@ -26,9 +27,45 @@ public class BoardFactory {
         for (int row = 0; row < height; row++) {
             for (int col = 0; col < width; col++) {
                 Tile tile = createRandomTile();
+
+                if ((row == 0 || row == height - 1) && (col == 0 || col == width - 1)) {
+                    tile.setIsFixed(true);
+                }
+                else if (row == 0 || row == height - 1) {
+                    if (width % 2 == 0) {
+                        if (col == width / 2 - 1 || col == width / 2) {
+                            tile.setIsFixed(true);
+                        }
+                    } else if (col % 2 == 0) {
+                        tile.setIsFixed(true);
+                    }
+                }
+                else if (col == 0 || col == width - 1) {
+                    if (height % 2 == 0) {
+                        if (row == height / 2 - 1 || row == height / 2) {
+                            tile.setIsFixed(true);
+                        }
+                    } else if (row % 2 == 0) {
+                        tile.setIsFixed(true);
+                    }
+                }
+
                 tiles[row][col] = tile;
             }
         }
+
+        // Replace corner tiles, maybe we can do the in the loop already
+        tiles[0][0] = new Tile(EnumSet.of(Direction.DOWN, Direction.RIGHT), false);
+        tiles[0][0].setIsFixed(true);
+        tiles[0][width-1] = new Tile(EnumSet.of(Direction.DOWN, Direction.LEFT), false);
+        tiles[0][width-1].setIsFixed(true);
+        tiles[height-1][0] = new Tile(EnumSet.of(Direction.UP, Direction.RIGHT), false);
+        tiles[height-1][0].setIsFixed(true);
+        tiles[height-1][width-1] = new Tile(EnumSet.of(Direction.UP, Direction.LEFT), false);
+        tiles[height-1][width-1].setIsFixed(true);
+
+
+
 
         return new Board(width, height, tiles);
     }

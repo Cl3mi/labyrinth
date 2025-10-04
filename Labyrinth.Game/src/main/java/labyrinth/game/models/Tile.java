@@ -13,6 +13,7 @@ public class Tile {
 
     private final EnumSet<Direction> entrances;
     private boolean hasTreasure;
+    private boolean isFixed;
 
     /**
      * Creates a tile with specified entrances and optional treasure.
@@ -38,6 +39,14 @@ public class Tile {
 
     public void setHasTreasure(boolean hasTreasure) {
         this.hasTreasure = hasTreasure;
+    }
+
+    public boolean isFixed() {
+        return isFixed;
+    }
+
+    public void setIsFixed(boolean isFixed) {
+        this.isFixed = isFixed;
     }
 
     /**

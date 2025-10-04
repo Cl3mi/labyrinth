@@ -66,6 +66,7 @@ public class BoardPanel extends JPanel {
             Color reachableBg = new Color(80, 160, 80);   // green highlight
             Color normalBg = new Color(60, 65, 75);
             Color playerColor = new Color(200, 80, 80);
+            Color fixedBg = new Color(160, 160, 0);
 
             int corridorWidth = Math.max(4, size / 6);
 
@@ -99,8 +100,15 @@ public class BoardPanel extends JPanel {
 
                     // Center dot for tile
                     int dotSize = Math.max(4, corridorWidth);
-                    g2.setColor(wallColor);
+                    if(tile.isFixed())  {
+                        g2.setColor(fixedBg);
+                    } else {
+                        g2.setColor(wallColor);
+
+                    }
+
                     g2.fillOval(cx - dotSize / 2, cy - dotSize / 2, dotSize, dotSize);
+
 
                     // Player position (red circle)
                     if (player != null && player.getCurrentPosition().getRow() == row &&
