@@ -28,6 +28,13 @@ public class Graph {
     }
 
     /**
+     * Clears all tiles and connections from the graph.
+     */
+    public void clear() {
+        adjacencyList.clear();
+    }
+
+    /**
      * Connects two tiles bidirectionally if they are connected.
      *
      * @param tile1 first tile

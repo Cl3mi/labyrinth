@@ -53,6 +53,7 @@ public class Board {
      * Initializes the graph by connecting adjacent tiles based on entrances.
      */
     private void initializeGraph() {
+        graph.clear();
         for (int row = 0; row < height; row++) {
             for (int col = 0; col < width; col++) {
                 Tile tile = tiles[row][col];
@@ -205,17 +206,19 @@ public class Board {
         return visited;
     }
 
-
     public void placeRandomTreasure(TreasureCard treasureCard) {
         Random random = new Random();
         Tile tile;
         int row, col;
+        boolean tileHasTreasure;
+
         do {
             row = random.nextInt(tiles.length);
             col = random.nextInt(tiles[0].length);
 
             tile = tiles[row][col];
-        } while (isCornerCoordinate(row, col));
+            tileHasTreasure = tile.getTreasureCard() != null;
+        } while (isCornerCoordinate(row, col) || tileHasTreasure);
         System.out.println("Placing " + treasureCard.getTreasureName() + " at " + row + "/" + col);
 
         tile.setTreasureCard(treasureCard);

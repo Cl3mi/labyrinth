@@ -6,6 +6,7 @@ import labyrinth.game.models.*;
 import javax.swing.*;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
+import java.util.List;
 
 /**
  * Small launcher for the BoardPanel viewer.
@@ -13,14 +14,14 @@ import java.awt.event.KeyEvent;
  */
 public class LabyrinthViewer {
 
-    public static void viewSwing(Board board, Player player) {
+    public static void viewSwing(Board board, List<Player> player) {
         SwingUtilities.invokeLater(() -> {
-            var reachable = board.getReachableTiles(player);
+            var reachable = board.getReachableTiles(player.getFirst());
 
             JFrame frame = new JFrame("Labyrinth Board Viewer - Player can reach " + reachable.size() + " Tiles");
             frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
-            BoardPanel panel = new BoardPanel(board, player);
+            BoardPanel panel = new BoardPanel(board, player.getFirst(), player);
             frame.add(panel);
 
             frame.pack();
@@ -48,5 +49,9 @@ public class LabyrinthViewer {
      */
     public static void viewSwing(Board board) {
         viewSwing(board, null);
+    }
+
+    public static void viewSwing(Room room) {
+        viewSwing(room.getBoard(), room.getPlayers());
     }
 }
