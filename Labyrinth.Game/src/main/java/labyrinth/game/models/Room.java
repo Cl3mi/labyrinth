@@ -1,5 +1,7 @@
 package labyrinth.game.models;
 
+import labyrinth.game.factories.TreasureCardFactory;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -22,7 +24,6 @@ public class Room {
      * @param roomCode          unique identifier for the room
      * @param maxPlayers        maximum number of players (2–4)
      * @param treasuresToCollect number of treasures each player must collect
-     * @param board             the game board for this room
      */
     public Room(String roomCode, int maxPlayers, int treasuresToCollect, Board board) {
         if (maxPlayers < 2 || maxPlayers > 4) {
@@ -31,8 +32,8 @@ public class Room {
         this.roomCode = Objects.requireNonNull(roomCode);
         this.maxPlayers = maxPlayers;
         this.treasuresToCollect = treasuresToCollect;
-        this.board = Objects.requireNonNull(board);
         this.players = new ArrayList<>();
+        this.board = board;
     }
 
     public String getRoomCode() {
@@ -77,7 +78,14 @@ public class Room {
             throw new IllegalStateException("At least 2 players required to start the game");
         }
 
-        // TODO: Shuffle treasure cards and assign to players
+        int treasuresPerPlayer = treasuresToCollect;
+
+        for (Player player : players) {
+            List<TreasureCard> cards = TreasureCardFactory.createRandomCards(treasuresPerPlayer);
+            player.getAssignedTreasureCards().clear();
+            player.getAssignedTreasureCards().addAll(cards);
+        }
+
         // TODO: Place players on starting positions on the board
         // TODO: Any other game initialization logic
         System.out.println("Game started in room " + roomCode + " with " + players.size() + " players.");

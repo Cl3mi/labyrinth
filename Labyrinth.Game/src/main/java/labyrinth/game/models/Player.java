@@ -69,15 +69,14 @@ public class Player {
      *
      * @param tile the tile to move to
      */
-    public void moveTo(Tile tile) {
-        throw new ExecutionControl.NotImplementedException();
+    public void moveTo(Tile tile) throws ExecutionControl.NotImplementedException {
+        throw new ExecutionControl.NotImplementedException("Not implemented yet");
     }
-
     /**
      * Collects the treasure if the player is on a tile with a matching treasure card.
      */
-    public void collectTreasure() {
-        throw new ExecutionControl.NotImplementedException();
+    public void collectTreasure() throws ExecutionControl.NotImplementedException {
+        throw new ExecutionControl.NotImplementedException("Not implemented yet");
     }
 
     @Override

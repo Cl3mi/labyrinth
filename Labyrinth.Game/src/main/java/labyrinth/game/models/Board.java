@@ -2,8 +2,7 @@ package labyrinth.game.models;
 
 import labyrinth.game.enums.*;
 
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Represents the game board for the Labyrinth game.
@@ -150,4 +149,151 @@ public class Board {
         Tile startTile = tiles[pos.getRow()][pos.getColumn()];
         return graph.findReachable(startTile);
     }
+
+    /**
+     * Calculates reachable tiles for a player directly using the board array
+     * instead of the prebuilt Graph. Uses BFS for traversal.
+     *
+     * @param player the player whose reachable tiles should be calculated
+     * @return set of reachable tiles
+     */
+    public Set<Tile> getReachableTilesArrayBased(Player player) {
+        Position pos = player.getCurrentPosition();
+        Tile start = tiles[pos.getRow()][pos.getColumn()];
+
+        Set<Tile> visited = new HashSet<>();
+        Queue<Position> queue = new ArrayDeque<>();
+
+        visited.add(start);
+        queue.add(pos);
+
+        while (!queue.isEmpty()) {
+            Position current = queue.poll();
+            Tile currentTile = tiles[current.getRow()][current.getColumn()];
+
+            for (Direction dir : Direction.values()) {
+                int newRow = current.getRow();
+                int newCol = current.getColumn();
+
+                switch (dir) {
+                    case UP -> newRow--;
+                    case DOWN -> newRow++;
+                    case LEFT -> newCol--;
+                    case RIGHT -> newCol++;
+                }
+
+                // Bounds check BEFORE creating a Position
+                if (newRow < 0 || newRow >= height || newCol < 0 || newCol >= width) {
+                    continue;
+                }
+
+                Position neighborPos = new Position(newRow, newCol);
+                Tile neighbor = tiles[newRow][newCol];
+                Direction oppositeDir = dir.opposite();
+
+                // Check if tiles are connected in this direction
+                if (currentTile.isConnectedTo(neighbor, dir) &&
+                        neighbor.isConnectedTo(currentTile, oppositeDir) &&
+                        !visited.contains(neighbor)) {
+
+                    visited.add(neighbor);
+                    queue.add(neighborPos);
+                }
+            }
+        }
+
+        return visited;
+    }
+
+
+    /**
+     * Prints a simple ASCII representation of the board to the console.
+     * Each tile's shape depends on its entrances.
+     */
+    public void drawToConsole() {
+        for (int row = 0; row < height; row++) {
+            for (int col = 0; col < width; col++) {
+                Tile tile = tiles[row][col];
+                System.out.print(getTileSymbol(tile) + " ");
+            }
+            System.out.println();
+        }
+    }
+
+    /**
+     * Determines a printable symbol for a given tile based on its entrances.
+     */
+    private String getTileSymbol(Tile tile) {
+        var e = tile.getEntrances();
+        boolean up = e.contains(Direction.UP);
+        boolean down = e.contains(Direction.DOWN);
+        boolean left = e.contains(Direction.LEFT);
+        boolean right = e.contains(Direction.RIGHT);
+
+        // Corner pieces
+        if (up && right && !down && !left) return "┌";
+        if (up && left && !down && !right) return "┐";
+        if (down && right && !up && !left) return "└";
+        if (down && left && !up && !right) return "┘";
+
+        // Straight pieces
+        if (up && down && !left && !right) return "│";
+        if (left && right && !up && !down) return "─";
+
+        // T-junctions
+        if (up && left && right && !down) return "┴";
+        if (down && left && right && !up) return "┬";
+        if (left && up && down && !right) return "┤";
+        if (right && up && down && !left) return "├";
+
+        // Cross (shouldn’t happen in labyrinth, but included for completeness)
+        if (up && down && left && right) return "┼";
+
+        // Default fallback
+        return "·";
+    }
+
+    /**
+     * Draws the board as a connected maze using ASCII art.
+     * Each tile is drawn as a 3x3 block to properly visualize corridors.
+     */
+    public void drawPretty() {
+        StringBuilder sb = new StringBuilder();
+
+        for (int row = 0; row < height; row++) {
+            // We build each tile as 3 rows of text
+            StringBuilder top = new StringBuilder();
+            StringBuilder mid = new StringBuilder();
+            StringBuilder bot = new StringBuilder();
+
+            for (int col = 0; col < width; col++) {
+                Tile tile = tiles[row][col];
+                Set<Direction> e = tile.getEntrances();
+                boolean up = e.contains(Direction.UP);
+                boolean down = e.contains(Direction.DOWN);
+                boolean left = e.contains(Direction.LEFT);
+                boolean right = e.contains(Direction.RIGHT);
+
+                // Top row: either corridor or wall
+                top.append(up ? "  |  " : "#####");
+
+                // Middle row: walls left/right + treasure indicator
+                if (left && right) mid.append("  o  ");
+                else if (left)     mid.append("o####");
+                else if (right)    mid.append("####o");
+                else               mid.append("#####");
+
+                // Bottom row: corridor or wall
+                bot.append(down ? "  |  " : "#####");
+            }
+
+            // Add to output
+            sb.append(top).append("\n");
+            sb.append(mid).append("\n");
+            sb.append(bot).append("\n");
+        }
+
+        System.out.println(sb.toString());
+    }
+
 }
