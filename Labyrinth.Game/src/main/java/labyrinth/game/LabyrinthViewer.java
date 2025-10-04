@@ -4,6 +4,8 @@ import labyrinth.game.factories.BoardFactory;
 import labyrinth.game.models.*;
 
 import javax.swing.*;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
 
 /**
  * Small launcher for the BoardPanel viewer.
@@ -13,7 +15,9 @@ public class LabyrinthViewer {
 
     public static void viewSwing(Board board, Player player) {
         SwingUtilities.invokeLater(() -> {
-            JFrame frame = new JFrame("Labyrinth Board Viewer");
+            var reachable = board.getReachableTiles(player);
+
+            JFrame frame = new JFrame("Labyrinth Board Viewer - Player can reach " + reachable.size() + " Tiles");
             frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
             BoardPanel panel = new BoardPanel(board, player);
@@ -22,6 +26,20 @@ public class LabyrinthViewer {
             frame.pack();
             frame.setLocationRelativeTo(null);
             frame.setVisible(true);
+
+            frame.addKeyListener(new KeyAdapter() {
+                @Override
+                public void keyPressed(KeyEvent e) {
+                    if (e.getKeyChar() == 'r' || e.getKeyChar() == 'R') {
+                        frame.dispose(); // Close old GUI
+                        System.out.println("\n--- Resetting debug ---\n");
+                        Testing.debug(); // Re-run debug
+                    }
+                }
+            });
+
+            frame.setFocusable(true);
+            frame.requestFocusInWindow();
         });
     }
 
