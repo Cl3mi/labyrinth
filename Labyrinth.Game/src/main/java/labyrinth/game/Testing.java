@@ -3,9 +3,6 @@ package labyrinth.game;
 import labyrinth.game.factories.BoardFactory;
 import labyrinth.game.models.*;
 
-import java.util.ArrayList;
-import java.util.List;
-
 public class Testing {
     public static void main(String[] args) {
         debug();
@@ -32,14 +29,10 @@ public class Testing {
         room.join(p3);
         room.join(p4);
 
-
         // Request to start the game is sent
         Board board = BoardFactory.createRandomBoard(room.getBoardWidth(), room.getBoardHeight());
         room.setBoard(board);
-
-        // Start the game: distribute cards and set up players
         room.startGame();
-
 
         // DEBUG:
         // Show players with their assigned cards
