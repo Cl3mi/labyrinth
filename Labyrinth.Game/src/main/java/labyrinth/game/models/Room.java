@@ -1,5 +1,6 @@
 package labyrinth.game.models;
 
+import labyrinth.game.enums.RoomState;
 import labyrinth.game.factories.TreasureCardFactory;
 
 import java.util.ArrayList;
@@ -13,28 +14,30 @@ import java.util.Objects;
 public class Room {
 
     private final String roomCode;
-    private final int maxPlayers;
-    private final int treasuresToCollect;
-    private final Board board;
+    private int maxPlayers;
+    private int amountOfTreasuresPerPlayer;
+    private Board board;
     private final List<Player> players;
+    private RoomState roomState;
 
+    private int boardWidth;
+    private int boardHeight;
 
     /**
      * Creates a new game room.
      *
      * @param roomCode          unique identifier for the room
-     * @param maxPlayers        maximum number of players (2–4)
-     * @param amountOfTreasuresPerPlayer number of treasures each player must collect
      */
-    public Room(String roomCode, int maxPlayers, int amountOfTreasuresPerPlayer, Board board) {
-        if (maxPlayers < 2 || maxPlayers > 4) {
-            throw new IllegalArgumentException("Room must have 2 to 4 players");
-        }
+    public Room(String roomCode) {
         this.roomCode = Objects.requireNonNull(roomCode);
-        this.maxPlayers = maxPlayers;
-        this.treasuresToCollect = amountOfTreasuresPerPlayer;
+        this.maxPlayers = 4;
+        this.amountOfTreasuresPerPlayer = 6;
         this.players = new ArrayList<>();
-        this.board = board;
+        this.roomState = RoomState.LOBBY;
+
+        this.board = null;
+        this.boardWidth = 7;
+        this.boardHeight = 7;
     }
 
     public String getRoomCode() {
@@ -45,8 +48,8 @@ public class Room {
         return maxPlayers;
     }
 
-    public int getTreasuresToCollect() {
-        return treasuresToCollect;
+    public int getAmountOfTreasuresPerPlayer() {
+        return amountOfTreasuresPerPlayer;
     }
 
     public Board getBoard() {
@@ -57,6 +60,40 @@ public class Room {
         return new ArrayList<>(players);
     }
 
+    public void setMaxPlayers(int maxPlayers) {
+        if (maxPlayers < 2) {
+            throw new IllegalArgumentException("Max players can't be less than 2");
+        }
+        this.maxPlayers = maxPlayers;
+    }
+
+    public int getBoardWidth() {
+        return boardWidth;
+    }
+
+    public void setBoardWidth(int boardWidth) {
+        this.boardWidth = boardWidth;
+    }
+
+    public int getBoardHeight() {
+        return boardHeight;
+    }
+
+    public void setBoardHeight(int boardHeight) {
+        this.boardHeight = boardHeight;
+    }
+
+    public void setAmountOfTreasuresPerPlayer(int amountOfTreasuresPerPlayer) {
+        if (amountOfTreasuresPerPlayer < 1) {
+            throw new IllegalArgumentException("Amount of treasures can't be less than 1");
+        }
+        this.amountOfTreasuresPerPlayer = amountOfTreasuresPerPlayer;
+    }
+
+    public void setBoard(Board board) {
+        this.board = board;
+    }
+
     /**
      * Adds a player to the room.
      *
@@ -64,6 +101,10 @@ public class Room {
      * @throws IllegalStateException if the room is full
      */
     public void join(Player player) {
+        if(roomState != RoomState.LOBBY) {
+            throw new IllegalStateException("Cannot join a game that is in progress!");
+        }
+
         if (players.size() >= maxPlayers) {
             throw new IllegalStateException("Room is full");
         }
@@ -79,13 +120,13 @@ public class Room {
             throw new IllegalStateException("At least 2 players required to start the game");
         }
 
-        List<TreasureCard> cards = TreasureCardFactory.createRandomCards(treasuresToCollect * players.size());
+        List<TreasureCard> cards = TreasureCardFactory.createRandomCards(amountOfTreasuresPerPlayer * players.size());
 
         do {
             TreasureCard card = cards.getFirst();
             board.placeRandomTreasure(card);
             for (Player player : players) {
-                if(player.getAssignedTreasureCards().size() < treasuresToCollect) {
+                if(player.getAssignedTreasureCards().size() < amountOfTreasuresPerPlayer) {
                     player.getAssignedTreasureCards().add(card);
                     break;
                 }
@@ -93,13 +134,24 @@ public class Room {
             cards.removeFirst();
         } while (!cards.isEmpty());
 
-        for (Player player : players) {
+        for (int i = 0; i < players.size(); i++) {
+            Player player = players.get(i);
             player.getAssignedTreasureCards().clear();
             player.getAssignedTreasureCards().addAll(cards);
+
+            Position position;
+
+            switch (i) {
+                case 0 -> position = new Position(0, 0);
+                case 1 -> position = new Position(0, boardWidth - 1);
+                case 2 -> position = new Position(boardHeight - 1, boardWidth - 1);
+                case 3 -> position = new Position(boardHeight - 1, 0);
+                default -> position = new Position(0, 0);
+            }
+
+            player.setCurrentPosition(position);
         }
 
-        // TODO: Place players on starting positions on the board
-        // TODO: Any other game initialization logic
         System.out.println("Game started in room " + roomCode + " with " + players.size() + " players.");
     }
 
@@ -108,7 +160,7 @@ public class Room {
         return "Room{" +
                 "roomCode='" + roomCode + '\'' +
                 ", maxPlayers=" + maxPlayers +
-                ", treasuresToCollect=" + treasuresToCollect +
+                ", treasuresToCollect=" + amountOfTreasuresPerPlayer +
                 ", players=" + players +
                 '}';
     }

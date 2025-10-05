@@ -2,10 +2,7 @@ package labyrinth.game.models;
 
 import jdk.jshell.spi.ExecutionControl;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.Objects;
+import java.util.*;
 
 /**
  * Represents a player in the Labyrinth game.
@@ -16,7 +13,7 @@ public class Player {
 
     private final String id;
     private final String name;
-    private final List<TreasureCard> assignedTreasureCards;
+    private List<TreasureCard> assignedTreasureCards;
     private Position currentPosition;
     private Set<Tile> reachableTiles; // Optional cache for reachable tiles
 
@@ -25,14 +22,12 @@ public class Player {
      *
      * @param id                    unique identifier
      * @param name                  player name
-     * @param assignedTreasureCards treasure cards assigned to this player
-     * @param startPosition         initial position on the board
      */
-    public Player(String id, String name, List<TreasureCard> assignedTreasureCards, Position startPosition) {
+    public Player(String id, String name) {
         this.id = Objects.requireNonNull(id);
         this.name = Objects.requireNonNull(name);
-        this.assignedTreasureCards = Objects.requireNonNull(assignedTreasureCards);
-        this.currentPosition = Objects.requireNonNull(startPosition);
+        this.assignedTreasureCards = new ArrayList<>();
+        this.currentPosition = null;
         this.reachableTiles = null;
     }
 

@@ -11,33 +11,37 @@ public class Testing {
         debug();
     }
 
-
     public static void debug(){
-        int width = 7;
-        int height = 7;
-
-        // Create a random board (7x7)
-        Board board = BoardFactory.createRandomBoard(width, height);
-        System.out.println("Board created with size: " + board.getWidth() + "x" + board.getHeight());
-
-        // Create a room for up to 4 players, each needs 3 treasures
-        Room room = new Room("Room-123", 4, 3, board);
-
-        // Create some players with starting positions
-        Player p1 = new Player("P1", "Alice", new ArrayList<>(), new Position(0, 0));
-        Player p2 = new Player("P2", "Bob", new ArrayList<>(), new Position(0, width - 1));
-        Player p3 = new Player("P3", "Charlie", new ArrayList<>(), new Position(height - 1, width - 1));
-        Player p4 = new Player("P1", "Alice", new ArrayList<>(), new Position(height - 1, 0));
-
-        // Add them to the room
+        // Lets Simulate creating a room here. Player presses something like "create lobby"
+        Room room = new Room("Room-123");
+        Player p1 = new Player("P1", "Alice");
         room.join(p1);
+
+        // Different settings are made in the lobby screen
+        room.setMaxPlayers(4);
+        room.setAmountOfTreasuresPerPlayer(7);
+        room.setBoardHeight(7);
+        room.setBoardWidth(7);
+
+        // More Players join the lobby
+        Player p2 = new Player("P2", "Bob");
+        Player p3 = new Player("P3", "Charlie");
+        Player p4 = new Player("P1", "Alice");
+
         room.join(p2);
         room.join(p3);
         room.join(p4);
 
+
+        // Request to start the game is sent
+        Board board = BoardFactory.createRandomBoard(room.getBoardWidth(), room.getBoardHeight());
+        room.setBoard(board);
+
         // Start the game: distribute cards and set up players
         room.startGame();
 
+
+        // DEBUG:
         // Show players with their assigned cards
         for (Player player : room.getPlayers()) {
             System.out.println(player.getName() + " has treasures:");
@@ -46,13 +50,7 @@ public class Testing {
             }
         }
 
-        // Check reachable tiles for one player
-        System.out.println("\nReachable tiles for Alice from (0,0):");
-        var reachable = board.getReachableTiles(p1);
-        System.out.println("Alice can reach " + reachable.size() + " tiles. (graph)");
-        var reachable2 = board.getReachableTilesArrayBased(p1);
-        System.out.println("Alice can reach " + reachable2.size() + " tiles. (array)");
+        // Open Debug Viewer
         LabyrinthViewer.viewSwing(room);
-
     }
 }
