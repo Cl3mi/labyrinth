@@ -13,7 +13,7 @@ public class Player {
 
     private final String id;
     private final String name;
-    private List<TreasureCard> assignedTreasureCards;
+    private final List<TreasureCard> assignedTreasureCards;
     private Position currentPosition;
     private Set<Tile> reachableTiles; // Optional cache for reachable tiles
 

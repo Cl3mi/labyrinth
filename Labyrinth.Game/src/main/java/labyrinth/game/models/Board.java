@@ -14,6 +14,11 @@ public class Board {
     private final int height;
     private final Tile[][] tiles;
     private final Graph graph;
+    private List<Player> players;
+    private int currentPlayerIndex;
+    private MoveState currentMoveState = MoveState.PLACE_TILE;
+    private Tile extraTile;
+    private boolean freeRoam = false;
 
     /**
      * Creates a board with the given dimensions and tiles.
@@ -22,7 +27,7 @@ public class Board {
      * @param height number of rows
      * @param tiles  2D array of tiles (height x width)
      */
-    public Board(int width, int height, Tile[][] tiles) {
+    public Board(int width, int height, Tile[][] tiles, Tile extraTile) {
         if (tiles.length != height || tiles[0].length != width) {
             throw new IllegalArgumentException("Tile array dimensions must match width and height");
         }
@@ -31,6 +36,7 @@ public class Board {
         this.tiles = tiles;
         this.graph = new Graph();
         initializeGraph();
+        this.extraTile = extraTile;
     }
 
     public int getWidth() {
@@ -47,6 +53,26 @@ public class Board {
 
     public Graph getGraph() {
         return graph;
+    }
+
+    public List<Player> getPlayers() {
+        return new ArrayList<>(players);
+    }
+
+    public void setPlayers(List<Player> players) {
+        this.players = players;
+    }
+
+    public Tile getExtraTile() {
+        return extraTile;
+    }
+
+    public void setFreeRoam(boolean freeRoam){
+        this.freeRoam = freeRoam;
+    }
+
+    public boolean getFreeRoam(){
+        return freeRoam;
     }
 
     /**
@@ -87,6 +113,11 @@ public class Board {
      * @param direction LEFT or RIGHT
      */
     public void shiftRow(int rowIndex, Direction direction) {
+        if(currentMoveState == MoveState.PLACE_TILE && !freeRoam) {
+            System.out.println("Player needs to move a tile first");
+            return;
+        }
+
         if (rowIndex < 0 || rowIndex >= height) {
             throw new IllegalArgumentException("Invalid row index");
         }
@@ -98,13 +129,16 @@ public class Board {
         if (direction == Direction.RIGHT) {
             Tile last = row[width - 1];
             System.arraycopy(row, 0, row, 1, width - 1);
-            row[0] = last;
+            row[0] = extraTile;
+            extraTile = last;
         } else {
             Tile first = row[0];
             System.arraycopy(row, 1, row, 0, width - 1);
-            row[width - 1] = first;
+            row[width - 1] = extraTile;
+            extraTile = first;
         }
 
+        currentMoveState = MoveState.MOVE;
         initializeGraph();
     }
 
@@ -115,6 +149,11 @@ public class Board {
      * @param direction   UP or DOWN
      */
     public void shiftColumn(int columnIndex, Direction direction) {
+        if(currentMoveState == MoveState.PLACE_TILE && !freeRoam){
+            System.out.println("Player needs to move a tile first");
+            return;
+        }
+
         if (columnIndex < 0 || columnIndex >= width) {
             throw new IllegalArgumentException("Invalid column index");
         }
@@ -127,15 +166,18 @@ public class Board {
             for (int row = height - 1; row > 0; row--) {
                 tiles[row][columnIndex] = tiles[row - 1][columnIndex];
             }
-            tiles[0][columnIndex] = last;
+            tiles[0][columnIndex] = extraTile;
+            extraTile = last;
         } else {
             Tile first = tiles[0][columnIndex];
             for (int row = 0; row < height - 1; row++) {
                 tiles[row][columnIndex] = tiles[row + 1][columnIndex];
             }
-            tiles[height - 1][columnIndex] = first;
+            tiles[height - 1][columnIndex] = extraTile;
+            extraTile = first;
         }
 
+        currentMoveState = MoveState.MOVE;
         initializeGraph();
     }
 
@@ -236,4 +278,43 @@ public class Board {
         return isTopLeft || isTopRight || isBottomLeft || isBottomRight;
     }
 
+    public boolean movePlayerToTile(Player player, int targetRow, int targetCol) {
+        if(player != players.get(currentPlayerIndex) && !freeRoam) {
+            System.out.println("It's not the players turn!");
+            return false;
+        }
+
+        if(currentMoveState != MoveState.MOVE && !freeRoam) {
+            System.out.println("A tile needs to be moved!");
+            return false;
+        }
+
+        Tile currentTile = tiles[player.getCurrentPosition().getRow()][player.getCurrentPosition().getColumn()];
+        Tile targetTile = tiles[targetRow][targetCol];
+
+        System.out.println("Current position: " + player.getCurrentPosition().getRow() + "/" + player.getCurrentPosition().getColumn());
+        System.out.println("Moving " + player.getName() + " to " + targetRow + "/" + targetCol);
+        if(targetTile.getPlayer() != null){
+            System.out.println("Cant move a player is already on the target tile!");
+            return false;
+        }
+
+        Set<Tile> reachable = getReachableTiles(player);
+        if (!reachable.contains(targetTile)) {
+            System.out.println("Tile is not reachable!");
+            return false;
+        }
+
+        targetTile.getSteppedOnBy(player);
+        player.setCurrentPosition(new Position(targetRow, targetCol));
+
+        System.out.println("Player moved to " + player.getCurrentPosition());
+        currentPlayerIndex++;
+        if (currentPlayerIndex >= players.size()) {
+            currentPlayerIndex = 0;
+        }
+        currentMoveState = MoveState.PLACE_TILE;
+
+        return  true;
+    }
 }

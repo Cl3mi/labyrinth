@@ -31,7 +31,7 @@ public class LabyrinthViewer {
             frame.addKeyListener(new KeyAdapter() {
                 @Override
                 public void keyPressed(KeyEvent e) {
-                    if (e.getKeyChar() == 'r' || e.getKeyChar() == 'R') {
+                    if (e.getKeyChar() == 'q' || e.getKeyChar() == 'Q') {
                         frame.dispose(); // Close old GUI
                         System.out.println("\n--- Resetting debug ---\n");
                         Testing.debug(); // Re-run debug
@@ -44,6 +44,24 @@ public class LabyrinthViewer {
                 public void keyPressed(KeyEvent e) {
                     if (e.getKeyChar() == 'p' || e.getKeyChar() == 'P') {
                         panel.switchPlayer();
+                    }
+                }
+            });
+
+            frame.addKeyListener(new KeyAdapter() {
+                @Override
+                public void keyPressed(KeyEvent e) {
+                    if (e.getKeyChar() == 'r' || e.getKeyChar() == 'R') {
+                        panel.rotateExtraTile();
+                    }
+                }
+            });
+
+            frame.addKeyListener(new KeyAdapter() {
+                @Override
+                public void keyPressed(KeyEvent e) {
+                    if (e.getKeyChar() == 'f' || e.getKeyChar() == 'F') {
+                        panel.toggleFreeRoam();
                     }
                 }
             });

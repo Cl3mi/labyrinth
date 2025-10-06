@@ -2,6 +2,7 @@ package labyrinth.game;
 import labyrinth.game.enums.Direction;
 import labyrinth.game.models.*;
 
+import javax.smartcardio.Card;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
@@ -116,49 +117,73 @@ public class BoardPanel extends JPanel {
         }
 
         setBackground(Color.DARK_GRAY);
-        setPreferredSize(new Dimension(800, 800));
+        setPreferredSize(new Dimension(1400, 800));
 
         // Add mouse listener for arrow clicks
         addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
-                handleArrowClick(e.getPoint());
+                Point p = e.getPoint();
+
+                // === Pfeile prüfen ===
+                for (ArrowButton arrow : arrowButtons) {
+                    if (arrow.contains(p)) {
+                        if (arrow.isRow) {
+                            board.shiftRow(arrow.index, arrow.direction);
+                        } else {
+                            board.shiftColumn(arrow.index, arrow.direction);
+                        }
+
+                        // erreichbare Tiles aktualisieren
+                        reachableTiles.clear();
+                        if (BoardPanel.this.currentPlayer != null) {
+                            reachableTiles.addAll(board.getReachableTiles(BoardPanel.this.currentPlayer));
+                        }
+
+                        repaint();
+                        return;
+                    }
+                }
+
+                // === Tile-Klick prüfen ===
+                int cols = board.getWidth();
+                int rows = board.getHeight();
+
+                System.out.println("---------");
+                System.out.println("Current player: " + BoardPanel.this.currentPlayer);
+
+                outer:
+                for (int row = 0; row < rows; row++) {
+                    for (int col = 0; col < cols; col++) {
+                        int x = xOffset + col * size;
+                        int y = yOffset + row * size;
+                        Rectangle tileRect = new Rectangle(x, y, size, size);
+                        if (tileRect.contains(p)) {
+                            Tile clickedTile = board.getTiles()[row][col];
+                            if (reachableTiles.contains(clickedTile)) {
+                                boolean moved = board.movePlayerToTile(BoardPanel.this.currentPlayer, row, col);
+                                if (moved) {
+                                    reachableTiles.clear();
+                                    reachableTiles.addAll(board.getReachableTiles(BoardPanel.this.currentPlayer));
+                                    repaint();
+                                }
+                            }
+                            break outer;
+                        }
+                    }
+                }
+
+                System.out.println("---------");
             }
         });
-    }
 
-    private void handleArrowClick(Point p) {
-        for (ArrowButton arrow : arrowButtons) {
-            if (arrow.contains(p)) {
-                if (arrow.isRow) {
-                    board.shiftRow(arrow.index, arrow.direction);
-                } else {
-                    board.shiftColumn(arrow.index, arrow.direction);
-                }
-
-                // Recalculate reachable tiles if player exists
-                reachableTiles.clear();
-                if (currentPlayer != null) {
-                    Set<Tile> newReachable = board.getReachableTiles(currentPlayer);
-                    System.out.println("=== Debug: Reachable Tiles ===");
-                    System.out.println("Player position: (" + currentPlayer.getCurrentPosition().getRow() + ", " + currentPlayer.getCurrentPosition().getColumn() + ")");
-                    System.out.println("Reachable tiles returned: " + (newReachable != null ? newReachable.size() : "null"));
-                    if (newReachable != null) {
-                        reachableTiles.addAll(newReachable);
-                    }
-                    System.out.println("Total in reachableTiles set: " + reachableTiles.size());
-                    System.out.println("==============================");
-                }
-
-                repaint();
-                break;
-            }
-        }
     }
 
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
+        int cardPanelWidth = 40;
+
         if (board == null) return;
 
         Graphics2D g2 = (Graphics2D) g.create();
@@ -168,14 +193,14 @@ public class BoardPanel extends JPanel {
             int cols = board.getWidth();
             int rows = board.getHeight();
 
-            int w = getWidth() - 2 * arrowSize - 20; // Reserve space for arrows
+            int w = getWidth() - 2 * arrowSize - 20 - cardPanelWidth; // Reserve space for arrows and cards
             int h = getHeight() - 2 * arrowSize - 20;
 
             int cellW = w / cols;
             int cellH = h / rows;
             size = Math.min(cellW, cellH);
 
-            xOffset = (getWidth() - size * cols) / 2;
+            xOffset = cardPanelWidth + (getWidth() - size * cols) / 2;
             yOffset = (getHeight() - size * rows) / 2;
 
             // Clear arrow buttons and recreate them
@@ -238,6 +263,7 @@ public class BoardPanel extends JPanel {
 
                     g2.fillOval(cx - dotSize / 2, cy - dotSize / 2, dotSize, dotSize);
 
+                    // treasure name
                     if (tile.getTreasureCard() != null) {
                         String treasureName = tile.getTreasureCard().getTreasureName();
                         g2.setColor(Color.BLACK);
@@ -332,20 +358,145 @@ public class BoardPanel extends JPanel {
                 g2.draw(arrow.arrowShape);
             }
 
+            // extra tile
+            Tile extraTile = board.getExtraTile();
+            if (extraTile != null) {
+                int tileSize = size;
+                int margin = 20;
+                int x = getWidth() - tileSize - margin;
+                int y = getHeight() - tileSize - margin;
+
+                drawSingleTile(g2, extraTile, x, y, tileSize);
+            }
+
+            // debug info
+            drawDebugInfo(g2);
+
+            if (currentPlayer != null) {
+                drawTreasureCards(g2, currentPlayer);
+            }
+
         } finally {
             g2.dispose();
         }
     }
+
+    private void drawDebugInfo(Graphics2D g2) {
+        int infoMargin = 20;
+        int infoX = getWidth() - 250; // adjust width if you need more space
+        int infoY = 40;
+
+        g2.setFont(new Font("Arial", Font.BOLD, 16));
+        g2.setColor(Color.RED);
+
+        String infoText1 = "Player to move: " + (currentPlayer != null ? currentPlayer.getName() : "None");
+        String infoText2 = "Free roam: " + board.getFreeRoam();
+
+        g2.drawString(infoText1, infoX, infoY);
+        g2.drawString(infoText2, infoX, infoY + 25);
+    }
+
+    private void drawTreasureCards(Graphics2D g2, Player player) {
+        int cardWidth = 60;
+        int cardHeight = 90;
+        int padding = 10;
+        int startX = 10;
+        int startY = 40;
+
+        List<TreasureCard> cards = player.getAssignedTreasureCards();
+
+        for (int i = 0; i < cards.size(); i++) {
+            TreasureCard card = cards.get(i);
+            if(card.isCollected()){
+                g2.setColor(new Color(50, 220, 50));
+
+            } else {
+                g2.setColor(new Color(220, 220, 250));
+            }
+
+            int y = startY + i * (cardHeight + padding);
+            g2.fillRoundRect(startX, y, cardWidth, cardHeight, 10, 10);
+
+            g2.setColor(Color.BLACK);
+            String treasureName = cards.get(i).getTreasureName();
+            FontMetrics fm = g2.getFontMetrics();
+            int textWidth = fm.stringWidth(treasureName);
+            g2.drawString(treasureName, startX + (cardWidth - textWidth) / 2, y + cardHeight / 2);
+
+            g2.setColor(new Color(220, 220, 250));
+        }
+    }
+
+    /**
+     * Draws a single tile at the given position and size.
+     */
+    private void drawSingleTile(Graphics2D g2, Tile tile, int x, int y, int size) {
+        if (tile == null) return;
+
+        int cx = x + size / 2;
+        int cy = y + size / 2;
+        int corridorWidth = Math.max(4, size / 6);
+
+        Color corridorColor = new Color(235, 235, 220);
+        Color wallColor = new Color(50, 50, 50);
+        Color fixedBg = new Color(160, 160, 0);
+        Color normalBg = new Color(100, 100, 100);
+
+        // background
+        g2.setColor(tile.isFixed() ? fixedBg : normalBg);
+        g2.fillRect(x, y, size, size);
+
+        // corridors
+        g2.setColor(corridorColor);
+        if (tile.getEntrances().contains(Direction.UP))
+            g2.fillRect(cx - corridorWidth / 2, y, corridorWidth, size / 2);
+        if (tile.getEntrances().contains(Direction.DOWN))
+            g2.fillRect(cx - corridorWidth / 2, cy, corridorWidth, size / 2);
+        if (tile.getEntrances().contains(Direction.LEFT))
+            g2.fillRect(x, cy - corridorWidth / 2, size / 2, corridorWidth);
+        if (tile.getEntrances().contains(Direction.RIGHT))
+            g2.fillRect(cx, cy - corridorWidth / 2, size / 2, corridorWidth);
+
+        // center dot
+        int dotSize = Math.max(4, corridorWidth);
+        g2.setColor(wallColor);
+        g2.fillOval(cx - dotSize / 2, cy - dotSize / 2, dotSize, dotSize);
+
+        // treasure name if any
+        if (tile.getTreasureCard() != null) {
+            String treasureName = tile.getTreasureCard().getTreasureName();
+            g2.setColor(Color.BLACK);
+            FontMetrics fm = g2.getFontMetrics();
+            int textWidth = fm.stringWidth(treasureName);
+            int textHeight = fm.getAscent();
+            g2.drawString(treasureName, cx - textWidth / 2, (cy + textHeight / 2) - 20);
+        }
+
+        // border
+        g2.setColor(Color.BLACK);
+        g2.drawRect(x, y, size, size);
+    }
+
 
     public void switchPlayer(){
         currentPlayerIndex++;
         if (currentPlayerIndex >= players.size()) {
             currentPlayerIndex = 0;
         }
-        System.out.println("Switching player " + currentPlayerIndex);
-        currentPlayer = players.get(currentPlayerIndex);
+        System.out.println("Switching player " + currentPlayerIndex + 1);
+        this.currentPlayer = players.get(currentPlayerIndex);
         this.reachableTiles.clear();
         this.reachableTiles.addAll(board.getReachableTiles(currentPlayer));
+        repaint();
+    }
+
+    public void rotateExtraTile(){
+        board.getExtraTile().rotate();
+        repaint();
+    }
+
+    public void toggleFreeRoam(){
+        board.setFreeRoam(!board.getFreeRoam());
         repaint();
     }
 }

@@ -34,15 +34,6 @@ public class Testing {
         room.setBoard(board);
         room.startGame();
 
-        // DEBUG:
-        // Show players with their assigned cards
-        for (Player player : room.getPlayers()) {
-            System.out.println(player.getName() + " has treasures:");
-            for (TreasureCard card : player.getAssignedTreasureCards()) {
-                System.out.println("  - " + card.getTreasureName());
-            }
-        }
-
         // Open Debug Viewer
         LabyrinthViewer.viewSwing(room);
     }

@@ -62,16 +62,16 @@ public class BoardFactory {
         }
 
         // Replace corner tiles, maybe we can do the in the loop already, but rn im too lazy
-        tiles[0][0] = new Tile(EnumSet.of(Direction.DOWN, Direction.RIGHT), false);
+        tiles[0][0] = new Tile(EnumSet.of(Direction.DOWN, Direction.RIGHT));
         tiles[0][0].setIsFixed(true);
-        tiles[0][width-1] = new Tile(EnumSet.of(Direction.DOWN, Direction.LEFT), false);
+        tiles[0][width-1] = new Tile(EnumSet.of(Direction.DOWN, Direction.LEFT));
         tiles[0][width-1].setIsFixed(true);
-        tiles[height-1][0] = new Tile(EnumSet.of(Direction.UP, Direction.RIGHT), false);
+        tiles[height-1][0] = new Tile(EnumSet.of(Direction.UP, Direction.RIGHT));
         tiles[height-1][0].setIsFixed(true);
-        tiles[height-1][width-1] = new Tile(EnumSet.of(Direction.UP, Direction.LEFT), false);
+        tiles[height-1][width-1] = new Tile(EnumSet.of(Direction.UP, Direction.LEFT));
         tiles[height-1][width-1].setIsFixed(true);
 
-        return new Board(width, height, tiles);
+        return new Board(width, height, tiles,createRandomTile());
     }
 
     /**
@@ -86,7 +86,7 @@ public class BoardFactory {
             default -> throw new IllegalStateException("Unexpected tile type");
         };
 
-        Tile tile = new Tile(entrances, RANDOM.nextDouble() < 0.2); // ~20% chance treasure
+        Tile tile = new Tile(entrances);
 
         // Rotate randomly 0–3 times
         int rotations = RANDOM.nextInt(4);

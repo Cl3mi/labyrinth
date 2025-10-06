@@ -12,9 +12,9 @@ import java.util.Set;
 public class Tile {
 
     private final EnumSet<Direction> entrances;
-    private boolean hasTreasure;
     private boolean isFixed;
     private TreasureCard treasureCard;
+    private Player player;
 
     /**
      * Creates a tile with specified entrances and optional treasure.
@@ -28,30 +28,8 @@ public class Tile {
         this.entrances = EnumSet.copyOf(entrances);
     }
 
-    /**
-     * Creates a tile with specified entrances and optional treasure.
-     *
-     * @param entrances    directions where the tile has openings (at least 2)
-     * @param hasTreasure  whether the tile contains a treasure
-     */
-    public Tile(Set<Direction> entrances, boolean hasTreasure) {
-        if (entrances.size() < 2) {
-            throw new IllegalArgumentException("A tile must have at least 2 entrances.");
-        }
-        this.entrances = EnumSet.copyOf(entrances);
-        this.hasTreasure = hasTreasure;
-    }
-
     public Set<Direction> getEntrances() {
         return EnumSet.copyOf(entrances);
-    }
-
-    public boolean hasTreasure() {
-        return hasTreasure;
-    }
-
-    public void setHasTreasure(boolean hasTreasure) {
-        this.hasTreasure = hasTreasure;
     }
 
     public boolean isFixed() {
@@ -68,6 +46,14 @@ public class Tile {
 
     public void setTreasureCard(TreasureCard treasureCard) {
         this.treasureCard = treasureCard;
+    }
+
+    public Player getPlayer() {
+        return player ;
+    }
+
+    public void setPlayer(Player player) {
+        this.player = player;
     }
 
     /**
@@ -100,11 +86,22 @@ public class Tile {
         return entrances.contains(direction) && neighbor.getEntrances().contains(direction.opposite());
     }
 
+    public void getSteppedOnBy(Player player){
+        this.player = player;
+
+        if(treasureCard != null){
+            if(player.getAssignedTreasureCards().contains(treasureCard)){
+                System.out.println("Card: " + treasureCard.getTreasureName());
+                treasureCard.collect();
+                this.treasureCard = null;
+            }
+        }
+    }
+
     @Override
     public String toString() {
         return "Tile{" +
                 "entrances=" + entrances +
-                ", hasTreasure=" + hasTreasure +
                 '}';
     }
 }

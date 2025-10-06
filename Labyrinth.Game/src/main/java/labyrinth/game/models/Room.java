@@ -121,7 +121,7 @@ public class Room {
         }
 
         List<TreasureCard> cards = TreasureCardFactory.createRandomCards(amountOfTreasuresPerPlayer * players.size());
-
+        System.out.println( cards.size() + " cards have been created");
         do {
             TreasureCard card = cards.getFirst();
             board.placeRandomTreasure(card);
@@ -136,8 +136,6 @@ public class Room {
 
         for (int i = 0; i < players.size(); i++) {
             Player player = players.get(i);
-            player.getAssignedTreasureCards().clear();
-            player.getAssignedTreasureCards().addAll(cards);
 
             Position position;
 
@@ -149,9 +147,11 @@ public class Room {
                 default -> position = new Position(0, 0);
             }
 
+            System.out.println(player.getName() + " gets position: " + position.getRow() + "/" + position.getColumn());
             player.setCurrentPosition(position);
         }
 
+        this.board.setPlayers(players);
         System.out.println("Game started in room " + roomCode + " with " + players.size() + " players.");
     }
 
