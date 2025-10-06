@@ -129,9 +129,9 @@ public class BoardPanel extends JPanel {
                 for (ArrowButton arrow : arrowButtons) {
                     if (arrow.contains(p)) {
                         if (arrow.isRow) {
-                            board.shiftRow(arrow.index, arrow.direction);
+                            board.shiftRow(arrow.index, arrow.direction, currentPlayer);
                         } else {
-                            board.shiftColumn(arrow.index, arrow.direction);
+                            board.shiftColumn(arrow.index, arrow.direction, currentPlayer);
                         }
 
                         // erreichbare Tiles aktualisieren
@@ -382,18 +382,45 @@ public class BoardPanel extends JPanel {
     }
 
     private void drawDebugInfo(Graphics2D g2) {
-        int infoMargin = 20;
-        int infoX = getWidth() - 250; // adjust width if you need more space
+        int infoX = getWidth() - 250;
         int infoY = 40;
 
         g2.setFont(new Font("Arial", Font.BOLD, 16));
         g2.setColor(Color.RED);
 
-        String infoText1 = "Player to move: " + (currentPlayer != null ? currentPlayer.getName() : "None");
-        String infoText2 = "Free roam: " + board.getFreeRoam();
+        List<String> infoLines = new ArrayList<>();
 
-        g2.drawString(infoText1, infoX, infoY);
-        g2.drawString(infoText2, infoX, infoY + 25);
+        // --- General game info ---
+        var players = board.getPlayers();
+        if (players != null && !players.isEmpty()) {
+            var current = players.get(board.getCurrentPlayerIndex());
+            infoLines.add("Player to move: " + current.getName());
+        } else {
+            infoLines.add("Player to move: None");
+        }
+
+        infoLines.add("Free roam: " + board.getFreeRoam());
+        infoLines.add("Current move state: " + board.getCurrentMoveState());
+
+        infoLines.add(""); // blank line for spacing
+        infoLines.add("=== Players ===");
+
+        // --- Player list ---
+        if (players != null && !players.isEmpty()) {
+            for (Player p : players) {
+                var pos = p.getCurrentPosition();
+                String positionText = (pos != null)
+                        ? "(" + pos.getRow() + "," + pos.getColumn() + ")"
+                        : "(not placed)";
+                infoLines.add(p.getName() + " at " + positionText);
+            }
+        }
+
+        // --- Draw all lines ---
+        int lineHeight = 25;
+        for (int i = 0; i < infoLines.size(); i++) {
+            g2.drawString(infoLines.get(i), infoX, infoY + i * lineHeight);
+        }
     }
 
     private void drawTreasureCards(Graphics2D g2, Player player) {
@@ -443,7 +470,7 @@ public class BoardPanel extends JPanel {
         Color normalBg = new Color(100, 100, 100);
 
         // background
-        g2.setColor(tile.isFixed() ? fixedBg : normalBg);
+        g2.setColor(tile.isFixed() ? normalBg : normalBg);
         g2.fillRect(x, y, size, size);
 
         // corridors

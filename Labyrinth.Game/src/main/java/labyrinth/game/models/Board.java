@@ -75,6 +75,14 @@ public class Board {
         return freeRoam;
     }
 
+    public MoveState getCurrentMoveState() {
+        return currentMoveState;
+    }
+
+    public int getCurrentPlayerIndex() {
+        return currentPlayerIndex;
+    }
+
     /**
      * Initializes the graph by connecting adjacent tiles based on entrances.
      */
@@ -112,9 +120,13 @@ public class Board {
      * @param rowIndex the row to shift
      * @param direction LEFT or RIGHT
      */
-    public void shiftRow(int rowIndex, Direction direction) {
-        if(currentMoveState == MoveState.PLACE_TILE && !freeRoam) {
+    public void shiftRow(int rowIndex, Direction direction, Player player) {
+        if(currentMoveState == MoveState.MOVE && !freeRoam) {
             System.out.println("Player needs to move a tile first");
+            return;
+        }
+        if(player != players.get(currentPlayerIndex) && !freeRoam) {
+            System.out.println("It's not the players turn!");
             return;
         }
 
@@ -148,9 +160,13 @@ public class Board {
      * @param columnIndex the column to shift
      * @param direction   UP or DOWN
      */
-    public void shiftColumn(int columnIndex, Direction direction) {
-        if(currentMoveState == MoveState.PLACE_TILE && !freeRoam){
+    public void shiftColumn(int columnIndex, Direction direction, Player player) {
+        if(currentMoveState == MoveState.MOVE && !freeRoam){
             System.out.println("Player needs to move a tile first");
+            return;
+        }
+        if(player != players.get(currentPlayerIndex) && !freeRoam) {
+            System.out.println("It's not the players turn!");
             return;
         }
 
@@ -307,6 +323,7 @@ public class Board {
 
         targetTile.getSteppedOnBy(player);
         player.setCurrentPosition(new Position(targetRow, targetCol));
+        currentTile.setPlayer(null);
 
         System.out.println("Player moved to " + player.getCurrentPosition());
         currentPlayerIndex++;

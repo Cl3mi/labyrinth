@@ -23,7 +23,7 @@ public class Testing {
         // More Players join the lobby
         Player p2 = new Player("P2", "Bob");
         Player p3 = new Player("P3", "Charlie");
-        Player p4 = new Player("P1", "Alice");
+        Player p4 = new Player("P4", "Dover");
 
         room.join(p2);
         room.join(p3);
