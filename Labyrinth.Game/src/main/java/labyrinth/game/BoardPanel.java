@@ -129,9 +129,9 @@ public class BoardPanel extends JPanel {
                 for (ArrowButton arrow : arrowButtons) {
                     if (arrow.contains(p)) {
                         if (arrow.isRow) {
-                            board.shiftRow(arrow.index, arrow.direction, currentPlayer);
+                            board.shiftRow(arrow.index, arrow.direction, BoardPanel.this.currentPlayer);
                         } else {
-                            board.shiftColumn(arrow.index, arrow.direction, currentPlayer);
+                            board.shiftColumn(arrow.index, arrow.direction, BoardPanel.this.currentPlayer);
                         }
 
                         // erreichbare Tiles aktualisieren
