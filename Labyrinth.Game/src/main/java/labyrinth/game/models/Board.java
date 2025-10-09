@@ -121,38 +121,78 @@ public class Board {
      * @param direction LEFT or RIGHT
      */
     public void shiftRow(int rowIndex, Direction direction, Player player) {
-        if(currentMoveState == MoveState.MOVE && !freeRoam) {
+        if (currentMoveState == MoveState.MOVE && !freeRoam) {
             System.out.println("Player needs to move a tile first");
             return;
         }
-        if(player != players.get(currentPlayerIndex) && !freeRoam) {
-            System.out.println("It's not the players turn!");
+        if (player != players.get(currentPlayerIndex) && !freeRoam) {
+            System.out.println("It's not the player's turn!");
             return;
         }
 
-        if (rowIndex < 0 || rowIndex >= height) {
+        if (rowIndex < 0 || rowIndex >= height)
             throw new IllegalArgumentException("Invalid row index");
-        }
-        if (direction != Direction.LEFT && direction != Direction.RIGHT) {
+
+        if (direction != Direction.LEFT && direction != Direction.RIGHT)
             throw new IllegalArgumentException("Row can only be shifted LEFT or RIGHT");
+
+        for (int col = 0; col < width; col++) {
+            if (tiles[rowIndex][col].isFixed() && !freeRoam) {
+                System.out.println("Row " + rowIndex + " contains fixed tiles. Cannot shift.");
+                return;
+            }
         }
 
-        Tile[] row = tiles[rowIndex];
+        Map<Player, Position> affectedPlayers = new HashMap<>();
+        for (Player p : players) {
+            Position pos = p.getCurrentPosition();
+            if (pos != null && pos.getRow() == rowIndex) {
+                affectedPlayers.put(p, pos);
+            }
+        }
+
         if (direction == Direction.RIGHT) {
-            Tile last = row[width - 1];
-            System.arraycopy(row, 0, row, 1, width - 1);
-            row[0] = extraTile;
+            Tile last = tiles[rowIndex][width - 1];
+            for (int col = width - 1; col > 0; col--) {
+                tiles[rowIndex][col] = tiles[rowIndex][col - 1];
+            }
+            tiles[rowIndex][0] = extraTile;
             extraTile = last;
+
+            for (Map.Entry<Player, Position> entry : affectedPlayers.entrySet()) {
+                Player p = entry.getKey();
+                Position oldPos = entry.getValue();
+                int newCol = oldPos.getColumn() + 1;
+                if (newCol >= width) {
+                    System.out.println(p.getName() + " got pushed out! Appears on left.");
+                    newCol = 0;
+                }
+                p.setCurrentPosition(new Position(rowIndex, newCol));
+            }
         } else {
-            Tile first = row[0];
-            System.arraycopy(row, 1, row, 0, width - 1);
-            row[width - 1] = extraTile;
+            Tile first = tiles[rowIndex][0];
+            for (int col = 0; col < width - 1; col++) {
+                tiles[rowIndex][col] = tiles[rowIndex][col + 1];
+            }
+            tiles[rowIndex][width - 1] = extraTile;
             extraTile = first;
+
+            for (Map.Entry<Player, Position> entry : affectedPlayers.entrySet()) {
+                Player p = entry.getKey();
+                Position oldPos = entry.getValue();
+                int newCol = oldPos.getColumn() - 1;
+                if (newCol < 0) {
+                    System.out.println(p.getName() + " got pushed out! Appears on right.");
+                    newCol = width - 1;
+                }
+                p.setCurrentPosition(new Position(rowIndex, newCol));
+            }
         }
 
         currentMoveState = MoveState.MOVE;
         initializeGraph();
     }
+
 
     /**
      * Shifts a column in the specified direction. Tiles wrap around.
@@ -161,36 +201,77 @@ public class Board {
      * @param direction   UP or DOWN
      */
     public void shiftColumn(int columnIndex, Direction direction, Player player) {
-        if(currentMoveState == MoveState.MOVE && !freeRoam){
+        if (currentMoveState == MoveState.MOVE && !freeRoam) {
             System.out.println("Player needs to move a tile first");
             return;
         }
-        if(player != players.get(currentPlayerIndex) && !freeRoam) {
-            System.out.println("It's not the players turn!");
+        if (player != players.get(currentPlayerIndex) && !freeRoam) {
+            System.out.println("It's not the player's turn!");
             return;
         }
 
-        if (columnIndex < 0 || columnIndex >= width) {
+        if (columnIndex < 0 || columnIndex >= width)
             throw new IllegalArgumentException("Invalid column index");
-        }
-        if (direction != Direction.UP && direction != Direction.DOWN) {
+
+        if (direction != Direction.UP && direction != Direction.DOWN)
             throw new IllegalArgumentException("Column can only be shifted UP or DOWN");
+
+        for (int row = 0; row < height; row++) {
+            Tile tile = tiles[row][columnIndex];
+            if (tile.isFixed() && !freeRoam) {
+                System.out.println("Column " + columnIndex + " contains fixed tiles. Cannot shift.");
+                return;
+            }
+        }
+
+        Map<Player, Position> affectedPlayers = new HashMap<>();
+        for (Player p : players) {
+            Position pos = p.getCurrentPosition();
+            if (pos != null && pos.getColumn() == columnIndex) {
+                affectedPlayers.put(p, pos);
+            }
         }
 
         if (direction == Direction.DOWN) {
-            Tile last = tiles[height - 1][columnIndex];
+            Tile bottom = tiles[height - 1][columnIndex];
             for (int row = height - 1; row > 0; row--) {
                 tiles[row][columnIndex] = tiles[row - 1][columnIndex];
             }
             tiles[0][columnIndex] = extraTile;
-            extraTile = last;
-        } else {
-            Tile first = tiles[0][columnIndex];
+            extraTile = bottom;
+
+            for (Map.Entry<Player, Position> entry : affectedPlayers.entrySet()) {
+                Player p = entry.getKey();
+                Position oldPos = entry.getValue();
+                int newRow = oldPos.getRow() + 1;
+
+                if (newRow >= height) {
+                    System.out.println(p.getName() + " got pushed out! Appears on top.");
+                    newRow = 0;
+                }
+
+                p.setCurrentPosition(new Position(newRow, columnIndex));
+            }
+        } else { // UP
+            Tile top = tiles[0][columnIndex];
             for (int row = 0; row < height - 1; row++) {
                 tiles[row][columnIndex] = tiles[row + 1][columnIndex];
             }
             tiles[height - 1][columnIndex] = extraTile;
-            extraTile = first;
+            extraTile = top;
+
+            for (Map.Entry<Player, Position> entry : affectedPlayers.entrySet()) {
+                Player p = entry.getKey();
+                Position oldPos = entry.getValue();
+                int newRow = oldPos.getRow() - 1;
+
+                if (newRow < 0) {
+                    System.out.println(p.getName() + " got pushed out! Appears on bottom.");
+                    newRow = height - 1;
+                }
+
+                p.setCurrentPosition(new Position(newRow, columnIndex));
+            }
         }
 
         currentMoveState = MoveState.MOVE;
