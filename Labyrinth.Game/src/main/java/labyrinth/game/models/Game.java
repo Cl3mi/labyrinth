@@ -146,25 +146,28 @@ public class Game {
             cards.removeFirst();
         } while (!cards.isEmpty());
 
+        // Assign starting positions to each player by placing them on the four corners of the board.
         for (int i = 0; i < players.size(); i++) {
             Player player = players.get(i);
-
-            Position position;
-
+            // Determine the corner coordinates based on player index
+            int row;
+            int col;
             switch (i) {
-                case 0 -> position = new Position(0, 0);
-                case 1 -> position = new Position(0, boardWidth - 1);
-                case 2 -> position = new Position(boardHeight - 1, boardWidth - 1);
-                case 3 -> position = new Position(boardHeight - 1, 0);
-                default -> position = new Position(0, 0);
+                case 0 -> { row = 0; col = 0; }
+                case 1 -> { row = 0; col = boardWidth - 1; }
+                case 2 -> { row = boardHeight - 1; col = boardWidth - 1; }
+                case 3 -> { row = boardHeight - 1; col = 0; }
+                default -> { row = 0; col = 0; }
             }
-
-            System.out.println(player.getName() + " gets position: " + position.getRow() + "/" + position.getColumn());
-            player.setCurrentPosition(position);
+            Tile startingTile = board.getTileAt(row, col);
+            System.out.println(player.getName() + " starts on tile: " + row + "/" + col);
+            // Set the player's current tile to the tile at the determined coordinates
+            player.setCurrentTile(startingTile);
         }
 
+        // Register the players with the board and synchronize their tile references
         this.board.setPlayers(players);
-        System.out.println("Game started in GameLobby" + "with " + players.size() + " players.");
+        System.out.println("Game started in GameLobby" + " with " + players.size() + " players.");
     }
 
     @Override

@@ -6,13 +6,23 @@ import java.util.*;
 
 /**
  * Represents the game board for the Labyrinth game.
- * Contains a 2D grid of tiles and a graph representing tile connectivity.
+ * The layout of tiles is stored in a bidirectional map between {@link Position}
+ * instances and {@link Tile} instances. A separate graph tracks the connectivity
+ * of neighboring tiles based on their entrances.
  */
 public class Board {
 
     private final int width;
     private final int height;
-    private final Tile[][] tiles;
+    /**
+     * A bidirectional mapping between board positions and the corresponding tiles. The forward
+     * direction maps a {@link Position} (row/column coordinates) to a {@link Tile}. The
+     * backward direction maps a {@link Tile} back to its {@link Position} on the board.
+     *
+     * <p>This replaces the old 2D array representation of the board and allows constant
+     * time lookups of either side.</p>
+     */
+    private final BiMap<Position, Tile> tileMap;
     private final Graph graph;
     private List<Player> players;
     private int currentPlayerIndex;
@@ -27,14 +37,34 @@ public class Board {
      * @param height number of rows
      * @param tiles  2D array of tiles (height x width)
      */
-    public Board(int width, int height, Tile[][] tiles, Tile extraTile) {
-        if (tiles.length != height || tiles[0].length != width) {
+    /**
+     * Creates a board with the given dimensions. Although the constructor accepts a 2D
+     * array of tiles for backwards compatibility, it immediately populates a
+     * {@link BiMap} mapping each {@link Position} to its associated {@link Tile}. The
+     * original array reference is not stored internally.
+     *
+     * @param width  number of columns
+     * @param height number of rows
+     * @param tiles  initial 2D array of tiles (height x width)
+     * @param extraTile the spare tile which will be inserted during shifts
+     */
+    public Board(int width, int height, Tile[][] tilesArray, Tile extraTile) {
+        if (tilesArray.length != height || tilesArray[0].length != width) {
             throw new IllegalArgumentException("Tile array dimensions must match width and height");
         }
         this.width = width;
         this.height = height;
-        this.tiles = tiles;
+        this.tileMap = new BiMap<>();
+        // Populate the BiMap with positions and tiles
+        for (int row = 0; row < height; row++) {
+            for (int col = 0; col < width; col++) {
+                Position position = new Position(row, col);
+                Tile tile = tilesArray[row][col];
+                tileMap.put(position, tile);
+            }
+        }
         this.graph = new Graph();
+        // Build the connectivity graph based on the initial layout
         initializeGraph();
         this.extraTile = extraTile;
     }
@@ -47,8 +77,43 @@ public class Board {
         return height;
     }
 
+    /**
+     * Returns a new 2D array representing the current board state. This method
+     * constructs a fresh array on each invocation by reading from the underlying
+     * {@link BiMap}. The caller should not attempt to modify the returned
+     * array, as changes will not be reflected in the board.
+     *
+     * @return a copy of the current board tiles as a 2D array
+     */
     public Tile[][] getTiles() {
-        return tiles;
+        Tile[][] arr = new Tile[height][width];
+        for (int row = 0; row < height; row++) {
+            for (int col = 0; col < width; col++) {
+                arr[row][col] = tileMap.getForward(new Position(row, col));
+            }
+        }
+        return arr;
+    }
+
+    /**
+     * Retrieves the tile at the specified coordinates.
+     *
+     * @param row    row index (0-based)
+     * @param column column index (0-based)
+     * @return the tile located at (row, column), or null if not present
+     */
+    public Tile getTileAt(int row, int column) {
+        return tileMap.getForward(new Position(row, column));
+    }
+
+    /**
+     * Retrieves the {@link Position} of the given tile on the board.
+     *
+     * @param tile the tile to look up
+     * @return the position of the tile, or null if it is not currently on the board
+     */
+    public Position getPositionOfTile(Tile tile) {
+        return tileMap.getBackward(tile);
     }
 
     public Graph getGraph() {
@@ -61,6 +126,10 @@ public class Board {
 
     public void setPlayers(List<Player> players) {
         this.players = players;
+        // Ensure that each player's current tile and the tile's player reference
+        // are synchronized when setting the list of players. This is necessary
+        // after initial player placement in the game.
+        synchronizePlayerTiles();
     }
 
     public Tile getExtraTile() {
@@ -90,24 +159,24 @@ public class Board {
         graph.clear();
         for (int row = 0; row < height; row++) {
             for (int col = 0; col < width; col++) {
-                Tile tile = tiles[row][col];
+                Tile tile = tileMap.getForward(new Position(row, col));
                 graph.addTile(tile);
 
                 // Connect with neighbors if entrances match
                 if (row > 0) {
-                    Tile upNeighbor = tiles[row - 1][col];
+                    Tile upNeighbor = tileMap.getForward(new Position(row - 1, col));
                     graph.connect(tile, upNeighbor, Direction.UP);
                 }
                 if (row < height - 1) {
-                    Tile downNeighbor = tiles[row + 1][col];
+                    Tile downNeighbor = tileMap.getForward(new Position(row + 1, col));
                     graph.connect(tile, downNeighbor, Direction.DOWN);
                 }
                 if (col > 0) {
-                    Tile leftNeighbor = tiles[row][col - 1];
+                    Tile leftNeighbor = tileMap.getForward(new Position(row, col - 1));
                     graph.connect(tile, leftNeighbor, Direction.LEFT);
                 }
                 if (col < width - 1) {
-                    Tile rightNeighbor = tiles[row][col + 1];
+                    Tile rightNeighbor = tileMap.getForward(new Position(row, col + 1));
                     graph.connect(tile, rightNeighbor, Direction.RIGHT);
                 }
             }
@@ -137,28 +206,39 @@ public class Board {
             throw new IllegalArgumentException("Row can only be shifted LEFT or RIGHT");
 
         for (int col = 0; col < width; col++) {
-            if (tiles[rowIndex][col].isFixed() && !freeRoam) {
+            Tile tile = tileMap.getForward(new Position(rowIndex, col));
+            if (tile.isFixed() && !freeRoam) {
                 System.out.println("Row " + rowIndex + " contains fixed tiles. Cannot shift.");
                 return;
             }
         }
 
         Map<Player, Position> affectedPlayers = new HashMap<>();
+        // Determine which players are on this row by inspecting their current tiles
         for (Player p : players) {
-            Position pos = p.getCurrentPosition();
-            if (pos != null && pos.getRow() == rowIndex) {
-                affectedPlayers.put(p, pos);
+            Tile playerTile = p.getCurrentTile();
+            if (playerTile != null) {
+                Position pos = getPositionOfTile(playerTile);
+                if (pos != null && pos.getRow() == rowIndex) {
+                    affectedPlayers.put(p, pos);
+                }
             }
         }
 
         if (direction == Direction.RIGHT) {
-            Tile last = tiles[rowIndex][width - 1];
+            // Save the tile at the far right as it will become the new extra tile
+            Tile last = tileMap.getForward(new Position(rowIndex, width - 1));
+            // Shift tiles to the right
             for (int col = width - 1; col > 0; col--) {
-                tiles[rowIndex][col] = tiles[rowIndex][col - 1];
+                Tile from = tileMap.getForward(new Position(rowIndex, col - 1));
+                tileMap.put(new Position(rowIndex, col), from);
             }
-            tiles[rowIndex][0] = extraTile;
+            // Insert the extra tile at the beginning
+            tileMap.put(new Position(rowIndex, 0), extraTile);
+            // The last tile becomes the new extra tile
             extraTile = last;
 
+            // Update player tiles
             for (Map.Entry<Player, Position> entry : affectedPlayers.entrySet()) {
                 Player p = entry.getKey();
                 Position oldPos = entry.getValue();
@@ -167,16 +247,24 @@ public class Board {
                     System.out.println(p.getName() + " got pushed out! Appears on left.");
                     newCol = 0;
                 }
-                p.setCurrentPosition(new Position(rowIndex, newCol));
+                // Set the player's tile to the tile now at the new position
+                Tile newTile = tileMap.getForward(new Position(rowIndex, newCol));
+                p.setCurrentTile(newTile);
             }
         } else {
-            Tile first = tiles[rowIndex][0];
+            // Save the tile at the far left as it will become the new extra tile
+            Tile first = tileMap.getForward(new Position(rowIndex, 0));
+            // Shift tiles to the left
             for (int col = 0; col < width - 1; col++) {
-                tiles[rowIndex][col] = tiles[rowIndex][col + 1];
+                Tile from = tileMap.getForward(new Position(rowIndex, col + 1));
+                tileMap.put(new Position(rowIndex, col), from);
             }
-            tiles[rowIndex][width - 1] = extraTile;
+            // Insert the extra tile at the end
+            tileMap.put(new Position(rowIndex, width - 1), extraTile);
+            // The first tile becomes the new extra tile
             extraTile = first;
 
+            // Update player tiles
             for (Map.Entry<Player, Position> entry : affectedPlayers.entrySet()) {
                 Player p = entry.getKey();
                 Position oldPos = entry.getValue();
@@ -185,12 +273,32 @@ public class Board {
                     System.out.println(p.getName() + " got pushed out! Appears on right.");
                     newCol = width - 1;
                 }
-                p.setCurrentPosition(new Position(rowIndex, newCol));
+                Tile newTile = tileMap.getForward(new Position(rowIndex, newCol));
+                p.setCurrentTile(newTile);
             }
         }
 
+        // After shifting tiles and updating positions, update each player's current tile
+        // and clear/set tile occupants accordingly.
+        synchronizePlayerTiles();
+
         currentMoveState = MoveState.MOVE;
         initializeGraph();
+    }
+
+    /**
+     * Synchronizes player state after tile shifts. Prior to removing the player reference
+     * from {@link Tile}, this method cleared and reassigned tile occupants. Now it
+     * remains as a placeholder so that any player-related post-shift logic can be
+     * centralised here. Currently it performs no actions because player occupancy is
+     * tracked solely on the {@link Player} instances.
+     */
+    private void synchronizePlayerTiles() {
+        // Tiles no longer maintain occupancy; player location is stored
+        // on each Player via its currentTile reference. This method remains
+        // as a placeholder to be invoked after shifting tiles, ensuring any
+        // board-specific logic related to players can be centralized here.
+        // Currently it performs no actions.
     }
 
 
@@ -217,7 +325,7 @@ public class Board {
             throw new IllegalArgumentException("Column can only be shifted UP or DOWN");
 
         for (int row = 0; row < height; row++) {
-            Tile tile = tiles[row][columnIndex];
+            Tile tile = tileMap.getForward(new Position(row, columnIndex));
             if (tile.isFixed() && !freeRoam) {
                 System.out.println("Column " + columnIndex + " contains fixed tiles. Cannot shift.");
                 return;
@@ -225,54 +333,71 @@ public class Board {
         }
 
         Map<Player, Position> affectedPlayers = new HashMap<>();
+        // Determine which players are on this column by inspecting their current tiles
         for (Player p : players) {
-            Position pos = p.getCurrentPosition();
-            if (pos != null && pos.getColumn() == columnIndex) {
-                affectedPlayers.put(p, pos);
+            Tile playerTile = p.getCurrentTile();
+            if (playerTile != null) {
+                Position pos = getPositionOfTile(playerTile);
+                if (pos != null && pos.getColumn() == columnIndex) {
+                    affectedPlayers.put(p, pos);
+                }
             }
         }
 
         if (direction == Direction.DOWN) {
-            Tile bottom = tiles[height - 1][columnIndex];
+            // Save the tile at the bottom which will become the new extra tile
+            Tile bottom = tileMap.getForward(new Position(height - 1, columnIndex));
+            // Shift tiles downwards
             for (int row = height - 1; row > 0; row--) {
-                tiles[row][columnIndex] = tiles[row - 1][columnIndex];
+                Tile from = tileMap.getForward(new Position(row - 1, columnIndex));
+                tileMap.put(new Position(row, columnIndex), from);
             }
-            tiles[0][columnIndex] = extraTile;
+            // Insert the extra tile at the top
+            tileMap.put(new Position(0, columnIndex), extraTile);
+            // The bottom tile becomes the new extra tile
             extraTile = bottom;
 
+            // Update player tiles
             for (Map.Entry<Player, Position> entry : affectedPlayers.entrySet()) {
                 Player p = entry.getKey();
                 Position oldPos = entry.getValue();
                 int newRow = oldPos.getRow() + 1;
-
                 if (newRow >= height) {
                     System.out.println(p.getName() + " got pushed out! Appears on top.");
                     newRow = 0;
                 }
-
-                p.setCurrentPosition(new Position(newRow, columnIndex));
+                Tile newTile = tileMap.getForward(new Position(newRow, columnIndex));
+                p.setCurrentTile(newTile);
             }
         } else { // UP
-            Tile top = tiles[0][columnIndex];
+            // Save the tile at the top which will become the new extra tile
+            Tile top = tileMap.getForward(new Position(0, columnIndex));
+            // Shift tiles upwards
             for (int row = 0; row < height - 1; row++) {
-                tiles[row][columnIndex] = tiles[row + 1][columnIndex];
+                Tile from = tileMap.getForward(new Position(row + 1, columnIndex));
+                tileMap.put(new Position(row, columnIndex), from);
             }
-            tiles[height - 1][columnIndex] = extraTile;
+            // Insert the extra tile at the bottom
+            tileMap.put(new Position(height - 1, columnIndex), extraTile);
+            // The top tile becomes the new extra tile
             extraTile = top;
 
+            // Update player tiles
             for (Map.Entry<Player, Position> entry : affectedPlayers.entrySet()) {
                 Player p = entry.getKey();
                 Position oldPos = entry.getValue();
                 int newRow = oldPos.getRow() - 1;
-
                 if (newRow < 0) {
                     System.out.println(p.getName() + " got pushed out! Appears on bottom.");
                     newRow = height - 1;
                 }
-
-                p.setCurrentPosition(new Position(newRow, columnIndex));
+                Tile newTile = tileMap.getForward(new Position(newRow, columnIndex));
+                p.setCurrentTile(newTile);
             }
         }
+
+        // Synchronize players with their new tiles
+        synchronizePlayerTiles();
 
         currentMoveState = MoveState.MOVE;
         initializeGraph();
@@ -285,8 +410,10 @@ public class Board {
      * @return set of reachable tiles
      */
     public Set<Tile> getReachableTiles(Player player) {
-        Position pos = player.getCurrentPosition();
-        Tile startTile = tiles[pos.getRow()][pos.getColumn()];
+        Tile startTile = player.getCurrentTile();
+        if (startTile == null) {
+            return Collections.emptySet();
+        }
         return graph.findReachable(startTile);
     }
 
@@ -298,8 +425,11 @@ public class Board {
      * @return set of reachable tiles
      */
     public Set<Tile> getReachableTilesArrayBased(Player player) {
-        Position pos = player.getCurrentPosition();
-        Tile start = tiles[pos.getRow()][pos.getColumn()];
+        Tile start = player.getCurrentTile();
+        if (start == null) {
+            return Collections.emptySet();
+        }
+        Position pos = getPositionOfTile(start);
 
         Set<Tile> visited = new HashSet<>();
         Queue<Position> queue = new ArrayDeque<>();
@@ -309,7 +439,7 @@ public class Board {
 
         while (!queue.isEmpty()) {
             Position current = queue.poll();
-            Tile currentTile = tiles[current.getRow()][current.getColumn()];
+            Tile currentTile = tileMap.getForward(current);
 
             for (Direction dir : Direction.values()) {
                 int newRow = current.getRow();
@@ -328,7 +458,7 @@ public class Board {
                 }
 
                 Position neighborPos = new Position(newRow, newCol);
-                Tile neighbor = tiles[newRow][newCol];
+                Tile neighbor = tileMap.getForward(new Position(newRow, newCol));
                 Direction oppositeDir = dir.opposite();
 
                 // Check if tiles are connected in this direction
@@ -352,11 +482,10 @@ public class Board {
         boolean tileHasTreasure;
 
         do {
-            row = random.nextInt(tiles.length);
-            col = random.nextInt(tiles[0].length);
-
-            tile = tiles[row][col];
-            tileHasTreasure = tile.getTreasureCard() != null;
+            row = random.nextInt(height);
+            col = random.nextInt(width);
+            tile = tileMap.getForward(new Position(row, col));
+            tileHasTreasure = tile != null && tile.getTreasureCard() != null;
         } while (isCornerCoordinate(row, col) || tileHasTreasure);
         System.out.println("Placing " + treasureCard.getTreasureName() + " at " + row + "/" + col);
 
@@ -364,13 +493,10 @@ public class Board {
     }
 
     public boolean isCornerCoordinate(int row, int col) {
-        int height = tiles.length;
-        int width = tiles[0].length;
-
         boolean isTopLeft = (row == 0 && col == 0);
-        boolean isTopRight = (row == 0 && col == width - 1);
-        boolean isBottomLeft = (row == height - 1 && col == 0);
-        boolean isBottomRight = (row == height - 1 && col == width - 1);
+        boolean isTopRight = (row == 0 && col == this.width - 1);
+        boolean isBottomLeft = (row == this.height - 1 && col == 0);
+        boolean isBottomRight = (row == this.height - 1 && col == this.width - 1);
 
         return isTopLeft || isTopRight || isBottomLeft || isBottomRight;
     }
@@ -386,14 +512,19 @@ public class Board {
             return false;
         }
 
-        Tile currentTile = tiles[player.getCurrentPosition().getRow()][player.getCurrentPosition().getColumn()];
-        Tile targetTile = tiles[targetRow][targetCol];
+        // Lookup the player's current tile and the target tile using the bi-directional mapping
+        Tile currentTile = player.getCurrentTile();
+        Tile targetTile = tileMap.getForward(new Position(targetRow, targetCol));
 
-        System.out.println("Current position: " + player.getCurrentPosition().getRow() + "/" + player.getCurrentPosition().getColumn());
+        Position currPos = (currentTile != null) ? getPositionOfTile(currentTile) : null;
+        System.out.println("Current position: " + (currPos != null ? currPos.getRow() + "/" + currPos.getColumn() : "none"));
         System.out.println("Moving " + player.getName() + " to " + targetRow + "/" + targetCol);
-        if(targetTile.getPlayer() != null){
-            System.out.println("Cant move a player is already on the target tile!");
-            return false;
+        // Check if another player is already on the target tile by inspecting players' currentTile
+        for (Player other : players) {
+            if (other != player && other.getCurrentTile() == targetTile) {
+                System.out.println("Cant move a player is already on the target tile!");
+                return false;
+            }
         }
 
         Set<Tile> reachable = getReachableTiles(player);
@@ -402,17 +533,19 @@ public class Board {
             return false;
         }
 
+        // Step onto the target tile (which may collect treasures)
         targetTile.getSteppedOnBy(player);
-        player.setCurrentPosition(new Position(targetRow, targetCol));
-        currentTile.setPlayer(null);
+        // Update player's logical tile
+        player.setCurrentTile(targetTile);
 
-        System.out.println("Player moved to " + player.getCurrentPosition());
+        Position newPos = getPositionOfTile(targetTile);
+        System.out.println("Player moved to " + (newPos != null ? newPos : "unknown"));
         currentPlayerIndex++;
         if (currentPlayerIndex >= players.size()) {
             currentPlayerIndex = 0;
         }
         currentMoveState = MoveState.PLACE_TILE;
 
-        return  true;
+        return true;
     }
 }

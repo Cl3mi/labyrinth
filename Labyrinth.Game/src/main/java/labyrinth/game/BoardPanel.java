@@ -3,6 +3,7 @@ package labyrinth.game;
 import labyrinth.game.enums.Direction;
 import labyrinth.game.models.Board;
 import labyrinth.game.models.Player;
+import labyrinth.game.models.Position;
 import labyrinth.game.models.Tile;
 import labyrinth.game.models.TreasureCard;
 
@@ -273,18 +274,24 @@ public class BoardPanel extends JPanel {
     private void drawPlayersOnTile(Graphics2D g2, int row, int col) {
         for (int i = 0; i < players.size(); i++) {
             Player p = players.get(i);
-            if (p != null && p.getCurrentPosition() != null && p.getCurrentPosition().getRow() == row && p.getCurrentPosition().getColumn() == col) {
-                int cx = xOffset + col * size + size / 2;
-                int cy = yOffset + row * size + size / 2;
+            if (p != null) {
+                var tile = p.getCurrentTile();
+                if (tile != null) {
+                    Position pos = board.getPositionOfTile(tile);
+                    if (pos != null && pos.getRow() == row && pos.getColumn() == col) {
+                        int cx = xOffset + col * size + size / 2;
+                        int cy = yOffset + row * size + size / 2;
 
-                g2.setColor(PLAYER_COLORS[i % PLAYER_COLORS.length]);
-                Font oldFont = g2.getFont();
-                g2.setFont(PLAYER_MARKER_FONT);
-                FontMetrics fm = g2.getFontMetrics();
-                String text = "P" + (i + 1);
-                int textWidth = fm.stringWidth(text);
-                g2.drawString(text, cx - textWidth / 2, cy + fm.getAscent() / 2 - fm.getDescent());
-                g2.setFont(oldFont);
+                        g2.setColor(PLAYER_COLORS[i % PLAYER_COLORS.length]);
+                        Font oldFont = g2.getFont();
+                        g2.setFont(PLAYER_MARKER_FONT);
+                        FontMetrics fm = g2.getFontMetrics();
+                        String text = "P" + (i + 1);
+                        int textWidth = fm.stringWidth(text);
+                        g2.drawString(text, cx - textWidth / 2, cy + fm.getAscent() / 2 - fm.getDescent());
+                        g2.setFont(oldFont);
+                    }
+                }
             }
         }
     }
@@ -371,7 +378,10 @@ public class BoardPanel extends JPanel {
 
         if (players != null && !players.isEmpty()) {
             for (Player p : players) {
-                var pos = p.getCurrentPosition();
+                Position pos = null;
+                if (p.getCurrentTile() != null) {
+                    pos = board.getPositionOfTile(p.getCurrentTile());
+                }
                 String positionText = (pos != null) ? "(" + pos.getRow() + "," + pos.getColumn() + ")" : "(not placed)";
                 infoLines.add(p.getName() + " at " + positionText);
             }
