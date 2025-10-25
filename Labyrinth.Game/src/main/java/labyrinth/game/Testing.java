@@ -1,6 +1,9 @@
 package labyrinth.game;
 
+import labyrinth.game.abstractions.IBoardFactory;
+import labyrinth.game.abstractions.ITreasureCardFactory;
 import labyrinth.game.factories.BoardFactory;
+import labyrinth.game.factories.TreasureCardFactory;
 import labyrinth.game.models.*;
 
 public class Testing {
@@ -10,31 +13,35 @@ public class Testing {
 
     public static void debug(){
         // Lets Simulate creating a room here. Player presses something like "create lobby"
-        Room room = new Room("Room-123");
-        Player p1 = new Player("P1", "Alice");
-        room.join(p1);
+        var game = Game.getInstance();
+        ITreasureCardFactory treasureCardsFactory = new TreasureCardFactory();
+        IBoardFactory boardFactory = new BoardFactory();
+
+        var p1 = new Player("P1", "Alice");
+        game.join(p1);
 
         // Different settings are made in the lobby screen
-        room.setMaxPlayers(4);
-        room.setAmountOfTreasuresPerPlayer(7);
-        room.setBoardHeight(7);
-        room.setBoardWidth(7);
+        game.setMaxPlayers(4);
+        game.setAmountOfTreasuresPerPlayer(7);
+        game.setBoardHeight(7);
+        game.setBoardWidth(7);
 
         // More Players join the lobby
         Player p2 = new Player("P2", "Bob");
         Player p3 = new Player("P3", "Charlie");
         Player p4 = new Player("P4", "Dover");
 
-        room.join(p2);
-        room.join(p3);
-        room.join(p4);
+        game.join(p2);
+        game.join(p3);
+        game.join(p4);
 
         // Request to start the game is sent
-        Board board = BoardFactory.createRandomBoard(room.getBoardWidth(), room.getBoardHeight());
-        room.setBoard(board);
-        room.startGame();
+        var board = boardFactory.createBoardForGame(game);
+        var treasureCards = treasureCardsFactory.createCardsForGame(game);
+        game.setBoard(board);
+        game.startGame(treasureCards);
 
         // Open Debug Viewer
-        LabyrinthViewer.viewSwing(room);
+        LabyrinthViewer.viewSwing(game);
     }
 }

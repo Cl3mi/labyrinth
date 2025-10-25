@@ -1,19 +1,24 @@
 package labyrinth.game.models;
 
 import labyrinth.game.enums.RoomState;
-import labyrinth.game.factories.TreasureCardFactory;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 
 /**
  * Represents a game room for the Labyrinth game.
  * Each room has a unique code, a board, and manages 2–4 players.
  */
-public class Room {
+public class Game {
+    //#region singleton
+    private static final Game INSTANCE = new Game();
 
-    private final String roomCode;
+    public static Game getInstance() {
+        return INSTANCE;
+    }
+    //#endregion
+
+    //#region fields
     private int maxPlayers;
     private int amountOfTreasuresPerPlayer;
     private Board board;
@@ -22,14 +27,14 @@ public class Room {
 
     private int boardWidth;
     private int boardHeight;
+    //#endregion
 
+    //#region ctor
     /**
      * Creates a new game room.
      *
-     * @param roomCode          unique identifier for the room
      */
-    public Room(String roomCode) {
-        this.roomCode = Objects.requireNonNull(roomCode);
+    private Game() {
         this.maxPlayers = 4;
         this.amountOfTreasuresPerPlayer = 6;
         this.players = new ArrayList<>();
@@ -39,11 +44,9 @@ public class Room {
         this.boardWidth = 7;
         this.boardHeight = 7;
     }
+    //#endregion
 
-    public String getRoomCode() {
-        return roomCode;
-    }
-
+    //#region getters and setters
     public int getMaxPlayers() {
         return maxPlayers;
     }
@@ -93,7 +96,9 @@ public class Room {
     public void setBoard(Board board) {
         this.board = board;
     }
+    //#endregion
 
+    //#region methods
     /**
      * Adds a player to the room.
      *
@@ -115,13 +120,20 @@ public class Room {
      * Starts the game. This method could be extended to initialize
      * player positions, shuffle treasure cards, and set up the board.
      */
-    public void startGame() {
+    public void startGame(List<TreasureCard> cards) {
+        if(roomState != RoomState.LOBBY) {
+            throw new IllegalStateException("Cannot start a game that is in progress or finished!");
+        }
+
         if (players.size() < 2) {
             throw new IllegalStateException("At least 2 players required to start the game");
         }
 
-        List<TreasureCard> cards = TreasureCardFactory.createRandomCards(amountOfTreasuresPerPlayer * players.size());
-        System.out.println( cards.size() + " cards have been created");
+        if (cards.size() != amountOfTreasuresPerPlayer * players.size()) {
+            throw new IllegalStateException("Not the right amount of treasure cards supplied. Got " + cards.size() + ", expected " + amountOfTreasuresPerPlayer * players.size());
+        }
+
+        System.out.println(cards.size() + " cards have been created");
         do {
             TreasureCard card = cards.getFirst();
             board.placeRandomTreasure(card);
@@ -152,16 +164,16 @@ public class Room {
         }
 
         this.board.setPlayers(players);
-        System.out.println("Game started in room " + roomCode + " with " + players.size() + " players.");
+        System.out.println("Game started in GameLobby" + "with " + players.size() + " players.");
     }
 
     @Override
     public String toString() {
         return "Room{" +
-                "roomCode='" + roomCode + '\'' +
                 ", maxPlayers=" + maxPlayers +
                 ", treasuresToCollect=" + amountOfTreasuresPerPlayer +
                 ", players=" + players +
                 '}';
     }
+    //#endregion
 }
