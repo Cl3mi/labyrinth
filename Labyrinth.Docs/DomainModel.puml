@@ -1,0 +1,88 @@
+@startuml
+title Das verrückte Labyrinth – Domain Model
+
+skinparam dpi 150
+skinparam shadowing true
+skinparam roundCorner 10
+skinparam linetype ortho
+skinparam classAttributeIconSize 0
+hide empty members
+
+'----------------------------
+' Main Entities (Domain)
+'----------------------------
+class Game {
+  - playerNumber : int [2..4]
+  - treasuresToCollectPerPlayer : int [1..10]
+  - timeLimit : Duration
+}
+
+class Player {
+  - name : String
+  - rowPosition : int
+  - columnPosition : int
+  - points: int
+}
+
+
+class Board {
+  - width : int
+  - height : int
+}
+
+class Tile {
+  - openings : Set<Direction>  'e.g., L-, I-, or T-shaped
+  - fixed: boolean
+}
+
+class TreasureCard {
+  - treasureName : String
+  - collected : boolean
+  - pointsReward: int
+}
+
+class Treasure {
+  - treasureName : String
+  - rowPosition : int
+  - columnPosition : int
+}
+
+class Bonus {
+  - bonusName : String
+  - bonusDescription : String
+  - rowPosition : int
+  - columnPosition : int
+}
+
+class Achievement {
+  - achievementName : String
+  - description : String
+  - pointsReward : int
+}
+
+class Turn {
+  - turnNumber : int
+  - currentPlayer : Player
+}
+
+enum Direction {
+  UP
+  DOWN
+  LEFT
+  RIGHT
+}
+
+'----------------------------
+' Relationships (Domain)
+'----------------------------
+Game "1" o--- "2..4" Player : has >
+Game "1" *--- "1" Board : contains >
+Board "1" *-- "*" Tile : consists of > 
+Player "0..*" o---- "1..*" TreasureCard : owns >
+Player "0..*" o-- "1..*" Bonus : owns >
+Tile ---> Treasure  : may hold >
+Tile --> Bonus  : may hold >
+Player "1" o--- "*" Achievement : earns >
+TreasureCard "*" o-- "1" Treasure : represents >
+Game "1" o-- "*" Turn : consists of >
+@enduml

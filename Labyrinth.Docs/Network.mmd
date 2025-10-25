@@ -1,0 +1,30 @@
+%% Network Architecture / Data Flow – The aMAZEing Labyrinth
+flowchart TD
+    %% Clusters / Containers
+    subgraph Lobby["Lobby Server"]
+        A1["Server Registry"]
+        A2["Server List API"]
+    end
+
+    subgraph GameServer["Game Server"]
+        B1["Game Logic"]
+        B2["Matchmaking"]
+        B3["Network Handler"]
+        B4["Game Log"]
+    end
+
+    subgraph Client["Client"]
+        C1["GUI"]
+        C2["Network Client"]
+        C3["AI Agent"]
+    end
+
+    %% Connections
+    GameServer -.->|POST/PUT/DELETE /server| Lobby:::softRed
+    Client -->|GET /server| Lobby:::softBlue
+    Client -->|ws: /client/actions| GameServer:::softBlue
+    GameServer -->|ws: /server/broadcast| Client:::softBlue
+
+    %% Styles
+    classDef softRed stroke:#ff9999,stroke-width:2px,color:#cc0000;
+    classDef softBlue stroke:#66b3ff,stroke-width:2px,color:#004080;

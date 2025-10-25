@@ -1,6 +1,5 @@
 package labyrinth.game;
 
-import labyrinth.game.factories.BoardFactory;
 import labyrinth.game.models.*;
 
 import javax.swing.*;
@@ -78,7 +77,7 @@ public class LabyrinthViewer {
         viewSwing(board, null);
     }
 
-    public static void viewSwing(Room room) {
-        viewSwing(room.getBoard(), room.getPlayers());
+    public static void viewSwing(Game game) {
+        viewSwing(game.getBoard(), game.getPlayers());
     }
 }

@@ -1,5 +1,6 @@
 package labyrinth.game.factories;
 
+import labyrinth.game.abstractions.IBoardFactory;
 import labyrinth.game.models.*;
 import labyrinth.game.enums.*;
 
@@ -9,19 +10,15 @@ import java.util.*;
 /**
  * Factory class to generate random labyrinth boards.
  */
-public class BoardFactory {
+public class BoardFactory implements IBoardFactory {
 
     private static final Random RANDOM = new Random();
 
-    /**
-     * Generates a random board with given dimensions.
-     * Each tile is randomly selected from corner, straight, or T-junction shapes.
-     *
-     * @param width  number of columns
-     * @param height number of rows
-     * @return generated Board
-     */
-    public static Board createRandomBoard(int width, int height) {
+
+    @Override
+    public Board createBoardForGame(Game game) {
+        var width = game.getBoardWidth();
+        var height = game.getBoardHeight();
         Tile[][] tiles = new Tile[height][width];
 
         for (int row = 0; row < height; row++) {
@@ -52,7 +49,7 @@ public class BoardFactory {
                             tile.rotate();
                         }
                     }
-                        tile.setIsFixed(true);
+                    tile.setIsFixed(true);
                 } else {
                     tile = createRandomTile();
                 }

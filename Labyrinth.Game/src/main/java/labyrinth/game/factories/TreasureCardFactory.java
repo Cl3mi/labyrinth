@@ -1,5 +1,7 @@
 package labyrinth.game.factories;
 
+import labyrinth.game.abstractions.ITreasureCardFactory;
+import labyrinth.game.models.Game;
 import labyrinth.game.models.TreasureCard;
 
 import java.util.ArrayList;
@@ -11,7 +13,7 @@ import java.util.UUID;
  * Factory class to create TreasureCards for the game.
  * Maintains a predefined set of treasure names.
  */
-public class TreasureCardFactory {
+public class TreasureCardFactory implements ITreasureCardFactory {
 
     private static final List<String> TREASURE_NAMES = List.of(
             "Crown", "Jewel", "Goblet", "Ring", "Coin",
@@ -24,22 +26,20 @@ public class TreasureCardFactory {
             "Carving", "Figurine", "Crystal", "Talisman", "RingBox"
     );
 
-    /**
-     * Creates a list of randomly selected TreasureCards.
-     *
-     * @param count number of cards to create
-     * @return list of TreasureCards
-     */
-    public static List<TreasureCard> createRandomCards(int count) {
-        if (count < 1 || count > TREASURE_NAMES.size()) {
-            throw new IllegalArgumentException("Count must be between 1 and " + TREASURE_NAMES.size());
+    @Override
+    public List<TreasureCard> createCardsForGame(Game game) {
+        var playerCount = game.getPlayers().size();
+        var treasuresToGenerate = game.getAmountOfTreasuresPerPlayer() * playerCount;
+
+        if (treasuresToGenerate < 1 || treasuresToGenerate > TREASURE_NAMES.size()) {
+            throw new IllegalArgumentException("Count must be between 1 and " + TREASURE_NAMES.size()/playerCount);
         }
 
         List<String> shuffledNames = new ArrayList<>(TREASURE_NAMES);
         Collections.shuffle(shuffledNames);
 
         List<TreasureCard> cards = new ArrayList<>();
-        for (int i = 0; i < count; i++) {
+        for (int i = 0; i < treasuresToGenerate; i++) {
             String name = shuffledNames.get(i);
             String id = UUID.randomUUID().toString();
             String imagePath = "/images/treasures/" + name.toLowerCase() + ".png";
