@@ -3,12 +3,11 @@ package labyrinth.game.models;
 import java.util.HashMap;
 import java.util.Map;
 
-class BiMap<K, V> {
+public class BiMap<K, V> {
     private final Map<K, V> forward = new HashMap<>();
     private final Map<V, K> backward = new HashMap<>();
 
     public void put(K key, V value) {
-        // Remove previous mapping if either side existed
         if (forward.containsKey(key)) {
             backward.remove(forward.get(key));
         }

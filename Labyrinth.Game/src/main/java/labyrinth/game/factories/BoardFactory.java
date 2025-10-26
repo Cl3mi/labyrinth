@@ -3,6 +3,8 @@ package labyrinth.game.factories;
 import labyrinth.game.abstractions.IBoardFactory;
 import labyrinth.game.models.*;
 import labyrinth.game.enums.*;
+import labyrinth.game.models.BiMap;
+import labyrinth.game.models.Position;
 
 import java.security.DigestException;
 import java.util.*;
@@ -14,26 +16,20 @@ public class BoardFactory implements IBoardFactory {
 
     private static final Random RANDOM = new Random();
 
-
     @Override
     public Board createBoardForGame(Game game) {
         var width = game.getBoardWidth();
         var height = game.getBoardHeight();
-        Tile[][] tiles = new Tile[height][width];
+        BiMap<Position, Tile> tileMap = new BiMap<>();
 
         for (int row = 0; row < height; row++) {
             for (int col = 0; col < width; col++) {
                 Tile tile;
 
-                // Since the board is not always uneven we need a more sophisticated logic
-                // than % 2. If one direction is even, keep the middle two fixed and every
-                // second from there on also
                 boolean rowFixed = shouldBeFixed(row, height);
                 boolean colFixed = shouldBeFixed(col, width);
 
                 if (rowFixed && colFixed) {
-                    // Fixed tiles should always have 3 entrances
-                    // Fixed tiles on the outside should always look to the inside
                     if(row == 0) {
                         tile = new Tile(EnumSet.of(Direction.DOWN, Direction.RIGHT, Direction.LEFT));
                     } else if(col == 0) {
@@ -54,21 +50,16 @@ public class BoardFactory implements IBoardFactory {
                     tile = createRandomTile();
                 }
 
-                tiles[row][col] = tile;
+                tileMap.put(new Position(row, col), tile);
             }
         }
 
-        // Replace corner tiles, maybe we can do the in the loop already, but rn im too lazy
-        tiles[0][0] = new Tile(EnumSet.of(Direction.DOWN, Direction.RIGHT));
-        tiles[0][0].setIsFixed(true);
-        tiles[0][width-1] = new Tile(EnumSet.of(Direction.DOWN, Direction.LEFT));
-        tiles[0][width-1].setIsFixed(true);
-        tiles[height-1][0] = new Tile(EnumSet.of(Direction.UP, Direction.RIGHT));
-        tiles[height-1][0].setIsFixed(true);
-        tiles[height-1][width-1] = new Tile(EnumSet.of(Direction.UP, Direction.LEFT));
-        tiles[height-1][width-1].setIsFixed(true);
+        tileMap.put(new Position(0, 0), new Tile(EnumSet.of(Direction.DOWN, Direction.RIGHT)) {{ setIsFixed(true); }});
+        tileMap.put(new Position(0, width-1), new Tile(EnumSet.of(Direction.DOWN, Direction.LEFT)) {{ setIsFixed(true); }});
+        tileMap.put(new Position(height-1, 0), new Tile(EnumSet.of(Direction.UP, Direction.RIGHT)) {{ setIsFixed(true); }});
+        tileMap.put(new Position(height-1, width-1), new Tile(EnumSet.of(Direction.UP, Direction.LEFT)) {{ setIsFixed(true); }});
 
-        return new Board(width, height, tiles,createRandomTile());
+        return new Board(width, height, tileMap, createRandomTile());
     }
 
     /**

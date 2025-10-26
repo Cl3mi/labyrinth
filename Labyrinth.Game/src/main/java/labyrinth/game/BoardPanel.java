@@ -1,11 +1,7 @@
 package labyrinth.game;
 
 import labyrinth.game.enums.Direction;
-import labyrinth.game.models.Board;
-import labyrinth.game.models.Player;
-import labyrinth.game.models.Position;
-import labyrinth.game.models.Tile;
-import labyrinth.game.models.TreasureCard;
+import labyrinth.game.models.*;
 
 import javax.swing.*;
 import java.awt.*;
@@ -43,7 +39,7 @@ public class BoardPanel extends JPanel {
     };
 
     // --- Class Fields ---
-    private final Board board;
+    private final Game game;
     private Player currentPlayer;
     private final List<Player> players;
     private int currentPlayerIndex = 0;
@@ -59,8 +55,8 @@ public class BoardPanel extends JPanel {
     /**
      * Creates a viewer panel for the given board and list of players.
      */
-    public BoardPanel(Board board, Player currentPlayer, List<Player> players) {
-        this.board = board;
+    public BoardPanel(Game game, Player currentPlayer, List<Player> players) {
+        this.game = game;
         this.currentPlayer = currentPlayer;
         this.players = players != null ? players : List.of();
         this.reachableTiles = new HashSet<>();
@@ -70,12 +66,7 @@ public class BoardPanel extends JPanel {
         setupMouseListener();
     }
 
-    /**
-     * Creates a viewer panel for the given board and optional player.
-     */
-    public BoardPanel(Board board, Player currentPlayer) {
-        this(board, currentPlayer, currentPlayer != null ? List.of(currentPlayer) : List.of());
-    }
+
 
     // =================================================================================
     // MOUSE EVENT HANDLING
@@ -103,9 +94,9 @@ public class BoardPanel extends JPanel {
         for (ArrowButton arrow : arrowButtons) {
             if (arrow.contains(p)) {
                 if (arrow.isRow) {
-                    board.shiftRow(arrow.index, arrow.direction, currentPlayer);
+                    game.shift(arrow.index, arrow.direction, currentPlayer);
                 } else {
-                    board.shiftColumn(arrow.index, arrow.direction, currentPlayer);
+                    game.shift(arrow.index, arrow.direction, currentPlayer);
                 }
                 updateReachableTilesAndRepaint();
                 return true;
@@ -122,13 +113,13 @@ public class BoardPanel extends JPanel {
         System.out.println("Current player: " + currentPlayer);
 
         outer:
-        for (int row = 0; row < board.getHeight(); row++) {
-            for (int col = 0; col < board.getWidth(); col++) {
+        for (int row = 0; row < game.getBoard().getHeight(); row++) {
+            for (int col = 0; col < game.getBoard().getWidth(); col++) {
                 Rectangle tileRect = new Rectangle(xOffset + col * size, yOffset + row * size, size, size);
                 if (tileRect.contains(p)) {
-                    Tile clickedTile = board.getTiles()[row][col];
+                    Tile clickedTile = game.getBoard().getTiles()[row][col];
                     if (reachableTiles.contains(clickedTile)) {
-                        boolean moved = board.movePlayerToTile(currentPlayer, row, col);
+                        boolean moved = game.movePlayerToTile(row, col, currentPlayer);
                         if (moved) {
                             updateReachableTilesAndRepaint();
                         }
@@ -146,8 +137,19 @@ public class BoardPanel extends JPanel {
     private void updateReachableTilesAndRepaint() {
         reachableTiles.clear();
         if (currentPlayer != null) {
-            reachableTiles.addAll(board.getReachableTiles(currentPlayer));
+            reachableTiles.addAll(game.getBoard().getReachableTiles(currentPlayer));
         }
+
+        repaint();
+    }
+
+    public void updateReachableTilesAndRepaintAuto() {
+        currentPlayer = game.getPlayers().get(game.getCurrentPlayerIndex());
+        reachableTiles.clear();
+        if (currentPlayer != null) {
+            reachableTiles.addAll(game.getBoard().getReachableTiles(currentPlayer));
+        }
+
         repaint();
     }
 
@@ -158,7 +160,7 @@ public class BoardPanel extends JPanel {
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
-        if (board == null) return;
+        if (game.getBoard() == null) return;
 
         Graphics2D g2 = (Graphics2D) g.create();
         try {
@@ -184,16 +186,17 @@ public class BoardPanel extends JPanel {
     private void calculateLayoutMetrics() {
         int w = getWidth() - 2 * arrowSize - PANEL_PADDING - CARD_PANEL_WIDTH;
         int h = getHeight() - 2 * arrowSize - PANEL_PADDING;
-        size = Math.min(w / board.getWidth(), h / board.getHeight());
+        size = Math.min(w / game.getBoard().getWidth(), h / game.getBoard().getHeight());
 
-        xOffset = CARD_PANEL_WIDTH + (getWidth() - size * board.getWidth()) / 2;
-        yOffset = (getHeight() - size * board.getHeight()) / 2;
+        xOffset = CARD_PANEL_WIDTH + (getWidth() - size * game.getBoard().getWidth()) / 2;
+        yOffset = (getHeight() - size * game.getBoard().getHeight()) / 2;
     }
 
     /**
      * Draws the main grid of tiles and the players on them.
      */
     private void drawBoardGrid(Graphics2D g2) {
+        var board = game.getBoard();
         for (int row = 0; row < board.getHeight(); row++) {
             for (int col = 0; col < board.getWidth(); col++) {
                 Tile tile = board.getTiles()[row][col];
@@ -272,6 +275,7 @@ public class BoardPanel extends JPanel {
      * Draws any players located on the specified tile.
      */
     private void drawPlayersOnTile(Graphics2D g2, int row, int col) {
+        var board = game.getBoard();
         for (int i = 0; i < players.size(); i++) {
             Player p = players.get(i);
             if (p != null) {
@@ -300,6 +304,7 @@ public class BoardPanel extends JPanel {
      * Clears, recreates, and draws all the arrow buttons.
      */
     private void createAndDrawArrowButtons(Graphics2D g2) {
+        var board = game.getBoard();
         arrowButtons.clear();
         g2.setColor(ARROW_COLOR);
         g2.setStroke(new BasicStroke(2));
@@ -344,6 +349,7 @@ public class BoardPanel extends JPanel {
      * Draws the extra tile in the corner of the panel.
      */
     private void drawExtraTile(Graphics2D g2) {
+        var board = game.getBoard();
         Tile extraTile = board.getExtraTile();
         if (extraTile != null) {
             int margin = 20;
@@ -355,6 +361,7 @@ public class BoardPanel extends JPanel {
     }
 
     private void drawDebugInfo(Graphics2D g2) {
+        var board = game.getBoard();
         int infoX = getWidth() - 250;
         int infoY = 40;
 
@@ -362,7 +369,7 @@ public class BoardPanel extends JPanel {
         g2.setColor(Color.RED);
 
         List<String> infoLines = new ArrayList<>();
-        var players = board.getPlayers();
+        var players = game.getPlayers();
 
         if (players != null && !players.isEmpty()) {
             var current = players.get(board.getCurrentPlayerIndex());
@@ -432,6 +439,7 @@ public class BoardPanel extends JPanel {
     }
 
     public void rotateExtraTile() {
+        var board = game.getBoard();
         if (board.getExtraTile() != null) {
             board.getExtraTile().rotate();
             repaint();
@@ -439,6 +447,7 @@ public class BoardPanel extends JPanel {
     }
 
     public void toggleFreeRoam() {
+        var board = game.getBoard();
         board.setFreeRoam(!board.getFreeRoam());
         repaint();
     }
