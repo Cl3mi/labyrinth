@@ -1,6 +1,8 @@
 package labyrinth.game.models;
 
+import labyrinth.game.abstractions.IBoardEventListener;
 import labyrinth.game.enums.*;
+import labyrinth.game.events.BoardEvent;
 
 import java.util.*;
 
@@ -37,7 +39,7 @@ public class Board {
         this.width = width;
         this.height = height;
         this.tileMap = tileMap;
-        this.graph = new Graph();
+        this.graph = new Graph(this);
         initializeGraph();
         this.extraTile = extraTile;
     }
@@ -156,6 +158,7 @@ public class Board {
         tileMap.put(new Position(0, columnIndex), extraTile);
         adjustPlayersOnPushedOutTile(pushedOut);
         extraTile = bottom;
+        notifyListeners(BoardEventType.COLUMN_SHIFTED, columnIndex);
         return true;
     }
 
@@ -173,6 +176,7 @@ public class Board {
         tileMap.put(new Position(height - 1, columnIndex), extraTile);
         adjustPlayersOnPushedOutTile(pushedOut);
         extraTile = top;
+        notifyListeners(BoardEventType.COLUMN_SHIFTED, columnIndex);
         return true;
     }
 
@@ -192,6 +196,7 @@ public class Board {
         tileMap.put(new Position(rowIndex, width - 1), extraTile);
         adjustPlayersOnPushedOutTile(pushedOut);
         extraTile = first;
+        notifyListeners(BoardEventType.ROW_SHIFTED, rowIndex);
         return true;
     }
 
@@ -211,6 +216,7 @@ public class Board {
         tileMap.put(new Position(rowIndex, 0), extraTile);
         adjustPlayersOnPushedOutTile(pushedOut);
         extraTile = last;
+        notifyListeners(BoardEventType.ROW_SHIFTED, rowIndex);
         return true;
     }
 
@@ -319,6 +325,25 @@ public class Board {
             if (player.getCurrentTile() == pushedOutTile) {
                 player.setCurrentTile(extraTile);
             }
+        }
+    }
+
+
+    // Obserser stuff, refactor later
+    private final List<IBoardEventListener> listeners = new ArrayList<>();
+
+    public void addListener(IBoardEventListener listener) {
+        listeners.add(listener);
+    }
+
+    public void removeListener(IBoardEventListener listener) {
+        listeners.remove(listener);
+    }
+
+    private void notifyListeners(BoardEventType type, int index) {
+        var event = new BoardEvent(type, index);
+        for (IBoardEventListener listener : listeners) {
+            listener.onBoardEvent(event);
         }
     }
 }
