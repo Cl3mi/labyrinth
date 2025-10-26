@@ -12,16 +12,16 @@ import java.util.List;
  * Generates a random board using BoardFactory and displays it.
  */
 public class LabyrinthViewer {
-
-    public static void viewSwing(Board board, List<Player> player) {
+    private static BoardPanel currentPanel;
+    public static void viewSwing(Game game, List<Player> player) {
         SwingUtilities.invokeLater(() -> {
-            var reachable = board.getReachableTiles(player.getFirst());
+            var reachable = game.getBoard().getReachableTiles(player.getFirst());
 
             JFrame frame = new JFrame("Labyrinth Board Viewer - Player can reach " + reachable.size() + " Tiles");
             frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
-            BoardPanel panel = new BoardPanel(board, player.getFirst(), player);
-            frame.add(panel);
+            currentPanel = new BoardPanel(game, player.getFirst(), player);
+            frame.add(currentPanel);
 
             frame.pack();
             frame.setLocationRelativeTo(null);
@@ -33,7 +33,7 @@ public class LabyrinthViewer {
                     if (e.getKeyChar() == 'q' || e.getKeyChar() == 'Q') {
                         frame.dispose(); // Close old GUI
                         System.out.println("\n--- Resetting debug ---\n");
-                        Testing.debug(); // Re-run debug
+                        Testing.simulateGameStart(); // Re-run debug
                     }
                 }
             });
@@ -42,7 +42,7 @@ public class LabyrinthViewer {
                 @Override
                 public void keyPressed(KeyEvent e) {
                     if (e.getKeyChar() == 'p' || e.getKeyChar() == 'P') {
-                        panel.switchPlayer();
+                        currentPanel.switchPlayer();
                     }
                 }
             });
@@ -51,7 +51,7 @@ public class LabyrinthViewer {
                 @Override
                 public void keyPressed(KeyEvent e) {
                     if (e.getKeyChar() == 'r' || e.getKeyChar() == 'R') {
-                        panel.rotateExtraTile();
+                        currentPanel.rotateExtraTile();
                     }
                 }
             });
@@ -60,7 +60,7 @@ public class LabyrinthViewer {
                 @Override
                 public void keyPressed(KeyEvent e) {
                     if (e.getKeyChar() == 'f' || e.getKeyChar() == 'F') {
-                        panel.toggleFreeRoam();
+                        currentPanel.toggleFreeRoam();
                     }
                 }
             });
@@ -73,11 +73,13 @@ public class LabyrinthViewer {
     /**
      * Convenience overload for showing the board without a player.
      */
-    public static void viewSwing(Board board) {
-        viewSwing(board, null);
+    public static void viewSwing(Game game) {
+        viewSwing(game, game.getPlayers());
     }
 
-    public static void viewSwing(Game game) {
-        viewSwing(game.getBoard(), game.getPlayers());
+    public static void repaintView() {
+        if (currentPanel != null) {
+            currentPanel.updateReachableTilesAndRepaintAuto();
+        }
     }
 }

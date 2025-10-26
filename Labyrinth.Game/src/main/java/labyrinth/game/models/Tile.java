@@ -14,7 +14,6 @@ public class Tile {
     private final EnumSet<Direction> entrances;
     private boolean isFixed;
     private TreasureCard treasureCard;
-    private Player player;
 
     /**
      * Creates a tile with specified entrances and optional treasure.
@@ -48,12 +47,25 @@ public class Tile {
         this.treasureCard = treasureCard;
     }
 
+    /**
+     * Tiles no longer maintain a direct reference to a player. To determine which
+     * player occupies a tile, inspect the {@code currentTile} reference on each
+     * {@link Player} instead.
+     */
+    @Deprecated
     public Player getPlayer() {
-        return player ;
+        return null;
     }
 
+    /**
+     * Tiles no longer maintain a direct reference to a player. Player movement is
+     * tracked via {@link Player#setCurrentTile(Tile)}.
+     *
+     * @param player the player to set (ignored)
+     */
+    @Deprecated
     public void setPlayer(Player player) {
-        this.player = player;
+        // no-op: occupancy handled by Player
     }
 
     /**
@@ -87,10 +99,11 @@ public class Tile {
     }
 
     public void getSteppedOnBy(Player player){
-        this.player = player;
-
-        if(treasureCard != null){
-            if(player.getAssignedTreasureCards().contains(treasureCard)){
+        // When a player steps on this tile, collect treasure if appropriate.
+        // Tiles no longer store the occupant; the calling code updates
+        // the player's current tile instead.
+        if (treasureCard != null) {
+            if (player.getAssignedTreasureCards().contains(treasureCard)) {
                 System.out.println("Card: " + treasureCard.getTreasureName());
                 treasureCard.collect();
                 this.treasureCard = null;

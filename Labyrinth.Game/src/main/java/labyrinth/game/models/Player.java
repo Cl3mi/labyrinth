@@ -7,15 +7,18 @@ import java.util.*;
 /**
  * Represents a player in the Labyrinth game.
  * Each player has a unique ID, a name, a list of assigned treasure cards,
- * and a current position on the board.
+ * and a current tile on the board.
  */
 public class Player {
 
     private final String id;
     private final String name;
     private final List<TreasureCard> assignedTreasureCards;
-    private Position currentPosition;
-    private Set<Tile> reachableTiles; // Optional cache for reachable tiles
+    /**
+     * The tile on which the player is currently standing. The board is
+     * responsible for updating this reference when the player moves.
+     */
+    private Tile currentTile;
 
     /**
      * Creates a new player with a given ID, name, and list of treasure cards.
@@ -27,8 +30,7 @@ public class Player {
         this.id = Objects.requireNonNull(id);
         this.name = Objects.requireNonNull(name);
         this.assignedTreasureCards = new ArrayList<>();
-        this.currentPosition = null;
-        this.reachableTiles = null;
+        this.currentTile = null;
     }
 
     public String getId() {
@@ -43,35 +45,26 @@ public class Player {
         return assignedTreasureCards;
     }
 
-    public Position getCurrentPosition() {
-        return currentPosition;
-    }
-
-    public void setCurrentPosition(Position currentPosition) {
-        this.currentPosition = currentPosition;
-    }
-
-    public Set<Tile> getReachableTiles() {
-        return reachableTiles == null ? Set.of() : new HashSet<>(reachableTiles);
-    }
-
-    public void setReachableTiles(Set<Tile> reachableTiles) {
-        this.reachableTiles = new HashSet<>(reachableTiles);
-    }
 
     /**
-     * Moves the player to the specified tile.
+     * Returns the tile on which this player is currently standing.
      *
-     * @param tile the tile to move to
+     * @return the current tile, or null if the player is not placed on the board
      */
-    public void moveTo(Tile tile) throws ExecutionControl.NotImplementedException {
-        throw new ExecutionControl.NotImplementedException("Not implemented yet");
+    public Tile getCurrentTile() {
+        return currentTile;
     }
+
     /**
-     * Collects the treasure if the player is on a tile with a matching treasure card.
+     * Sets the tile on which this player is standing. This should only be
+     * invoked by the board when it moves players or reassigns their
+     * positions.  The board is responsible for updating this reference
+     * whenever a player moves on the board.
+     *
+     * @param tile the tile on which the player now stands
      */
-    public void collectTreasure() throws ExecutionControl.NotImplementedException {
-        throw new ExecutionControl.NotImplementedException("Not implemented yet");
+    public void setCurrentTile(Tile tile) {
+        this.currentTile = tile;
     }
 
     @Override
@@ -79,7 +72,7 @@ public class Player {
         return "Player{" +
                 "id='" + id + '\'' +
                 ", name='" + name + '\'' +
-                ", currentPosition=" + currentPosition +
+                ", currentTile=" + (currentTile != null ? currentTile : "null") +
                 ", treasures=" + assignedTreasureCards +
                 '}';
     }
