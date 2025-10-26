@@ -22,7 +22,7 @@ public class Graph implements IBoardEventListener {
     public Graph(Board board) {
         this.board = board;
         this.adjacencyList = new HashMap<>();
-        //initializeGraph();
+        initializeGraph();
     }
 
     /**
@@ -136,8 +136,8 @@ public class Graph implements IBoardEventListener {
     @Override
     public void onBoardEvent(BoardEvent event) {
         switch (event.type()) {
-            //case ROW_SHIFTED -> updateAfterRowShift(event.index());
-            //case COLUMN_SHIFTED -> updateAfterColumnShift(event.index());
+            case ROW_SHIFTED -> updateAfterRowShift(event.index());
+            case COLUMN_SHIFTED -> updateAfterColumnShift(event.index());
         }
     }
 
@@ -173,10 +173,12 @@ public class Graph implements IBoardEventListener {
     }
 
     public void initializeGraph() {
+        clear();
+
         var height = board.getHeight();
         var width = board.getWidth();
         var tileMap = board.getTileMap();
-
+        
         for (int row = 0; row < height; row++) {
             for (int col = 0; col < width; col++) {
                 Tile tile = tileMap.getForward(new Position(row, col));

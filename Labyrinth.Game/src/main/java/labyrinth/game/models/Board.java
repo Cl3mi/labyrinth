@@ -40,10 +40,9 @@ public class Board {
         this.height = height;
         this.tileMap = tileMap;
         this.graph = new Graph(this);
-        initializeGraph();
+        this.addListener(this.graph);
         this.extraTile = extraTile;
     }
-
 
     public int getWidth() {
         return width;
@@ -108,38 +107,6 @@ public class Board {
 
     public int getCurrentPlayerIndex() {
         return currentPlayerIndex;
-    }
-
-    /**
-     * Initializes the graph by connecting adjacent tiles based on entrances.
-     */
-    public void initializeGraph() {
-        graph.clear();
-        for (int row = 0; row < height; row++) {
-            for (int col = 0; col < width; col++) {
-                Tile tile = tileMap.getForward(new Position(row, col));
-                graph.addTile(tile);
-
-                // Connect with neighbors if entrances match
-                if (row > 0) {
-                    Tile upNeighbor = tileMap.getForward(new Position(row - 1, col));
-                    graph.connect(tile, upNeighbor, Direction.UP);
-                }
-                if (row < height - 1) {
-                    Tile downNeighbor = tileMap.getForward(new Position(row + 1, col));
-                    graph.connect(tile, downNeighbor, Direction.DOWN);
-                }
-                if (col > 0) {
-                    Tile leftNeighbor = tileMap.getForward(new Position(row, col - 1));
-                    graph.connect(tile, leftNeighbor, Direction.LEFT);
-                }
-                if (col < width - 1) {
-                    Tile rightNeighbor = tileMap.getForward(new Position(row, col + 1));
-                    graph.connect(tile, rightNeighbor, Direction.RIGHT);
-                }
-            }
-        }
-        System.out.println("Graph initialized");
     }
 
     protected boolean shiftColumnDown(int columnIndex) {

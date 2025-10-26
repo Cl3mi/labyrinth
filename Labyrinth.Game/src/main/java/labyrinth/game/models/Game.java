@@ -161,7 +161,6 @@ public class Game {
             return;
         }
         currentMoveState = MoveState.MOVE;
-        board.initializeGraph();
     }
 
     public boolean movePlayerToTile(int row, int col, Player player) {
