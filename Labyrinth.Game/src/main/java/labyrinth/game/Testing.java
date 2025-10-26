@@ -12,7 +12,7 @@ import java.util.ArrayList;
 public class Testing {
     public static void main(String[] args) {
         //simulateGameStart();
-        simulateGameMoves(2000);
+        simulateGameMoves(1000);
     }
 
     public static void simulateGameStart(){

@@ -178,7 +178,7 @@ public class Graph implements IBoardEventListener {
         var height = board.getHeight();
         var width = board.getWidth();
         var tileMap = board.getTileMap();
-        
+
         for (int row = 0; row < height; row++) {
             for (int col = 0; col < width; col++) {
                 Tile tile = tileMap.getForward(new Position(row, col));
