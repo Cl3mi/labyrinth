@@ -56,24 +56,6 @@ public class Board {
     }
 
     /**
-     * Returns a new 2D array representing the current board state. This method
-     * constructs a fresh array on each invocation by reading from the underlying
-     * {@link BiMap}. The caller should not attempt to modify the returned
-     * array, as changes will not be reflected in the board.
-     *
-     * @return a copy of the current board tiles as a 2D array
-     */
-    public Tile[][] getTiles() {
-        Tile[][] arr = new Tile[height][width];
-        for (int row = 0; row < height; row++) {
-            for (int col = 0; col < width; col++) {
-                arr[row][col] = tileMap.getForward(new Position(row, col));
-            }
-        }
-        return arr;
-    }
-
-    /**
      * Retrieves the tile at the specified coordinates.
      *
      * @param row    row index (0-based)

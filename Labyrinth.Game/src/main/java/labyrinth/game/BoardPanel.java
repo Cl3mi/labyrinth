@@ -117,7 +117,7 @@ public class BoardPanel extends JPanel {
             for (int col = 0; col < game.getBoard().getWidth(); col++) {
                 Rectangle tileRect = new Rectangle(xOffset + col * size, yOffset + row * size, size, size);
                 if (tileRect.contains(p)) {
-                    Tile clickedTile = game.getBoard().getTiles()[row][col];
+                    Tile clickedTile = game.getBoard().getTileAt(row, col);
                     if (reachableTiles.contains(clickedTile)) {
                         boolean moved = game.movePlayerToTile(row, col, currentPlayer);
                         if (moved) {
@@ -199,7 +199,7 @@ public class BoardPanel extends JPanel {
         var board = game.getBoard();
         for (int row = 0; row < board.getHeight(); row++) {
             for (int col = 0; col < board.getWidth(); col++) {
-                Tile tile = board.getTiles()[row][col];
+                Tile tile = board.getTileAt(row, col);
                 if (tile != null) {
                     int x = xOffset + col * size;
                     int y = yOffset + row * size;

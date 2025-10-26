@@ -19,7 +19,6 @@ public class Player {
      * responsible for updating this reference when the player moves.
      */
     private Tile currentTile;
-    private Set<Tile> reachableTiles; // Optional cache for reachable tiles
 
     /**
      * Creates a new player with a given ID, name, and list of treasure cards.
@@ -32,7 +31,6 @@ public class Player {
         this.name = Objects.requireNonNull(name);
         this.assignedTreasureCards = new ArrayList<>();
         this.currentTile = null;
-        this.reachableTiles = null;
     }
 
     public String getId() {
@@ -46,7 +44,6 @@ public class Player {
     public List<TreasureCard> getAssignedTreasureCards() {
         return assignedTreasureCards;
     }
-
 
 
     /**
@@ -68,29 +65,6 @@ public class Player {
      */
     public void setCurrentTile(Tile tile) {
         this.currentTile = tile;
-    }
-
-    public Set<Tile> getReachableTiles() {
-        return reachableTiles == null ? Set.of() : new HashSet<>(reachableTiles);
-    }
-
-    public void setReachableTiles(Set<Tile> reachableTiles) {
-        this.reachableTiles = new HashSet<>(reachableTiles);
-    }
-
-    /**
-     * Moves the player to the specified tile.
-     *
-     * @param tile the tile to move to
-     */
-    public void moveTo(Tile tile) throws ExecutionControl.NotImplementedException {
-        throw new ExecutionControl.NotImplementedException("Not implemented yet");
-    }
-    /**
-     * Collects the treasure if the player is on a tile with a matching treasure card.
-     */
-    public void collectTreasure() throws ExecutionControl.NotImplementedException {
-        throw new ExecutionControl.NotImplementedException("Not implemented yet");
     }
 
     @Override

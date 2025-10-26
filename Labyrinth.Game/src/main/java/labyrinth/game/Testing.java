@@ -11,8 +11,8 @@ import java.util.ArrayList;
 
 public class Testing {
     public static void main(String[] args) {
-        //simulateGameStart();
-        simulateGameMoves(2000);
+        simulateGameStart();
+        //simulateGameMoves(2000);
     }
 
     public static void simulateGameStart(){
