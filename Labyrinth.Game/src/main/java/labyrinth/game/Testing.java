@@ -11,8 +11,8 @@ import java.util.ArrayList;
 
 public class Testing {
     public static void main(String[] args) {
-        simulateGameStart();
-        //simulateGameMoves(2000);
+        //simulateGameStart();
+        simulateGameMoves(2000);
     }
 
     public static void simulateGameStart(){
@@ -25,10 +25,9 @@ public class Testing {
         game.join(p1);
 
         // Different settings are made in the lobby screen
-        game.setMaxPlayers(4);
-        game.setAmountOfTreasuresPerPlayer(7);
-        game.setBoardHeight(7);
-        game.setBoardWidth(7);
+        game.setGameConfig(
+                new GameConfig(7, 7, 7, 4)
+        );
 
         // More Players join the lobby
         Player p2 = new Player("P2", "Bob");

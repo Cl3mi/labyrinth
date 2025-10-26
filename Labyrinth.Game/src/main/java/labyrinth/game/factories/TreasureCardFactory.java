@@ -29,7 +29,7 @@ public class TreasureCardFactory implements ITreasureCardFactory {
     @Override
     public List<TreasureCard> createCardsForGame(Game game) {
         var playerCount = game.getPlayers().size();
-        var treasuresToGenerate = game.getAmountOfTreasuresPerPlayer() * playerCount;
+        var treasuresToGenerate = game.getGameConfig().amountOfTreasuresPerPlayer() * playerCount;
 
         if (treasuresToGenerate < 1 || treasuresToGenerate > TREASURE_NAMES.size()) {
             throw new IllegalArgumentException("Count must be between 1 and " + TREASURE_NAMES.size()/playerCount);

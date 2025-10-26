@@ -140,89 +140,6 @@ public class Board {
         System.out.println("Graph initialized");
     }
 
-    /**
-     * Shifts a row in the specified direction. Tiles wrap around.
-     *
-     * @param rowIndex the row to shift
-     * @param direction LEFT or RIGHT
-     */
-    public void shiftRow(int rowIndex, Direction direction, Player player) {
-        if (currentMoveState == MoveState.MOVE && !freeRoam) {
-            System.out.println("Player needs to move a tile first");
-            return;
-        }
-        if (player != players.get(currentPlayerIndex) && !freeRoam) {
-            System.out.println("It's not the player's turn!");
-            return;
-        }
-
-        if (rowIndex < 0 || rowIndex >= height)
-            throw new IllegalArgumentException("Invalid row index");
-
-        if (direction != Direction.LEFT && direction != Direction.RIGHT)
-            throw new IllegalArgumentException("Row can only be shifted LEFT or RIGHT");
-
-        for (int col = 0; col < width; col++) {
-            Tile tile = tileMap.getForward(new Position(rowIndex, col));
-            if (tile.isFixed() && !freeRoam) {
-                System.out.println("Row " + rowIndex + " contains fixed tiles. Cannot shift.");
-                return;
-            }
-        }
-
-        if (direction == Direction.RIGHT) {
-            shiftRowRight(rowIndex);
-        } else {
-            shiftRowLeft(rowIndex);
-        }
-
-        currentMoveState = MoveState.MOVE;
-        initializeGraph();
-    }
-
-
-
-
-    /**
-     * Shifts a column in the specified direction. Tiles wrap around.
-     *
-     * @param columnIndex the column to shift
-     * @param direction   UP or DOWN
-     */
-    public void shiftColumn(int columnIndex, Direction direction, Player player) {
-        if (currentMoveState == MoveState.MOVE && !freeRoam) {
-            System.out.println("Player needs to move a tile first");
-            return;
-        }
-        if (player != players.get(currentPlayerIndex) && !freeRoam) {
-            System.out.println("It's not the player's turn!");
-            return;
-        }
-
-        if (columnIndex < 0 || columnIndex >= width)
-            throw new IllegalArgumentException("Invalid column index");
-
-        if (direction != Direction.UP && direction != Direction.DOWN)
-            throw new IllegalArgumentException("Column can only be shifted UP or DOWN");
-
-        for (int row = 0; row < height; row++) {
-            Tile tile = tileMap.getForward(new Position(row, columnIndex));
-            if (tile.isFixed() && !freeRoam) {
-                System.out.println("Column " + columnIndex + " contains fixed tiles. Cannot shift.");
-                return;
-            }
-        }
-
-        if (direction == Direction.DOWN) {
-            shiftColumnDown(columnIndex);
-        } else { // UP
-            shiftColumnUp(columnIndex);
-        }
-
-        currentMoveState = MoveState.MOVE;
-        initializeGraph();
-    }
-
     protected boolean shiftColumnDown(int columnIndex) {
         if(colContainsFixedTile(columnIndex)) {
             return false;
@@ -296,6 +213,7 @@ public class Board {
         extraTile = last;
         return true;
     }
+
     public boolean colContainsFixedTile(int columnIndex) {
         for (int row = 0; row < height; row++) {
             Tile tile = tileMap.getForward(new Position(row, columnIndex));
@@ -331,7 +249,6 @@ public class Board {
         }
         return graph.findReachable(startTile);
     }
-
 
     public void placeRandomTreasure(TreasureCard treasureCard) {
         Random random = new Random();

@@ -14,7 +14,6 @@ import java.util.List;
 public class Game {
     //#region singleton
     private static final Game INSTANCE = new Game();
-
     public static Game getInstance() {
         return INSTANCE;
     }
@@ -24,14 +23,11 @@ public class Game {
     private int currentPlayerIndex;
     private MoveState currentMoveState = MoveState.PLACE_TILE;
 
-    private int maxPlayers;
-    private int amountOfTreasuresPerPlayer;
     private Board board;
     private final List<Player> players;
     private RoomState roomState;
 
-    private int boardWidth;
-    private int boardHeight;
+    private GameConfig gameConfig;
     //#endregion
 
     //#region ctor
@@ -40,26 +36,24 @@ public class Game {
      *
      */
     private Game() {
-        this.maxPlayers = 4;
-        this.amountOfTreasuresPerPlayer = 6;
         this.players = new ArrayList<>();
         this.roomState = RoomState.LOBBY;
-
         this.board = null;
-        this.boardWidth = 7;
-        this.boardHeight = 7;
+
+        // start with a default config
+        this.gameConfig = new GameConfig(7, 7, 7, 4);
 
         this.currentPlayerIndex = 0;
     }
     //#endregion
 
     //#region getters and setters
-    public int getMaxPlayers() {
-        return maxPlayers;
+    public GameConfig getGameConfig() {
+        return gameConfig;
     }
 
-    public int getAmountOfTreasuresPerPlayer() {
-        return amountOfTreasuresPerPlayer;
+    public void setGameConfig(GameConfig gameConfig) {
+        this.gameConfig = gameConfig;
     }
 
     public Board getBoard() {
@@ -72,36 +66,6 @@ public class Game {
 
     public List<Player> getPlayers() {
         return new ArrayList<>(players);
-    }
-
-    public void setMaxPlayers(int maxPlayers) {
-        if (maxPlayers < 2) {
-            throw new IllegalArgumentException("Max players can't be less than 2");
-        }
-        this.maxPlayers = maxPlayers;
-    }
-
-    public int getBoardWidth() {
-        return boardWidth;
-    }
-
-    public void setBoardWidth(int boardWidth) {
-        this.boardWidth = boardWidth;
-    }
-
-    public int getBoardHeight() {
-        return boardHeight;
-    }
-
-    public void setBoardHeight(int boardHeight) {
-        this.boardHeight = boardHeight;
-    }
-
-    public void setAmountOfTreasuresPerPlayer(int amountOfTreasuresPerPlayer) {
-        if (amountOfTreasuresPerPlayer < 1) {
-            throw new IllegalArgumentException("Amount of treasures can't be less than 1");
-        }
-        this.amountOfTreasuresPerPlayer = amountOfTreasuresPerPlayer;
     }
 
     public void setBoard(Board board) {
@@ -121,7 +85,7 @@ public class Game {
             throw new IllegalStateException("Cannot join a game that is in progress!");
         }
 
-        if (players.size() >= maxPlayers) {
+        if (players.size() >= gameConfig.maxPlayers()) {
             throw new IllegalStateException("Room is full");
         }
         players.add(player);
@@ -140,8 +104,8 @@ public class Game {
             throw new IllegalStateException("At least 2 players required to start the game");
         }
 
-        if (cards.size() != amountOfTreasuresPerPlayer * players.size()) {
-            throw new IllegalStateException("Not the right amount of treasure cards supplied. Got " + cards.size() + ", expected " + amountOfTreasuresPerPlayer * players.size());
+        if (cards.size() != gameConfig.amountOfTreasuresPerPlayer() * players.size()) {
+            throw new IllegalStateException("Not the right amount of treasure cards supplied. Got " + cards.size() + ", expected " + gameConfig.amountOfTreasuresPerPlayer() * players.size());
         }
 
         System.out.println(cards.size() + " cards have been created");
@@ -149,7 +113,7 @@ public class Game {
             TreasureCard card = cards.getFirst();
             board.placeRandomTreasure(card);
             for (Player player : players) {
-                if(player.getAssignedTreasureCards().size() < amountOfTreasuresPerPlayer) {
+                if(player.getAssignedTreasureCards().size() < gameConfig.amountOfTreasuresPerPlayer()) {
                     player.getAssignedTreasureCards().add(card);
                     break;
                 }
@@ -165,9 +129,9 @@ public class Game {
             int col;
             switch (i) {
                 case 0 -> { row = 0; col = 0; }
-                case 1 -> { row = 0; col = boardWidth - 1; }
-                case 2 -> { row = boardHeight - 1; col = boardWidth - 1; }
-                case 3 -> { row = boardHeight - 1; col = 0; }
+                case 1 -> { row = 0; col = gameConfig.boardWidth() - 1; }
+                case 2 -> { row = gameConfig.boardHeight()  - 1; col = gameConfig.boardWidth()  - 1; }
+                case 3 -> { row = gameConfig.boardHeight() - 1; col = 0; }
                 default -> { row = 0; col = 0; }
             }
             Tile startingTile = board.getTileAt(row, col);
@@ -181,26 +145,16 @@ public class Game {
         System.out.println("Game started in GameLobby" + " with " + players.size() + " players.");
     }
 
-
     public void shift(int index, Direction direction, Player player) {
         guardFor(MoveState.PLACE_TILE);
         guardFor(player);
 
-        boolean res = false;
-        switch (direction) {
-            case UP:
-                res = board.shiftColumnUp(index);
-                break;
-            case DOWN:
-                res = board.shiftColumnDown(index);
-                break;
-            case LEFT:
-                res = board.shiftRowLeft(index);
-                break;
-            case RIGHT:
-                res = board.shiftRowRight(index);
-                break;
-        }
+        boolean res = switch (direction) {
+            case UP -> board.shiftColumnUp(index);
+            case DOWN -> board.shiftColumnDown(index);
+            case LEFT -> board.shiftRowLeft(index);
+            case RIGHT -> board.shiftRowRight(index);
+        };
 
         if(!res)
         {
@@ -214,8 +168,11 @@ public class Game {
         guardFor(MoveState.MOVE);
         guardFor(player);
 
-        board.movePlayerToTile(player, row, col);
+        var moved = board.movePlayerToTile(player, row, col);
 
+        if(!moved){
+            return false;
+        }
         currentMoveState = MoveState.PLACE_TILE;
 
         currentPlayerIndex++;
@@ -235,6 +192,12 @@ public class Game {
         }
     }
 
+    private void guardFor(RoomState roomState) {
+        if(this.roomState != roomState) {
+            throw new IllegalStateException("Illegal room state");
+        }
+    }
+
     private void guardFor(Player playerToMove){
         if(board.getFreeRoam()) {
             return;
@@ -247,8 +210,6 @@ public class Game {
     @Override
     public String toString() {
         return "Room{" +
-                ", maxPlayers=" + maxPlayers +
-                ", treasuresToCollect=" + amountOfTreasuresPerPlayer +
                 ", players=" + players +
                 '}';
     }

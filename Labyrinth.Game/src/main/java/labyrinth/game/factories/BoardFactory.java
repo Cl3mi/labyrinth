@@ -18,8 +18,9 @@ public class BoardFactory implements IBoardFactory {
 
     @Override
     public Board createBoardForGame(Game game) {
-        var width = game.getBoardWidth();
-        var height = game.getBoardHeight();
+        var gameConfig = game.getGameConfig();
+        var width = gameConfig.boardWidth();
+        var height = gameConfig.boardHeight();
         BiMap<Position, Tile> tileMap = new BiMap<>();
 
         for (int row = 0; row < height; row++) {
