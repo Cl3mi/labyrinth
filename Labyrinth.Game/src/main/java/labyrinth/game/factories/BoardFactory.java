@@ -5,8 +5,8 @@ import labyrinth.game.models.*;
 import labyrinth.game.enums.*;
 import labyrinth.game.models.BiMap;
 import labyrinth.game.models.Position;
+import labyrinth.game.util.TileShapes;
 
-import java.security.DigestException;
 import java.util.*;
 
 /**
@@ -21,6 +21,14 @@ public class BoardFactory implements IBoardFactory {
         var gameConfig = game.getGameConfig();
         var width = gameConfig.boardWidth();
         var height = gameConfig.boardHeight();
+
+        var tileMap = createRandomTileMap(width, height);
+        replaceCornerTiles(tileMap, width, height);
+
+        return new Board(width, height, tileMap, createRandomTile());
+    }
+
+    private BiMap<Position, Tile> createRandomTileMap(int width, int height){
         BiMap<Position, Tile> tileMap = new BiMap<>();
 
         for (int row = 0; row < height; row++) {
@@ -32,15 +40,15 @@ public class BoardFactory implements IBoardFactory {
 
                 if (rowFixed && colFixed) {
                     if(row == 0) {
-                        tile = new Tile(EnumSet.of(Direction.DOWN, Direction.RIGHT, Direction.LEFT));
+                        tile = new Tile(TileShapes.SHAPE_T_NO_UP);
                     } else if(col == 0) {
-                        tile = new Tile(EnumSet.of(Direction.DOWN, Direction.UP, Direction.RIGHT));
+                        tile = new Tile(TileShapes.SHAPE_T_NO_LEFT);
                     } else if(row == height - 1) {
-                        tile = new Tile(EnumSet.of(Direction.UP, Direction.LEFT, Direction.RIGHT));
+                        tile = new Tile(TileShapes.SHAPE_T_NO_DOWN);
                     }  else if(col == width - 1) {
-                        tile = new Tile(EnumSet.of(Direction.DOWN, Direction.UP, Direction.LEFT));
+                        tile = new Tile(TileShapes.SHAPE_T_NO_RIGHT);
                     } else {
-                        tile = new Tile(EnumSet.of(Direction.DOWN, Direction.RIGHT, Direction.LEFT));
+                        tile = new Tile(TileShapes.SHAPE_T_NO_UP);
                         int rotations = RANDOM.nextInt(4);
                         for (int i = 0; i < rotations; i++) {
                             tile.rotate();
@@ -55,12 +63,15 @@ public class BoardFactory implements IBoardFactory {
             }
         }
 
-        tileMap.put(new Position(0, 0), new Tile(EnumSet.of(Direction.DOWN, Direction.RIGHT)) {{ setIsFixed(true); }});
-        tileMap.put(new Position(0, width-1), new Tile(EnumSet.of(Direction.DOWN, Direction.LEFT)) {{ setIsFixed(true); }});
-        tileMap.put(new Position(height-1, 0), new Tile(EnumSet.of(Direction.UP, Direction.RIGHT)) {{ setIsFixed(true); }});
-        tileMap.put(new Position(height-1, width-1), new Tile(EnumSet.of(Direction.UP, Direction.LEFT)) {{ setIsFixed(true); }});
+        return tileMap;
+    }
 
-        return new Board(width, height, tileMap, createRandomTile());
+    private void replaceCornerTiles(BiMap<Position, Tile> tileMap, int width, int height){
+        tileMap.put(new Position(0, 0), new Tile(TileShapes.SHAPE_CORNER_DOWN_RIGHT) {{ setIsFixed(true); }});
+        tileMap.put(new Position(0, width-1), new Tile(TileShapes.SHAPE_CORNER_DOWN_LEFT) {{ setIsFixed(true); }});
+        tileMap.put(new Position(height-1, 0), new Tile(TileShapes.SHAPE_CORNER_UP_RIGHT) {{ setIsFixed(true); }});
+        tileMap.put(new Position(height-1, width-1), new Tile(TileShapes.SHAPE_CORNER_UP_LEFT) {{ setIsFixed(true); }});
+
     }
 
     /**
