@@ -1,22 +1,23 @@
 package labyrinth.contracts.models;
-
+import labyrinth.contracts.SlashGame;
+import labyrinth.contracts.model.EventType;
 import java.util.Map;
 import java.util.Objects;
 import com.fasterxml.jackson.annotation.*;
-public class Coordinates {
-  @JsonProperty("x")
-  private int x;
-  @JsonProperty("y")
-  private int y;
+public class PlayerDisconnectedEventPayload implements SlashGame {
+  @JsonProperty("type")
+  private EventType type;
+  @JsonProperty("playerId")
+  private String playerId;
   @JsonAnySetter
   @JsonInclude(JsonInclude.Include.NON_NULL)
   private Map<String, Object> additionalProperties;
 
-  public int getX() { return this.x; }
-  public void setX(int x) { this.x = x; }
+  public EventType getType() { return this.type; }
+  public void setType(EventType type) { this.type = type; }
 
-  public int getY() { return this.y; }
-  public void setY(int y) { this.y = y; }
+  public String getPlayerId() { return this.playerId; }
+  public void setPlayerId(String playerId) { this.playerId = playerId; }
 
   @JsonAnyGetter
   public Map<String, Object> getAdditionalProperties() { return this.additionalProperties; }
@@ -30,23 +31,23 @@ public class Coordinates {
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    Coordinates self = (Coordinates) o;
+    PlayerDisconnectedEventPayload self = (PlayerDisconnectedEventPayload) o;
       return 
-        Objects.equals(this.x, self.x) &&
-        Objects.equals(this.y, self.y) &&
+        Objects.equals(this.type, self.type) &&
+        Objects.equals(this.playerId, self.playerId) &&
         Objects.equals(this.additionalProperties, self.additionalProperties);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash((Object)x, (Object)y, (Object)additionalProperties);
+    return Objects.hash((Object)type, (Object)playerId, (Object)additionalProperties);
   }
 
   @Override
   public String toString() {
-    return "class Coordinates {\n" +   
-      "    x: " + toIndentedString(x) + "\n" +
-      "    y: " + toIndentedString(y) + "\n" +
+    return "class PlayerDisconnectedEventPayload {\n" +   
+      "    type: " + toIndentedString(type) + "\n" +
+      "    playerId: " + toIndentedString(playerId) + "\n" +
       "    additionalProperties: " + toIndentedString(additionalProperties) + "\n" +
     "}";
   }

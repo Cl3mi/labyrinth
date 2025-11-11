@@ -3,20 +3,20 @@ package labyrinth.contracts.models;
 import java.util.Map;
 import java.util.Objects;
 import com.fasterxml.jackson.annotation.*;
-public class Coordinates {
-  @JsonProperty("x")
-  private int x;
-  @JsonProperty("y")
-  private int y;
+public class Treasure {
+  @JsonProperty("id")
+  private int id;
+  @JsonProperty("name")
+  private String name;
   @JsonAnySetter
   @JsonInclude(JsonInclude.Include.NON_NULL)
   private Map<String, Object> additionalProperties;
 
-  public int getX() { return this.x; }
-  public void setX(int x) { this.x = x; }
+  public int getId() { return this.id; }
+  public void setId(int id) { this.id = id; }
 
-  public int getY() { return this.y; }
-  public void setY(int y) { this.y = y; }
+  public String getName() { return this.name; }
+  public void setName(String name) { this.name = name; }
 
   @JsonAnyGetter
   public Map<String, Object> getAdditionalProperties() { return this.additionalProperties; }
@@ -30,23 +30,23 @@ public class Coordinates {
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    Coordinates self = (Coordinates) o;
+    Treasure self = (Treasure) o;
       return 
-        Objects.equals(this.x, self.x) &&
-        Objects.equals(this.y, self.y) &&
+        Objects.equals(this.id, self.id) &&
+        Objects.equals(this.name, self.name) &&
         Objects.equals(this.additionalProperties, self.additionalProperties);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash((Object)x, (Object)y, (Object)additionalProperties);
+    return Objects.hash((Object)id, (Object)name, (Object)additionalProperties);
   }
 
   @Override
   public String toString() {
-    return "class Coordinates {\n" +   
-      "    x: " + toIndentedString(x) + "\n" +
-      "    y: " + toIndentedString(y) + "\n" +
+    return "class Treasure {\n" +   
+      "    id: " + toIndentedString(id) + "\n" +
+      "    name: " + toIndentedString(name) + "\n" +
       "    additionalProperties: " + toIndentedString(additionalProperties) + "\n" +
     "}";
   }

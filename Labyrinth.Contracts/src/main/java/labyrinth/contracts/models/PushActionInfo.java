@@ -1,22 +1,23 @@
 package labyrinth.contracts.models;
-
 import java.util.Map;
 import java.util.Objects;
 import com.fasterxml.jackson.annotation.*;
-public class Coordinates {
-  @JsonProperty("x")
-  private int x;
-  @JsonProperty("y")
-  private int y;
+public class PushActionInfo {
+  @JsonProperty("rowOrColIndex")
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  private Integer rowOrColIndex;
+  @JsonProperty("direction")
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  private Direction direction;
   @JsonAnySetter
   @JsonInclude(JsonInclude.Include.NON_NULL)
   private Map<String, Object> additionalProperties;
 
-  public int getX() { return this.x; }
-  public void setX(int x) { this.x = x; }
+  public Integer getRowOrColIndex() { return this.rowOrColIndex; }
+  public void setRowOrColIndex(Integer rowOrColIndex) { this.rowOrColIndex = rowOrColIndex; }
 
-  public int getY() { return this.y; }
-  public void setY(int y) { this.y = y; }
+  public Direction getDirection() { return this.direction; }
+  public void setDirection(Direction direction) { this.direction = direction; }
 
   @JsonAnyGetter
   public Map<String, Object> getAdditionalProperties() { return this.additionalProperties; }
@@ -30,23 +31,23 @@ public class Coordinates {
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    Coordinates self = (Coordinates) o;
+    PushActionInfo self = (PushActionInfo) o;
       return 
-        Objects.equals(this.x, self.x) &&
-        Objects.equals(this.y, self.y) &&
+        Objects.equals(this.rowOrColIndex, self.rowOrColIndex) &&
+        Objects.equals(this.direction, self.direction) &&
         Objects.equals(this.additionalProperties, self.additionalProperties);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash((Object)x, (Object)y, (Object)additionalProperties);
+    return Objects.hash((Object)rowOrColIndex, (Object)direction, (Object)additionalProperties);
   }
 
   @Override
   public String toString() {
-    return "class Coordinates {\n" +   
-      "    x: " + toIndentedString(x) + "\n" +
-      "    y: " + toIndentedString(y) + "\n" +
+    return "class PushActionInfo {\n" +   
+      "    rowOrColIndex: " + toIndentedString(rowOrColIndex) + "\n" +
+      "    direction: " + toIndentedString(direction) + "\n" +
       "    additionalProperties: " + toIndentedString(additionalProperties) + "\n" +
     "}";
   }

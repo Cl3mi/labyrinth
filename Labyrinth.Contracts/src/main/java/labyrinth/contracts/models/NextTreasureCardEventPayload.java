@@ -1,22 +1,24 @@
 package labyrinth.contracts.models;
+import labyrinth.contracts.SlashGame;
+import labyrinth.contracts.model.EventType;
 
 import java.util.Map;
 import java.util.Objects;
 import com.fasterxml.jackson.annotation.*;
-public class Coordinates {
-  @JsonProperty("x")
-  private int x;
-  @JsonProperty("y")
-  private int y;
+public class NextTreasureCardEventPayload implements SlashGame {
+  @JsonProperty("type")
+  private EventType type;
+  @JsonProperty("treasure")
+  private Treasure treasure;
   @JsonAnySetter
   @JsonInclude(JsonInclude.Include.NON_NULL)
   private Map<String, Object> additionalProperties;
 
-  public int getX() { return this.x; }
-  public void setX(int x) { this.x = x; }
+  public EventType getType() { return this.type; }
+  public void setType(EventType type) { this.type = type; }
 
-  public int getY() { return this.y; }
-  public void setY(int y) { this.y = y; }
+  public Treasure getTreasure() { return this.treasure; }
+  public void setTreasure(Treasure treasure) { this.treasure = treasure; }
 
   @JsonAnyGetter
   public Map<String, Object> getAdditionalProperties() { return this.additionalProperties; }
@@ -30,23 +32,23 @@ public class Coordinates {
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    Coordinates self = (Coordinates) o;
+    NextTreasureCardEventPayload self = (NextTreasureCardEventPayload) o;
       return 
-        Objects.equals(this.x, self.x) &&
-        Objects.equals(this.y, self.y) &&
+        Objects.equals(this.type, self.type) &&
+        Objects.equals(this.treasure, self.treasure) &&
         Objects.equals(this.additionalProperties, self.additionalProperties);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash((Object)x, (Object)y, (Object)additionalProperties);
+    return Objects.hash((Object)type, (Object)treasure, (Object)additionalProperties);
   }
 
   @Override
   public String toString() {
-    return "class Coordinates {\n" +   
-      "    x: " + toIndentedString(x) + "\n" +
-      "    y: " + toIndentedString(y) + "\n" +
+    return "class NextTreasureCardEventPayload {\n" +   
+      "    type: " + toIndentedString(type) + "\n" +
+      "    treasure: " + toIndentedString(treasure) + "\n" +
       "    additionalProperties: " + toIndentedString(additionalProperties) + "\n" +
     "}";
   }
