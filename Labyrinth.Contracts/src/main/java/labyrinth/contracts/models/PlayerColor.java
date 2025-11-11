@@ -1,21 +1,19 @@
-package labyrinth.contracts.model;
+package labyrinth.contracts.models;
 
-import com.fasterxml.jackson.annotation.*;
+
 public enum PlayerColor {
   RED((String)"RED"), BLUE((String)"BLUE"), GREEN((String)"GREEN"), YELLOW((String)"YELLOW");
 
-  private String value;
+  private final String value;
 
   PlayerColor(String value) {
     this.value = value;
   }
 
-  @JsonValue
   public String getValue() {
     return value;
   }
 
-  @JsonCreator
   public static PlayerColor fromValue(String value) {
     for (PlayerColor e : PlayerColor.values()) {
       if (e.value.equals(value)) {

@@ -1,22 +1,12 @@
 package labyrinth.contracts.models;
+import labyrinth.contracts.models.PlayerGameStats;
 import java.util.Map;
 import java.util.Objects;
-import com.fasterxml.jackson.annotation.*;
 public class RankingEntry {
-  @JsonProperty("playerId")
-  @JsonInclude(JsonInclude.Include.NON_NULL)
   private String playerId;
-  @JsonProperty("rank")
-  @JsonInclude(JsonInclude.Include.NON_NULL)
   private Integer rank;
-  @JsonProperty("score")
-  @JsonInclude(JsonInclude.Include.NON_NULL)
   private Integer score;
-  @JsonProperty("stats")
-  @JsonInclude(JsonInclude.Include.NON_NULL)
   private PlayerGameStats stats;
-  @JsonAnySetter
-  @JsonInclude(JsonInclude.Include.NON_NULL)
   private Map<String, Object> additionalProperties;
 
   public String getPlayerId() { return this.playerId; }
@@ -31,7 +21,6 @@ public class RankingEntry {
   public PlayerGameStats getStats() { return this.stats; }
   public void setStats(PlayerGameStats stats) { this.stats = stats; }
 
-  @JsonAnyGetter
   public Map<String, Object> getAdditionalProperties() { return this.additionalProperties; }
   public void setAdditionalProperties(Map<String, Object> additionalProperties) { this.additionalProperties = additionalProperties; }
 

@@ -1,21 +1,19 @@
-package labyrinth.contracts.model;
+package labyrinth.contracts.models;
 
-import com.fasterxml.jackson.annotation.*;
+
 public enum ErrorCode {
   INVALID_MOVE((String)"INVALID_MOVE"), NOT_YOUR_TURN((String)"NOT_YOUR_TURN"), INVALID_PUSH((String)"INVALID_PUSH"), BONUS_NOT_AVAILABLE((String)"BONUS_NOT_AVAILABLE");
 
-  private String value;
+  private final String value;
 
   ErrorCode(String value) {
     this.value = value;
   }
 
-  @JsonValue
   public String getValue() {
     return value;
   }
 
-  @JsonCreator
   public static ErrorCode fromValue(String value) {
     for (ErrorCode e : ErrorCode.values()) {
       if (e.value.equals(value)) {

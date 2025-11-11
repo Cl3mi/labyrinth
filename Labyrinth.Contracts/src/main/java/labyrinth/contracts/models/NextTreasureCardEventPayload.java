@@ -1,17 +1,12 @@
 package labyrinth.contracts.models;
-import labyrinth.contracts.SlashGame;
-import labyrinth.contracts.model.EventType;
-
+import labyrinth.contracts.models.SlashGame;
+import labyrinth.contracts.models.EventType;
+import labyrinth.contracts.models.Treasure;
 import java.util.Map;
 import java.util.Objects;
-import com.fasterxml.jackson.annotation.*;
 public class NextTreasureCardEventPayload implements SlashGame {
-  @JsonProperty("type")
   private EventType type;
-  @JsonProperty("treasure")
   private Treasure treasure;
-  @JsonAnySetter
-  @JsonInclude(JsonInclude.Include.NON_NULL)
   private Map<String, Object> additionalProperties;
 
   public EventType getType() { return this.type; }
@@ -20,7 +15,6 @@ public class NextTreasureCardEventPayload implements SlashGame {
   public Treasure getTreasure() { return this.treasure; }
   public void setTreasure(Treasure treasure) { this.treasure = treasure; }
 
-  @JsonAnyGetter
   public Map<String, Object> getAdditionalProperties() { return this.additionalProperties; }
   public void setAdditionalProperties(Map<String, Object> additionalProperties) { this.additionalProperties = additionalProperties; }
 

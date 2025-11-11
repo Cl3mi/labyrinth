@@ -1,23 +1,17 @@
 package labyrinth.contracts.models;
-import labyrinth.contracts.models.SlashGame;
-import labyrinth.contracts.models.EventType;
-import labyrinth.contracts.models.ErrorCode;
+import labyrinth.contracts.models.CommandType;
 import java.util.Map;
 import java.util.Objects;
-public class ActionErrorEventPayload implements SlashGame {
-  private EventType type;
-  private ErrorCode errorCode;
-  private String message;
+public class UseSwapCommandPayload {
+  private CommandType type;
+  private String targetPlayerId;
   private Map<String, Object> additionalProperties;
 
-  public EventType getType() { return this.type; }
-  public void setType(EventType type) { this.type = type; }
+  public CommandType getType() { return this.type; }
+  public void setType(CommandType type) { this.type = type; }
 
-  public ErrorCode getErrorCode() { return this.errorCode; }
-  public void setErrorCode(ErrorCode errorCode) { this.errorCode = errorCode; }
-
-  public String getMessage() { return this.message; }
-  public void setMessage(String message) { this.message = message; }
+  public String getTargetPlayerId() { return this.targetPlayerId; }
+  public void setTargetPlayerId(String targetPlayerId) { this.targetPlayerId = targetPlayerId; }
 
   public Map<String, Object> getAdditionalProperties() { return this.additionalProperties; }
   public void setAdditionalProperties(Map<String, Object> additionalProperties) { this.additionalProperties = additionalProperties; }
@@ -30,25 +24,23 @@ public class ActionErrorEventPayload implements SlashGame {
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    ActionErrorEventPayload self = (ActionErrorEventPayload) o;
+    UseSwapCommandPayload self = (UseSwapCommandPayload) o;
       return 
         Objects.equals(this.type, self.type) &&
-        Objects.equals(this.errorCode, self.errorCode) &&
-        Objects.equals(this.message, self.message) &&
+        Objects.equals(this.targetPlayerId, self.targetPlayerId) &&
         Objects.equals(this.additionalProperties, self.additionalProperties);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash((Object)type, (Object)errorCode, (Object)message, (Object)additionalProperties);
+    return Objects.hash((Object)type, (Object)targetPlayerId, (Object)additionalProperties);
   }
 
   @Override
   public String toString() {
-    return "class ActionErrorEventPayload {\n" +   
+    return "class UseSwapCommandPayload {\n" +   
       "    type: " + toIndentedString(type) + "\n" +
-      "    errorCode: " + toIndentedString(errorCode) + "\n" +
-      "    message: " + toIndentedString(message) + "\n" +
+      "    targetPlayerId: " + toIndentedString(targetPlayerId) + "\n" +
       "    additionalProperties: " + toIndentedString(additionalProperties) + "\n" +
     "}";
   }

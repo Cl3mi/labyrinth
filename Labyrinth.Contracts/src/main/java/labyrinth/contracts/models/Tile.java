@@ -1,24 +1,14 @@
 package labyrinth.contracts.models;
+import labyrinth.contracts.models.Direction;
+import labyrinth.contracts.models.Treasure;
+import labyrinth.contracts.models.Bonus;
 import java.util.Map;
 import java.util.Objects;
-import com.fasterxml.jackson.annotation.*;
-import labyrinth.contracts.enums.Direction;
-
 public class Tile {
-  @JsonProperty("entrances")
-  @JsonInclude(JsonInclude.Include.NON_NULL)
   private Direction[] entrances;
-  @JsonProperty("treasure")
-  @JsonInclude(JsonInclude.Include.NON_NULL)
   private Treasure treasure;
-  @JsonProperty("bonus")
-  @JsonInclude(JsonInclude.Include.NON_NULL)
   private Bonus bonus;
-  @JsonProperty("isFixed")
-  @JsonInclude(JsonInclude.Include.NON_NULL)
   private Boolean isFixed;
-  @JsonAnySetter
-  @JsonInclude(JsonInclude.Include.NON_NULL)
   private Map<String, Object> additionalProperties;
 
   public Direction[] getEntrances() { return this.entrances; }
@@ -33,7 +23,6 @@ public class Tile {
   public Boolean getIsFixed() { return this.isFixed; }
   public void setIsFixed(Boolean isFixed) { this.isFixed = isFixed; }
 
-  @JsonAnyGetter
   public Map<String, Object> getAdditionalProperties() { return this.additionalProperties; }
   public void setAdditionalProperties(Map<String, Object> additionalProperties) { this.additionalProperties = additionalProperties; }
 

@@ -1,49 +1,24 @@
 package labyrinth.contracts.models;
-import labyrinth.contracts.model.PlayerColor;
-import labyrinth.contracts.model.AchievementType;
-import labyrinth.contracts.model.BonusType;
+import labyrinth.contracts.models.PlayerColor;
+import labyrinth.contracts.models.Coordinates;
+import labyrinth.contracts.models.Treasure;
+import labyrinth.contracts.models.AchievementType;
+import labyrinth.contracts.models.BonusType;
 import java.util.Map;
 import java.util.Objects;
-import com.fasterxml.jackson.annotation.*;
 public class PlayerState {
-  @JsonProperty("id")
-  @JsonInclude(JsonInclude.Include.NON_NULL)
   private String id;
-  @JsonProperty("name")
-  @JsonInclude(JsonInclude.Include.NON_NULL)
   private String name;
-  @JsonProperty("color")
-  @JsonInclude(JsonInclude.Include.NON_NULL)
   private PlayerColor color;
-  @JsonProperty("isAdmin")
-  @JsonInclude(JsonInclude.Include.NON_NULL)
   private Boolean isAdmin;
-  @JsonProperty("isReady")
-  @JsonInclude(JsonInclude.Include.NON_NULL)
   private Boolean isReady;
-  @JsonProperty("currentPosition")
-  @JsonInclude(JsonInclude.Include.NON_NULL)
   private Coordinates currentPosition;
-  @JsonProperty("homePosition")
-  @JsonInclude(JsonInclude.Include.NON_NULL)
   private Coordinates homePosition;
-  @JsonProperty("treasuresFound")
-  @JsonInclude(JsonInclude.Include.NON_NULL)
   private Treasure[] treasuresFound;
-  @JsonProperty("currentTreasure")
-  @JsonInclude(JsonInclude.Include.NON_NULL)
   private Treasure currentTreasure;
-  @JsonProperty("remainingTreasureCount")
-  @JsonInclude(JsonInclude.Include.NON_NULL)
   private Integer remainingTreasureCount;
-  @JsonProperty("achievements")
-  @JsonInclude(JsonInclude.Include.NON_NULL)
   private AchievementType[] achievements;
-  @JsonProperty("availableBonuses")
-  @JsonInclude(JsonInclude.Include.NON_NULL)
   private BonusType[] availableBonuses;
-  @JsonAnySetter
-  @JsonInclude(JsonInclude.Include.NON_NULL)
   private Map<String, Object> additionalProperties;
 
   public String getId() { return this.id; }
@@ -82,7 +57,6 @@ public class PlayerState {
   public BonusType[] getAvailableBonuses() { return this.availableBonuses; }
   public void setAvailableBonuses(BonusType[] availableBonuses) { this.availableBonuses = availableBonuses; }
 
-  @JsonAnyGetter
   public Map<String, Object> getAdditionalProperties() { return this.additionalProperties; }
   public void setAdditionalProperties(Map<String, Object> additionalProperties) { this.additionalProperties = additionalProperties; }
 

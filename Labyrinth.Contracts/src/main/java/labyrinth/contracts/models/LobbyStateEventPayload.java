@@ -1,17 +1,12 @@
 package labyrinth.contracts.models;
-import labyrinth.contracts.SlashGame;
-import labyrinth.contracts.model.EventType;
-
+import labyrinth.contracts.models.SlashGame;
+import labyrinth.contracts.models.EventType;
+import labyrinth.contracts.models.PlayerInfo;
 import java.util.Map;
 import java.util.Objects;
-import com.fasterxml.jackson.annotation.*;
 public class LobbyStateEventPayload implements SlashGame {
-  @JsonProperty("type")
   private EventType type;
-  @JsonProperty("players")
   private PlayerInfo[] players;
-  @JsonAnySetter
-  @JsonInclude(JsonInclude.Include.NON_NULL)
   private Map<String, Object> additionalProperties;
 
   public EventType getType() { return this.type; }
@@ -20,7 +15,6 @@ public class LobbyStateEventPayload implements SlashGame {
   public PlayerInfo[] getPlayers() { return this.players; }
   public void setPlayers(PlayerInfo[] players) { this.players = players; }
 
-  @JsonAnyGetter
   public Map<String, Object> getAdditionalProperties() { return this.additionalProperties; }
   public void setAdditionalProperties(Map<String, Object> additionalProperties) { this.additionalProperties = additionalProperties; }
 

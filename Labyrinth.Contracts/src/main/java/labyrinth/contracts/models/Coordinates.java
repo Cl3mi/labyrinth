@@ -2,14 +2,9 @@ package labyrinth.contracts.models;
 
 import java.util.Map;
 import java.util.Objects;
-import com.fasterxml.jackson.annotation.*;
 public class Coordinates {
-  @JsonProperty("x")
   private int x;
-  @JsonProperty("y")
   private int y;
-  @JsonAnySetter
-  @JsonInclude(JsonInclude.Include.NON_NULL)
   private Map<String, Object> additionalProperties;
 
   public int getX() { return this.x; }
@@ -18,7 +13,6 @@ public class Coordinates {
   public int getY() { return this.y; }
   public void setY(int y) { this.y = y; }
 
-  @JsonAnyGetter
   public Map<String, Object> getAdditionalProperties() { return this.additionalProperties; }
   public void setAdditionalProperties(Map<String, Object> additionalProperties) { this.additionalProperties = additionalProperties; }
 

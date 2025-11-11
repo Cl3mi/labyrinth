@@ -1,26 +1,13 @@
 package labyrinth.contracts.models;
-import labyrinth.contracts.model.PlayerColor;
+import labyrinth.contracts.models.PlayerColor;
 import java.util.Map;
 import java.util.Objects;
-import com.fasterxml.jackson.annotation.*;
 public class PlayerInfo {
-  @JsonProperty("id")
-  @JsonInclude(JsonInclude.Include.NON_NULL)
   private String id;
-  @JsonProperty("name")
-  @JsonInclude(JsonInclude.Include.NON_NULL)
   private String name;
-  @JsonProperty("color")
-  @JsonInclude(JsonInclude.Include.NON_NULL)
   private PlayerColor color;
-  @JsonProperty("isAdmin")
-  @JsonInclude(JsonInclude.Include.NON_NULL)
   private Boolean isAdmin;
-  @JsonProperty("isReady")
-  @JsonInclude(JsonInclude.Include.NON_NULL)
   private Boolean isReady;
-  @JsonAnySetter
-  @JsonInclude(JsonInclude.Include.NON_NULL)
   private Map<String, Object> additionalProperties;
 
   public String getId() { return this.id; }
@@ -38,7 +25,6 @@ public class PlayerInfo {
   public Boolean getIsReady() { return this.isReady; }
   public void setIsReady(Boolean isReady) { this.isReady = isReady; }
 
-  @JsonAnyGetter
   public Map<String, Object> getAdditionalProperties() { return this.additionalProperties; }
   public void setAdditionalProperties(Map<String, Object> additionalProperties) { this.additionalProperties = additionalProperties; }
 

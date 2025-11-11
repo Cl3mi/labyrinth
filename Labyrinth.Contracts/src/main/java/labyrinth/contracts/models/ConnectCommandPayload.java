@@ -1,23 +1,17 @@
 package labyrinth.contracts.models;
-import labyrinth.contracts.models.SlashGame;
-import labyrinth.contracts.models.EventType;
-import labyrinth.contracts.models.ErrorCode;
+import labyrinth.contracts.models.CommandType;
 import java.util.Map;
 import java.util.Objects;
-public class ActionErrorEventPayload implements SlashGame {
-  private EventType type;
-  private ErrorCode errorCode;
-  private String message;
+public class ConnectCommandPayload {
+  private CommandType type;
+  private String username;
   private Map<String, Object> additionalProperties;
 
-  public EventType getType() { return this.type; }
-  public void setType(EventType type) { this.type = type; }
+  public CommandType getType() { return this.type; }
+  public void setType(CommandType type) { this.type = type; }
 
-  public ErrorCode getErrorCode() { return this.errorCode; }
-  public void setErrorCode(ErrorCode errorCode) { this.errorCode = errorCode; }
-
-  public String getMessage() { return this.message; }
-  public void setMessage(String message) { this.message = message; }
+  public String getUsername() { return this.username; }
+  public void setUsername(String username) { this.username = username; }
 
   public Map<String, Object> getAdditionalProperties() { return this.additionalProperties; }
   public void setAdditionalProperties(Map<String, Object> additionalProperties) { this.additionalProperties = additionalProperties; }
@@ -30,25 +24,23 @@ public class ActionErrorEventPayload implements SlashGame {
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    ActionErrorEventPayload self = (ActionErrorEventPayload) o;
+    ConnectCommandPayload self = (ConnectCommandPayload) o;
       return 
         Objects.equals(this.type, self.type) &&
-        Objects.equals(this.errorCode, self.errorCode) &&
-        Objects.equals(this.message, self.message) &&
+        Objects.equals(this.username, self.username) &&
         Objects.equals(this.additionalProperties, self.additionalProperties);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash((Object)type, (Object)errorCode, (Object)message, (Object)additionalProperties);
+    return Objects.hash((Object)type, (Object)username, (Object)additionalProperties);
   }
 
   @Override
   public String toString() {
-    return "class ActionErrorEventPayload {\n" +   
+    return "class ConnectCommandPayload {\n" +   
       "    type: " + toIndentedString(type) + "\n" +
-      "    errorCode: " + toIndentedString(errorCode) + "\n" +
-      "    message: " + toIndentedString(message) + "\n" +
+      "    username: " + toIndentedString(username) + "\n" +
       "    additionalProperties: " + toIndentedString(additionalProperties) + "\n" +
     "}";
   }

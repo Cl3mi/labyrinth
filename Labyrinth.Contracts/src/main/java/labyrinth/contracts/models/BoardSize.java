@@ -1,18 +1,17 @@
 package labyrinth.contracts.models;
-import labyrinth.contracts.models.SlashGame;
-import labyrinth.contracts.models.EventType;
+
 import java.util.Map;
 import java.util.Objects;
-public class PlayerDisconnectedEventPayload implements SlashGame {
-  private EventType type;
-  private String playerId;
+public class BoardSize {
+  private int rows = 7;
+  private int cols = 7;
   private Map<String, Object> additionalProperties;
 
-  public EventType getType() { return this.type; }
-  public void setType(EventType type) { this.type = type; }
+  public int getRows() { return this.rows; }
+  public void setRows(int rows) { this.rows = rows; }
 
-  public String getPlayerId() { return this.playerId; }
-  public void setPlayerId(String playerId) { this.playerId = playerId; }
+  public int getCols() { return this.cols; }
+  public void setCols(int cols) { this.cols = cols; }
 
   public Map<String, Object> getAdditionalProperties() { return this.additionalProperties; }
   public void setAdditionalProperties(Map<String, Object> additionalProperties) { this.additionalProperties = additionalProperties; }
@@ -25,23 +24,23 @@ public class PlayerDisconnectedEventPayload implements SlashGame {
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    PlayerDisconnectedEventPayload self = (PlayerDisconnectedEventPayload) o;
+    BoardSize self = (BoardSize) o;
       return 
-        Objects.equals(this.type, self.type) &&
-        Objects.equals(this.playerId, self.playerId) &&
+        Objects.equals(this.rows, self.rows) &&
+        Objects.equals(this.cols, self.cols) &&
         Objects.equals(this.additionalProperties, self.additionalProperties);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash((Object)type, (Object)playerId, (Object)additionalProperties);
+    return Objects.hash((Object)rows, (Object)cols, (Object)additionalProperties);
   }
 
   @Override
   public String toString() {
-    return "class PlayerDisconnectedEventPayload {\n" +   
-      "    type: " + toIndentedString(type) + "\n" +
-      "    playerId: " + toIndentedString(playerId) + "\n" +
+    return "class BoardSize {\n" +   
+      "    rows: " + toIndentedString(rows) + "\n" +
+      "    cols: " + toIndentedString(cols) + "\n" +
       "    additionalProperties: " + toIndentedString(additionalProperties) + "\n" +
     "}";
   }

@@ -1,20 +1,13 @@
 package labyrinth.contracts.models;
-import labyrinth.contracts.SlashGame;
-import labyrinth.contracts.model.EventType;
-
+import labyrinth.contracts.models.SlashGame;
+import labyrinth.contracts.models.EventType;
+import labyrinth.contracts.models.RankingEntry;
 import java.util.Map;
 import java.util.Objects;
-import com.fasterxml.jackson.annotation.*;
 public class GameOverEventPayload implements SlashGame {
-  @JsonProperty("type")
   private EventType type;
-  @JsonProperty("winnerId")
-  @JsonInclude(JsonInclude.Include.NON_NULL)
   private String winnerId;
-  @JsonProperty("ranking")
   private RankingEntry[] ranking;
-  @JsonAnySetter
-  @JsonInclude(JsonInclude.Include.NON_NULL)
   private Map<String, Object> additionalProperties;
 
   public EventType getType() { return this.type; }
@@ -26,7 +19,6 @@ public class GameOverEventPayload implements SlashGame {
   public RankingEntry[] getRanking() { return this.ranking; }
   public void setRanking(RankingEntry[] ranking) { this.ranking = ranking; }
 
-  @JsonAnyGetter
   public Map<String, Object> getAdditionalProperties() { return this.additionalProperties; }
   public void setAdditionalProperties(Map<String, Object> additionalProperties) { this.additionalProperties = additionalProperties; }
 

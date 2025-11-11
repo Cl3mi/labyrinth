@@ -2,14 +2,9 @@ package labyrinth.contracts.models;
 
 import java.util.Map;
 import java.util.Objects;
-import com.fasterxml.jackson.annotation.*;
 public class Treasure {
-  @JsonProperty("id")
   private int id;
-  @JsonProperty("name")
   private String name;
-  @JsonAnySetter
-  @JsonInclude(JsonInclude.Include.NON_NULL)
   private Map<String, Object> additionalProperties;
 
   public int getId() { return this.id; }
@@ -18,7 +13,6 @@ public class Treasure {
   public String getName() { return this.name; }
   public void setName(String name) { this.name = name; }
 
-  @JsonAnyGetter
   public Map<String, Object> getAdditionalProperties() { return this.additionalProperties; }
   public void setAdditionalProperties(Map<String, Object> additionalProperties) { this.additionalProperties = additionalProperties; }
 

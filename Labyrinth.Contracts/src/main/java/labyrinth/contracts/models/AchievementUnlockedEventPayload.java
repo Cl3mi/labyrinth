@@ -1,19 +1,13 @@
 package labyrinth.contracts.models;
-import labyrinth.contracts.SlashGame;
-import labyrinth.contracts.model.EventType;
-import labyrinth.contracts.model.AchievementType;
+import labyrinth.contracts.models.SlashGame;
+import labyrinth.contracts.models.EventType;
+import labyrinth.contracts.models.AchievementType;
 import java.util.Map;
 import java.util.Objects;
-import com.fasterxml.jackson.annotation.*;
 public class AchievementUnlockedEventPayload implements SlashGame {
-  @JsonProperty("type")
   private EventType type;
-  @JsonProperty("playerId")
   private String playerId;
-  @JsonProperty("achievement")
   private AchievementType achievement;
-  @JsonAnySetter
-  @JsonInclude(JsonInclude.Include.NON_NULL)
   private Map<String, Object> additionalProperties;
 
   public EventType getType() { return this.type; }
@@ -25,7 +19,6 @@ public class AchievementUnlockedEventPayload implements SlashGame {
   public AchievementType getAchievement() { return this.achievement; }
   public void setAchievement(AchievementType achievement) { this.achievement = achievement; }
 
-  @JsonAnyGetter
   public Map<String, Object> getAdditionalProperties() { return this.additionalProperties; }
   public void setAdditionalProperties(Map<String, Object> additionalProperties) { this.additionalProperties = additionalProperties; }
 

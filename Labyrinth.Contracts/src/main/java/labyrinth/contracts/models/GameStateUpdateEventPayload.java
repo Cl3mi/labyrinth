@@ -1,23 +1,17 @@
 package labyrinth.contracts.models;
-import labyrinth.contracts.SlashGame;
-import labyrinth.contracts.model.EventType;
-import labyrinth.contracts.model.TurnState;
+import labyrinth.contracts.models.SlashGame;
+import labyrinth.contracts.models.EventType;
+import labyrinth.contracts.models.GameBoard;
+import labyrinth.contracts.models.PlayerState;
+import labyrinth.contracts.models.TurnState;
 import java.util.Map;
 import java.util.Objects;
-import com.fasterxml.jackson.annotation.*;
 public class GameStateUpdateEventPayload implements SlashGame {
-  @JsonProperty("type")
   private EventType type;
-  @JsonProperty("board")
   private GameBoard board;
-  @JsonProperty("players")
   private PlayerState[] players;
-  @JsonProperty("currentPlayerId")
   private String currentPlayerId;
-  @JsonProperty("currentTurnState")
   private TurnState currentTurnState;
-  @JsonAnySetter
-  @JsonInclude(JsonInclude.Include.NON_NULL)
   private Map<String, Object> additionalProperties;
 
   public EventType getType() { return this.type; }
@@ -35,7 +29,6 @@ public class GameStateUpdateEventPayload implements SlashGame {
   public TurnState getCurrentTurnState() { return this.currentTurnState; }
   public void setCurrentTurnState(TurnState currentTurnState) { this.currentTurnState = currentTurnState; }
 
-  @JsonAnyGetter
   public Map<String, Object> getAdditionalProperties() { return this.additionalProperties; }
   public void setAdditionalProperties(Map<String, Object> additionalProperties) { this.additionalProperties = additionalProperties; }
 

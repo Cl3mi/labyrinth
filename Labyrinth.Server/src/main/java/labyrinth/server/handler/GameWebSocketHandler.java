@@ -1,35 +1,61 @@
 package labyrinth.server.handler;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Component;
-import org.springframework.web.reactive.socket.WebSocketHandler;
-import org.springframework.web.reactive.socket.WebSocketMessage;
-import org.springframework.web.reactive.socket.WebSocketSession;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
-import reactor.util.annotation.NonNull;
+import org.springframework.web.socket.TextMessage;
+import org.springframework.web.socket.WebSocketSession;
+import org.springframework.web.socket.handler.TextWebSocketHandler;
+
+import java.io.IOException;
 
 @Component
-@RequiredArgsConstructor
-@Slf4j
-public class GameWebSocketHandler implements WebSocketHandler {
+public class GameWebSocketHandler extends TextWebSocketHandler {
 
-    private final ObjectMapper objectMapper;
+    private final ObjectMapper mapper = new ObjectMapper();
 
-    @NonNull
     @Override
-    public Mono<Void> handle(WebSocketSession session) {
-        log.info("Neuer Client verbunden: {}", session.getId());
+    protected void handleTextMessage(@NonNull WebSocketSession session, TextMessage message) throws Exception {
+        JsonNode json = mapper.readTree(message.getPayload());
 
-        Mono<Void> input = session.receive()
-                .map(WebSocketMessage::getPayloadAsText)
-                .doOnNext(msg -> log.info("Nachricht von {}: {}", session.getId(), msg))
-                .then();
+        if (!json.has("type")) {
+            session.sendMessage(new TextMessage("{\"error\":\"Missing type field\"}"));
+            return;
+        }
 
-        Mono<Void> output = session.send(Flux.never());
+        String type = json.get("type").asText();
 
-        return Mono.zip(input, output).then();
+        switch (type) {
+            case "joinGame":
+                handleJoinGame(session, json);
+                break;
+
+            case "move":
+                handleMove(session, json);
+                break;
+
+            case "leaveGame":
+                handleLeaveGame(session, json);
+                break;
+
+            default:
+                session.sendMessage(new TextMessage("{\"error\":\"Unknown type: " + type + "\"}"));
+        }
+    }
+
+    private void handleJoinGame(WebSocketSession session, JsonNode json) throws IOException {
+        // TODO: Implementieren
+        session.sendMessage(new TextMessage("handleJoinGame"));
+    }
+
+    private void handleMove(WebSocketSession session, JsonNode json) throws IOException {
+        // TODO: Implementieren
+        session.sendMessage(new TextMessage("handleMove"));
+    }
+
+    private void handleLeaveGame(WebSocketSession session, JsonNode json) throws IOException {
+        // TODO: Implementieren
+        session.sendMessage(new TextMessage("handleLeaveGame"));
     }
 }

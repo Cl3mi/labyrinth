@@ -1,22 +1,13 @@
 package labyrinth.contracts.models;
+import labyrinth.contracts.models.Tile;
+import labyrinth.contracts.models.PushActionInfo;
 import java.util.Map;
 import java.util.Objects;
-import com.fasterxml.jackson.annotation.*;
 public class GameBoard {
-  @JsonProperty("rows")
-  @JsonInclude(JsonInclude.Include.NON_NULL)
   private Integer rows;
-  @JsonProperty("cols")
-  @JsonInclude(JsonInclude.Include.NON_NULL)
   private Integer cols;
-  @JsonProperty("tiles")
-  @JsonInclude(JsonInclude.Include.NON_NULL)
   private Tile[][] tiles;
-  @JsonProperty("lastPush")
-  @JsonInclude(JsonInclude.Include.NON_NULL)
   private PushActionInfo lastPush;
-  @JsonAnySetter
-  @JsonInclude(JsonInclude.Include.NON_NULL)
   private Map<String, Object> additionalProperties;
 
   public Integer getRows() { return this.rows; }
@@ -31,7 +22,6 @@ public class GameBoard {
   public PushActionInfo getLastPush() { return this.lastPush; }
   public void setLastPush(PushActionInfo lastPush) { this.lastPush = lastPush; }
 
-  @JsonAnyGetter
   public Map<String, Object> getAdditionalProperties() { return this.additionalProperties; }
   public void setAdditionalProperties(Map<String, Object> additionalProperties) { this.additionalProperties = additionalProperties; }
 

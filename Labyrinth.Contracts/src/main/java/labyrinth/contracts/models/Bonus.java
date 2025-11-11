@@ -1,17 +1,10 @@
 package labyrinth.contracts.models;
-import labyrinth.contracts.model.BonusType;
+import labyrinth.contracts.models.BonusType;
 import java.util.Map;
 import java.util.Objects;
-import com.fasterxml.jackson.annotation.*;
 public class Bonus {
-  @JsonProperty("id")
-  @JsonInclude(JsonInclude.Include.NON_NULL)
   private Integer id;
-  @JsonProperty("type")
-  @JsonInclude(JsonInclude.Include.NON_NULL)
   private BonusType type;
-  @JsonAnySetter
-  @JsonInclude(JsonInclude.Include.NON_NULL)
   private Map<String, Object> additionalProperties;
 
   public Integer getId() { return this.id; }
@@ -20,7 +13,6 @@ public class Bonus {
   public BonusType getType() { return this.type; }
   public void setType(BonusType type) { this.type = type; }
 
-  @JsonAnyGetter
   public Map<String, Object> getAdditionalProperties() { return this.additionalProperties; }
   public void setAdditionalProperties(Map<String, Object> additionalProperties) { this.additionalProperties = additionalProperties; }
 
