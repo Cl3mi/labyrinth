@@ -2,6 +2,8 @@ package labyrinth.contracts.models;
 import java.util.Map;
 import java.util.Objects;
 import com.fasterxml.jackson.annotation.*;
+import labyrinth.contracts.enums.Direction;
+
 public class Tile {
   @JsonProperty("entrances")
   @JsonInclude(JsonInclude.Include.NON_NULL)

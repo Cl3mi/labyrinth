@@ -1,4 +1,4 @@
-package labyrinth.contracts.models;
+package labyrinth.contracts.enums;
 
 import com.fasterxml.jackson.annotation.*;
 public enum Direction {
