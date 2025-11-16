@@ -1,9 +1,8 @@
-package labyrinth.server.messaging;
+package labyrinth.server.messaging.commands;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import labyrinth.contracts.models.*;
-import labyrinth.server.models.CommandMessage;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
@@ -29,7 +28,7 @@ public class CommandMessageParser {
         this.mapper = mapper;
     }
 
-    public CommandMessage parse(String jsonString) throws IOException {
+    public CommandEnvelope<?> parse(String jsonString) throws IOException {
         JsonNode json = mapper.readTree(jsonString);
 
         if (!json.has("type")) {
@@ -44,6 +43,7 @@ public class CommandMessageParser {
             throw new IllegalArgumentException("Unknown message type: " + typeString);
         }
 
-        return new CommandMessage(command, mapper.treeToValue(json, dtoClass));
+        var payload = mapper.treeToValue(json, dtoClass);
+        return new CommandEnvelope<>(command, payload);
     }
 }

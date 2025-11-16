@@ -2,10 +2,9 @@ package labyrinth.contracts.models;
 import labyrinth.contracts.models.CommandType;
 import java.util.Map;
 import java.util.Objects;
-public class ConnectCommandPayload {
+public class DisconnectCommandPayload {
   private CommandType type;
   private String username;
-  private String playerId;
   private Map<String, Object> additionalProperties;
 
   public CommandType getType() { return this.type; }
@@ -13,9 +12,6 @@ public class ConnectCommandPayload {
 
   public String getUsername() { return this.username; }
   public void setUsername(String username) { this.username = username; }
-
-  public String getPlayerId() { return this.playerId; }
-  public void setPlayerId(String playerId) { this.playerId = playerId; }
 
   public Map<String, Object> getAdditionalProperties() { return this.additionalProperties; }
   public void setAdditionalProperties(Map<String, Object> additionalProperties) { this.additionalProperties = additionalProperties; }
@@ -28,25 +24,23 @@ public class ConnectCommandPayload {
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    ConnectCommandPayload self = (ConnectCommandPayload) o;
+    DisconnectCommandPayload self = (DisconnectCommandPayload) o;
       return 
         Objects.equals(this.type, self.type) &&
         Objects.equals(this.username, self.username) &&
-        Objects.equals(this.playerId, self.playerId) &&
         Objects.equals(this.additionalProperties, self.additionalProperties);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash((Object)type, (Object)username, (Object)playerId, (Object)additionalProperties);
+    return Objects.hash((Object)type, (Object)username, (Object)additionalProperties);
   }
 
   @Override
   public String toString() {
-    return "class ConnectCommandPayload {\n" +   
+    return "class DisconnectCommandPayload {\n" +   
       "    type: " + toIndentedString(type) + "\n" +
       "    username: " + toIndentedString(username) + "\n" +
-      "    playerId: " + toIndentedString(playerId) + "\n" +
       "    additionalProperties: " + toIndentedString(additionalProperties) + "\n" +
     "}";
   }

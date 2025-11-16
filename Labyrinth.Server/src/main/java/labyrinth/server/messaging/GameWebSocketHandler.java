@@ -1,4 +1,4 @@
-package labyrinth.server.handler;
+package labyrinth.server.messaging;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import labyrinth.contracts.models.ActionErrorEventPayload;
@@ -6,10 +6,8 @@ import labyrinth.contracts.models.ErrorCode;
 import labyrinth.contracts.models.EventType;
 import labyrinth.contracts.models.ServerInfoPayload;
 import labyrinth.server.exceptions.ActionErrorException;
-import labyrinth.server.messaging.CommandMessageDispatcher;
-import labyrinth.server.messaging.CommandMessageParser;
-import labyrinth.server.messaging.OutboundMessageSender;
-import labyrinth.server.messaging.SessionManager;
+import labyrinth.server.messaging.commands.CommandMessageDispatcher;
+import labyrinth.server.messaging.commands.CommandMessageParser;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
@@ -25,23 +23,21 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
 
     private final CommandMessageParser messageParser;
     private final CommandMessageDispatcher dispatcher;
-    private final SessionManager sessionManager;
-    private final OutboundMessageSender outboundMessageSender;
+    private final PlayerSessionRegistry playerSessionRegistry;
+    private final MessageService messageService;
 
     public GameWebSocketHandler(CommandMessageParser messageParser,
                                 CommandMessageDispatcher dispatcher,
-                                SessionManager sessionManager,
-                                OutboundMessageSender outboundMessageSender) {
+                                PlayerSessionRegistry playerSessionRegistry,
+                                MessageService messageService) {
         this.messageParser = messageParser;
         this.dispatcher = dispatcher;
-        this.sessionManager = sessionManager;
-        this.outboundMessageSender = outboundMessageSender;
+        this.playerSessionRegistry = playerSessionRegistry;
+        this.messageService = messageService;
     }
 
     @Override
     public void afterConnectionEstablished(@NonNull WebSocketSession session) {
-        sessionManager.addSession(session);
-
         var serverInfo = new ServerInfoPayload();
         serverInfo.setType(EventType.SERVER_INFO);
         serverInfo.setServerTime(OffsetDateTime.now());
@@ -49,36 +45,35 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
         serverInfo.setProtocolVersion("1.0.0");
         serverInfo.setServerVersion("");
 
-        outboundMessageSender.send(session, serverInfo);
+        messageService.sendToSession(session, serverInfo);
 
     }
 
     @Override
     public void afterConnectionClosed(@NonNull WebSocketSession session, @NonNull CloseStatus status) {
-        sessionManager.removeSession(session);
+        playerSessionRegistry.removePlayerBySessionId(session.getId());
     }
 
     @Override
-    protected void handleTextMessage(@NonNull WebSocketSession session, @NonNull TextMessage message) throws Exception {
+    protected void handleTextMessage(@NonNull WebSocketSession session, @NonNull TextMessage message) {
 
         try {
-            var parsedMessage = messageParser.parse(message.getPayload());
-            dispatcher.dispatch(parsedMessage.type(), parsedMessage.payload());
+            var envelope = messageParser.parse(message.getPayload());
+            dispatcher.dispatch(session, envelope);
         } catch (ActionErrorException ex) {
             var actionError = new ActionErrorEventPayload();
             actionError.setType(EventType.ACTION_ERROR);
             actionError.setMessage(ex.getMessage());
             actionError.setErrorCode(ex.getErrorCode());
 
-            outboundMessageSender.send(session, actionError);
-        }
-        catch(Exception ex) {
+            messageService.sendToSession(session, actionError);
+        } catch (Exception ex) {
             var actionError = new ActionErrorEventPayload();
             actionError.setType(EventType.ACTION_ERROR);
             actionError.setMessage(ex.getMessage());
             actionError.setErrorCode(ErrorCode.GENERAL);
 
-            outboundMessageSender.send(session, actionError);
+            messageService.sendToSession(session, actionError);
         }
     }
 }

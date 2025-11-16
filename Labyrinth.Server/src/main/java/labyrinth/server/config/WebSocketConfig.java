@@ -1,7 +1,7 @@
 package labyrinth.server.config;
 
 
-import labyrinth.server.handler.GameWebSocketHandler;
+import labyrinth.server.messaging.GameWebSocketHandler;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.socket.config.annotation.EnableWebSocket;
 import org.springframework.web.socket.config.annotation.WebSocketConfigurer;
