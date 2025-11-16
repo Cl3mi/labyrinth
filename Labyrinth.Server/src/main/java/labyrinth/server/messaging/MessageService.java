@@ -18,8 +18,7 @@ public class MessageService {
     private final PlayerSessionRegistry playerSessionService;
     private final ObjectMapper objectMapper;
 
-    public MessageService(PlayerSessionRegistry playerSessionService,
-                          ObjectMapper objectMapper) {
+    public MessageService(PlayerSessionRegistry playerSessionService, ObjectMapper objectMapper) {
         this.playerSessionService = playerSessionService;
         this.objectMapper = objectMapper;
     }

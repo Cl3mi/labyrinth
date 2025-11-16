@@ -14,6 +14,7 @@ public class PlayerSessionRegistry {
 
     private final Map<String, UUID> playerIdBySessionId = new ConcurrentHashMap<>();
     private final Map<UUID, WebSocketSession> sessionByPlayerId = new ConcurrentHashMap<>();
+    private final Map<UUID, Long> disconnectedAt = new ConcurrentHashMap<>();
 
     public void registerPlayer(Player player, WebSocketSession session) {
         UUID playerId = player.getId();
@@ -21,14 +22,31 @@ public class PlayerSessionRegistry {
 
         playerIdBySessionId.put(sessionId, playerId);
         sessionByPlayerId.put(playerId, session);
+
+        disconnectedAt.remove(playerId);
     }
 
-    public UUID removePlayerBySessionId(String sessionId) {
-        UUID playerId = playerIdBySessionId.remove(sessionId);
-        if (playerId != null) {
-            sessionByPlayerId.remove(playerId);
+    public void removePlayer(UUID playerId) {
+        var session  = sessionByPlayerId.remove(playerId);
+
+        if (session != null) {
+            playerIdBySessionId.remove(session.getId());
         }
-        return playerId;
+
+        disconnectedAt.remove(playerId);
+    }
+
+    public void markDisconnected(WebSocketSession session) {
+        UUID playerId = playerIdBySessionId.get(session.getId());
+        if (playerId == null) return;
+
+        disconnectedAt.put(playerId, System.currentTimeMillis());
+        sessionByPlayerId.remove(playerId);
+        playerIdBySessionId.remove(session.getId());
+    }
+
+    public Map<UUID, Long> getDisconnectedEntries() {
+        return disconnectedAt;
     }
 
 

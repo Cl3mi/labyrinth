@@ -9,6 +9,8 @@ import labyrinth.server.messaging.commands.ICommandHandler;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.WebSocketSession;
 
+import java.util.UUID;
+
 
 @Component
 public class ConnectCommandHandler implements ICommandHandler<ConnectCommandPayload> {
@@ -32,11 +34,24 @@ public class ConnectCommandHandler implements ICommandHandler<ConnectCommandPayl
     @Override
     public void handle(WebSocketSession session, ConnectCommandPayload payload) throws Exception {
 
-        if(playerSessionRegistry.isSessionRegistered(session.getId())) {
+        if (playerSessionRegistry.isSessionRegistered(session.getId())) {
             throw new ActionErrorException("Session is already connected", ErrorCode.GENERAL); //TODO: error code?
         }
 
-        var player =  gameService.connectPlayer(payload.getUsername());
+        if (payload.getPlayerId() != null) {
+            var playerId = UUID.fromString(payload.getPlayerId());
+            var player = gameService.getPlayer(playerId);
+
+            playerSessionRegistry.registerPlayer(player, session);
+
+            var ackPayload = new ConnectAckEventPayload();
+            ackPayload.setType(EventType.CONNECT_ACK);
+            ackPayload.setPlayerId(player.getId().toString());
+            messageService.sendToPlayer(player, ackPayload);
+            return;
+        }
+
+        var player = gameService.connectPlayer(payload.getUsername());
 
         playerSessionRegistry.registerPlayer(player, session);
 

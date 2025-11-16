@@ -51,7 +51,7 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
 
     @Override
     public void afterConnectionClosed(@NonNull WebSocketSession session, @NonNull CloseStatus status) {
-        playerSessionRegistry.removePlayerBySessionId(session.getId());
+        playerSessionRegistry.markDisconnected(session);
     }
 
     @Override
