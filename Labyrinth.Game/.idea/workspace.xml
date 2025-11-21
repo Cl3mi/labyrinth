@@ -5,11 +5,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="23e349dc-720d-4583-a01f-2052390b0232" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/src/main/java/labyrinth/game/factories/StaticTileFactory.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/labyrinth/game/util/TileShapes.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/labyrinth/game/Testing.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/labyrinth/game/Testing.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/labyrinth/game/factories/BoardFactory.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/labyrinth/game/factories/BoardFactory.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -37,15 +33,15 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "Application.Testing.executor": "Run",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "git-widget-placeholder": "features/sl/cleanup",
-    "kotlin-language-version-configured": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;Application.Testing.executor&quot;: &quot;Run&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;features/sl/cleanup&quot;,
+    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;
   }
-}]]></component>
+}</component>
   <component name="RunManager">
     <configuration name="Testing" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
       <option name="MAIN_CLASS_NAME" value="labyrinth.game.Testing" />
