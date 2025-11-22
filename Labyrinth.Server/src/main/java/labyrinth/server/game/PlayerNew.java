@@ -9,7 +9,7 @@ import java.util.UUID;
 
 @Setter
 @Getter
-public class Player {
+public class PlayerNew {
     private UUID id;
     private String username;
     private OffsetDateTime joinDate;

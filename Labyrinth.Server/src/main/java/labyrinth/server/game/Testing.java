@@ -8,6 +8,7 @@ import labyrinth.server.game.factories.TreasureCardFactory;
 import labyrinth.server.game.models.*;
 
 import java.util.ArrayList;
+import java.util.UUID;
 
 public class Testing {
     public static void main(String[] args) {
@@ -21,7 +22,7 @@ public class Testing {
         ITreasureCardFactory treasureCardsFactory = new TreasureCardFactory();
         IBoardFactory boardFactory = new BoardFactory();
 
-        var p1 = new Player("P1", "Alice");
+        var p1 = new Player(UUID.randomUUID(), "Alice");
         game.join(p1);
 
         // Different settings are made in the lobby screen
@@ -30,9 +31,9 @@ public class Testing {
         );
 
         // More Players join the lobby
-        Player p2 = new Player("P2", "Bob");
-        Player p3 = new Player("P3", "Charlie");
-        Player p4 = new Player("P4", "Dover");
+        Player p2 = new Player(UUID.randomUUID(), "Bob");
+        Player p3 = new Player(UUID.randomUUID(), "Charlie");
+        Player p4 = new Player(UUID.randomUUID(), "Dover");
 
         game.join(p2);
         game.join(p3);
@@ -93,7 +94,7 @@ public class Testing {
             // Determine reachable tiles after shifting
             var reachableTiles = board.getReachableTiles(currentPlayer);
             if (reachableTiles.isEmpty()) {
-                System.out.println("No reachable tiles for player: " + currentPlayer.getName());
+                System.out.println("No reachable tiles for player: " + currentPlayer.getUsername());
                 continue;
             }
 
@@ -114,7 +115,7 @@ public class Testing {
             System.out.printf(
                     "Move %d: Player %s -> shifted row/col %d %s and moved to (%d,%d)%n",
                     move + 1,
-                    currentPlayer.getName(),
+                    currentPlayer.getUsername(),
                     shiftIndex,
                     direction,
                     positionOpt.getRow(),

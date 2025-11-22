@@ -2,7 +2,7 @@ package labyrinth.server.messaging;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import labyrinth.server.game.Player;
+import labyrinth.server.game.models.Player;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;

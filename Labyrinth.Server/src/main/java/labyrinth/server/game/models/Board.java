@@ -256,7 +256,7 @@ public class Board {
 
         Position currPos = (currentTile != null) ? getPositionOfTile(currentTile) : null;
         System.out.println("Current position: " + (currPos != null ? currPos.getRow() + "/" + currPos.getColumn() : "none"));
-        System.out.println("Moving " + player.getName() + " to " + targetRow + "/" + targetCol);
+        System.out.println("Moving " + player.getUsername() + " to " + targetRow + "/" + targetCol);
         // Check if another player is already on the target tile by inspecting players' currentTile
         for (Player other : players) {
             if (other != player && other.getCurrentTile() == targetTile) {

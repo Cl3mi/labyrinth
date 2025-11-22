@@ -3,14 +3,18 @@ package labyrinth.server.game.models;
 import labyrinth.server.game.enums.Direction;
 import labyrinth.server.game.enums.MoveState;
 import labyrinth.server.game.enums.RoomState;
+import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * Represents a game room for the Labyrinth game.
  * Each room has a unique code, a board, and manages 2–4 players.
  */
+// TODO: Rename to lobby
+@Component
 public class Game {
     //#region singleton
     private static final Game INSTANCE = new Game();
@@ -80,15 +84,21 @@ public class Game {
      * @param player the player to join
      * @throws IllegalStateException if the room is full
      */
-    public void join(Player player) {
+    public Player join(Player player) {
         if(roomState != RoomState.LOBBY) {
             throw new IllegalStateException("Cannot join a game that is in progress!");
         }
 
-        if (players.size() >= gameConfig.maxPlayers()) {
+        if (isFull()) {
             throw new IllegalStateException("Room is full");
         }
+
+        if (!isUsernameAvailable(player.getUsername())) {
+            throw new IllegalArgumentException("Username is already taken");
+        }
+
         players.add(player);
+        return player;
     }
 
     /**
@@ -135,7 +145,7 @@ public class Game {
                 default -> { row = 0; col = 0; }
             }
             Tile startingTile = board.getTileAt(row, col);
-            System.out.println(player.getName() + " starts on tile: " + row + "/" + col);
+            System.out.println(player.getUsername() + " starts on tile: " + row + "/" + col);
             // Set the player's current tile to the tile at the determined coordinates
             player.setCurrentTile(startingTile);
         }
@@ -205,6 +215,20 @@ public class Game {
             throw new IllegalStateException("Illegal player. Expected " + players.get(currentPlayerIndex).getId() + " but got " + playerToMove.getId());
         }
     }
+
+    private boolean isUsernameAvailable(String username) {
+        return players.stream()
+                .noneMatch(p -> p.getUsername().equalsIgnoreCase(username));
+    }
+
+    private boolean isFull() {
+        return players.size() >= gameConfig.maxPlayers();
+    }
+
+    public void removePlayer(UUID playerId) {
+        players.removeIf(p -> p.getId().equals(playerId));
+    }
+
 
     @Override
     public String toString() {

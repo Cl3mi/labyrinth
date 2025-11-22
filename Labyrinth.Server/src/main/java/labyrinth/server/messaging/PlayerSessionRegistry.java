@@ -1,6 +1,6 @@
 package labyrinth.server.messaging;
 
-import labyrinth.server.game.Player;
+import labyrinth.server.game.models.Player;
 import org.springframework.stereotype.Service;
 import org.springframework.web.socket.WebSocketSession;
 

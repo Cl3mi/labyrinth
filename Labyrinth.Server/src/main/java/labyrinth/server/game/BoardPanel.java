@@ -373,7 +373,7 @@ public class BoardPanel extends JPanel {
 
         if (players != null && !players.isEmpty()) {
             var current = players.get(board.getCurrentPlayerIndex());
-            infoLines.add("Player to move: " + current.getName());
+            infoLines.add("Player to move: " + current.getUsername());
         } else {
             infoLines.add("Player to move: None");
         }
@@ -390,7 +390,7 @@ public class BoardPanel extends JPanel {
                     pos = board.getPositionOfTile(p.getCurrentTile());
                 }
                 String positionText = (pos != null) ? "(" + pos.getRow() + "," + pos.getColumn() + ")" : "(not placed)";
-                infoLines.add(p.getName() + " at " + positionText);
+                infoLines.add(p.getUsername() + " at " + positionText);
             }
         }
 

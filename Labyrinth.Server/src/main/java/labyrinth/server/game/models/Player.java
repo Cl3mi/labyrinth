@@ -1,7 +1,8 @@
 package labyrinth.server.game.models;
 
-import jdk.jshell.spi.ExecutionControl;
+import labyrinth.contracts.models.PlayerColor;
 
+import java.time.OffsetDateTime;
 import java.util.*;
 
 /**
@@ -10,10 +11,17 @@ import java.util.*;
  * and a current tile on the board.
  */
 public class Player {
+    private final UUID id;
+    private final String username;
 
-    private final String id;
-    private final String name;
+    private OffsetDateTime joinDate;
+    private int score;
+    private boolean isAiActive;
+    private boolean isAdmin;
+    private PlayerColor color;
+
     private final List<TreasureCard> assignedTreasureCards;
+
     /**
      * The tile on which the player is currently standing. The board is
      * responsible for updating this reference when the player moves.
@@ -24,21 +32,21 @@ public class Player {
      * Creates a new player with a given ID, name, and list of treasure cards.
      *
      * @param id                    unique identifier
-     * @param name                  player name
+     * @param username                  player name
      */
-    public Player(String id, String name) {
+    public Player(UUID id, String username) {
         this.id = Objects.requireNonNull(id);
-        this.name = Objects.requireNonNull(name);
+        this.username = Objects.requireNonNull(username);
         this.assignedTreasureCards = new ArrayList<>();
         this.currentTile = null;
     }
 
-    public String getId() {
+    public UUID getId() {
         return id;
     }
 
-    public String getName() {
-        return name;
+    public String getUsername() {
+        return username;
     }
 
     public List<TreasureCard> getAssignedTreasureCards() {
@@ -71,9 +79,49 @@ public class Player {
     public String toString() {
         return "Player{" +
                 "id='" + id + '\'' +
-                ", name='" + name + '\'' +
+                ", name='" + username + '\'' +
                 ", currentTile=" + (currentTile != null ? currentTile : "null") +
                 ", treasures=" + assignedTreasureCards +
                 '}';
+    }
+
+    public void setJoinDate(OffsetDateTime joinDate) {
+        this.joinDate = joinDate;
+    }
+
+    public void setScore(int score) {
+        this.score = score;
+    }
+
+    public void setAiActive(boolean aiActive) {
+        isAiActive = aiActive;
+    }
+
+    public void setAdmin(boolean admin) {
+        isAdmin = admin;
+    }
+
+    public void setColor(PlayerColor color) {
+        this.color = color;
+    }
+
+    public OffsetDateTime getJoinDate() {
+        return joinDate;
+    }
+
+    public int getScore() {
+        return score;
+    }
+
+    public boolean isAiActive() {
+        return isAiActive;
+    }
+
+    public boolean isAdmin() {
+        return isAdmin;
+    }
+
+    public PlayerColor getColor() {
+        return color;
     }
 }

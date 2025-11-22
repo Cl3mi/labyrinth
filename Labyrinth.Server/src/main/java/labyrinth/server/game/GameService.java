@@ -2,6 +2,8 @@ package labyrinth.server.game;
 
 
 import labyrinth.contracts.models.PlayerColor;
+import labyrinth.server.game.models.Game;
+import labyrinth.server.game.models.Player;
 import org.springframework.stereotype.Service;
 
 import java.time.OffsetDateTime;
@@ -12,23 +14,21 @@ import java.util.UUID;
 @Service
 public class GameService {
 
-    private final Lobby lobby;
+    private final Game lobby;
     private final List<Player> players = new ArrayList<>();
 
-    public GameService(Lobby lobby) {
+    public GameService(Game lobby) {
         this.lobby = lobby;
     }
 
 
     public Player connectPlayer(String username) {
-        Player player = new Player();
-        player.setId(UUID.randomUUID());
-        player.setUsername(username);
+        Player player = new Player(UUID.randomUUID(), username);
         player.setJoinDate(OffsetDateTime.now());
         player.setColor(getNextColor());
         players.add(player);
 
-        return lobby.tryJoinLobby(player);
+        return lobby.join(player);
     }
 
     public List<Player> getPlayersInLobby() {
