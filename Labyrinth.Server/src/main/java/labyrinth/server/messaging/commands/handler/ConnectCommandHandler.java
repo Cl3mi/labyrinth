@@ -34,7 +34,7 @@ public class ConnectCommandHandler implements ICommandHandler<ConnectCommandPayl
     @Override
     public void handle(WebSocketSession session, ConnectCommandPayload payload) throws Exception {
 
-        if (playerSessionRegistry.isSessionRegistered(session.getId())) {
+        if (playerSessionRegistry.isSessionRegistered(session)) {
             throw new ActionErrorException("Session is already connected", ErrorCode.GENERAL); //TODO: error code?
         }
 
