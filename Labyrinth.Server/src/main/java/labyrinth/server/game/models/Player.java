@@ -1,6 +1,8 @@
 package labyrinth.server.game.models;
 
 import labyrinth.contracts.models.PlayerColor;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.time.OffsetDateTime;
 import java.util.*;
@@ -10,6 +12,8 @@ import java.util.*;
  * Each player has a unique ID, a name, a list of assigned treasure cards,
  * and a current tile on the board.
  */
+@Setter
+@Getter
 public class Player {
     private final UUID id;
     private final String username;
@@ -41,40 +45,6 @@ public class Player {
         this.currentTile = null;
     }
 
-    public UUID getId() {
-        return id;
-    }
-
-    public String getUsername() {
-        return username;
-    }
-
-    public List<TreasureCard> getAssignedTreasureCards() {
-        return assignedTreasureCards;
-    }
-
-
-    /**
-     * Returns the tile on which this player is currently standing.
-     *
-     * @return the current tile, or null if the player is not placed on the board
-     */
-    public Tile getCurrentTile() {
-        return currentTile;
-    }
-
-    /**
-     * Sets the tile on which this player is standing. This should only be
-     * invoked by the board when it moves players or reassigns their
-     * positions.  The board is responsible for updating this reference
-     * whenever a player moves on the board.
-     *
-     * @param tile the tile on which the player now stands
-     */
-    public void setCurrentTile(Tile tile) {
-        this.currentTile = tile;
-    }
-
     @Override
     public String toString() {
         return "Player{" +
@@ -83,45 +53,5 @@ public class Player {
                 ", currentTile=" + (currentTile != null ? currentTile : "null") +
                 ", treasures=" + assignedTreasureCards +
                 '}';
-    }
-
-    public void setJoinDate(OffsetDateTime joinDate) {
-        this.joinDate = joinDate;
-    }
-
-    public void setScore(int score) {
-        this.score = score;
-    }
-
-    public void setAiActive(boolean aiActive) {
-        isAiActive = aiActive;
-    }
-
-    public void setAdmin(boolean admin) {
-        isAdmin = admin;
-    }
-
-    public void setColor(PlayerColor color) {
-        this.color = color;
-    }
-
-    public OffsetDateTime getJoinDate() {
-        return joinDate;
-    }
-
-    public int getScore() {
-        return score;
-    }
-
-    public boolean isAiActive() {
-        return isAiActive;
-    }
-
-    public boolean isAdmin() {
-        return isAdmin;
-    }
-
-    public PlayerColor getColor() {
-        return color;
     }
 }
