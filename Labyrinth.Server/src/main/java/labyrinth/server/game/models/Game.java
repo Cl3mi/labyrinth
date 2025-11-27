@@ -3,6 +3,8 @@ package labyrinth.server.game.models;
 import labyrinth.server.game.enums.Direction;
 import labyrinth.server.game.enums.MoveState;
 import labyrinth.server.game.enums.RoomState;
+import lombok.Getter;
+import lombok.Setter;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -13,8 +15,9 @@ import java.util.UUID;
  * Represents a game room for the Labyrinth game.
  * Each room has a unique code, a board, and manages 2–4 players.
  */
-// TODO: Rename to lobby
 @Component
+@Getter
+@Setter
 public class Game {
     //#region singleton
     private static final Game INSTANCE = new Game();
@@ -26,6 +29,7 @@ public class Game {
     //#region fields
     private int currentPlayerIndex;
     private MoveState currentMoveState = MoveState.PLACE_TILE;
+
 
     private Board board;
     private final List<Player> players;
@@ -48,32 +52,6 @@ public class Game {
         this.gameConfig = new GameConfig(7, 7, 7, 4);
 
         this.currentPlayerIndex = 0;
-    }
-    //#endregion
-
-    //#region getters and setters
-    public GameConfig getGameConfig() {
-        return gameConfig;
-    }
-
-    public void setGameConfig(GameConfig gameConfig) {
-        this.gameConfig = gameConfig;
-    }
-
-    public Board getBoard() {
-        return board;
-    }
-
-    public int getCurrentPlayerIndex() {
-        return currentPlayerIndex;
-    }
-
-    public List<Player> getPlayers() {
-        return new ArrayList<>(players);
-    }
-
-    public void setBoard(Board board) {
-        this.board = board;
     }
     //#endregion
 
