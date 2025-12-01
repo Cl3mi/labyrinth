@@ -64,7 +64,7 @@ public class Game implements IGame {
      * @throws IllegalStateException if the room is full
      */
     public Player join(String username) {
-        if(roomState != RoomState.LOBBY) {
+        if (roomState != RoomState.LOBBY) {
             throw new IllegalStateException("Cannot join a game that is in progress!");
         }
 
@@ -79,7 +79,7 @@ public class Game implements IGame {
         Player player = new Player(UUID.randomUUID(), username);
         player.setColor(getNextColor());
 
-        if(players.isEmpty()) {
+        if (players.isEmpty()) {
             //first player becomes admin
             player.setAdmin(true);
         }
@@ -109,7 +109,7 @@ public class Game implements IGame {
      */
     @Override
     public void startGame(GameConfig gameConfig) {
-        if(roomState != RoomState.LOBBY) {
+        if (roomState != RoomState.LOBBY) {
             throw new IllegalStateException("Cannot start a game that is in progress or finished!");
         }
 
@@ -146,11 +146,26 @@ public class Game implements IGame {
             int row;
             int col;
             switch (i) {
-                case 0 -> { row = 0; col = 0; }
-                case 1 -> { row = 0; col = gameConfig.boardWidth() - 1; }
-                case 2 -> { row = gameConfig.boardHeight()  - 1; col = gameConfig.boardWidth()  - 1; }
-                case 3 -> { row = gameConfig.boardHeight() - 1; col = 0; }
-                default -> { row = 0; col = 0; }
+                case 0 -> {
+                    row = 0;
+                    col = 0;
+                }
+                case 1 -> {
+                    row = 0;
+                    col = gameConfig.boardWidth() - 1;
+                }
+                case 2 -> {
+                    row = gameConfig.boardHeight() - 1;
+                    col = gameConfig.boardWidth() - 1;
+                }
+                case 3 -> {
+                    row = gameConfig.boardHeight() - 1;
+                    col = 0;
+                }
+                default -> {
+                    row = 0;
+                    col = 0;
+                }
             }
             Tile startingTile = board.getTileAt(row, col);
             System.out.println(player.getUsername() + " starts on tile: " + row + "/" + col);
@@ -161,6 +176,17 @@ public class Game implements IGame {
         // Register the players with the board and synchronize their tile references
         this.board.setPlayers(players);
         System.out.println("Game started in GameLobby" + " with " + players.size() + " players.");
+    }
+
+    @Override
+    public Player getCurrentPlayer() {
+        return players.get(currentPlayerIndex);
+    }
+
+    @Override
+    public Position getCurrentPositionOfPlayer(Player player) {
+        var tileOfPlayer = player.getCurrentTile();
+        return board.getPositionOfTile(tileOfPlayer);
     }
 
     public void shift(int index, Direction direction, Player player) {
@@ -174,8 +200,7 @@ public class Game implements IGame {
             case RIGHT -> board.shiftRowRight(index);
         };
 
-        if(!res)
-        {
+        if (!res) {
             return;
         }
         currentMoveState = MoveState.MOVE;
@@ -187,7 +212,7 @@ public class Game implements IGame {
 
         var moved = board.movePlayerToTile(player, row, col);
 
-        if(!moved){
+        if (!moved) {
             return false;
         }
         currentMoveState = MoveState.PLACE_TILE;
@@ -200,26 +225,26 @@ public class Game implements IGame {
     }
 
     private void guardFor(MoveState moveState) {
-        if(board.getFreeRoam()) {
+        if (board.getFreeRoam()) {
             return;
         }
 
-        if(this.currentMoveState != moveState) {
+        if (this.currentMoveState != moveState) {
             throw new IllegalStateException("Illegal move state");
         }
     }
 
     private void guardFor(RoomState roomState) {
-        if(this.roomState != roomState) {
+        if (this.roomState != roomState) {
             throw new IllegalStateException("Illegal room state");
         }
     }
 
-    private void guardFor(Player playerToMove){
-        if(board.getFreeRoam()) {
+    private void guardFor(Player playerToMove) {
+        if (board.getFreeRoam()) {
             return;
         }
-        if(!players.get(currentPlayerIndex).equals(playerToMove)) {
+        if (!players.get(currentPlayerIndex).equals(playerToMove)) {
             throw new IllegalStateException("Illegal player. Expected " + players.get(currentPlayerIndex).getId() + " but got " + playerToMove.getId());
         }
     }
@@ -234,15 +259,12 @@ public class Game implements IGame {
     }
 
 
-
     @Override
     public String toString() {
         return "Room{" +
                 ", players=" + players +
                 '}';
     }
-
-
 
     private PlayerColor getNextColor() {
         for (PlayerColor color : PlayerColor.values()) {

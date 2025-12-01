@@ -12,25 +12,29 @@ import java.util.ArrayList;
 @Component
 @RequiredArgsConstructor
 public class GameMapper {
+
     private final PlayerInfoMapper playerMapper;
     private final GameBoardMapper gameBoardMapper;
+    private final TurnStateMapper turnStateMapper;
+    private final CoordinatesMapper coordinatesMapper;
 
     public GameStateUpdateEventPayload toGameStateDto(IGame game) {
         var gameState = new GameStateUpdateEventPayload();
         gameState.setType(EventType.GAME_STATE_UPDATE);
 
-        var players = game.getPlayers()
-                .stream()
-                .map(playerMapper::toDto)
-                .toList();
+        var gameBoard = game.getBoard();
+        var players = game.getPlayers();
 
         var playerStates = new ArrayList<PlayerState>();
-        for(var player : players) {
+        for (var player : players) {
             var playerState = new PlayerState();
-            playerState.setPlayerInfo(player);
+            playerState.setPlayerInfo(playerMapper.toDto(player));
+
+            var playersPosition = game.getCurrentPositionOfPlayer(player);
+            playerState.setCurrentPosition(coordinatesMapper.toDto(playersPosition));
+
             // TODO: playerState.setAchievements();
             // TODO: playerState.setAvailableBonuses();
-            // TODO: playerState.setCurrentPosition();
             // TODO: playerState.setCurrentTreasure();
             // TODO: playerState.setHomePosition();
             // TODO: playerState.setRemainingTreasureCount();
@@ -40,9 +44,9 @@ public class GameMapper {
         }
 
         gameState.setPlayers(playerStates.toArray(PlayerState[]::new));
-        gameState.setBoard(gameBoardMapper.toDto(game.getBoard()));
-        //TODO gameState.setCurrentTurnState();
-        //TODO gameState.setCurrentPlayerId();
+        gameState.setCurrentTurnState(turnStateMapper.toDto(game.getCurrentMoveState()));
+        gameState.setCurrentPlayerId(game.getCurrentPlayer().getId().toString());
+        gameState.setBoard(gameBoardMapper.toDto(gameBoard));
 
         return gameState;
     }
