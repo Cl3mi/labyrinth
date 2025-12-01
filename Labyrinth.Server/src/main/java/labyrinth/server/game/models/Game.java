@@ -1,5 +1,6 @@
 package labyrinth.server.game.models;
 
+import labyrinth.server.game.abstractions.IGame;
 import labyrinth.server.game.enums.Direction;
 import labyrinth.server.game.enums.MoveState;
 import labyrinth.server.game.enums.RoomState;
@@ -18,7 +19,7 @@ import java.util.UUID;
 @Component
 @Getter
 @Setter
-public class Game {
+public class Game implements IGame {
     //#region singleton
     private static final Game INSTANCE = new Game();
     public static Game getInstance() {

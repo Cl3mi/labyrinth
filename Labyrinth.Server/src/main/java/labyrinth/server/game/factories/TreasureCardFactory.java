@@ -7,7 +7,6 @@ import labyrinth.server.game.models.TreasureCard;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.UUID;
 
 /**
  * Factory class to create TreasureCards for the game.
@@ -41,9 +40,8 @@ public class TreasureCardFactory implements ITreasureCardFactory {
         List<TreasureCard> cards = new ArrayList<>();
         for (int i = 0; i < treasuresToGenerate; i++) {
             String name = shuffledNames.get(i);
-            String id = UUID.randomUUID().toString();
             String imagePath = "/images/treasures/" + name.toLowerCase() + ".png";
-            cards.add(new TreasureCard(id, name, imagePath));
+            cards.add(new TreasureCard(i, name, imagePath));
         }
 
         return cards;
