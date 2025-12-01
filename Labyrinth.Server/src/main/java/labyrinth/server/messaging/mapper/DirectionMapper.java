@@ -5,7 +5,6 @@ import org.springframework.stereotype.Component;
 
 
 @Component
-
 public class DirectionMapper {
     public Direction toDto(labyrinth.server.game.enums.Direction direction) {
         return switch (direction) {

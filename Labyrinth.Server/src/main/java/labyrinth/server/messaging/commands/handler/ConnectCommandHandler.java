@@ -2,10 +2,12 @@ package labyrinth.server.messaging.commands.handler;
 
 import labyrinth.contracts.models.*;
 import labyrinth.server.exceptions.ActionErrorException;
-import labyrinth.server.game.GameService;
+import labyrinth.server.game.abstractions.IGame;
 import labyrinth.server.messaging.MessageService;
 import labyrinth.server.messaging.PlayerSessionRegistry;
 import labyrinth.server.messaging.commands.ICommandHandler;
+import labyrinth.server.messaging.mapper.PlayerInfoMapper;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.WebSocketSession;
 
@@ -13,18 +15,14 @@ import java.util.UUID;
 
 
 @Component
+@RequiredArgsConstructor
 public class ConnectCommandHandler implements ICommandHandler<ConnectCommandPayload> {
-    private final GameService gameService;
+
+    private final IGame game;
     private final PlayerSessionRegistry playerSessionRegistry;
     private final MessageService messageService;
+    private final PlayerInfoMapper playerInfoMapper;
 
-    public ConnectCommandHandler(GameService gameService,
-                                 PlayerSessionRegistry playerSessionRegistry,
-                                 MessageService messageService) {
-        this.gameService = gameService;
-        this.playerSessionRegistry = playerSessionRegistry;
-        this.messageService = messageService;
-    }
 
     @Override
     public CommandType type() {
@@ -40,7 +38,7 @@ public class ConnectCommandHandler implements ICommandHandler<ConnectCommandPayl
 
         if (payload.getPlayerId() != null) {
             var playerId = UUID.fromString(payload.getPlayerId());
-            var player = gameService.getPlayer(playerId);
+            var player = game.getPlayer(playerId);
 
             playerSessionRegistry.registerPlayer(player, session);
 
@@ -51,7 +49,7 @@ public class ConnectCommandHandler implements ICommandHandler<ConnectCommandPayl
             return;
         }
 
-        var player = gameService.connectPlayer(payload.getUsername());
+        var player = game.join(payload.getUsername());
 
         playerSessionRegistry.registerPlayer(player, session);
 
@@ -61,16 +59,9 @@ public class ConnectCommandHandler implements ICommandHandler<ConnectCommandPayl
 
         messageService.sendToPlayer(player, ackPayload);
 
-        var players = gameService.getPlayersInLobby()
+        var players = game.getPlayers()
                 .stream()
-                .map(p -> {
-                    var playerInfo = new PlayerInfo();
-                    playerInfo.setId(p.getId().toString());
-                    playerInfo.setIsAdmin(p.isAdmin());
-                    playerInfo.setColor(p.getColor());
-                    playerInfo.setName(p.getUsername());
-                    return playerInfo;
-                })
+                .map(playerInfoMapper::toDto)
                 .toArray(PlayerInfo[]::new);
 
         var lobbyStateUpdated = new LobbyStateEventPayload();

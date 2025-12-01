@@ -1,6 +1,9 @@
 package labyrinth.server.game.models;
 
+import labyrinth.contracts.models.PlayerColor;
+import labyrinth.server.game.abstractions.IBoardFactory;
 import labyrinth.server.game.abstractions.IGame;
+import labyrinth.server.game.abstractions.ITreasureCardFactory;
 import labyrinth.server.game.enums.Direction;
 import labyrinth.server.game.enums.MoveState;
 import labyrinth.server.game.enums.RoomState;
@@ -8,8 +11,10 @@ import lombok.Getter;
 import lombok.Setter;
 import org.springframework.stereotype.Component;
 
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 /**
@@ -20,50 +25,45 @@ import java.util.UUID;
 @Getter
 @Setter
 public class Game implements IGame {
-    //#region singleton
-    private static final Game INSTANCE = new Game();
-    public static Game getInstance() {
-        return INSTANCE;
-    }
-    //#endregion
 
-    //#region fields
     private int currentPlayerIndex;
     private MoveState currentMoveState = MoveState.PLACE_TILE;
 
-
+    @Setter(lombok.AccessLevel.NONE)
     private Board board;
+
     private final List<Player> players;
     private RoomState roomState;
 
+    @Setter(lombok.AccessLevel.NONE)
+    @Getter(lombok.AccessLevel.NONE)
     private GameConfig gameConfig;
-    //#endregion
 
-    //#region ctor
-    /**
-     * Creates a new game room.
-     *
-     */
-    private Game() {
+    private final ITreasureCardFactory treasureCardFactory;
+    private final IBoardFactory boardFactory;
+
+
+    public Game(ITreasureCardFactory treasureCardFactory, IBoardFactory boardFactory) {
+        this.treasureCardFactory = treasureCardFactory;
+        this.boardFactory = boardFactory;
+
         this.players = new ArrayList<>();
         this.roomState = RoomState.LOBBY;
         this.board = null;
 
         // start with a default config
-        this.gameConfig = new GameConfig(7, 7, 7, 4);
+        this.gameConfig = GameConfig.getDefault();
 
         this.currentPlayerIndex = 0;
     }
-    //#endregion
 
-    //#region methods
     /**
      * Adds a player to the room.
      *
-     * @param player the player to join
+     * @param username the username of the player joining the room
      * @throws IllegalStateException if the room is full
      */
-    public Player join(Player player) {
+    public Player join(String username) {
         if(roomState != RoomState.LOBBY) {
             throw new IllegalStateException("Cannot join a game that is in progress!");
         }
@@ -72,19 +72,43 @@ public class Game implements IGame {
             throw new IllegalStateException("Room is full");
         }
 
-        if (!isUsernameAvailable(player.getUsername())) {
+        if (!isUsernameAvailable(username)) {
             throw new IllegalArgumentException("Username is already taken");
         }
 
+        Player player = new Player(UUID.randomUUID(), username);
+        player.setColor(getNextColor());
+
+        if(players.isEmpty()) {
+            //first player becomes admin
+            player.setAdmin(true);
+        }
+
+        player.setJoinDate(OffsetDateTime.now());
         players.add(player);
         return player;
+    }
+
+    @Override
+    public void leave(Player player) {
+        //TODO: handle leaving during game
+        players.removeIf(p -> p.getId().equals(player.getId()));
+    }
+
+    @Override
+    public Player getPlayer(UUID playerId) {
+        return players.stream()
+                .filter(p -> p.getId().equals(playerId))
+                .findFirst()
+                .orElse(null);
     }
 
     /**
      * Starts the game. This method could be extended to initialize
      * player positions, shuffle treasure cards, and set up the board.
      */
-    public void startGame(List<TreasureCard> cards) {
+    @Override
+    public void startGame(GameConfig gameConfig) {
         if(roomState != RoomState.LOBBY) {
             throw new IllegalStateException("Cannot start a game that is in progress or finished!");
         }
@@ -93,21 +117,26 @@ public class Game implements IGame {
             throw new IllegalStateException("At least 2 players required to start the game");
         }
 
-        if (cards.size() != gameConfig.amountOfTreasuresPerPlayer() * players.size()) {
-            throw new IllegalStateException("Not the right amount of treasure cards supplied. Got " + cards.size() + ", expected " + gameConfig.amountOfTreasuresPerPlayer() * players.size());
-        }
+        this.gameConfig = Objects.requireNonNullElseGet(gameConfig, GameConfig::getDefault);
+        board = boardFactory.createBoard(gameConfig.boardWidth(), gameConfig.boardHeight());
+
+        var cards = treasureCardFactory.createTreasureCards(gameConfig.treasureCardCount(), players.size());
 
         System.out.println(cards.size() + " cards have been created");
+
+        var currentPlayerIndex = 0;
         do {
             TreasureCard card = cards.getFirst();
             board.placeRandomTreasure(card);
-            for (Player player : players) {
-                if(player.getAssignedTreasureCards().size() < gameConfig.amountOfTreasuresPerPlayer()) {
-                    player.getAssignedTreasureCards().add(card);
-                    break;
-                }
+
+            Player player = players.get(currentPlayerIndex);
+            player.getAssignedTreasureCards().add(card);
+            currentPlayerIndex++;
+            if (currentPlayerIndex >= players.size()) {
+                currentPlayerIndex = 0;
             }
-            cards.removeFirst();
+
+            cards.remove(card);
         } while (!cards.isEmpty());
 
         // Assign starting positions to each player by placing them on the four corners of the board.
@@ -204,9 +233,6 @@ public class Game implements IGame {
         return players.size() >= gameConfig.maxPlayers();
     }
 
-    public void removePlayer(UUID playerId) {
-        players.removeIf(p -> p.getId().equals(playerId));
-    }
 
 
     @Override
@@ -215,5 +241,17 @@ public class Game implements IGame {
                 ", players=" + players +
                 '}';
     }
-    //#endregion
+
+
+
+    private PlayerColor getNextColor() {
+        for (PlayerColor color : PlayerColor.values()) {
+            boolean used = players.stream()
+                    .anyMatch(p -> p.getColor() == color);
+            if (!used) {
+                return color;
+            }
+        }
+        throw new IllegalStateException("No available colors left");
+    }
 }

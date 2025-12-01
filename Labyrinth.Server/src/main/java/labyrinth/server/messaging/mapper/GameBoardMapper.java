@@ -6,18 +6,15 @@ import labyrinth.contracts.models.Tile;
 import labyrinth.server.game.models.Board;
 import labyrinth.server.game.models.Position;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 @Component
+@RequiredArgsConstructor
 public class GameBoardMapper {
+
     private final DirectionMapper directionMapper;
     private final TreasureMapper treasureMapper;
-
-    public GameBoardMapper(DirectionMapper directionMapper,
-                           TreasureMapper treasureMapper) {
-        this.directionMapper = directionMapper;
-        this.treasureMapper = treasureMapper;
-    }
 
     public GameBoard toDto(Board board) {
         GameBoard dto = new GameBoard();
