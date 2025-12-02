@@ -1,0 +1,23 @@
+# ARG to control JDK version
+ARG JAVA_VERSION=24
+
+FROM eclipse-temurin:${JAVA_VERSION} AS builder
+
+ARG MAVEN_VERSION=3.9.6
+
+# Install Maven manually
+RUN apt-get update && apt-get install -y --no-install-recommends curl tar ca-certificates \
+  && curl -fsSL https://archive.apache.org/dist/maven/maven-3/${MAVEN_VERSION}/binaries/apache-maven-${MAVEN_VERSION}-bin.tar.gz -o /tmp/maven.tar.gz \
+  && tar -xzf /tmp/maven.tar.gz -C /opt \
+  && mv /opt/apache-maven-${MAVEN_VERSION} /opt/maven \
+  && ln -s /opt/maven/bin/mvn /usr/bin/mvn \
+  && rm -rf /var/lib/apt/lists/* /tmp/maven.tar.gz
+
+# Copy the whole project
+WORKDIR /project
+COPY . .
+
+# Run tests from parent pom.xml
+RUN mvn -B -e -X -f pom.xml test
+
+# No CMD — this is a build-only image

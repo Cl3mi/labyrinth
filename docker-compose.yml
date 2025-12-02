@@ -1,0 +1,31 @@
+services:
+  server:
+    build:
+      context: .
+      dockerfile: Labyrinth.Server/Dockerfile
+      args:
+        - JAVA_VERSION=24-jdk
+    image: labyrinth/server:latest
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+
+  client:
+    build:
+      context: .
+      dockerfile: Labyrinth.Client/Dockerfile
+      args:
+        - JAVA_VERSION=24-jdk
+    image: labyrinth/client:latest
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+
+  test:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+      args:
+        - JAVA_VERSION=24-jdk
+    # We just want to build it, not run it
+    image: labyrinth/test:latest
