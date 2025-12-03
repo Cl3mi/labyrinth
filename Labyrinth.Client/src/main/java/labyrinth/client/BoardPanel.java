@@ -10,11 +10,12 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.event.MouseMotionAdapter;
 import java.awt.geom.Path2D;
-import java.util.ArrayList;
-import java.util.HashSet;
+import java.awt.image.BufferedImage;
+import java.util.*;
 import java.util.List;
-import java.util.Set;
+import labyrinth.client.audio.AudioPlayer;
 
 /**
  * Panel that draws a Labyrinth {@link Board} with optional reachable tile highlighting
@@ -27,7 +28,7 @@ public class BoardPanel extends JPanel {
     private static final int PANEL_PADDING = 20;
     private static final int ARROW_MARGIN = 5;
     private static final Font DEBUG_INFO_FONT = new Font("Arial", Font.BOLD, 16);
-    private static final Font PLAYER_MARKER_FONT = new Font("Arial", Font.BOLD, 30);
+    private static final Font PLAYER_MARKER_FONT = new Font("Arial", Font.BOLD, 30); // nur Fallback
     private static final Font COORDINATE_FONT = new Font("Arial", Font.PLAIN, 10);
     private static final Color BACKGROUND_COLOR = Color.DARK_GRAY;
     private static final Color CORRIDOR_COLOR = new Color(235, 235, 220);
@@ -36,10 +37,17 @@ public class BoardPanel extends JPanel {
     private static final Color NORMAL_TILE_BACKGROUND_COLOR = new Color(100, 100, 100);
     private static final Color FIXED_TILE_BACKGROUND_COLOR = new Color(160, 160, 0);
     private static final Color ARROW_COLOR = new Color(70, 130, 180);
+    private static final Color ARROW_COLOR_HOVER = new Color(120, 180, 230);
     private static final Color[] PLAYER_COLORS = {
             new Color(200, 80, 80), new Color(80, 180, 80),
             new Color(80, 120, 200), new Color(230, 200, 80)
     };
+
+    // --- Images ---
+    private final Map<String, BufferedImage> tileImages = new HashMap<>(); // "I","L","T"
+    private final List<BufferedImage> playerIcons = new ArrayList<>();     // index = player
+    private Image backgroundImage;
+    private static final int TILE_PADDING = 0;
 
     // --- Class Fields ---
     private final Board board;
@@ -48,12 +56,16 @@ public class BoardPanel extends JPanel {
     private int currentPlayerIndex = 0;
     private final Set<Tile> reachableTiles;
     private final List<ArrowButton> arrowButtons = new ArrayList<>();
+    private ArrowButton hoveredArrow = null;
 
     // --- Dynamic Layout Fields ---
     private int xOffset;
     private int yOffset;
     private int size;
     private int arrowSize = 30;
+
+    // --- Audio ---
+    private AudioPlayer backgroundMusic;
 
     /**
      * Creates a viewer panel for the given board and list of players.
@@ -63,10 +75,19 @@ public class BoardPanel extends JPanel {
         this.currentPlayer = currentPlayer;
         this.players = players != null ? players : List.of();
         this.reachableTiles = new HashSet<>();
+
+        loadBackgroundImage();
+        loadTileImages();
+        loadPlayerIcons();
+
         updateReachableTilesAndRepaint();
         setBackground(BACKGROUND_COLOR);
         setPreferredSize(new Dimension(1400, 800));
         setupMouseListener();
+
+        backgroundMusic = new AudioPlayer("/sounds/06-Kokiri-Forest.wav");
+        backgroundMusic.setVolume(0.4f);
+        backgroundMusic.loop();
     }
 
     /**
@@ -74,6 +95,179 @@ public class BoardPanel extends JPanel {
      */
     public BoardPanel(Board board, Player currentPlayer) {
         this(board, currentPlayer, currentPlayer != null ? List.of(currentPlayer) : List.of());
+    }
+
+    // =================================================================================
+    // IMAGE LOADING
+    // =================================================================================
+
+    private void loadBackgroundImage() {
+        try {
+            var url = getClass().getResource("/images/ui/background.jpg");
+            if (url != null) {
+                backgroundImage = new ImageIcon(url).getImage();
+            } else {
+                System.err.println("Background image not found: /images/ui/background.jpg");
+            }
+        } catch (Exception e) {
+            System.err.println("Error loading background image: " + e.getMessage());
+        }
+    }
+
+    private BufferedImage loadImage(String path) {
+        try {
+            var url = getClass().getResource(path);
+            if (url == null) {
+                System.err.println("Image not found on classpath: " + path);
+                return null;
+            }
+            return javax.imageio.ImageIO.read(url);
+        } catch (Exception e) {
+            System.err.println("Error loading image: " + path + " -> " + e.getMessage());
+            return null;
+        }
+    }
+
+    private void loadTileImages() {
+        tileImages.put("I", loadImage("/images/tiles/tile_I.png"));
+        tileImages.put("L", loadImage("/images/tiles/tile_L.png"));
+        tileImages.put("T", loadImage("/images/tiles/tile_princess.png"));
+        // Optional Kreuz:
+        // tileImages.put("X", loadImage("/images/tiles/tile_X.png"));
+    }
+
+    private void loadPlayerIcons() {
+        // Versuche bis zu 4 Icons zu laden, fallback auf Text wenn null
+        for (int i = 1; i <= 4; i++) {
+            BufferedImage img = loadImage("/images/players/player" + i + ".png");
+            playerIcons.add(img); // img kann null sein; dann wird Text verwendet
+        }
+    }
+
+    // =================================================================================
+    // TILE IMAGE INFO & DRAWING
+    // =================================================================================
+
+    private static class TileImageInfo {
+        final String type;   // "I","L","T","X"
+        final int rotation;  // 0,90,180,270
+
+        TileImageInfo(String type, int rotation) {
+            this.type = type;
+            this.rotation = rotation;
+        }
+    }
+
+    /**
+     * Leitet aus den Tile-Entrances die Tile-Form (I/L/T) und Rotation ab.
+     * Nutzt dein client-Model: Tile.getEntrances() -> Set<Direction>.
+     */
+    private TileImageInfo getTileImageInfo(Tile tile) {
+        Set<Direction> dirs = tile.getEntrances();
+        if (dirs == null || dirs.isEmpty()) {
+            return null;
+        }
+
+        // I-Tiles: zwei gegenüberliegende Eingänge
+        if (dirs.size() == 2) {
+            if (dirs.contains(Direction.UP) && dirs.contains(Direction.DOWN)) {
+                return new TileImageInfo("I", 0);
+            }
+            if (dirs.contains(Direction.LEFT) && dirs.contains(Direction.RIGHT)) {
+                return new TileImageInfo("I", 90);
+            }
+        }
+
+        // L-Tiles: zwei benachbarte Eingänge
+        if (dirs.size() == 2) {
+            if (dirs.contains(Direction.UP) && dirs.contains(Direction.RIGHT)) {
+                return new TileImageInfo("L", 0);
+            }
+            if (dirs.contains(Direction.RIGHT) && dirs.contains(Direction.DOWN)) {
+                return new TileImageInfo("L", 90);
+            }
+            if (dirs.contains(Direction.DOWN) && dirs.contains(Direction.LEFT)) {
+                return new TileImageInfo("L", 180);
+            }
+            if (dirs.contains(Direction.LEFT) && dirs.contains(Direction.UP)) {
+                return new TileImageInfo("L", 270);
+            }
+        }
+
+        // T-Tiles: drei Eingänge
+        if (dirs.size() == 3) {
+            if (dirs.contains(Direction.LEFT) && dirs.contains(Direction.UP) && dirs.contains(Direction.RIGHT)) {
+                return new TileImageInfo("T", 0);
+            }
+            if (dirs.contains(Direction.UP) && dirs.contains(Direction.RIGHT) && dirs.contains(Direction.DOWN)) {
+                return new TileImageInfo("T", 90);
+            }
+            if (dirs.contains(Direction.RIGHT) && dirs.contains(Direction.DOWN) && dirs.contains(Direction.LEFT)) {
+                return new TileImageInfo("T", 180);
+            }
+            if (dirs.contains(Direction.DOWN) && dirs.contains(Direction.LEFT) && dirs.contains(Direction.UP)) {
+                return new TileImageInfo("T", 270);
+            }
+        }
+
+        return null;
+    }
+
+    private void drawRotatedImage(Graphics2D g2, Image img, int x, int y, int rotationDeg) {
+        if (img == null) return;
+
+        Graphics2D g = (Graphics2D) g2.create();
+
+        // Nur innerhalb dieses Tiles zeichnen
+        Shape oldClip = g.getClip();
+        g.setClip(new Rectangle(x, y, size, size));
+
+        // Etwas größer zeichnen als das Tile (z.B. 1.2 = 20% größer)
+        double scale = 1.2;
+        int drawSize = (int) Math.round(size * scale);
+
+        // so zentrieren, dass es mittig im Tile liegt
+        int drawX = x - (drawSize - size) / 2;
+        int drawY = y - (drawSize - size) / 2;
+
+        int cx = drawX + drawSize / 2;
+        int cy = drawY + drawSize / 2;
+
+        g.rotate(Math.toRadians(rotationDeg), cx, cy);
+        g.drawImage(img, drawX, drawY, drawSize, drawSize, null);
+
+        // Clip zurücksetzen
+        g.setClip(oldClip);
+        g.dispose();
+    }
+
+    private void drawCorridorsFallback(Graphics2D g2, Tile tile, int x, int y) {
+        int cx = x + size / 2;
+        int cy = y + size / 2;
+        int corridorWidth = Math.max(4, size / 6);
+
+        g2.setColor(CORRIDOR_COLOR);
+        if (tile.getEntrances().contains(Direction.UP)) {
+            g2.fillRect(cx - corridorWidth / 2, y, corridorWidth, size / 2);
+        }
+        if (tile.getEntrances().contains(Direction.DOWN)) {
+            g2.fillRect(cx - corridorWidth / 2, cy, corridorWidth, size / 2);
+        }
+        if (tile.getEntrances().contains(Direction.LEFT)) {
+            g2.fillRect(x, cy - corridorWidth / 2, size / 2, corridorWidth);
+        }
+        if (tile.getEntrances().contains(Direction.RIGHT)) {
+            g2.fillRect(cx, cy - corridorWidth / 2, size / 2, corridorWidth);
+        }
+
+        int dotSize = Math.max(4, corridorWidth);
+        g2.setColor(tile.isFixed() ? FIXED_TILE_BACKGROUND_COLOR : WALL_COLOR);
+        g2.fillOval(cx - dotSize / 2, cy - dotSize / 2, dotSize, dotSize);
+    }
+
+    private void drawTileHighlight(Graphics2D g2, int x, int y) {
+        g2.setColor(new Color(255, 255, 0, 120));
+        g2.fillRoundRect(x - 4, y - 4, size + 8, size + 8, 15, 15);
     }
 
     // =================================================================================
@@ -92,12 +286,22 @@ public class BoardPanel extends JPanel {
                 handleTileClick(e.getPoint());
             }
         });
+
+        addMouseMotionListener(new MouseMotionAdapter() {
+            @Override
+            public void mouseMoved(MouseEvent e) {
+                hoveredArrow = null;
+                for (ArrowButton arrow : arrowButtons) {
+                    if (arrow.contains(e.getPoint())) {
+                        hoveredArrow = arrow;
+                        break;
+                    }
+                }
+                repaint();
+            }
+        });
     }
 
-    /**
-     * Checks for and handles a click on a row/column shift arrow.
-     * @return true if an arrow was clicked, false otherwise.
-     */
     private boolean handleArrowClick(Point p) {
         for (ArrowButton arrow : arrowButtons) {
             if (arrow.contains(p)) {
@@ -113,9 +317,6 @@ public class BoardPanel extends JPanel {
         return false;
     }
 
-    /**
-     * Checks for and handles a click on a tile on the game board.
-     */
     private void handleTileClick(Point p) {
         System.out.println("---------");
         System.out.println("Current player: " + currentPlayer);
@@ -139,9 +340,6 @@ public class BoardPanel extends JPanel {
         System.out.println("---------");
     }
 
-    /**
-     * Recalculates the set of reachable tiles for the current player and repaints the component.
-     */
     private void updateReachableTilesAndRepaint() {
         reachableTiles.clear();
         if (currentPlayer != null) {
@@ -158,6 +356,11 @@ public class BoardPanel extends JPanel {
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
         if (board == null) return;
+
+        // Hintergrundbild
+        if (backgroundImage != null) {
+            g.drawImage(backgroundImage, 0, 0, getWidth(), getHeight(), this);
+        }
 
         Graphics2D g2 = (Graphics2D) g.create();
         try {
@@ -177,9 +380,6 @@ public class BoardPanel extends JPanel {
         }
     }
 
-    /**
-     * Calculates the primary layout metrics (tile size, board offset) based on the panel's current size.
-     */
     private void calculateLayoutMetrics() {
         int w = getWidth() - 2 * arrowSize - PANEL_PADDING - CARD_PANEL_WIDTH;
         int h = getHeight() - 2 * arrowSize - PANEL_PADDING;
@@ -189,9 +389,6 @@ public class BoardPanel extends JPanel {
         yOffset = (getHeight() - size * board.getHeight()) / 2;
     }
 
-    /**
-     * Draws the main grid of tiles and the players on them.
-     */
     private void drawBoardGrid(Graphics2D g2) {
         for (int row = 0; row < board.getHeight(); row++) {
             for (int col = 0; col < board.getWidth(); col++) {
@@ -206,48 +403,40 @@ public class BoardPanel extends JPanel {
         }
     }
 
-    /**
-     * Draws a single, complete tile at a specified location.
-     * @param drawDetails Toggles drawing of player-specific details like treasures and coordinates.
-     */
     private void drawTileAt(Graphics2D g2, Tile tile, int x, int y, int row, int col, boolean drawDetails) {
-        int cx = x + size / 2;
-        int cy = y + size / 2;
-        int corridorWidth = Math.max(4, size / 6);
+        // Hintergrund für den Fall, dass kein Bild vorhanden ist
 
-        // Background
-        g2.setColor(reachableTiles.contains(tile) ? REACHABLE_TILE_HIGHLIGHT_COLOR : NORMAL_TILE_BACKGROUND_COLOR);
-        g2.fillRect(x, y, size, size);
+        // Bild + Rotation (jetzt mit Zoom+Clip)
+        TileImageInfo info = getTileImageInfo(tile);
+        boolean drewImage = false;
+        if (info != null) {
+            BufferedImage img = tileImages.get(info.type);
+            if (img != null) {
+                drawRotatedImage(g2, img, x, y, info.rotation);
+                drewImage = true;
+            }
+        }
 
-        // Corridors
-        g2.setColor(CORRIDOR_COLOR);
-        if (tile.getEntrances().contains(Direction.UP)) g2.fillRect(cx - corridorWidth / 2, y, corridorWidth, size / 2);
-        if (tile.getEntrances().contains(Direction.DOWN)) g2.fillRect(cx - corridorWidth / 2, cy, corridorWidth, size / 2);
-        if (tile.getEntrances().contains(Direction.LEFT)) g2.fillRect(x, cy - corridorWidth / 2, size / 2, corridorWidth);
-        if (tile.getEntrances().contains(Direction.RIGHT)) g2.fillRect(cx, cy - corridorWidth / 2, size / 2, corridorWidth);
-
-        // Center dot
-        int dotSize = Math.max(4, corridorWidth);
-        g2.setColor(tile.isFixed() ? FIXED_TILE_BACKGROUND_COLOR : WALL_COLOR);
-        g2.fillOval(cx - dotSize / 2, cy - dotSize / 2, dotSize, dotSize);
+        // Fallback, falls kein Bild gefunden wurde
+        if (!drewImage) {
+            drawCorridorsFallback(g2, tile, x, y);
+        }
 
         if (drawDetails) {
-            // Treasure Name
             if (tile.getTreasureCard() != null) {
+                int cx = x + size / 2;
+                int cy = y + size / 2;
                 drawTreasureOnTile(g2, tile.getTreasureCard(), cx, cy);
             }
-            // Coordinates
             drawCoordinates(g2, x, y, row, col);
         }
 
-        // Border
-        g2.setColor(Color.BLACK);
-        g2.drawRect(x, y, size, size);
+        // KEIN zusätzlicher schwarzer Rahmen mehr
+        // g2.setColor(Color.BLACK);
+        // g2.drawRect(x, y, size, size);
     }
 
-    /**
-     * A helper to draw the treasure name on a tile.
-     */
+
     private void drawTreasureOnTile(Graphics2D g2, TreasureCard card, int centerX, int centerY) {
         g2.setColor(Color.BLACK);
         FontMetrics fm = g2.getFontMetrics();
@@ -255,9 +444,6 @@ public class BoardPanel extends JPanel {
         g2.drawString(card.getTreasureName(), centerX - textWidth / 2, (centerY + fm.getAscent() / 2) - 20);
     }
 
-    /**
-     * A helper to draw the (row, col) coordinates on a tile.
-     */
     private void drawCoordinates(Graphics2D g2, int x, int y, int row, int col) {
         String coords = "(" + row + "," + col + ")";
         g2.setColor(Color.WHITE);
@@ -267,82 +453,115 @@ public class BoardPanel extends JPanel {
         g2.setFont(oldFont);
     }
 
-    /**
-     * Draws any players located on the specified tile.
-     */
     private void drawPlayersOnTile(Graphics2D g2, int row, int col) {
         for (int i = 0; i < players.size(); i++) {
             Player p = players.get(i);
-            if (p != null && p.getCurrentPosition() != null && p.getCurrentPosition().getRow() == row && p.getCurrentPosition().getColumn() == col) {
+            if (p != null && p.getCurrentPosition() != null &&
+                    p.getCurrentPosition().getRow() == row &&
+                    p.getCurrentPosition().getColumn() == col) {
+
                 int cx = xOffset + col * size + size / 2;
                 int cy = yOffset + row * size + size / 2;
 
-                g2.setColor(PLAYER_COLORS[i % PLAYER_COLORS.length]);
-                Font oldFont = g2.getFont();
-                g2.setFont(PLAYER_MARKER_FONT);
-                FontMetrics fm = g2.getFontMetrics();
-                String text = "P" + (i + 1);
-                int textWidth = fm.stringWidth(text);
-                g2.drawString(text, cx - textWidth / 2, cy + fm.getAscent() / 2 - fm.getDescent());
-                g2.setFont(oldFont);
+                BufferedImage icon = (i < playerIcons.size()) ? playerIcons.get(i) : null;
+                if (icon != null) {
+                    int iconSize = (int) (size * 0.6);
+                    g2.drawImage(icon,
+                            cx - iconSize / 2,
+                            cy - iconSize / 2,
+                            iconSize,
+                            iconSize,
+                            null);
+                } else {
+                    // Fallback: Text "P1" etc.
+                    g2.setColor(PLAYER_COLORS[i % PLAYER_COLORS.length]);
+                    Font oldFont = g2.getFont();
+                    g2.setFont(PLAYER_MARKER_FONT);
+                    FontMetrics fm = g2.getFontMetrics();
+                    String text = "P" + (i + 1);
+                    int textWidth = fm.stringWidth(text);
+                    g2.drawString(text, cx - textWidth / 2, cy + fm.getAscent() / 2 - fm.getDescent());
+                    g2.setFont(oldFont);
+                }
             }
         }
     }
 
-    /**
-     * Clears, recreates, and draws all the arrow buttons.
-     */
     private void createAndDrawArrowButtons(Graphics2D g2) {
         arrowButtons.clear();
-        g2.setColor(ARROW_COLOR);
         g2.setStroke(new BasicStroke(2));
 
         int rows = board.getHeight();
         int cols = board.getWidth();
 
-        // Left and Right arrows
+        // ROW SHIFT — Nur jede 2. Zeile (Index 1,3,5,...)
         for (int row = 0; row < rows; row++) {
-            int y = yOffset + row * size + (size - arrowSize) / 2;
-            Rectangle rightBounds = new Rectangle(xOffset - arrowSize - ARROW_MARGIN, y, arrowSize, arrowSize);
-            ArrowButton rightArrow = new ArrowButton(rightBounds, Direction.RIGHT, row, true);
-            arrowButtons.add(rightArrow);
-            g2.fill(rightArrow.arrowShape);
-            g2.draw(rightArrow.arrowShape);
 
-            Rectangle leftBounds = new Rectangle(xOffset + cols * size + ARROW_MARGIN, y, arrowSize, arrowSize);
-            ArrowButton leftArrow = new ArrowButton(leftBounds, Direction.LEFT, row, true);
+            if (row % 2 == 0) continue; // nur ungerade Zeilen erlauben
+
+            int y = yOffset + row * size + (size - arrowSize) / 2;
+
+            // LINKS vom Board: Pfeil zeigt NACH RECHTS (schiebt nach rechts rein)
+            Rectangle leftBounds = new Rectangle(xOffset - arrowSize - ARROW_MARGIN, y, arrowSize, arrowSize);
+            ArrowButton leftArrow = new ArrowButton(leftBounds, Direction.RIGHT, row, true);
             arrowButtons.add(leftArrow);
-            g2.fill(leftArrow.arrowShape);
-            g2.draw(leftArrow.arrowShape);
+            drawArrowButton(g2, leftArrow);
+
+            // RECHTS vom Board: Pfeil zeigt NACH LINKS (schiebt nach links rein)
+            Rectangle rightBounds = new Rectangle(xOffset + cols * size + ARROW_MARGIN, y, arrowSize, arrowSize);
+            ArrowButton rightArrow = new ArrowButton(rightBounds, Direction.LEFT, row, true);
+            arrowButtons.add(rightArrow);
+            drawArrowButton(g2, rightArrow);
         }
 
-        // Top and Bottom arrows
+        // COLUMN SHIFT — Nur jede 2. Spalte (Index 1,3,5,...)
         for (int col = 0; col < cols; col++) {
-            int x = xOffset + col * size + (size - arrowSize) / 2;
-            Rectangle downBounds = new Rectangle(x, yOffset - arrowSize - ARROW_MARGIN, arrowSize, arrowSize);
-            ArrowButton downArrow = new ArrowButton(downBounds, Direction.DOWN, col, false);
-            arrowButtons.add(downArrow);
-            g2.fill(downArrow.arrowShape);
-            g2.draw(downArrow.arrowShape);
 
-            Rectangle upBounds = new Rectangle(x, yOffset + rows * size + ARROW_MARGIN, arrowSize, arrowSize);
-            ArrowButton upArrow = new ArrowButton(upBounds, Direction.UP, col, false);
+            if (col % 2 == 0) continue; // nur ungerade Spalten erlauben
+
+            int x = xOffset + col * size + (size - arrowSize) / 2;
+
+            // ÜBER dem Board: Pfeil zeigt NACH UNTEN (schiebt nach unten rein)
+            Rectangle upBounds = new Rectangle(x, yOffset - arrowSize - ARROW_MARGIN, arrowSize, arrowSize);
+            ArrowButton upArrow = new ArrowButton(upBounds, Direction.DOWN, col, false);
             arrowButtons.add(upArrow);
-            g2.fill(upArrow.arrowShape);
-            g2.draw(upArrow.arrowShape);
+            drawArrowButton(g2, upArrow);
+
+            // UNTER dem Board: Pfeil zeigt NACH OBEN (schiebt nach oben rein)
+            Rectangle downBounds = new Rectangle(x, yOffset + rows * size + ARROW_MARGIN, arrowSize, arrowSize);
+            ArrowButton downArrow = new ArrowButton(downBounds, Direction.UP, col, false);
+            arrowButtons.add(downArrow);
+            drawArrowButton(g2, downArrow);
         }
     }
 
-    /**
-     * Draws the extra tile in the corner of the panel.
-     */
+
+    private void drawArrowButton(Graphics2D g2, ArrowButton arrow) {
+        if (arrow == hoveredArrow) {
+            g2.setColor(ARROW_COLOR_HOVER);
+        } else {
+            g2.setColor(ARROW_COLOR);
+        }
+
+        // kleiner Schatten
+        g2.fillRoundRect(arrow.bounds.x + 2, arrow.bounds.y + 2, arrow.bounds.width, arrow.bounds.height, 8, 8);
+        g2.setColor(new Color(20, 20, 40, 180));
+        g2.drawRoundRect(arrow.bounds.x + 2, arrow.bounds.y + 2, arrow.bounds.width, arrow.bounds.height, 8, 8);
+
+        // eigentlicher Button
+        g2.setColor(arrow == hoveredArrow ? ARROW_COLOR_HOVER : ARROW_COLOR);
+        g2.fillRoundRect(arrow.bounds.x, arrow.bounds.y, arrow.bounds.width, arrow.bounds.height, 8, 8);
+
+        g2.setColor(Color.WHITE);
+        g2.fill(arrow.arrowShape);
+    }
+
     private void drawExtraTile(Graphics2D g2) {
         Tile extraTile = board.getExtraTile();
         if (extraTile != null) {
             int margin = 20;
             int x = getWidth() - size - margin;
             int y = getHeight() - size - margin;
-            // The extra tile doesn't need coordinates or other board-specific details
             drawTileAt(g2, extraTile, x, y, -1, -1, false);
         }
     }
@@ -416,7 +635,6 @@ public class BoardPanel extends JPanel {
     public void switchPlayer() {
         currentPlayerIndex = (currentPlayerIndex + 1) % players.size();
         this.currentPlayer = players.get(currentPlayerIndex);
-        // This print statement is useful for debugging player switches
         System.out.println("Switching player " + (currentPlayerIndex + 1));
         updateReachableTilesAndRepaint();
     }
@@ -437,9 +655,6 @@ public class BoardPanel extends JPanel {
     // INNER CLASSES
     // =================================================================================
 
-    /**
-     * Represents a clickable arrow button for shifting rows/columns.
-     */
     private static class ArrowButton {
         Rectangle bounds;
         Direction direction;
@@ -462,26 +677,26 @@ public class BoardPanel extends JPanel {
             int size = Math.min(bounds.width, bounds.height) / 2;
 
             switch (dir) {
-                case LEFT:
+                case LEFT -> {
                     arrow.moveTo(cx + size / 2.0, cy - size / 2.0);
                     arrow.lineTo(cx - size / 2.0, cy);
                     arrow.lineTo(cx + size / 2.0, cy + size / 2.0);
-                    break;
-                case RIGHT:
+                }
+                case RIGHT -> {
                     arrow.moveTo(cx - size / 2.0, cy - size / 2.0);
                     arrow.lineTo(cx + size / 2.0, cy);
                     arrow.lineTo(cx - size / 2.0, cy + size / 2.0);
-                    break;
-                case UP:
+                }
+                case UP -> {
                     arrow.moveTo(cx - size / 2.0, cy + size / 2.0);
                     arrow.lineTo(cx, cy - size / 2.0);
                     arrow.lineTo(cx + size / 2.0, cy + size / 2.0);
-                    break;
-                case DOWN:
+                }
+                case DOWN -> {
                     arrow.moveTo(cx - size / 2.0, cy - size / 2.0);
                     arrow.lineTo(cx, cy + size / 2.0);
                     arrow.lineTo(cx + size / 2.0, cy - size / 2.0);
-                    break;
+                }
             }
             arrow.closePath();
             return arrow;
