@@ -2,6 +2,7 @@ package labyrinth.server.game;
 
 import labyrinth.server.game.enums.Direction;
 import labyrinth.server.game.models.*;
+import labyrinth.server.game.models.records.Position;
 
 import javax.swing.*;
 import java.awt.*;
@@ -282,7 +283,7 @@ public class BoardPanel extends JPanel {
                 var tile = p.getCurrentTile();
                 if (tile != null) {
                     Position pos = board.getPositionOfTile(tile);
-                    if (pos != null && pos.getRow() == row && pos.getColumn() == col) {
+                    if (pos != null && pos.row() == row && pos.column() == col) {
                         int cx = xOffset + col * size + size / 2;
                         int cy = yOffset + row * size + size / 2;
 
@@ -378,7 +379,7 @@ public class BoardPanel extends JPanel {
             infoLines.add("Player to move: None");
         }
 
-        infoLines.add("Free roam: " + board.getFreeRoam());
+        infoLines.add("Free roam: " + board.isFreeRoam());
         infoLines.add("Current move state: " + board.getCurrentMoveState());
         infoLines.add(""); // blank line
         infoLines.add("=== Players ===");
@@ -389,7 +390,7 @@ public class BoardPanel extends JPanel {
                 if (p.getCurrentTile() != null) {
                     pos = board.getPositionOfTile(p.getCurrentTile());
                 }
-                String positionText = (pos != null) ? "(" + pos.getRow() + "," + pos.getColumn() + ")" : "(not placed)";
+                String positionText = (pos != null) ? "(" + pos.row() + "," + pos.column() + ")" : "(not placed)";
                 infoLines.add(p.getUsername() + " at " + positionText);
             }
         }
@@ -448,7 +449,7 @@ public class BoardPanel extends JPanel {
 
     public void toggleFreeRoam() {
         var board = game.getBoard();
-        board.setFreeRoam(!board.getFreeRoam());
+        board.setFreeRoam(!board.isFreeRoam());
         repaint();
     }
 

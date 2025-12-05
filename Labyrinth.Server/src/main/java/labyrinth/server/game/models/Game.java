@@ -7,6 +7,8 @@ import labyrinth.server.game.abstractions.ITreasureCardFactory;
 import labyrinth.server.game.enums.Direction;
 import labyrinth.server.game.enums.MoveState;
 import labyrinth.server.game.enums.RoomState;
+import labyrinth.server.game.models.records.GameConfig;
+import labyrinth.server.game.models.records.Position;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.stereotype.Component;
@@ -19,7 +21,7 @@ import java.util.UUID;
 
 /**
  * Represents a game room for the Labyrinth game.
- * Each room has a unique code, a board, and manages 2–4 players.
+ * Each game has a unique code, a board, and manages 2–4 players.
  */
 @Component
 @Getter
@@ -142,38 +144,13 @@ public class Game implements IGame {
         // Assign starting positions to each player by placing them on the four corners of the board.
         for (int i = 0; i < players.size(); i++) {
             Player player = players.get(i);
-            // Determine the corner coordinates based on player index
-            int row;
-            int col;
-            switch (i) {
-                case 0 -> {
-                    row = 0;
-                    col = 0;
-                }
-                case 1 -> {
-                    row = 0;
-                    col = gameConfig.boardWidth() - 1;
-                }
-                case 2 -> {
-                    row = gameConfig.boardHeight() - 1;
-                    col = gameConfig.boardWidth() - 1;
-                }
-                case 3 -> {
-                    row = gameConfig.boardHeight() - 1;
-                    col = 0;
-                }
-                default -> {
-                    row = 0;
-                    col = 0;
-                }
-            }
-            Tile startingTile = board.getTileAt(row, col);
-            System.out.println(player.getUsername() + " starts on tile: " + row + "/" + col);
-            // Set the player's current tile to the tile at the determined coordinates
+            var position = gameConfig.getStartPosition(i) ;
+
+            Tile startingTile = board.getTileAt(position);
+            System.out.println(player.getUsername() + " starts on tile: " + position.row() + "/" + position.column());
             player.setCurrentTile(startingTile);
         }
 
-        // Register the players with the board and synchronize their tile references
         this.board.setPlayers(players);
         System.out.println("Game started in GameLobby" + " with " + players.size() + " players.");
     }
@@ -225,7 +202,7 @@ public class Game implements IGame {
     }
 
     private void guardFor(MoveState moveState) {
-        if (board.getFreeRoam()) {
+        if (board.isFreeRoam()) {
             return;
         }
 
@@ -241,7 +218,7 @@ public class Game implements IGame {
     }
 
     private void guardFor(Player playerToMove) {
-        if (board.getFreeRoam()) {
+        if (board.isFreeRoam()) {
             return;
         }
         if (!players.get(currentPlayerIndex).equals(playerToMove)) {
