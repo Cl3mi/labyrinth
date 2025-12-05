@@ -14,10 +14,7 @@ import lombok.Setter;
 import org.springframework.stereotype.Component;
 
 import java.time.OffsetDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-import java.util.UUID;
+import java.util.*;
 
 /**
  * Represents a game room for the Labyrinth game.
@@ -166,9 +163,11 @@ public class Game implements IGame {
         return board.getPositionOfTile(tileOfPlayer);
     }
 
-    public void shift(int index, Direction direction, Player player) {
+    public void shift(int index, Direction direction, Set<Direction> entrances, Player player) {
         guardFor(MoveState.PLACE_TILE);
         guardFor(player);
+
+        //TODO: consider entrances (rotation)
 
         boolean res = switch (direction) {
             case UP -> board.shiftColumnUp(index);

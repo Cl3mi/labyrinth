@@ -95,9 +95,9 @@ public class BoardPanel extends JPanel {
         for (ArrowButton arrow : arrowButtons) {
             if (arrow.contains(p)) {
                 if (arrow.isRow) {
-                    game.shift(arrow.index, arrow.direction, currentPlayer);
+                    game.shift(arrow.index, arrow.direction, null, currentPlayer);
                 } else {
-                    game.shift(arrow.index, arrow.direction, currentPlayer);
+                    game.shift(arrow.index, arrow.direction, null, currentPlayer);
                 }
                 updateReachableTilesAndRepaint();
                 return true;
