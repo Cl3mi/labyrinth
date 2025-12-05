@@ -7,7 +7,7 @@ public class PlayerInfo {
   private String name;
   private PlayerColor color;
   private Boolean isAdmin;
-  private Boolean isReady;
+  private Boolean isAiControlled;
   private Map<String, Object> additionalProperties;
 
   public String getId() { return this.id; }
@@ -22,8 +22,8 @@ public class PlayerInfo {
   public Boolean getIsAdmin() { return this.isAdmin; }
   public void setIsAdmin(Boolean isAdmin) { this.isAdmin = isAdmin; }
 
-  public Boolean getIsReady() { return this.isReady; }
-  public void setIsReady(Boolean isReady) { this.isReady = isReady; }
+  public Boolean getIsAiControlled() { return this.isAiControlled; }
+  public void setIsAiControlled(Boolean isAiControlled) { this.isAiControlled = isAiControlled; }
 
   public Map<String, Object> getAdditionalProperties() { return this.additionalProperties; }
   public void setAdditionalProperties(Map<String, Object> additionalProperties) { this.additionalProperties = additionalProperties; }
@@ -42,13 +42,13 @@ public class PlayerInfo {
         Objects.equals(this.name, self.name) &&
         Objects.equals(this.color, self.color) &&
         Objects.equals(this.isAdmin, self.isAdmin) &&
-        Objects.equals(this.isReady, self.isReady) &&
+        Objects.equals(this.isAiControlled, self.isAiControlled) &&
         Objects.equals(this.additionalProperties, self.additionalProperties);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash((Object)id, (Object)name, (Object)color, (Object)isAdmin, (Object)isReady, (Object)additionalProperties);
+    return Objects.hash((Object)id, (Object)name, (Object)color, (Object)isAdmin, (Object)isAiControlled, (Object)additionalProperties);
   }
 
   @Override
@@ -58,7 +58,7 @@ public class PlayerInfo {
       "    name: " + toIndentedString(name) + "\n" +
       "    color: " + toIndentedString(color) + "\n" +
       "    isAdmin: " + toIndentedString(isAdmin) + "\n" +
-      "    isReady: " + toIndentedString(isReady) + "\n" +
+      "    isAiControlled: " + toIndentedString(isAiControlled) + "\n" +
       "    additionalProperties: " + toIndentedString(additionalProperties) + "\n" +
     "}";
   }

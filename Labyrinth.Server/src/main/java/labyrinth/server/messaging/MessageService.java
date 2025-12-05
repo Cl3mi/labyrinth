@@ -2,7 +2,6 @@ package labyrinth.server.messaging;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import labyrinth.server.game.models.Player;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -11,6 +10,7 @@ import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 
 import java.io.IOException;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -32,8 +32,8 @@ public class MessageService {
     }
 
 
-    public void sendToPlayer(Player player, Object payload) {
-        WebSocketSession session = playerSessionService.getSession(player);
+    public void sendToPlayer(UUID playerId, Object payload) {
+        WebSocketSession session = playerSessionService.getSession(playerId);
         if (session != null && session.isOpen()) {
             try {
                 String jsonPayload = objectMapper.writeValueAsString(payload);

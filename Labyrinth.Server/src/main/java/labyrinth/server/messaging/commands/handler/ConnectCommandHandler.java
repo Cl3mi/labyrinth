@@ -36,28 +36,35 @@ public class ConnectCommandHandler implements ICommandHandler<ConnectCommandPayl
             throw new ActionErrorException("Session is already connected", ErrorCode.GENERAL); //TODO: error code?
         }
 
-        if (payload.getPlayerId() != null) {
-            var playerId = UUID.fromString(payload.getPlayerId());
+        if (payload.getIdentifierToken() != null) {
+            var identifierToken = UUID.fromString(payload.getIdentifierToken());
+
+            var playerId = playerSessionRegistry.getPlayerIdByIdentifierToken(identifierToken);
             var player = game.getPlayer(playerId);
 
-            playerSessionRegistry.registerPlayer(player, session);
+            if(player == null) {
+                throw new ActionErrorException("Player with given identifier token not found", ErrorCode.GENERAL);
+            }
+
+            playerSessionRegistry.registerPlayer(playerId, identifierToken, session);
 
             var ackPayload = new ConnectAckEventPayload();
             ackPayload.setType(EventType.CONNECT_ACK);
-            ackPayload.setPlayerId(player.getId().toString());
-            messageService.sendToPlayer(player, ackPayload);
+            ackPayload.setIdentifierToken(identifierToken.toString());
+            messageService.sendToPlayer(playerId, ackPayload);
             return;
         }
 
         var player = game.join(payload.getUsername());
 
-        playerSessionRegistry.registerPlayer(player, session);
+        var identifierToken = UUID.randomUUID();
+        playerSessionRegistry.registerPlayer(player.getId(), identifierToken, session);
 
         var ackPayload = new ConnectAckEventPayload();
         ackPayload.setType(EventType.CONNECT_ACK);
-        ackPayload.setPlayerId(player.getId().toString());
+        ackPayload.setIdentifierToken(identifierToken.toString());
 
-        messageService.sendToPlayer(player, ackPayload);
+        messageService.sendToPlayer(player.getId(), ackPayload);
 
         var players = game.getPlayers()
                 .stream()
