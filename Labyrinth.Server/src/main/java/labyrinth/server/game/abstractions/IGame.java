@@ -32,6 +32,15 @@ public interface IGame {
 
     boolean movePlayerToTile(int row, int col, Player player);
 
-    void shift(int index, Direction direction, Set<Direction> entrances, Player player);
+    boolean shift(int index, Direction direction, Set<Direction> entrances, Player player);
 
+    void toggleAiForPlayer(Player player);
+
+    void useBeamBonus(int row, int col, Player player);
+
+    void useSwapBonus(Player currentPlayer, Player targetPlayer);
+
+    void usePushTwiceBonus(Player player);
+
+    void usePushFixedBonus(Player player);
 }

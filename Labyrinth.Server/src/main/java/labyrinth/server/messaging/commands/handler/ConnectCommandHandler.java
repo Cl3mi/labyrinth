@@ -19,7 +19,7 @@ import java.util.UUID;
 public class ConnectCommandHandler implements ICommandHandler<ConnectCommandPayload> {
 
     private final IGame game;
-    private final IPlayerSessionRegistry IPlayerSessionRegistry;
+    private final IPlayerSessionRegistry playerSessionRegistry;
     private final IMessageService messageService;
     private final PlayerInfoMapper playerInfoMapper;
 
@@ -31,22 +31,20 @@ public class ConnectCommandHandler implements ICommandHandler<ConnectCommandPayl
 
     @Override
     public void handle(WebSocketSession session, ConnectCommandPayload payload) throws Exception {
-
-        if (IPlayerSessionRegistry.isSessionRegistered(session)) {
+        if (playerSessionRegistry.isSessionRegistered(session)) {
             throw new ActionErrorException("Session is already connected", ErrorCode.GENERAL); //TODO: error code?
         }
 
         if (payload.getIdentifierToken() != null) {
             var identifierToken = UUID.fromString(payload.getIdentifierToken());
 
-            var playerId = IPlayerSessionRegistry.getPlayerIdByIdentifierToken(identifierToken);
+            var playerId = playerSessionRegistry.getPlayerIdByIdentifierToken(identifierToken);
             var player = game.getPlayer(playerId);
-
             if(player == null) {
-                throw new ActionErrorException("Player with given identifier token not found", ErrorCode.GENERAL);
+                throw new ActionErrorException("Player with ID " + playerId + " not found", ErrorCode.GENERAL); //TODO: error code?
             }
 
-            IPlayerSessionRegistry.registerPlayer(playerId, identifierToken, session);
+            playerSessionRegistry.registerPlayer(playerId, identifierToken, session);
 
             var ackPayload = new ConnectAckEventPayload();
             ackPayload.setType(EventType.CONNECT_ACK);
@@ -58,7 +56,7 @@ public class ConnectCommandHandler implements ICommandHandler<ConnectCommandPayl
         var player = game.join(payload.getUsername());
 
         var identifierToken = UUID.randomUUID();
-        IPlayerSessionRegistry.registerPlayer(player.getId(), identifierToken, session);
+        playerSessionRegistry.registerPlayer(player.getId(), identifierToken, session);
 
         var ackPayload = new ConnectAckEventPayload();
         ackPayload.setType(EventType.CONNECT_ACK);

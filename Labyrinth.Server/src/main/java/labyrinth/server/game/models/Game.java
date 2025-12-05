@@ -141,7 +141,7 @@ public class Game implements IGame {
         // Assign starting positions to each player by placing them on the four corners of the board.
         for (int i = 0; i < players.size(); i++) {
             Player player = players.get(i);
-            var position = gameConfig.getStartPosition(i) ;
+            var position = gameConfig.getStartPosition(i);
 
             Tile startingTile = board.getTileAt(position);
             System.out.println(player.getUsername() + " starts on tile: " + position.row() + "/" + position.column());
@@ -163,7 +163,7 @@ public class Game implements IGame {
         return board.getPositionOfTile(tileOfPlayer);
     }
 
-    public void shift(int index, Direction direction, Set<Direction> entrances, Player player) {
+    public boolean shift(int index, Direction direction, Set<Direction> entrances, Player player) {
         guardFor(MoveState.PLACE_TILE);
         guardFor(player);
 
@@ -177,9 +177,37 @@ public class Game implements IGame {
         };
 
         if (!res) {
-            return;
+            return false;
         }
         currentMoveState = MoveState.MOVE;
+
+        //TODO: return false if shifting is not possible
+        return true;
+    }
+
+    @Override
+    public void toggleAiForPlayer(Player player) {
+        //TODO: implement
+    }
+
+    @Override
+    public void useBeamBonus(int row, int col, Player player) {
+        //TODO: implement
+    }
+
+    @Override
+    public void useSwapBonus(Player currentPlayer, Player targetPlayer) {
+        //TODO: implement
+    }
+
+    @Override
+    public void usePushTwiceBonus(Player player) {
+        //TODO: implement
+    }
+
+    @Override
+    public void usePushFixedBonus(Player player) {
+        //TODO: implement
     }
 
     public boolean movePlayerToTile(int row, int col, Player player) {

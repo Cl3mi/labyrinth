@@ -35,7 +35,21 @@ public class PushTileCommandHandler implements ICommandHandler<PushTileCommandPa
     @Override
     public void handle(WebSocketSession session, PushTileCommandPayload payload) throws Exception {
         var playerId = playerSessionRegistry.getPlayerId(session);
+
+        if (playerId == null) {
+            throw new ActionErrorException("Session is not connected to a player", ErrorCode.GENERAL); //TODO: error code?
+        }
+
         var player = game.getPlayer(playerId);
+        if(player == null) {
+            throw new ActionErrorException("Player with ID " + playerId + " not found", ErrorCode.GENERAL); //TODO: error code?
+        }
+
+        var currentPlayer = game.getCurrentPlayer();
+
+        if(player != currentPlayer) {
+            throw new ActionErrorException("It's not your turn.", ErrorCode.NOT_YOUR_TURN);
+        }
 
         //TODO: error handling
 
@@ -44,14 +58,13 @@ public class PushTileCommandHandler implements ICommandHandler<PushTileCommandPa
                 .map(directionMapper::toModel)
                 .collect(Collectors.toSet());
 
+        var shiftSuccessful = game.shift(payload.getRowOrColIndex(), direction, entrances, player);
 
-        try {
-            game.shift(payload.getRowOrColIndex(), direction, entrances, player);
-
-            var gameState = gameMapper.toGameStateDto(game);
-            messageService.broadcastToPlayers(gameState);
-        } catch (Exception ex) {
-            throw new ActionErrorException("Cannot push tile with the specified parameters.", ErrorCode.GENERAL); //TODO: error code
+        if (!shiftSuccessful) {
+            throw new ActionErrorException("Cannot push tile with the specified parameters.", ErrorCode.INVALID_PUSH);
         }
+
+        var gameState = gameMapper.toGameStateDto(game);
+        messageService.broadcastToPlayers(gameState);
     }
 }

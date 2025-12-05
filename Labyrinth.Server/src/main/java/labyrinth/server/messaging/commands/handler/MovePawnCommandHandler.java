@@ -18,7 +18,7 @@ import org.springframework.web.socket.WebSocketSession;
 public class MovePawnCommandHandler implements ICommandHandler<MovePawnCommandPayload> {
 
     private final IGame game;
-    private final IPlayerSessionRegistry IPlayerSessionRegistry;
+    private final IPlayerSessionRegistry playerSessionRegistry;
     private final IMessageService messageService;
     private final GameMapper gameMapper;
 
@@ -29,10 +29,22 @@ public class MovePawnCommandHandler implements ICommandHandler<MovePawnCommandPa
 
     @Override
     public void handle(WebSocketSession session, MovePawnCommandPayload payload) throws Exception {
-        var playerId = IPlayerSessionRegistry.getPlayerId(session);
-        var player = game.getPlayer(playerId);
+        var playerId = playerSessionRegistry.getPlayerId(session);
 
-        //TODO: error handling
+        if (playerId == null) {
+            throw new ActionErrorException("Session is not connected to a player", ErrorCode.GENERAL); //TODO: error code?
+        }
+
+        var player = game.getPlayer(playerId);
+        if(player == null) {
+            throw new ActionErrorException("Player with ID " + playerId + " not found", ErrorCode.GENERAL); //TODO: error code?
+        }
+
+        var currentPlayer = game.getCurrentPlayer();
+
+        if(player != currentPlayer) {
+            throw new ActionErrorException("It's not your turn.", ErrorCode.NOT_YOUR_TURN);
+        }
 
         var coordinates = payload.getTargetCoordinates();
         var moveSuccessful = game.movePlayerToTile(coordinates.getY(), coordinates.getX(), player);
