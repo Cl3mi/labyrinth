@@ -3,6 +3,9 @@ package labyrinth.server.game.models;
 import labyrinth.server.game.abstractions.IBoardEventListener;
 import labyrinth.server.game.enums.*;
 import labyrinth.server.game.events.BoardEvent;
+import labyrinth.server.game.models.records.Position;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.util.*;
 
@@ -12,16 +15,20 @@ import java.util.*;
  * instances and {@link Tile} instances. A separate graph tracks the connectivity
  * of neighboring tiles based on their entrances.
  */
+@Getter
 public class Board {
 
     private final int width;
     private final int height;
     private final BiMap<Position, Tile> tileMap;
     private final Graph graph;
-    private List<Player> players;
     private int currentPlayerIndex;
     private MoveState currentMoveState = MoveState.PLACE_TILE;
     private Tile extraTile;
+
+    @Setter
+    private List<Player> players;
+    @Setter
     private boolean freeRoam = false;
 
     /**
@@ -44,18 +51,6 @@ public class Board {
         this.extraTile = extraTile;
     }
 
-    public int getWidth() {
-        return width;
-    }
-
-    public int getHeight() {
-        return height;
-    }
-
-    public BiMap<Position, Tile> getTileMap() {
-        return tileMap;
-    }
-
     /**
      * Retrieves the tile at the specified coordinates.
      *
@@ -68,6 +63,16 @@ public class Board {
     }
 
     /**
+     * Retrieves the tile at the specified coordinates.
+     *
+     * @param position    the position
+     * @return the tile located at (row, column), or null if not present
+     */
+    public Tile getTileAt(Position position) {
+        return tileMap.getForward(position);
+    }
+
+    /**
      * Retrieves the {@link Position} of the given tile on the board.
      *
      * @param tile the tile to look up
@@ -75,38 +80,6 @@ public class Board {
      */
     public Position getPositionOfTile(Tile tile) {
         return tileMap.getBackward(tile);
-    }
-
-    public Graph getGraph() {
-        return graph;
-    }
-
-    public List<Player> getPlayers() {
-        return new ArrayList<>(players);
-    }
-
-    public void setPlayers(List<Player> players) {
-        this.players = players;
-    }
-
-    public Tile getExtraTile() {
-        return extraTile;
-    }
-
-    public void setFreeRoam(boolean freeRoam){
-        this.freeRoam = freeRoam;
-    }
-
-    public boolean getFreeRoam(){
-        return freeRoam;
-    }
-
-    public MoveState getCurrentMoveState() {
-        return currentMoveState;
-    }
-
-    public int getCurrentPlayerIndex() {
-        return currentPlayerIndex;
     }
 
     protected boolean shiftColumnDown(int columnIndex) {
@@ -255,7 +228,7 @@ public class Board {
         Tile targetTile = tileMap.getForward(new Position(targetRow, targetCol));
 
         Position currPos = (currentTile != null) ? getPositionOfTile(currentTile) : null;
-        System.out.println("Current position: " + (currPos != null ? currPos.getRow() + "/" + currPos.getColumn() : "none"));
+        System.out.println("Current position: " + (currPos != null ? currPos.row() + "/" + currPos.column() : "none"));
         System.out.println("Moving " + player.getUsername() + " to " + targetRow + "/" + targetCol);
         // Check if another player is already on the target tile by inspecting players' currentTile
         for (Player other : players) {

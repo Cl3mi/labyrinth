@@ -4,7 +4,7 @@ import labyrinth.server.game.enums.Direction;
 import labyrinth.server.game.factories.BoardFactory;
 import labyrinth.server.game.factories.TreasureCardFactory;
 import labyrinth.server.game.models.Game;
-import labyrinth.server.game.models.GameConfig;
+import labyrinth.server.game.models.records.GameConfig;
 
 import java.util.ArrayList;
 
@@ -97,7 +97,7 @@ public class Testing {
             }
 
             // Move player
-            game.movePlayerToTile(positionOpt.getRow(), positionOpt.getColumn(), currentPlayer);
+            game.movePlayerToTile(positionOpt.row(), positionOpt.column(), currentPlayer);
 
             System.out.printf(
                     "Move %d: Player %s -> shifted row/col %d %s and moved to (%d,%d)%n",
@@ -105,8 +105,8 @@ public class Testing {
                     currentPlayer.getUsername(),
                     shiftIndex,
                     direction,
-                    positionOpt.getRow(),
-                    positionOpt.getColumn()
+                    positionOpt.row(),
+                    positionOpt.column()
             );
 
             LabyrinthViewer.repaintView();

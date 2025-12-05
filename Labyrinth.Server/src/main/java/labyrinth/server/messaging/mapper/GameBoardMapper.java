@@ -4,7 +4,7 @@ import labyrinth.contracts.models.Direction;
 import labyrinth.contracts.models.GameBoard;
 import labyrinth.contracts.models.Tile;
 import labyrinth.server.game.models.Board;
-import labyrinth.server.game.models.Position;
+import labyrinth.server.game.models.records.Position;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -26,8 +26,8 @@ public class GameBoardMapper {
 
         for (var entry : entries) {
             Position pos = entry.getKey();
-            if (pos.getRow() > maxRow) maxRow = pos.getRow();
-            if (pos.getColumn() > maxCol) maxCol = pos.getColumn();
+            if (pos.row() > maxRow) maxRow = pos.row();
+            if (pos.column() > maxCol) maxCol = pos.column();
         }
 
         Tile[][] tiles = new Tile[maxRow + 1][maxCol + 1];
@@ -48,7 +48,7 @@ public class GameBoardMapper {
                             .toArray(Direction[]::new)
             );
 
-            tiles[pos.getRow()][pos.getColumn()] = tileDto;
+            tiles[pos.row()][pos.column()] = tileDto;
         }
 
         dto.setTiles(tiles);

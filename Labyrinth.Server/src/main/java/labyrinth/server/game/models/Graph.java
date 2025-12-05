@@ -1,11 +1,11 @@
 package labyrinth.server.game.models;
 
-import java.io.Serializable;
 import java.util.*;
 
 import labyrinth.server.game.abstractions.IBoardEventListener;
 import labyrinth.server.game.enums.*;
 import labyrinth.server.game.events.BoardEvent;
+import labyrinth.server.game.models.records.Position;
 
 /**
  * Represents the connectivity graph of the Labyrinth board.

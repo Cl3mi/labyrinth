@@ -1,14 +1,9 @@
-package labyrinth.server.game.models;
-
-import java.util.Objects;
+package labyrinth.server.game.models.records;
 
 /**
  * Represents a position on the Labyrinth board with row and column coordinates.
  */
-public final class Position {
-
-    private final int row;
-    private final int column;
+public record Position(int row, int column) {
 
     /**
      * Creates a new position on the board.
@@ -16,20 +11,10 @@ public final class Position {
      * @param row    row index (0-based)
      * @param column column index (0-based)
      */
-    public Position(int row, int column) {
+    public Position {
         if (row < 0 || column < 0) {
             throw new IllegalArgumentException("Row and column must be non-negative");
         }
-        this.row = row;
-        this.column = column;
-    }
-
-    public int getRow() {
-        return row;
-    }
-
-    public int getColumn() {
-        return column;
     }
 
     /**
@@ -46,14 +31,8 @@ public final class Position {
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (!(o instanceof Position)) return false;
-        Position position = (Position) o;
+        if (!(o instanceof Position position)) return false;
         return row == position.row && column == position.column;
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(row, column);
     }
 
     @Override

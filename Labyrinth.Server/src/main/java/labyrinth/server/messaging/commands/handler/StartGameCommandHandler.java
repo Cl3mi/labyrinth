@@ -3,7 +3,7 @@ package labyrinth.server.messaging.commands.handler;
 import labyrinth.contracts.models.CommandType;
 import labyrinth.contracts.models.StartGameCommandPayload;
 import labyrinth.server.game.abstractions.IGame;
-import labyrinth.server.game.models.GameConfig;
+import labyrinth.server.game.models.records.GameConfig;
 import labyrinth.server.messaging.commands.ICommandHandler;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;

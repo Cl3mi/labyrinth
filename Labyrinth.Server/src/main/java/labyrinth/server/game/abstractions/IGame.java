@@ -2,9 +2,9 @@ package labyrinth.server.game.abstractions;
 
 import labyrinth.server.game.enums.MoveState;
 import labyrinth.server.game.models.Board;
-import labyrinth.server.game.models.GameConfig;
+import labyrinth.server.game.models.records.GameConfig;
 import labyrinth.server.game.models.Player;
-import labyrinth.server.game.models.Position;
+import labyrinth.server.game.models.records.Position;
 
 import java.util.List;
 import java.util.UUID;
