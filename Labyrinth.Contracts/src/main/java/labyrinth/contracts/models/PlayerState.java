@@ -11,7 +11,6 @@ public class PlayerState {
   private Coordinates currentPosition;
   private Coordinates homePosition;
   private Treasure[] treasuresFound;
-  private Treasure currentTreasure;
   private Integer remainingTreasureCount;
   private AchievementType[] achievements;
   private BonusType[] availableBonuses;
@@ -28,9 +27,6 @@ public class PlayerState {
 
   public Treasure[] getTreasuresFound() { return this.treasuresFound; }
   public void setTreasuresFound(Treasure[] treasuresFound) { this.treasuresFound = treasuresFound; }
-
-  public Treasure getCurrentTreasure() { return this.currentTreasure; }
-  public void setCurrentTreasure(Treasure currentTreasure) { this.currentTreasure = currentTreasure; }
 
   public Integer getRemainingTreasureCount() { return this.remainingTreasureCount; }
   public void setRemainingTreasureCount(Integer remainingTreasureCount) { this.remainingTreasureCount = remainingTreasureCount; }
@@ -58,7 +54,6 @@ public class PlayerState {
         Objects.equals(this.currentPosition, self.currentPosition) &&
         Objects.equals(this.homePosition, self.homePosition) &&
         Objects.equals(this.treasuresFound, self.treasuresFound) &&
-        Objects.equals(this.currentTreasure, self.currentTreasure) &&
         Objects.equals(this.remainingTreasureCount, self.remainingTreasureCount) &&
         Objects.equals(this.achievements, self.achievements) &&
         Objects.equals(this.availableBonuses, self.availableBonuses) &&
@@ -67,7 +62,7 @@ public class PlayerState {
 
   @Override
   public int hashCode() {
-    return Objects.hash((Object)playerInfo, (Object)currentPosition, (Object)homePosition, (Object)treasuresFound, (Object)currentTreasure, (Object)remainingTreasureCount, (Object)achievements, (Object)availableBonuses, (Object)additionalProperties);
+    return Objects.hash((Object)playerInfo, (Object)currentPosition, (Object)homePosition, (Object)treasuresFound, (Object)remainingTreasureCount, (Object)achievements, (Object)availableBonuses, (Object)additionalProperties);
   }
 
   @Override
@@ -77,7 +72,6 @@ public class PlayerState {
       "    currentPosition: " + toIndentedString(currentPosition) + "\n" +
       "    homePosition: " + toIndentedString(homePosition) + "\n" +
       "    treasuresFound: " + toIndentedString(treasuresFound) + "\n" +
-      "    currentTreasure: " + toIndentedString(currentTreasure) + "\n" +
       "    remainingTreasureCount: " + toIndentedString(remainingTreasureCount) + "\n" +
       "    achievements: " + toIndentedString(achievements) + "\n" +
       "    availableBonuses: " + toIndentedString(availableBonuses) + "\n" +

@@ -5,7 +5,7 @@ import java.util.Objects;
 public class ConnectCommandPayload {
   private CommandType type;
   private String username;
-  private String playerId;
+  private String identifierToken;
   private Map<String, Object> additionalProperties;
 
   public CommandType getType() { return this.type; }
@@ -14,8 +14,8 @@ public class ConnectCommandPayload {
   public String getUsername() { return this.username; }
   public void setUsername(String username) { this.username = username; }
 
-  public String getPlayerId() { return this.playerId; }
-  public void setPlayerId(String playerId) { this.playerId = playerId; }
+  public String getIdentifierToken() { return this.identifierToken; }
+  public void setIdentifierToken(String identifierToken) { this.identifierToken = identifierToken; }
 
   public Map<String, Object> getAdditionalProperties() { return this.additionalProperties; }
   public void setAdditionalProperties(Map<String, Object> additionalProperties) { this.additionalProperties = additionalProperties; }
@@ -32,13 +32,13 @@ public class ConnectCommandPayload {
       return 
         Objects.equals(this.type, self.type) &&
         Objects.equals(this.username, self.username) &&
-        Objects.equals(this.playerId, self.playerId) &&
+        Objects.equals(this.identifierToken, self.identifierToken) &&
         Objects.equals(this.additionalProperties, self.additionalProperties);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash((Object)type, (Object)username, (Object)playerId, (Object)additionalProperties);
+    return Objects.hash((Object)type, (Object)username, (Object)identifierToken, (Object)additionalProperties);
   }
 
   @Override
@@ -46,7 +46,7 @@ public class ConnectCommandPayload {
     return "class ConnectCommandPayload {\n" +   
       "    type: " + toIndentedString(type) + "\n" +
       "    username: " + toIndentedString(username) + "\n" +
-      "    playerId: " + toIndentedString(playerId) + "\n" +
+      "    identifierToken: " + toIndentedString(identifierToken) + "\n" +
       "    additionalProperties: " + toIndentedString(additionalProperties) + "\n" +
     "}";
   }
