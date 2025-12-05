@@ -7,10 +7,8 @@ import labyrinth.server.exceptions.ActionErrorException;
 import labyrinth.server.game.abstractions.IGame;
 import labyrinth.server.messaging.abstractions.IMessageService;
 import labyrinth.server.messaging.abstractions.IPlayerSessionRegistry;
-import labyrinth.server.messaging.commands.ICommandHandler;
 import labyrinth.server.messaging.mapper.DirectionMapper;
 import labyrinth.server.messaging.mapper.GameMapper;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.WebSocketSession;
 
@@ -18,14 +16,19 @@ import java.util.Arrays;
 import java.util.stream.Collectors;
 
 @Component
-@RequiredArgsConstructor
-public class PushTileCommandHandler implements ICommandHandler<PushTileCommandPayload> {
+public class PushTileCommandHandler extends AbstractCommandHandler<PushTileCommandPayload> {
 
-    private final IGame game;
-    private final IPlayerSessionRegistry playerSessionRegistry;
     private final IMessageService messageService;
     private final GameMapper gameMapper;
     private final DirectionMapper directionMapper;
+
+    public PushTileCommandHandler(IGame game, IPlayerSessionRegistry playerSessionRegistry, IMessageService messageService, GameMapper gameMapper, DirectionMapper directionMapper) {
+        super(game, playerSessionRegistry);
+
+        this.messageService = messageService;
+        this.gameMapper = gameMapper;
+        this.directionMapper = directionMapper;
+    }
 
     @Override
     public CommandType type() {
@@ -34,24 +37,8 @@ public class PushTileCommandHandler implements ICommandHandler<PushTileCommandPa
 
     @Override
     public void handle(WebSocketSession session, PushTileCommandPayload payload) throws Exception {
-        var playerId = playerSessionRegistry.getPlayerId(session);
-
-        if (playerId == null) {
-            throw new ActionErrorException("Session is not connected to a player", ErrorCode.GENERAL); //TODO: error code?
-        }
-
-        var player = game.getPlayer(playerId);
-        if(player == null) {
-            throw new ActionErrorException("Player with ID " + playerId + " not found", ErrorCode.GENERAL); //TODO: error code?
-        }
-
-        var currentPlayer = game.getCurrentPlayer();
-
-        if(player != currentPlayer) {
-            throw new ActionErrorException("It's not your turn.", ErrorCode.NOT_YOUR_TURN);
-        }
-
-        //TODO: error handling
+        var player = requireExistingPlayer(session);
+        requirePlayerIsCurrent(player);
 
         var direction = directionMapper.toModel(payload.getDirection());
         var entrances = Arrays.stream(payload.getTileEntrances())

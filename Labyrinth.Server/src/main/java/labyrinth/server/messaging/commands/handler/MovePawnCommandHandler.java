@@ -7,20 +7,22 @@ import labyrinth.server.exceptions.ActionErrorException;
 import labyrinth.server.game.abstractions.IGame;
 import labyrinth.server.messaging.abstractions.IMessageService;
 import labyrinth.server.messaging.abstractions.IPlayerSessionRegistry;
-import labyrinth.server.messaging.commands.ICommandHandler;
 import labyrinth.server.messaging.mapper.GameMapper;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.WebSocketSession;
 
 @Component
-@RequiredArgsConstructor
-public class MovePawnCommandHandler implements ICommandHandler<MovePawnCommandPayload> {
+public class MovePawnCommandHandler extends AbstractCommandHandler<MovePawnCommandPayload> {
 
-    private final IGame game;
-    private final IPlayerSessionRegistry playerSessionRegistry;
     private final IMessageService messageService;
     private final GameMapper gameMapper;
+
+    public MovePawnCommandHandler(IGame game, IPlayerSessionRegistry playerSessionRegistry, IMessageService messageService, GameMapper gameMapper) {
+        super(game, playerSessionRegistry);
+
+        this.messageService = messageService;
+        this.gameMapper = gameMapper;
+    }
 
     @Override
     public CommandType type() {
@@ -29,22 +31,9 @@ public class MovePawnCommandHandler implements ICommandHandler<MovePawnCommandPa
 
     @Override
     public void handle(WebSocketSession session, MovePawnCommandPayload payload) throws Exception {
-        var playerId = playerSessionRegistry.getPlayerId(session);
+        var player = requireExistingPlayer(session);
 
-        if (playerId == null) {
-            throw new ActionErrorException("Session is not connected to a player", ErrorCode.GENERAL); //TODO: error code?
-        }
-
-        var player = game.getPlayer(playerId);
-        if(player == null) {
-            throw new ActionErrorException("Player with ID " + playerId + " not found", ErrorCode.GENERAL); //TODO: error code?
-        }
-
-        var currentPlayer = game.getCurrentPlayer();
-
-        if(player != currentPlayer) {
-            throw new ActionErrorException("It's not your turn.", ErrorCode.NOT_YOUR_TURN);
-        }
+        requirePlayerIsCurrent(player);
 
         var coordinates = payload.getTargetCoordinates();
         var moveSuccessful = game.movePlayerToTile(coordinates.getY(), coordinates.getX(), player);

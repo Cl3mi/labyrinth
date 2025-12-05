@@ -5,9 +5,7 @@ import labyrinth.server.exceptions.ActionErrorException;
 import labyrinth.server.game.abstractions.IGame;
 import labyrinth.server.messaging.abstractions.IMessageService;
 import labyrinth.server.messaging.abstractions.IPlayerSessionRegistry;
-import labyrinth.server.messaging.commands.ICommandHandler;
 import labyrinth.server.messaging.mapper.PlayerInfoMapper;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.WebSocketSession;
 
@@ -15,14 +13,22 @@ import java.util.UUID;
 
 
 @Component
-@RequiredArgsConstructor
-public class ConnectCommandHandler implements ICommandHandler<ConnectCommandPayload> {
+public class ConnectCommandHandler extends AbstractCommandHandler<ConnectCommandPayload> {
 
     private final IGame game;
     private final IPlayerSessionRegistry playerSessionRegistry;
     private final IMessageService messageService;
     private final PlayerInfoMapper playerInfoMapper;
 
+
+    public ConnectCommandHandler(IGame game, IPlayerSessionRegistry playerSessionRegistry, IMessageService messageService, PlayerInfoMapper playerInfoMapper) {
+        super(game, playerSessionRegistry);
+
+        this.game = game;
+        this.playerSessionRegistry = playerSessionRegistry;
+        this.messageService = messageService;
+        this.playerInfoMapper = playerInfoMapper;
+    }
 
     @Override
     public CommandType type() {
@@ -39,8 +45,9 @@ public class ConnectCommandHandler implements ICommandHandler<ConnectCommandPayl
             var identifierToken = UUID.fromString(payload.getIdentifierToken());
 
             var playerId = playerSessionRegistry.getPlayerIdByIdentifierToken(identifierToken);
+
             var player = game.getPlayer(playerId);
-            if(player == null) {
+            if (player == null) {
                 throw new ActionErrorException("Player with ID " + playerId + " not found", ErrorCode.GENERAL); //TODO: error code?
             }
 
