@@ -1,18 +1,18 @@
 package labyrinth.server.game.factories;
 
 import labyrinth.server.game.abstractions.ITreasureCardFactory;
-import labyrinth.server.game.models.Game;
 import labyrinth.server.game.models.TreasureCard;
+import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.UUID;
 
 /**
  * Factory class to create TreasureCards for the game.
  * Maintains a predefined set of treasure names.
  */
+@Component
 public class TreasureCardFactory implements ITreasureCardFactory {
 
     private static final List<String> TREASURE_NAMES = List.of(
@@ -27,23 +27,20 @@ public class TreasureCardFactory implements ITreasureCardFactory {
     );
 
     @Override
-    public List<TreasureCard> createCardsForGame(Game game) {
-        var playerCount = game.getPlayers().size();
-        var treasuresToGenerate = game.getGameConfig().amountOfTreasuresPerPlayer() * playerCount;
+    public List<TreasureCard> createTreasureCards(int treasureCardCount, int playerCount) {
 
-        if (treasuresToGenerate < 1 || treasuresToGenerate > TREASURE_NAMES.size()) {
-            throw new IllegalArgumentException("Count must be between 1 and " + TREASURE_NAMES.size()/playerCount);
+        if (treasureCardCount % playerCount != 0) {
+            throw new IllegalArgumentException("Treasure card count must be divisible by player count.");
         }
 
         List<String> shuffledNames = new ArrayList<>(TREASURE_NAMES);
         Collections.shuffle(shuffledNames);
 
         List<TreasureCard> cards = new ArrayList<>();
-        for (int i = 0; i < treasuresToGenerate; i++) {
+        for (int i = 0; i < treasureCardCount; i++) {
             String name = shuffledNames.get(i);
-            String id = UUID.randomUUID().toString();
             String imagePath = "/images/treasures/" + name.toLowerCase() + ".png";
-            cards.add(new TreasureCard(id, name, imagePath));
+            cards.add(new TreasureCard(i, name, imagePath));
         }
 
         return cards;

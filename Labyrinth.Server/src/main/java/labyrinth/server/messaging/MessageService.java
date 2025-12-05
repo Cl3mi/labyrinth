@@ -3,6 +3,7 @@ package labyrinth.server.messaging;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import labyrinth.server.game.models.Player;
+import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -12,16 +13,12 @@ import org.springframework.web.socket.WebSocketSession;
 import java.io.IOException;
 
 @Service
+@RequiredArgsConstructor
 public class MessageService {
 
     private static final Logger log = LoggerFactory.getLogger(MessageService.class);
     private final PlayerSessionRegistry playerSessionService;
     private final ObjectMapper objectMapper;
-
-    public MessageService(PlayerSessionRegistry playerSessionService, ObjectMapper objectMapper) {
-        this.playerSessionService = playerSessionService;
-        this.objectMapper = objectMapper;
-    }
 
     public void sendToSession(WebSocketSession session, Object payload) {
         if (session != null && session.isOpen()) {

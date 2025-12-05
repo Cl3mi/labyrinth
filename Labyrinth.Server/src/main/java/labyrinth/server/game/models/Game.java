@@ -1,69 +1,72 @@
 package labyrinth.server.game.models;
 
+import labyrinth.contracts.models.PlayerColor;
+import labyrinth.server.game.abstractions.IBoardFactory;
+import labyrinth.server.game.abstractions.IGame;
+import labyrinth.server.game.abstractions.ITreasureCardFactory;
 import labyrinth.server.game.enums.Direction;
 import labyrinth.server.game.enums.MoveState;
 import labyrinth.server.game.enums.RoomState;
+import labyrinth.server.game.models.records.GameConfig;
+import labyrinth.server.game.models.records.Position;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.stereotype.Component;
 
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 /**
  * Represents a game room for the Labyrinth game.
- * Each room has a unique code, a board, and manages 2–4 players.
+ * Each game has a unique code, a board, and manages 2–4 players.
  */
 @Component
 @Getter
 @Setter
-public class Game {
-    //#region singleton
-    private static final Game INSTANCE = new Game();
-    public static Game getInstance() {
-        return INSTANCE;
-    }
-    //#endregion
+public class Game implements IGame {
 
-    //#region fields
     private int currentPlayerIndex;
     private MoveState currentMoveState = MoveState.PLACE_TILE;
 
-
+    @Setter(lombok.AccessLevel.NONE)
     private Board board;
+
     private final List<Player> players;
     private RoomState roomState;
 
+    @Setter(lombok.AccessLevel.NONE)
+    @Getter(lombok.AccessLevel.NONE)
     private GameConfig gameConfig;
-    //#endregion
 
-    //#region ctor
-    /**
-     * Creates a new game room.
-     *
-     */
-    private Game() {
+    private final ITreasureCardFactory treasureCardFactory;
+    private final IBoardFactory boardFactory;
+
+
+    public Game(ITreasureCardFactory treasureCardFactory, IBoardFactory boardFactory) {
+        this.treasureCardFactory = treasureCardFactory;
+        this.boardFactory = boardFactory;
+
         this.players = new ArrayList<>();
         this.roomState = RoomState.LOBBY;
         this.board = null;
 
         // start with a default config
-        this.gameConfig = new GameConfig(7, 7, 7, 4);
+        this.gameConfig = GameConfig.getDefault();
 
         this.currentPlayerIndex = 0;
     }
-    //#endregion
 
-    //#region methods
     /**
      * Adds a player to the room.
      *
-     * @param player the player to join
+     * @param username the username of the player joining the room
      * @throws IllegalStateException if the room is full
      */
-    public Player join(Player player) {
-        if(roomState != RoomState.LOBBY) {
+    public Player join(String username) {
+        if (roomState != RoomState.LOBBY) {
             throw new IllegalStateException("Cannot join a game that is in progress!");
         }
 
@@ -71,20 +74,44 @@ public class Game {
             throw new IllegalStateException("Room is full");
         }
 
-        if (!isUsernameAvailable(player.getUsername())) {
+        if (!isUsernameAvailable(username)) {
             throw new IllegalArgumentException("Username is already taken");
         }
 
+        Player player = new Player(UUID.randomUUID(), username);
+        player.setColor(getNextColor());
+
+        if (players.isEmpty()) {
+            //first player becomes admin
+            player.setAdmin(true);
+        }
+
+        player.setJoinDate(OffsetDateTime.now());
         players.add(player);
         return player;
+    }
+
+    @Override
+    public void leave(Player player) {
+        //TODO: handle leaving during game
+        players.removeIf(p -> p.getId().equals(player.getId()));
+    }
+
+    @Override
+    public Player getPlayer(UUID playerId) {
+        return players.stream()
+                .filter(p -> p.getId().equals(playerId))
+                .findFirst()
+                .orElse(null);
     }
 
     /**
      * Starts the game. This method could be extended to initialize
      * player positions, shuffle treasure cards, and set up the board.
      */
-    public void startGame(List<TreasureCard> cards) {
-        if(roomState != RoomState.LOBBY) {
+    @Override
+    public void startGame(GameConfig gameConfig) {
+        if (roomState != RoomState.LOBBY) {
             throw new IllegalStateException("Cannot start a game that is in progress or finished!");
         }
 
@@ -92,45 +119,51 @@ public class Game {
             throw new IllegalStateException("At least 2 players required to start the game");
         }
 
-        if (cards.size() != gameConfig.amountOfTreasuresPerPlayer() * players.size()) {
-            throw new IllegalStateException("Not the right amount of treasure cards supplied. Got " + cards.size() + ", expected " + gameConfig.amountOfTreasuresPerPlayer() * players.size());
-        }
+        this.gameConfig = Objects.requireNonNullElseGet(gameConfig, GameConfig::getDefault);
+        board = boardFactory.createBoard(gameConfig.boardWidth(), gameConfig.boardHeight());
+
+        var cards = treasureCardFactory.createTreasureCards(gameConfig.treasureCardCount(), players.size());
 
         System.out.println(cards.size() + " cards have been created");
+
+        var currentPlayerIndex = 0;
         do {
             TreasureCard card = cards.getFirst();
             board.placeRandomTreasure(card);
-            for (Player player : players) {
-                if(player.getAssignedTreasureCards().size() < gameConfig.amountOfTreasuresPerPlayer()) {
-                    player.getAssignedTreasureCards().add(card);
-                    break;
-                }
+
+            Player player = players.get(currentPlayerIndex);
+            player.getAssignedTreasureCards().add(card);
+            currentPlayerIndex++;
+            if (currentPlayerIndex >= players.size()) {
+                currentPlayerIndex = 0;
             }
+
             cards.removeFirst();
         } while (!cards.isEmpty());
 
         // Assign starting positions to each player by placing them on the four corners of the board.
         for (int i = 0; i < players.size(); i++) {
             Player player = players.get(i);
-            // Determine the corner coordinates based on player index
-            int row;
-            int col;
-            switch (i) {
-                case 0 -> { row = 0; col = 0; }
-                case 1 -> { row = 0; col = gameConfig.boardWidth() - 1; }
-                case 2 -> { row = gameConfig.boardHeight()  - 1; col = gameConfig.boardWidth()  - 1; }
-                case 3 -> { row = gameConfig.boardHeight() - 1; col = 0; }
-                default -> { row = 0; col = 0; }
-            }
-            Tile startingTile = board.getTileAt(row, col);
-            System.out.println(player.getUsername() + " starts on tile: " + row + "/" + col);
-            // Set the player's current tile to the tile at the determined coordinates
+            var position = gameConfig.getStartPosition(i) ;
+
+            Tile startingTile = board.getTileAt(position);
+            System.out.println(player.getUsername() + " starts on tile: " + position.row() + "/" + position.column());
             player.setCurrentTile(startingTile);
         }
 
-        // Register the players with the board and synchronize their tile references
         this.board.setPlayers(players);
         System.out.println("Game started in GameLobby" + " with " + players.size() + " players.");
+    }
+
+    @Override
+    public Player getCurrentPlayer() {
+        return players.get(currentPlayerIndex);
+    }
+
+    @Override
+    public Position getCurrentPositionOfPlayer(Player player) {
+        var tileOfPlayer = player.getCurrentTile();
+        return board.getPositionOfTile(tileOfPlayer);
     }
 
     public void shift(int index, Direction direction, Player player) {
@@ -144,8 +177,7 @@ public class Game {
             case RIGHT -> board.shiftRowRight(index);
         };
 
-        if(!res)
-        {
+        if (!res) {
             return;
         }
         currentMoveState = MoveState.MOVE;
@@ -157,7 +189,7 @@ public class Game {
 
         var moved = board.movePlayerToTile(player, row, col);
 
-        if(!moved){
+        if (!moved) {
             return false;
         }
         currentMoveState = MoveState.PLACE_TILE;
@@ -170,26 +202,26 @@ public class Game {
     }
 
     private void guardFor(MoveState moveState) {
-        if(board.getFreeRoam()) {
+        if (board.isFreeRoam()) {
             return;
         }
 
-        if(this.currentMoveState != moveState) {
+        if (this.currentMoveState != moveState) {
             throw new IllegalStateException("Illegal move state");
         }
     }
 
     private void guardFor(RoomState roomState) {
-        if(this.roomState != roomState) {
+        if (this.roomState != roomState) {
             throw new IllegalStateException("Illegal room state");
         }
     }
 
-    private void guardFor(Player playerToMove){
-        if(board.getFreeRoam()) {
+    private void guardFor(Player playerToMove) {
+        if (board.isFreeRoam()) {
             return;
         }
-        if(!players.get(currentPlayerIndex).equals(playerToMove)) {
+        if (!players.get(currentPlayerIndex).equals(playerToMove)) {
             throw new IllegalStateException("Illegal player. Expected " + players.get(currentPlayerIndex).getId() + " but got " + playerToMove.getId());
         }
     }
@@ -203,10 +235,6 @@ public class Game {
         return players.size() >= gameConfig.maxPlayers();
     }
 
-    public void removePlayer(UUID playerId) {
-        players.removeIf(p -> p.getId().equals(playerId));
-    }
-
 
     @Override
     public String toString() {
@@ -214,5 +242,15 @@ public class Game {
                 ", players=" + players +
                 '}';
     }
-    //#endregion
+
+    private PlayerColor getNextColor() {
+        for (PlayerColor color : PlayerColor.values()) {
+            boolean used = players.stream()
+                    .anyMatch(p -> p.getColor() == color);
+            if (!used) {
+                return color;
+            }
+        }
+        throw new IllegalStateException("No available colors left");
+    }
 }

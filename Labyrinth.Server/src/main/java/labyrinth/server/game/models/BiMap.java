@@ -1,7 +1,9 @@
 package labyrinth.server.game.models;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 public class BiMap<K, V> {
     private final Map<K, V> forward = new HashMap<>();
@@ -34,5 +36,9 @@ public class BiMap<K, V> {
     public void removeByValue(V value) {
         K key = backward.remove(value);
         if (key != null) forward.remove(key);
+    }
+
+    public Set<Map.Entry<K, V>> entrySet() {
+        return Collections.unmodifiableSet(forward.entrySet());
     }
 }

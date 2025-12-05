@@ -4,31 +4,26 @@ import labyrinth.server.game.abstractions.IBoardFactory;
 import labyrinth.server.game.models.*;
 import labyrinth.server.game.enums.*;
 import labyrinth.server.game.models.BiMap;
-import labyrinth.server.game.models.Position;
+import labyrinth.server.game.models.records.Position;
 import labyrinth.server.game.util.TileShapes;
+import org.springframework.stereotype.Component;
 
 import java.util.*;
 
-/**
- * Factory class to generate random labyrinth boards.
- */
+@Component
 public class BoardFactory implements IBoardFactory {
 
     private static final Random RANDOM = new Random();
 
     @Override
-    public Board createBoardForGame(Game game) {
-        var gameConfig = game.getGameConfig();
-        var width = gameConfig.boardWidth();
-        var height = gameConfig.boardHeight();
-
+    public Board createBoard(int width, int height) {
         var tileMap = createRandomTileMap(width, height);
         replaceCornerTiles(tileMap, width, height);
 
         return new Board(width, height, tileMap, createRandomTile());
     }
 
-    private BiMap<Position, Tile> createRandomTileMap(int width, int height){
+    private BiMap<Position, Tile> createRandomTileMap(int width, int height) {
         BiMap<Position, Tile> tileMap = new BiMap<>();
 
         for (int row = 0; row < height; row++) {
@@ -39,13 +34,13 @@ public class BoardFactory implements IBoardFactory {
                 boolean colFixed = shouldBeFixed(col, width);
 
                 if (rowFixed && colFixed) {
-                    if(row == 0) {
+                    if (row == 0) {
                         tile = new Tile(TileShapes.SHAPE_T_NO_UP);
-                    } else if(col == 0) {
+                    } else if (col == 0) {
                         tile = new Tile(TileShapes.SHAPE_T_NO_LEFT);
-                    } else if(row == height - 1) {
+                    } else if (row == height - 1) {
                         tile = new Tile(TileShapes.SHAPE_T_NO_DOWN);
-                    }  else if(col == width - 1) {
+                    } else if (col == width - 1) {
                         tile = new Tile(TileShapes.SHAPE_T_NO_RIGHT);
                     } else {
                         tile = new Tile(TileShapes.SHAPE_T_NO_UP);
@@ -66,11 +61,19 @@ public class BoardFactory implements IBoardFactory {
         return tileMap;
     }
 
-    private void replaceCornerTiles(BiMap<Position, Tile> tileMap, int width, int height){
-        tileMap.put(new Position(0, 0), new Tile(TileShapes.SHAPE_CORNER_DOWN_RIGHT) {{ setIsFixed(true); }});
-        tileMap.put(new Position(0, width-1), new Tile(TileShapes.SHAPE_CORNER_DOWN_LEFT) {{ setIsFixed(true); }});
-        tileMap.put(new Position(height-1, 0), new Tile(TileShapes.SHAPE_CORNER_UP_RIGHT) {{ setIsFixed(true); }});
-        tileMap.put(new Position(height-1, width-1), new Tile(TileShapes.SHAPE_CORNER_UP_LEFT) {{ setIsFixed(true); }});
+    private void replaceCornerTiles(BiMap<Position, Tile> tileMap, int width, int height) {
+        tileMap.put(new Position(0, 0), new Tile(TileShapes.SHAPE_CORNER_DOWN_RIGHT) {{
+            setIsFixed(true);
+        }});
+        tileMap.put(new Position(0, width - 1), new Tile(TileShapes.SHAPE_CORNER_DOWN_LEFT) {{
+            setIsFixed(true);
+        }});
+        tileMap.put(new Position(height - 1, 0), new Tile(TileShapes.SHAPE_CORNER_UP_RIGHT) {{
+            setIsFixed(true);
+        }});
+        tileMap.put(new Position(height - 1, width - 1), new Tile(TileShapes.SHAPE_CORNER_UP_LEFT) {{
+            setIsFixed(true);
+        }});
 
     }
 

@@ -8,6 +8,7 @@ import labyrinth.contracts.models.ServerInfoPayload;
 import labyrinth.server.exceptions.ActionErrorException;
 import labyrinth.server.messaging.commands.CommandMessageDispatcher;
 import labyrinth.server.messaging.commands.CommandMessageParser;
+import lombok.RequiredArgsConstructor;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
@@ -18,6 +19,7 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 import java.time.OffsetDateTime;
 
 @Component
+@RequiredArgsConstructor
 public class GameWebSocketHandler extends TextWebSocketHandler {
     private final ObjectMapper mapper = new ObjectMapper();
 
@@ -26,15 +28,6 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
     private final PlayerSessionRegistry playerSessionRegistry;
     private final MessageService messageService;
 
-    public GameWebSocketHandler(CommandMessageParser messageParser,
-                                CommandMessageDispatcher dispatcher,
-                                PlayerSessionRegistry playerSessionRegistry,
-                                MessageService messageService) {
-        this.messageParser = messageParser;
-        this.dispatcher = dispatcher;
-        this.playerSessionRegistry = playerSessionRegistry;
-        this.messageService = messageService;
-    }
 
     @Override
     public void afterConnectionEstablished(@NonNull WebSocketSession session) {
