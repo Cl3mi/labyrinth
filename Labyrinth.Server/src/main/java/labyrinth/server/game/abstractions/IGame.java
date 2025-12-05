@@ -2,8 +2,8 @@ package labyrinth.server.game.abstractions;
 
 import labyrinth.server.game.enums.MoveState;
 import labyrinth.server.game.models.Board;
-import labyrinth.server.game.models.records.GameConfig;
 import labyrinth.server.game.models.Player;
+import labyrinth.server.game.models.records.GameConfig;
 import labyrinth.server.game.models.records.Position;
 
 import java.util.List;
@@ -27,5 +27,7 @@ public interface IGame {
     Player getCurrentPlayer();
 
     Position getCurrentPositionOfPlayer(Player player);
+
+    boolean movePlayerToTile(int row, int col, Player player);
 
 }

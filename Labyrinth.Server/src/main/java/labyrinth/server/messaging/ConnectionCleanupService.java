@@ -1,6 +1,7 @@
 package labyrinth.server.messaging;
 
 import labyrinth.server.game.abstractions.IGame;
+import labyrinth.server.messaging.abstractions.IPlayerSessionRegistry;
 import lombok.RequiredArgsConstructor;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -9,19 +10,19 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class ConnectionCleanupService {
     public IGame game;
-    private final PlayerSessionRegistry playerSessionRegistry;
+    private final IPlayerSessionRegistry IPlayerSessionRegistry;
 
     @Scheduled(fixedRate = 1000)
     public void cleanupDisconnected() {
         long now = System.currentTimeMillis();
 
-        playerSessionRegistry.getDisconnectedEntries().forEach((playerId, ts) -> {
+        IPlayerSessionRegistry.getDisconnectedEntries().forEach((playerId, ts) -> {
             if (now - ts >= 30_000) {
 
                 var player = game.getPlayer(playerId);
                 game.leave(player);
 
-                playerSessionRegistry.removePlayer(playerId);
+                IPlayerSessionRegistry.removePlayer(playerId);
             }
         });
     }
