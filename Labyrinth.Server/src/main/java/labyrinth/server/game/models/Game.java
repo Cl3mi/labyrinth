@@ -138,7 +138,7 @@ public class Game implements IGame {
                 currentPlayerIndex = 0;
             }
 
-            cards.remove(card);
+            cards.removeFirst();
         } while (!cards.isEmpty());
 
         // Assign starting positions to each player by placing them on the four corners of the board.

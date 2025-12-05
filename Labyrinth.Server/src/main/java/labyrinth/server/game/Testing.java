@@ -31,7 +31,7 @@ public class Testing {
 
         // Request to start the game is sent
 
-        game.startGame(new GameConfig(7, 7,  4, 24, 1800, 4));
+        game.startGame(new GameConfig(7, 7, 4, 24, 1800, 4));
 
         // Open Debug Viewer
         LabyrinthViewer.viewSwing(game);

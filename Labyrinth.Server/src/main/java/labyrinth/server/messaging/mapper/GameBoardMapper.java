@@ -39,7 +39,11 @@ public class GameBoardMapper {
 
             var tileDto = new labyrinth.contracts.models.Tile();
             tileDto.setIsFixed(tile.isFixed());
-            tileDto.setTreasure(treasureMapper.toDto(tile.getTreasureCard()));
+            if (tile.getTreasureCard() != null) {
+                tileDto.setTreasure(treasureMapper.toDto(tile.getTreasureCard()));
+            } else {
+                tileDto.setTreasure(null);
+            }
             //tileDto.setBonus(tile.getBonus); TODO add bonus when available
 
             tileDto.setEntrances(
@@ -52,8 +56,8 @@ public class GameBoardMapper {
         }
 
         dto.setTiles(tiles);
-        dto.setRows(maxRow);
-        dto.setCols(maxCol);
+        dto.setRows(maxRow + 1);
+        dto.setCols(maxCol + 1);
 
         return dto;
     }
