@@ -12,7 +12,6 @@ public class PlayerInfoMapper {
         dto.setName(player.getUsername());
         dto.setColor(player.getColor());
         dto.setIsAdmin(player.isAdmin());
-        dto.setColor(player.getColor());
 
         return dto;
     }
