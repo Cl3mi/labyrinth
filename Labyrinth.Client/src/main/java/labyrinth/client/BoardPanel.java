@@ -86,7 +86,6 @@ public class BoardPanel extends JPanel {
         setupMouseListener();
 
         backgroundMusic = new AudioPlayer("/sounds/06-Kokiri-Forest.wav");
-        backgroundMusic.setVolume(0.4f);
         backgroundMusic.loop();
     }
 

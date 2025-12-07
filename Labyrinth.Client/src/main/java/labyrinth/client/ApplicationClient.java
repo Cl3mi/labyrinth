@@ -8,12 +8,12 @@ import labyrinth.client.models.Game;
 import labyrinth.client.models.LabyrinthApplication;
 import labyrinth.client.models.Player;
 
-public class Application {
+public class ApplicationClient {
     public static void main(String[] args) throws Exception {
         if (args.length > 0 && "debug".equalsIgnoreCase(args[0])) {
-            debug();           // alter Offline-Prototyp
+            startOnline();
         } else {
-            startOnline();     // neuer Server-Client
+            debug();
         }
     }
 

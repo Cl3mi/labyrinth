@@ -17,7 +17,6 @@ import java.util.*;
 public class Player {
     private final UUID id;
     private final String username;
-
     private OffsetDateTime joinDate;
     private int score;
     private boolean isAiActive;

@@ -174,7 +174,7 @@ public class BoardFactory implements IBoardFactory {
     }
 
     public static List<labyrinth.client.models.Player> convertPlayerStates(PlayerState[] states) {
-        List<labyrinth.client.models.Player> list = new ArrayList<>();
+        List<labyrinth.client.models.Player> list = new java.util.ArrayList<>();
         if (states == null) return list;
 
         for (PlayerState s : states) {
@@ -184,20 +184,16 @@ public class BoardFactory implements IBoardFactory {
             labyrinth.client.models.Player p =
                     new labyrinth.client.models.Player(s.getId(), s.getName());
 
-            // Position (falls vorhanden)
+            // Position (Contracts: x=row, y=column)
             if (s.getCurrentPosition() != null) {
                 Coordinates pos = s.getCurrentPosition();
-                // x = row, y = column
                 p.setCurrentPosition(
                         new labyrinth.client.models.Position(pos.getX(), pos.getY())
                 );
             }
 
-            // Optional: Farbe, Admin-Status, etc., nur falls du passende Setter im Client hast
-            // if (s.getColor() != null) {
-            //     p.setColor( mapColor(s.getColor()) );
-            // }
-            // p.setAdmin(Boolean.TRUE.equals(s.getIsAdmin()));
+            // TODO: wenn du später Farbe, Achievements usw. im UI anzeigen willst,
+            // kannst du sie hier ebenfalls mappen.
 
             list.add(p);
         }
