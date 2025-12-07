@@ -4,6 +4,7 @@ import labyrinth.server.game.enums.Direction;
 import labyrinth.server.game.enums.MoveState;
 import labyrinth.server.game.models.Board;
 import labyrinth.server.game.models.Player;
+import labyrinth.server.game.models.TreasureCard;
 import labyrinth.server.game.models.records.GameConfig;
 import labyrinth.server.game.models.records.Position;
 
@@ -22,7 +23,7 @@ public interface IGame {
 
     Board getBoard();
 
-    void startGame(GameConfig gameConfig);
+    void startGame(GameConfig gameConfig, List<TreasureCard> treasureCards, Board board);
 
     MoveState getCurrentMoveState();
 
