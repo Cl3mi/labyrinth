@@ -3,8 +3,9 @@ package labyrinth.client.factories;
 import labyrinth.client.abstractions.IBoardFactory;
 import labyrinth.client.models.*;
 import labyrinth.client.enums.*;
+import labyrinth.contracts.models.Coordinates;
+import labyrinth.contracts.models.PlayerState;
 
-import java.security.DigestException;
 import java.util.*;
 
 /**
@@ -116,4 +117,93 @@ public class BoardFactory implements IBoardFactory {
 
         return false;
     }
+
+    public static Board fromContracts(labyrinth.contracts.models.GameBoard gameBoard) {
+        int rows = gameBoard.getRows();
+        int cols = gameBoard.getCols();
+
+        Tile[][] clientTiles = new Tile[rows][cols];
+
+        labyrinth.contracts.models.Tile[][] contractTiles = gameBoard.getTiles();
+
+        for (int row = 0; row < rows; row++) {
+            for (int col = 0; col < cols; col++) {
+                labyrinth.contracts.models.Tile ct = contractTiles[row][col];
+                clientTiles[row][col] = convertContractTile(ct);
+            }
+        }
+
+        // Extra-Tile:
+        // Im GameBoard-Contract ist sie nicht direkt drin.
+        // Bis du weißt, wo sie im Event kommt, nehmen wir eine Dummy-Tile.
+        Tile extraTile = createRandomTile();
+
+        // Achtung: Board-Konstruktor: (width, height, tiles, extraTile)
+        return new Board(cols, rows, clientTiles, extraTile);
+    }
+
+    /**
+     * Hilfsmethode: wandelt ein Contract-Tile in ein Client-Tile um.
+     */
+    private static Tile convertContractTile(labyrinth.contracts.models.Tile ct) {
+        if (ct == null) {
+            // Fallback: einfach eine gerade Tile
+            return new Tile(EnumSet.of(Direction.UP, Direction.DOWN));
+        }
+
+        // Entrances: contracts.Direction[] -> EnumSet<client.Direction>
+        EnumSet<Direction> entrances = EnumSet.noneOf(Direction.class);
+        if (ct.getEntrances() != null) {
+            for (labyrinth.contracts.models.Direction d : ct.getEntrances()) {
+                entrances.add(Direction.valueOf(d.name()));
+            }
+        }
+
+        Tile clientTile = new Tile(entrances);
+
+        // Fixed-Flag
+        if (ct.getIsFixed() != null && ct.getIsFixed()) {
+            clientTile.setFixed(true);
+        }
+
+        // TODO: Treasure / Bonus aus Contracts übernehmen,
+        // wenn du dafür schon Client-Modelle hast.
+        // z.B. clientTile.setTreasureCard(...);
+
+        return clientTile;
+    }
+
+    public static List<labyrinth.client.models.Player> convertPlayerStates(PlayerState[] states) {
+        List<labyrinth.client.models.Player> list = new ArrayList<>();
+        if (states == null) return list;
+
+        for (PlayerState s : states) {
+            if (s == null) continue;
+
+            // Client-Player mit ID & Name
+            labyrinth.client.models.Player p =
+                    new labyrinth.client.models.Player(s.getId(), s.getName());
+
+            // Position (falls vorhanden)
+            if (s.getCurrentPosition() != null) {
+                Coordinates pos = s.getCurrentPosition();
+                // x = row, y = column
+                p.setCurrentPosition(
+                        new labyrinth.client.models.Position(pos.getX(), pos.getY())
+                );
+            }
+
+            // Optional: Farbe, Admin-Status, etc., nur falls du passende Setter im Client hast
+            // if (s.getColor() != null) {
+            //     p.setColor( mapColor(s.getColor()) );
+            // }
+            // p.setAdmin(Boolean.TRUE.equals(s.getIsAdmin()));
+
+            list.add(p);
+        }
+
+        return list;
+    }
+
+
 }

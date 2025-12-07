@@ -50,9 +50,9 @@ public class BoardPanel extends JPanel {
     private static final int TILE_PADDING = 0;
 
     // --- Class Fields ---
-    private final Board board;
+    private Board board;
     private Player currentPlayer;
-    private final List<Player> players;
+    private List<Player> players;
     private int currentPlayerIndex = 0;
     private final Set<Tile> reachableTiles;
     private final List<ArrowButton> arrowButtons = new ArrayList<>();
@@ -705,5 +705,22 @@ public class BoardPanel extends JPanel {
         boolean contains(Point p) {
             return bounds.contains(p);
         }
+
+
+    }
+
+    public void setBoard(Board board) {
+        this.board = board;
+        updateReachableTilesAndRepaint();
+    }
+
+    public void setPlayers(List<Player> players) {
+        this.players = players != null ? players : List.of();
+        repaint();
+    }
+
+    public void setCurrentPlayer(Player currentPlayer) {
+        this.currentPlayer = currentPlayer;
+        updateReachableTilesAndRepaint();
     }
 }
