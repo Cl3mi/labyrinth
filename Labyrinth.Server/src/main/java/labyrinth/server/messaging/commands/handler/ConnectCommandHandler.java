@@ -15,8 +15,6 @@ import java.util.UUID;
 @Component
 public class ConnectCommandHandler extends AbstractCommandHandler<ConnectCommandPayload> {
 
-    private final GameService gameService;
-    private final IPlayerSessionRegistry playerSessionRegistry;
     private final IMessageService messageService;
     private final PlayerInfoMapper playerInfoMapper;
 
@@ -28,8 +26,6 @@ public class ConnectCommandHandler extends AbstractCommandHandler<ConnectCommand
 
         super(gameService, playerSessionRegistry);
 
-        this.gameService = gameService;
-        this.playerSessionRegistry = playerSessionRegistry;
         this.messageService = messageService;
         this.playerInfoMapper = playerInfoMapper;
     }

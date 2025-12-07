@@ -1,6 +1,5 @@
 package labyrinth.server.game.factories;
 
-import labyrinth.server.game.abstractions.ITreasureCardFactory;
 import labyrinth.server.game.models.TreasureCard;
 import org.springframework.stereotype.Component;
 
@@ -13,7 +12,7 @@ import java.util.List;
  * Maintains a predefined set of treasure names.
  */
 @Component
-public class TreasureCardFactory implements ITreasureCardFactory {
+public class TreasureCardFactory {
 
     private static final List<String> TREASURE_NAMES = List.of(
             "Crown", "Jewel", "Goblet", "Ring", "Coin",
@@ -26,7 +25,6 @@ public class TreasureCardFactory implements ITreasureCardFactory {
             "Carving", "Figurine", "Crystal", "Talisman", "RingBox"
     );
 
-    @Override
     public List<TreasureCard> createTreasureCards(int treasureCardCount, int playerCount) {
 
         if (treasureCardCount % playerCount != 0) {

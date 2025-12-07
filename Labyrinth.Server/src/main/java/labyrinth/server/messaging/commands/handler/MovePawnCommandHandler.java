@@ -46,7 +46,7 @@ public class MovePawnCommandHandler extends AbstractCommandHandler<MovePawnComma
             throw new ActionErrorException("Cannot move pawn to the specified coordinates.", ErrorCode.INVALID_MOVE);
         }
 
-        var gameState = gameMapper.toGameStateDto(gameService.getGame());
+        var gameState = gameService.withGameReadLock(gameMapper::toGameStateDto);
         messageService.broadcastToPlayers(gameState);
     }
 }

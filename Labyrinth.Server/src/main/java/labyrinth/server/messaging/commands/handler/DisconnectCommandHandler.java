@@ -44,7 +44,7 @@ public class DisconnectCommandHandler extends AbstractCommandHandler<DisconnectC
         disconnectedPayload.setPlayerId(player.getId().toString());
         messageService.broadcastToPlayers(disconnectedPayload);
 
-        var gameState = gameMapper.toGameStateDto(gameService.getGame());
+        var gameState = gameService.withGameReadLock(gameMapper::toGameStateDto);
         messageService.broadcastToPlayers(gameState);
     }
 }

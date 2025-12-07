@@ -3,8 +3,6 @@ package labyrinth.server.messaging.commands.handler;
 import labyrinth.contracts.models.CommandType;
 import labyrinth.contracts.models.StartGameCommandPayload;
 import labyrinth.server.game.GameService;
-import labyrinth.server.game.abstractions.IBoardFactory;
-import labyrinth.server.game.abstractions.ITreasureCardFactory;
 import labyrinth.server.game.models.records.GameConfig;
 import labyrinth.server.messaging.abstractions.IPlayerSessionRegistry;
 import org.springframework.stereotype.Component;
@@ -13,17 +11,10 @@ import org.springframework.web.socket.WebSocketSession;
 @Component
 public class StartGameCommandHandler extends AbstractCommandHandler<StartGameCommandPayload> {
 
-    private final IBoardFactory boardFactory;
-    private final ITreasureCardFactory treasureCardFactory;
-
     public StartGameCommandHandler(GameService gameService,
-                                   IBoardFactory boardFactory,
-                                   ITreasureCardFactory treasureCardFactory,
                                    IPlayerSessionRegistry playerSessionRegistry) {
-        super(gameService, playerSessionRegistry);
 
-        this.boardFactory = boardFactory;
-        this.treasureCardFactory = treasureCardFactory;
+        super(gameService, playerSessionRegistry);
     }
 
     @Override

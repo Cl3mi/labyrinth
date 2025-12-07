@@ -1,21 +1,22 @@
 package labyrinth.server.game.factories;
 
-import labyrinth.server.game.abstractions.IBoardFactory;
-import labyrinth.server.game.models.*;
-import labyrinth.server.game.enums.*;
+import labyrinth.server.game.enums.Direction;
 import labyrinth.server.game.models.BiMap;
+import labyrinth.server.game.models.Board;
+import labyrinth.server.game.models.Tile;
 import labyrinth.server.game.models.records.Position;
 import labyrinth.server.game.util.TileShapes;
 import org.springframework.stereotype.Component;
 
-import java.util.*;
+import java.util.EnumSet;
+import java.util.Random;
+import java.util.Set;
 
 @Component
-public class BoardFactory implements IBoardFactory {
+public class BoardFactory {
 
     private static final Random RANDOM = new Random();
 
-    @Override
     public Board createBoard(int width, int height) {
         var tileMap = createRandomTileMap(width, height);
         replaceCornerTiles(tileMap, width, height);

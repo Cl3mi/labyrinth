@@ -1,116 +1,184 @@
 package labyrinth.server.game;
 
-import labyrinth.server.game.abstractions.IBoardFactory;
-import labyrinth.server.game.abstractions.ITreasureCardFactory;
 import labyrinth.server.game.enums.Direction;
-import labyrinth.server.game.enums.MoveState;
+import labyrinth.server.game.factories.BoardFactory;
+import labyrinth.server.game.factories.TreasureCardFactory;
 import labyrinth.server.game.models.Board;
 import labyrinth.server.game.models.Game;
 import labyrinth.server.game.models.Player;
 import labyrinth.server.game.models.records.GameConfig;
-import labyrinth.server.game.models.records.Position;
-import lombok.Getter;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.function.Function;
 
 @Service
 public class GameService {
 
-    @Getter
     private final Game game;
 
-    private final ITreasureCardFactory treasureCardFactory;
-    private final IBoardFactory boardFactory;
+    private final TreasureCardFactory treasureCardFactory;
+    private final BoardFactory boardFactory;
 
-    public GameService(ITreasureCardFactory treasureCardFactory, IBoardFactory boardFactory) {
+    private final ReadWriteLock rwLock = new ReentrantReadWriteLock();
+
+    public GameService(TreasureCardFactory treasureCardFactory, BoardFactory boardFactory) {
         this.game = new Game();
         this.treasureCardFactory = treasureCardFactory;
         this.boardFactory = boardFactory;
     }
 
     public Player join(String username) {
-        return game.join(username);
+        rwLock.writeLock().lock();
+        try {
+            return game.join(username);
+        } finally {
+            rwLock.writeLock().unlock();
+        }
     }
 
 
     public void leave(Player player) {
-        game.leave(player);
+        rwLock.writeLock().lock();
+        try {
+            game.leave(player);
+        } finally {
+            rwLock.writeLock().unlock();
+        }
     }
 
 
     public List<Player> getPlayers() {
-        return game.getPlayers();
+        rwLock.readLock().lock();
+        try {
+            return List.copyOf(game.getPlayers());
+        } finally {
+            rwLock.readLock().unlock();
+        }
     }
 
 
     public Player getPlayer(UUID playerId) {
-        return game.getPlayer(playerId);
+        rwLock.readLock().lock();
+        try {
+            return game.getPlayer(playerId);
+        } finally {
+            rwLock.readLock().unlock();
+        }
     }
 
 
     public Board getBoard() {
-        return game.getBoard();
+        rwLock.readLock().lock();
+        try {
+            return game.getBoard();
+        } finally {
+            rwLock.readLock().unlock();
+        }
     }
 
 
     public void startGame(GameConfig gameConfig) {
-        var board = boardFactory.createBoard(gameConfig.boardWidth(), gameConfig.boardHeight());
-        var treasureCards = treasureCardFactory.createTreasureCards(gameConfig.treasureCardCount(), game.getPlayers().size());
+        rwLock.writeLock().lock();
+        try {
+            int playersCount = game.getPlayers().size();
 
-        game.startGame(gameConfig, treasureCards, board);
+            var board = boardFactory.createBoard(gameConfig.boardWidth(), gameConfig.boardHeight());
+            var treasureCards = treasureCardFactory.createTreasureCards(gameConfig.treasureCardCount(), playersCount);
+
+            game.startGame(gameConfig, treasureCards, board);
+        } finally {
+            rwLock.writeLock().unlock();
+        }
     }
-
-
-    public MoveState getCurrentMoveState() {
-        return game.getCurrentMoveState();
-    }
-
 
     public Player getCurrentPlayer() {
-        return game.getCurrentPlayer();
+        rwLock.readLock().lock();
+        try {
+            return game.getCurrentPlayer();
+        } finally {
+            rwLock.readLock().unlock();
+        }
     }
-
-
-    public Position getCurrentPositionOfPlayer(Player player) {
-        return game.getCurrentPositionOfPlayer(player);
-    }
-
 
     public boolean movePlayerToTile(int row, int col, Player player) {
-        return game.movePlayerToTile(row, col, player);
+        rwLock.writeLock().lock();
+        try {
+            return game.movePlayerToTile(row, col, player);
+        } finally {
+            rwLock.writeLock().unlock();
+        }
     }
-
 
     public boolean shift(int index, Direction direction, Set<Direction> entrances, Player player) {
-        return game.shift(index, direction, entrances, player);
+        rwLock.writeLock().lock();
+        try {
+            return game.shift(index, direction, entrances, player);
+        } finally {
+            rwLock.writeLock().unlock();
+        }
     }
-
 
     public void toggleAiForPlayer(Player player) {
-        game.toggleAiForPlayer(player);
+        rwLock.writeLock().lock();
+        try {
+            game.toggleAiForPlayer(player);
+        } finally {
+            rwLock.writeLock().unlock();
+        }
     }
 
-
     public void useBeamBonus(int row, int col, Player player) {
-        game.useBeamBonus(row, col, player);
+        rwLock.writeLock().lock();
+        try {
+            game.useBeamBonus(row, col, player);
+        } finally {
+            rwLock.writeLock().unlock();
+        }
     }
 
 
     public void useSwapBonus(Player currentPlayer, Player targetPlayer) {
-        game.useSwapBonus(currentPlayer, targetPlayer);
+        rwLock.writeLock().lock();
+        try {
+            game.useSwapBonus(currentPlayer, targetPlayer);
+        } finally {
+            rwLock.writeLock().unlock();
+        }
     }
 
 
     public void usePushTwiceBonus(Player player) {
-        game.usePushTwiceBonus(player);
+        rwLock.writeLock().lock();
+        try {
+            game.usePushTwiceBonus(player);
+        } finally {
+            rwLock.writeLock().unlock();
+        }
     }
 
 
     public void usePushFixedBonus(Player player) {
-        game.usePushFixedBonus(player);
+        rwLock.writeLock().lock();
+        try {
+            game.usePushFixedBonus(player);
+        } finally {
+            rwLock.writeLock().unlock();
+        }
     }
 
+    // Generic helper: run a function under the Game read-lock. Keeps locking centralized
+    // while avoiding coupling the Game layer to messaging/contract DTO types.
+    public <T> T withGameReadLock(Function<Game, T> action) {
+        rwLock.readLock().lock();
+        try {
+            return action.apply(game);
+        } finally {
+            rwLock.readLock().unlock();
+        }
+    }
 }
