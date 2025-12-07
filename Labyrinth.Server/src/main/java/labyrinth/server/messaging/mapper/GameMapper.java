@@ -3,7 +3,7 @@ package labyrinth.server.messaging.mapper;
 import labyrinth.contracts.models.EventType;
 import labyrinth.contracts.models.GameStateUpdateEventPayload;
 import labyrinth.contracts.models.PlayerState;
-import labyrinth.server.game.abstractions.IGame;
+import labyrinth.server.game.models.Game;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -18,7 +18,7 @@ public class GameMapper {
     private final TurnStateMapper turnStateMapper;
     private final CoordinatesMapper coordinatesMapper;
 
-    public GameStateUpdateEventPayload toGameStateDto(IGame game) {
+    public GameStateUpdateEventPayload toGameStateDto(Game game) {
         var gameState = new GameStateUpdateEventPayload();
         gameState.setType(EventType.GAME_STATE_UPDATE);
 

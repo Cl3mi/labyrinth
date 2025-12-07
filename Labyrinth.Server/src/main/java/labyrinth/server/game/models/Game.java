@@ -1,9 +1,6 @@
 package labyrinth.server.game.models;
 
 import labyrinth.contracts.models.PlayerColor;
-import labyrinth.server.game.abstractions.IBoardFactory;
-import labyrinth.server.game.abstractions.IGame;
-import labyrinth.server.game.abstractions.ITreasureCardFactory;
 import labyrinth.server.game.enums.Direction;
 import labyrinth.server.game.enums.MoveState;
 import labyrinth.server.game.enums.RoomState;
@@ -11,7 +8,6 @@ import labyrinth.server.game.models.records.GameConfig;
 import labyrinth.server.game.models.records.Position;
 import lombok.Getter;
 import lombok.Setter;
-import org.springframework.stereotype.Component;
 
 import java.time.OffsetDateTime;
 import java.util.*;
@@ -20,10 +16,9 @@ import java.util.*;
  * Represents a game room for the Labyrinth game.
  * Each game has a unique code, a board, and manages 2–4 players.
  */
-@Component
 @Getter
 @Setter
-public class Game implements IGame {
+public class Game {
 
     private int currentPlayerIndex;
     private MoveState currentMoveState = MoveState.PLACE_TILE;
@@ -38,14 +33,7 @@ public class Game implements IGame {
     @Getter(lombok.AccessLevel.NONE)
     private GameConfig gameConfig;
 
-    private final ITreasureCardFactory treasureCardFactory;
-    private final IBoardFactory boardFactory;
-
-
-    public Game(ITreasureCardFactory treasureCardFactory, IBoardFactory boardFactory) {
-        this.treasureCardFactory = treasureCardFactory;
-        this.boardFactory = boardFactory;
-
+    public Game() {
         this.players = new ArrayList<>();
         this.roomState = RoomState.LOBBY;
         this.board = null;
@@ -88,13 +76,13 @@ public class Game implements IGame {
         return player;
     }
 
-    @Override
+
     public void leave(Player player) {
         //TODO: handle leaving during game
         players.removeIf(p -> p.getId().equals(player.getId()));
     }
 
-    @Override
+
     public Player getPlayer(UUID playerId) {
         return players.stream()
                 .filter(p -> p.getId().equals(playerId))
@@ -104,10 +92,10 @@ public class Game implements IGame {
 
     /**
      * Starts the game. This method could be extended to initialize
-     * player positions, shuffle treasure cards, and set up the board.
+     * player positions, shuffle treasure treasureCards, and set up the board.
      */
-    @Override
-    public void startGame(GameConfig gameConfig) {
+
+    public void startGame(GameConfig gameConfig, List<TreasureCard> treasureCards, Board board) {
         if (roomState != RoomState.LOBBY) {
             throw new IllegalStateException("Cannot start a game that is in progress or finished!");
         }
@@ -117,15 +105,11 @@ public class Game implements IGame {
         }
 
         this.gameConfig = Objects.requireNonNullElseGet(gameConfig, GameConfig::getDefault);
-        board = boardFactory.createBoard(gameConfig.boardWidth(), gameConfig.boardHeight());
-
-        var cards = treasureCardFactory.createTreasureCards(gameConfig.treasureCardCount(), players.size());
-
-        System.out.println(cards.size() + " cards have been created");
+        System.out.println(treasureCards.size() + " treasureCards have been created");
 
         var currentPlayerIndex = 0;
         do {
-            TreasureCard card = cards.getFirst();
+            TreasureCard card = treasureCards.getFirst();
             board.placeRandomTreasure(card);
 
             Player player = players.get(currentPlayerIndex);
@@ -135,8 +119,8 @@ public class Game implements IGame {
                 currentPlayerIndex = 0;
             }
 
-            cards.removeFirst();
-        } while (!cards.isEmpty());
+            treasureCards.removeFirst();
+        } while (!treasureCards.isEmpty());
 
         // Assign starting positions to each player by placing them on the four corners of the board.
         for (int i = 0; i < players.size(); i++) {
@@ -152,12 +136,11 @@ public class Game implements IGame {
         System.out.println("Game started in GameLobby" + " with " + players.size() + " players.");
     }
 
-    @Override
+
     public Player getCurrentPlayer() {
         return players.get(currentPlayerIndex);
     }
 
-    @Override
     public Position getCurrentPositionOfPlayer(Player player) {
         var tileOfPlayer = player.getCurrentTile();
         return board.getPositionOfTile(tileOfPlayer);
@@ -185,27 +168,26 @@ public class Game implements IGame {
         return true;
     }
 
-    @Override
     public void toggleAiForPlayer(Player player) {
         //TODO: implement
     }
 
-    @Override
+
     public void useBeamBonus(int row, int col, Player player) {
         //TODO: implement
     }
 
-    @Override
+
     public void useSwapBonus(Player currentPlayer, Player targetPlayer) {
         //TODO: implement
     }
 
-    @Override
+
     public void usePushTwiceBonus(Player player) {
         //TODO: implement
     }
 
-    @Override
+
     public void usePushFixedBonus(Player player) {
         //TODO: implement
     }

@@ -4,7 +4,7 @@ import labyrinth.contracts.models.CommandType;
 import labyrinth.contracts.models.DisconnectCommandPayload;
 import labyrinth.contracts.models.EventType;
 import labyrinth.contracts.models.PlayerDisconnectedEventPayload;
-import labyrinth.server.game.abstractions.IGame;
+import labyrinth.server.game.GameService;
 import labyrinth.server.messaging.abstractions.IMessageService;
 import labyrinth.server.messaging.abstractions.IPlayerSessionRegistry;
 import labyrinth.server.messaging.mapper.GameMapper;
@@ -18,8 +18,11 @@ public class DisconnectCommandHandler extends AbstractCommandHandler<DisconnectC
     private final IMessageService messageService;
     private final GameMapper gameMapper;
 
-    public DisconnectCommandHandler(IGame game, IPlayerSessionRegistry playerSessionRegistry, IMessageService messageService, GameMapper gameMapper) {
-        super(game, playerSessionRegistry);
+    public DisconnectCommandHandler(GameService gameService,
+                                    IPlayerSessionRegistry playerSessionRegistry,
+                                    IMessageService messageService,
+                                    GameMapper gameMapper) {
+        super(gameService, playerSessionRegistry);
 
         this.messageService = messageService;
         this.gameMapper = gameMapper;
@@ -34,14 +37,14 @@ public class DisconnectCommandHandler extends AbstractCommandHandler<DisconnectC
     public void handle(WebSocketSession session, DisconnectCommandPayload payload) throws Exception {
         var player = requireExistingPlayer(session);
 
-        game.leave(player);
+        gameService.leave(player);
 
         var disconnectedPayload = new PlayerDisconnectedEventPayload();
         disconnectedPayload.setType(EventType.PLAYER_DISCONNECTED);
         disconnectedPayload.setPlayerId(player.getId().toString());
         messageService.broadcastToPlayers(disconnectedPayload);
 
-        var gameState = gameMapper.toGameStateDto(game);
+        var gameState = gameService.withGameReadLock(gameMapper::toGameStateDto);
         messageService.broadcastToPlayers(gameState);
     }
 }

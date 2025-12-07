@@ -12,11 +12,7 @@ public class Testing {
     private static Game game;
 
     public static void main(String[] args) {
-        var treasureCardFactory = new TreasureCardFactory();
-        var boardFactory = new BoardFactory();
-
-        game = new Game(treasureCardFactory, boardFactory);
-
+        game = new Game();
         simulateGameStart();
         //simulateGameMoves(1000);
     }
@@ -30,8 +26,14 @@ public class Testing {
         game.join("Dover");
 
         // Request to start the game is sent
+        var treasureCardFactory = new TreasureCardFactory();
+        var boardFactory = new BoardFactory();
 
-        game.startGame(new GameConfig(7, 7, 4, 24, 1800, 4));
+        var gameConfig = new GameConfig(7, 7, 4, 24, 1800, 4);
+        var board = boardFactory.createBoard(gameConfig.boardWidth(), gameConfig.boardHeight());
+        var cards = treasureCardFactory.createTreasureCards(gameConfig.treasureCardCount(), game.getPlayers().size());
+
+        game.startGame(gameConfig, cards, board);
 
         // Open Debug Viewer
         LabyrinthViewer.viewSwing(game);

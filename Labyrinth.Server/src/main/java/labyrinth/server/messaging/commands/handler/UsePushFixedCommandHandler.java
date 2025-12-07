@@ -2,7 +2,7 @@ package labyrinth.server.messaging.commands.handler;
 
 import labyrinth.contracts.models.CommandType;
 import labyrinth.contracts.models.UsePushFixedCommandPayload;
-import labyrinth.server.game.abstractions.IGame;
+import labyrinth.server.game.GameService;
 import labyrinth.server.messaging.abstractions.IPlayerSessionRegistry;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.WebSocketSession;
@@ -10,8 +10,9 @@ import org.springframework.web.socket.WebSocketSession;
 @Component
 public class UsePushFixedCommandHandler extends AbstractCommandHandler<UsePushFixedCommandPayload> {
 
-    public UsePushFixedCommandHandler(IGame game, IPlayerSessionRegistry playerSessionRegistry) {
-        super(game, playerSessionRegistry);
+    public UsePushFixedCommandHandler(GameService gameService,
+                                      IPlayerSessionRegistry playerSessionRegistry) {
+        super(gameService, playerSessionRegistry);
     }
 
     @Override
@@ -24,6 +25,6 @@ public class UsePushFixedCommandHandler extends AbstractCommandHandler<UsePushFi
         var player = requireExistingPlayer(session);
         requirePlayerIsCurrent(player);
 
-        game.usePushFixedBonus(player);
+        gameService.usePushFixedBonus(player);
     }
 }

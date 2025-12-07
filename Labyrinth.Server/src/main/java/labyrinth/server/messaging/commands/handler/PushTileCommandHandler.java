@@ -4,7 +4,7 @@ import labyrinth.contracts.models.CommandType;
 import labyrinth.contracts.models.ErrorCode;
 import labyrinth.contracts.models.PushTileCommandPayload;
 import labyrinth.server.exceptions.ActionErrorException;
-import labyrinth.server.game.abstractions.IGame;
+import labyrinth.server.game.GameService;
 import labyrinth.server.messaging.abstractions.IMessageService;
 import labyrinth.server.messaging.abstractions.IPlayerSessionRegistry;
 import labyrinth.server.messaging.mapper.DirectionMapper;
@@ -19,15 +19,20 @@ import java.util.stream.Collectors;
 public class PushTileCommandHandler extends AbstractCommandHandler<PushTileCommandPayload> {
 
     private final IMessageService messageService;
-    private final GameMapper gameMapper;
     private final DirectionMapper directionMapper;
+    private final GameMapper gameMapper;
 
-    public PushTileCommandHandler(IGame game, IPlayerSessionRegistry playerSessionRegistry, IMessageService messageService, GameMapper gameMapper, DirectionMapper directionMapper) {
-        super(game, playerSessionRegistry);
+    public PushTileCommandHandler(GameService gameService,
+                                  IPlayerSessionRegistry playerSessionRegistry,
+                                  IMessageService messageService,
+                                  DirectionMapper directionMapper,
+                                  GameMapper gameMapper) {
+
+        super(gameService, playerSessionRegistry);
 
         this.messageService = messageService;
-        this.gameMapper = gameMapper;
         this.directionMapper = directionMapper;
+        this.gameMapper = gameMapper;
     }
 
     @Override
@@ -45,13 +50,13 @@ public class PushTileCommandHandler extends AbstractCommandHandler<PushTileComma
                 .map(directionMapper::toModel)
                 .collect(Collectors.toSet());
 
-        var shiftSuccessful = game.shift(payload.getRowOrColIndex(), direction, entrances, player);
+        var shiftSuccessful = gameService.shift(payload.getRowOrColIndex(), direction, entrances, player);
 
         if (!shiftSuccessful) {
             throw new ActionErrorException("Cannot push tile with the specified parameters.", ErrorCode.INVALID_PUSH);
         }
 
-        var gameState = gameMapper.toGameStateDto(game);
+        var gameState = gameService.withGameReadLock(gameMapper::toGameStateDto);
         messageService.broadcastToPlayers(gameState);
     }
 }

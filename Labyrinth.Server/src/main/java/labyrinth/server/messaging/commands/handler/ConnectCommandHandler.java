@@ -2,7 +2,7 @@ package labyrinth.server.messaging.commands.handler;
 
 import labyrinth.contracts.models.*;
 import labyrinth.server.exceptions.ActionErrorException;
-import labyrinth.server.game.abstractions.IGame;
+import labyrinth.server.game.GameService;
 import labyrinth.server.messaging.abstractions.IMessageService;
 import labyrinth.server.messaging.abstractions.IPlayerSessionRegistry;
 import labyrinth.server.messaging.mapper.PlayerInfoMapper;
@@ -15,17 +15,17 @@ import java.util.UUID;
 @Component
 public class ConnectCommandHandler extends AbstractCommandHandler<ConnectCommandPayload> {
 
-    private final IGame game;
-    private final IPlayerSessionRegistry playerSessionRegistry;
     private final IMessageService messageService;
     private final PlayerInfoMapper playerInfoMapper;
 
 
-    public ConnectCommandHandler(IGame game, IPlayerSessionRegistry playerSessionRegistry, IMessageService messageService, PlayerInfoMapper playerInfoMapper) {
-        super(game, playerSessionRegistry);
+    public ConnectCommandHandler(GameService gameService,
+                                 IPlayerSessionRegistry playerSessionRegistry,
+                                 IMessageService messageService,
+                                 PlayerInfoMapper playerInfoMapper) {
 
-        this.game = game;
-        this.playerSessionRegistry = playerSessionRegistry;
+        super(gameService, playerSessionRegistry);
+
         this.messageService = messageService;
         this.playerInfoMapper = playerInfoMapper;
     }
@@ -46,7 +46,7 @@ public class ConnectCommandHandler extends AbstractCommandHandler<ConnectCommand
 
             var playerId = playerSessionRegistry.getPlayerIdByIdentifierToken(identifierToken);
 
-            var player = game.getPlayer(playerId);
+            var player = gameService.getPlayer(playerId);
             if (player == null) {
                 throw new ActionErrorException("Player with ID " + playerId + " not found", ErrorCode.GENERAL); //TODO: error code?
             }
@@ -60,7 +60,7 @@ public class ConnectCommandHandler extends AbstractCommandHandler<ConnectCommand
             return;
         }
 
-        var player = game.join(payload.getUsername());
+        var player = gameService.join(payload.getUsername());
 
         var identifierToken = UUID.randomUUID();
         playerSessionRegistry.registerPlayer(player.getId(), identifierToken, session);
@@ -71,7 +71,7 @@ public class ConnectCommandHandler extends AbstractCommandHandler<ConnectCommand
 
         messageService.sendToPlayer(player.getId(), ackPayload);
 
-        var players = game.getPlayers()
+        var players = gameService.getPlayers()
                 .stream()
                 .map(playerInfoMapper::toDto)
                 .toArray(PlayerInfo[]::new);
