@@ -2,8 +2,6 @@ package labyrinth.server.messaging;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import labyrinth.server.messaging.abstractions.IMessageService;
-import labyrinth.server.messaging.abstractions.IPlayerSessionRegistry;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,13 +14,12 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
-public class MessageService implements IMessageService {
+public class MessageService {
 
     private static final Logger log = LoggerFactory.getLogger(MessageService.class);
-    private final IPlayerSessionRegistry playerSessionService;
+    private final PlayerSessionRegistry playerSessionService;
     private final ObjectMapper objectMapper;
 
-    @Override
     public void sendToSession(WebSocketSession session, Object payload) {
         if (session != null && session.isOpen()) {
             try {
@@ -34,8 +31,6 @@ public class MessageService implements IMessageService {
         }
     }
 
-
-    @Override
     public void sendToPlayer(UUID playerId, Object payload) {
         WebSocketSession session = playerSessionService.getSession(playerId);
         if (session != null && session.isOpen()) {
@@ -48,7 +43,6 @@ public class MessageService implements IMessageService {
         }
     }
 
-    @Override
     public void broadcastToPlayers(Object payload) {
         String jsonPayload;
         try {

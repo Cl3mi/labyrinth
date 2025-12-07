@@ -4,7 +4,7 @@ import labyrinth.contracts.models.ErrorCode;
 import labyrinth.server.exceptions.ActionErrorException;
 import labyrinth.server.game.GameService;
 import labyrinth.server.game.models.Player;
-import labyrinth.server.messaging.abstractions.IPlayerSessionRegistry;
+import labyrinth.server.messaging.PlayerSessionRegistry;
 import labyrinth.server.messaging.commands.ICommandHandler;
 import org.springframework.web.socket.WebSocketSession;
 
@@ -14,9 +14,9 @@ import java.util.UUID;
 public abstract class AbstractCommandHandler<T> implements ICommandHandler<T> {
 
     protected final GameService gameService;
-    protected final IPlayerSessionRegistry playerSessionRegistry;
+    protected final PlayerSessionRegistry playerSessionRegistry;
 
-    protected AbstractCommandHandler(GameService gameService, IPlayerSessionRegistry playerSessionRegistry) {
+    protected AbstractCommandHandler(GameService gameService, PlayerSessionRegistry playerSessionRegistry) {
         if (playerSessionRegistry == null) throw new IllegalArgumentException("playerSessionRegistry must not be null");
 
         this.gameService = gameService;

@@ -1,5 +1,6 @@
 package labyrinth.server.game;
 
+import labyrinth.server.game.enums.Achievement;
 import labyrinth.server.game.enums.Direction;
 import labyrinth.server.game.factories.BoardFactory;
 import labyrinth.server.game.factories.TreasureCardFactory;
@@ -7,6 +8,9 @@ import labyrinth.server.game.models.Board;
 import labyrinth.server.game.models.Game;
 import labyrinth.server.game.models.Player;
 import labyrinth.server.game.models.records.GameConfig;
+import labyrinth.server.messaging.events.EventPublisher;
+import labyrinth.server.messaging.events.records.AchievementUnlockedEvent;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -17,20 +21,16 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Function;
 
 @Service
+@RequiredArgsConstructor
 public class GameService {
 
-    private final Game game;
+    private final Game game = new Game();
+    private final ReadWriteLock rwLock = new ReentrantReadWriteLock();
 
     private final TreasureCardFactory treasureCardFactory;
     private final BoardFactory boardFactory;
+    private final EventPublisher eventPublisher;
 
-    private final ReadWriteLock rwLock = new ReentrantReadWriteLock();
-
-    public GameService(TreasureCardFactory treasureCardFactory, BoardFactory boardFactory) {
-        this.game = new Game();
-        this.treasureCardFactory = treasureCardFactory;
-        this.boardFactory = boardFactory;
-    }
 
     public Player join(String username) {
         rwLock.writeLock().lock();
@@ -41,7 +41,6 @@ public class GameService {
         }
     }
 
-
     public void leave(Player player) {
         rwLock.writeLock().lock();
         try {
@@ -50,7 +49,6 @@ public class GameService {
             rwLock.writeLock().unlock();
         }
     }
-
 
     public List<Player> getPlayers() {
         rwLock.readLock().lock();
@@ -61,7 +59,6 @@ public class GameService {
         }
     }
 
-
     public Player getPlayer(UUID playerId) {
         rwLock.readLock().lock();
         try {
@@ -71,7 +68,6 @@ public class GameService {
         }
     }
 
-
     public Board getBoard() {
         rwLock.readLock().lock();
         try {
@@ -80,7 +76,6 @@ public class GameService {
             rwLock.readLock().unlock();
         }
     }
-
 
     public void startGame(GameConfig gameConfig) {
         rwLock.writeLock().lock();
@@ -108,7 +103,15 @@ public class GameService {
     public boolean movePlayerToTile(int row, int col, Player player) {
         rwLock.writeLock().lock();
         try {
-            return game.movePlayerToTile(row, col, player);
+            boolean result = game.movePlayerToTile(row, col, player);
+
+            // TODO: this is just an example, replace with actual achievement unlocking logic
+            if (result) {
+                var achievementEvent = new AchievementUnlockedEvent(player, Achievement.RUNNER);
+                eventPublisher.publishAsync(achievementEvent);
+            }
+
+            return result;
         } finally {
             rwLock.writeLock().unlock();
         }
@@ -160,7 +163,6 @@ public class GameService {
             rwLock.writeLock().unlock();
         }
     }
-
 
     public void usePushFixedBonus(Player player) {
         rwLock.writeLock().lock();

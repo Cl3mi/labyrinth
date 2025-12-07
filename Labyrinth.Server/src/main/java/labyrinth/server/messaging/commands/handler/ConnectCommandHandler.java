@@ -3,8 +3,8 @@ package labyrinth.server.messaging.commands.handler;
 import labyrinth.contracts.models.*;
 import labyrinth.server.exceptions.ActionErrorException;
 import labyrinth.server.game.GameService;
-import labyrinth.server.messaging.abstractions.IMessageService;
-import labyrinth.server.messaging.abstractions.IPlayerSessionRegistry;
+import labyrinth.server.messaging.MessageService;
+import labyrinth.server.messaging.PlayerSessionRegistry;
 import labyrinth.server.messaging.mapper.PlayerInfoMapper;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.WebSocketSession;
@@ -15,13 +15,13 @@ import java.util.UUID;
 @Component
 public class ConnectCommandHandler extends AbstractCommandHandler<ConnectCommandPayload> {
 
-    private final IMessageService messageService;
+    private final MessageService messageService;
     private final PlayerInfoMapper playerInfoMapper;
 
 
     public ConnectCommandHandler(GameService gameService,
-                                 IPlayerSessionRegistry playerSessionRegistry,
-                                 IMessageService messageService,
+                                 PlayerSessionRegistry playerSessionRegistry,
+                                 MessageService messageService,
                                  PlayerInfoMapper playerInfoMapper) {
 
         super(gameService, playerSessionRegistry);

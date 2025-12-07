@@ -5,8 +5,8 @@ import labyrinth.contracts.models.ErrorCode;
 import labyrinth.contracts.models.PushTileCommandPayload;
 import labyrinth.server.exceptions.ActionErrorException;
 import labyrinth.server.game.GameService;
-import labyrinth.server.messaging.abstractions.IMessageService;
-import labyrinth.server.messaging.abstractions.IPlayerSessionRegistry;
+import labyrinth.server.messaging.MessageService;
+import labyrinth.server.messaging.PlayerSessionRegistry;
 import labyrinth.server.messaging.mapper.DirectionMapper;
 import labyrinth.server.messaging.mapper.GameMapper;
 import org.springframework.stereotype.Component;
@@ -18,13 +18,13 @@ import java.util.stream.Collectors;
 @Component
 public class PushTileCommandHandler extends AbstractCommandHandler<PushTileCommandPayload> {
 
-    private final IMessageService messageService;
+    private final MessageService messageService;
     private final DirectionMapper directionMapper;
     private final GameMapper gameMapper;
 
     public PushTileCommandHandler(GameService gameService,
-                                  IPlayerSessionRegistry playerSessionRegistry,
-                                  IMessageService messageService,
+                                  PlayerSessionRegistry playerSessionRegistry,
+                                  MessageService messageService,
                                   DirectionMapper directionMapper,
                                   GameMapper gameMapper) {
 

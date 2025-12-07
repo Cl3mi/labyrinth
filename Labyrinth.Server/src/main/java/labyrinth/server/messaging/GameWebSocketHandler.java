@@ -5,8 +5,6 @@ import labyrinth.contracts.models.ErrorCode;
 import labyrinth.contracts.models.EventType;
 import labyrinth.contracts.models.ServerInfoPayload;
 import labyrinth.server.exceptions.ActionErrorException;
-import labyrinth.server.messaging.abstractions.IMessageService;
-import labyrinth.server.messaging.abstractions.IPlayerSessionRegistry;
 import labyrinth.server.messaging.commands.CommandMessageDispatcher;
 import labyrinth.server.messaging.commands.CommandMessageParser;
 import lombok.RequiredArgsConstructor;
@@ -24,8 +22,8 @@ import java.time.OffsetDateTime;
 public class GameWebSocketHandler extends TextWebSocketHandler {
     private final CommandMessageParser messageParser;
     private final CommandMessageDispatcher dispatcher;
-    private final IPlayerSessionRegistry IPlayerSessionRegistry;
-    private final IMessageService messageService;
+    private final PlayerSessionRegistry IPlayerSessionRegistry;
+    private final MessageService messageService;
 
 
     @Override
