@@ -5,8 +5,8 @@ import labyrinth.contracts.models.DisconnectCommandPayload;
 import labyrinth.contracts.models.EventType;
 import labyrinth.contracts.models.PlayerDisconnectedEventPayload;
 import labyrinth.server.game.GameService;
-import labyrinth.server.messaging.abstractions.IMessageService;
-import labyrinth.server.messaging.abstractions.IPlayerSessionRegistry;
+import labyrinth.server.messaging.MessageService;
+import labyrinth.server.messaging.PlayerSessionRegistry;
 import labyrinth.server.messaging.mapper.GameMapper;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.WebSocketSession;
@@ -15,12 +15,12 @@ import org.springframework.web.socket.WebSocketSession;
 @Component
 public class DisconnectCommandHandler extends AbstractCommandHandler<DisconnectCommandPayload> {
 
-    private final IMessageService messageService;
+    private final MessageService messageService;
     private final GameMapper gameMapper;
 
     public DisconnectCommandHandler(GameService gameService,
-                                    IPlayerSessionRegistry playerSessionRegistry,
-                                    IMessageService messageService,
+                                    PlayerSessionRegistry playerSessionRegistry,
+                                    MessageService messageService,
                                     GameMapper gameMapper) {
         super(gameService, playerSessionRegistry);
 

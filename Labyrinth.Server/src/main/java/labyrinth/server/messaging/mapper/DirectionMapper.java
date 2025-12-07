@@ -7,20 +7,10 @@ import org.springframework.stereotype.Component;
 @Component
 public class DirectionMapper {
     public Direction toDto(labyrinth.server.game.enums.Direction direction) {
-        return switch (direction) {
-            case UP -> Direction.UP;
-            case DOWN -> Direction.DOWN;
-            case LEFT -> Direction.LEFT;
-            case RIGHT -> Direction.RIGHT;
-        };
+        return Direction.fromValue(direction.name());
     }
 
     public labyrinth.server.game.enums.Direction toModel(Direction direction) {
-        return switch (direction) {
-            case UP -> labyrinth.server.game.enums.Direction.UP;
-            case DOWN -> labyrinth.server.game.enums.Direction.DOWN;
-            case LEFT -> labyrinth.server.game.enums.Direction.LEFT;
-            case RIGHT -> labyrinth.server.game.enums.Direction.RIGHT;
-        };
+        return labyrinth.server.game.enums.Direction.valueOf(direction.name());
     }
 }

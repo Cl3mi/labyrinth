@@ -4,7 +4,7 @@ import labyrinth.contracts.models.CommandType;
 import labyrinth.contracts.models.StartGameCommandPayload;
 import labyrinth.server.game.GameService;
 import labyrinth.server.game.models.records.GameConfig;
-import labyrinth.server.messaging.abstractions.IPlayerSessionRegistry;
+import labyrinth.server.messaging.PlayerSessionRegistry;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.WebSocketSession;
 
@@ -12,7 +12,7 @@ import org.springframework.web.socket.WebSocketSession;
 public class StartGameCommandHandler extends AbstractCommandHandler<StartGameCommandPayload> {
 
     public StartGameCommandHandler(GameService gameService,
-                                   IPlayerSessionRegistry playerSessionRegistry) {
+                                   PlayerSessionRegistry playerSessionRegistry) {
 
         super(gameService, playerSessionRegistry);
     }
