@@ -2,8 +2,8 @@ package labyrinth.server.messaging.commands.handler;
 
 import labyrinth.contracts.models.CommandType;
 import labyrinth.contracts.models.StartGameCommandPayload;
+import labyrinth.server.game.GameService;
 import labyrinth.server.game.abstractions.IBoardFactory;
-import labyrinth.server.game.abstractions.IGame;
 import labyrinth.server.game.abstractions.ITreasureCardFactory;
 import labyrinth.server.game.models.records.GameConfig;
 import labyrinth.server.messaging.abstractions.IPlayerSessionRegistry;
@@ -16,11 +16,11 @@ public class StartGameCommandHandler extends AbstractCommandHandler<StartGameCom
     private final IBoardFactory boardFactory;
     private final ITreasureCardFactory treasureCardFactory;
 
-    public StartGameCommandHandler(IGame game,
+    public StartGameCommandHandler(GameService gameService,
                                    IBoardFactory boardFactory,
                                    ITreasureCardFactory treasureCardFactory,
                                    IPlayerSessionRegistry playerSessionRegistry) {
-        super(game, playerSessionRegistry);
+        super(gameService, playerSessionRegistry);
 
         this.boardFactory = boardFactory;
         this.treasureCardFactory = treasureCardFactory;
@@ -37,10 +37,7 @@ public class StartGameCommandHandler extends AbstractCommandHandler<StartGameCom
         requireAdmin(player);
 
         var gameConfig = createGameConfig(payload);
-
-        var board = boardFactory.createBoard(gameConfig.boardWidth(), gameConfig.boardHeight());
-        var cards = treasureCardFactory.createTreasureCards(gameConfig.treasureCardCount(), game.getPlayers().size());
-        game.startGame(gameConfig, cards, board);
+        gameService.startGame(gameConfig);
     }
 
     private GameConfig createGameConfig(StartGameCommandPayload payload) {

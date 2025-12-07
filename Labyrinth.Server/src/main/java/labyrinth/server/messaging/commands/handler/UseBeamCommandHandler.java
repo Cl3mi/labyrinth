@@ -2,7 +2,7 @@ package labyrinth.server.messaging.commands.handler;
 
 import labyrinth.contracts.models.CommandType;
 import labyrinth.contracts.models.UseBeamCommandPayload;
-import labyrinth.server.game.abstractions.IGame;
+import labyrinth.server.game.GameService;
 import labyrinth.server.messaging.abstractions.IPlayerSessionRegistry;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.WebSocketSession;
@@ -10,8 +10,9 @@ import org.springframework.web.socket.WebSocketSession;
 @Component
 public class UseBeamCommandHandler extends AbstractCommandHandler<UseBeamCommandPayload> {
 
-    public UseBeamCommandHandler(IGame game, IPlayerSessionRegistry playerSessionRegistry) {
-        super(game, playerSessionRegistry);
+    public UseBeamCommandHandler(GameService gameService,
+                                 IPlayerSessionRegistry playerSessionRegistry) {
+        super(gameService, playerSessionRegistry);
     }
 
     @Override
@@ -25,6 +26,6 @@ public class UseBeamCommandHandler extends AbstractCommandHandler<UseBeamCommand
         requirePlayerIsCurrent(player);
 
         var targetCoordinates = payload.getTargetCoordinates();
-        game.useBeamBonus(targetCoordinates.getY(), targetCoordinates.getX(), player);
+        gameService.useBeamBonus(targetCoordinates.getY(), targetCoordinates.getX(), player);
     }
 }
