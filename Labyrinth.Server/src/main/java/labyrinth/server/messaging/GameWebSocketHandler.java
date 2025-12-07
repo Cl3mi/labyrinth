@@ -1,11 +1,12 @@
 package labyrinth.server.messaging;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import labyrinth.contracts.models.ActionErrorEventPayload;
 import labyrinth.contracts.models.ErrorCode;
 import labyrinth.contracts.models.EventType;
 import labyrinth.contracts.models.ServerInfoPayload;
 import labyrinth.server.exceptions.ActionErrorException;
+import labyrinth.server.messaging.abstractions.IMessageService;
+import labyrinth.server.messaging.abstractions.IPlayerSessionRegistry;
 import labyrinth.server.messaging.commands.CommandMessageDispatcher;
 import labyrinth.server.messaging.commands.CommandMessageParser;
 import lombok.RequiredArgsConstructor;
@@ -21,12 +22,10 @@ import java.time.OffsetDateTime;
 @Component
 @RequiredArgsConstructor
 public class GameWebSocketHandler extends TextWebSocketHandler {
-    private final ObjectMapper mapper = new ObjectMapper();
-
     private final CommandMessageParser messageParser;
     private final CommandMessageDispatcher dispatcher;
-    private final PlayerSessionRegistry playerSessionRegistry;
-    private final MessageService messageService;
+    private final IPlayerSessionRegistry IPlayerSessionRegistry;
+    private final IMessageService messageService;
 
 
     @Override
@@ -44,7 +43,7 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
 
     @Override
     public void afterConnectionClosed(@NonNull WebSocketSession session, @NonNull CloseStatus status) {
-        playerSessionRegistry.markDisconnected(session);
+        IPlayerSessionRegistry.markDisconnected(session);
     }
 
     @Override

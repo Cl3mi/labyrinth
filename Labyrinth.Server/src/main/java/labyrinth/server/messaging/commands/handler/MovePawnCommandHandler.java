@@ -1,9 +1,9 @@
 package labyrinth.server.messaging.commands.handler;
 
 import labyrinth.contracts.models.CommandType;
-import labyrinth.contracts.models.DisconnectCommandPayload;
-import labyrinth.contracts.models.EventType;
-import labyrinth.contracts.models.PlayerDisconnectedEventPayload;
+import labyrinth.contracts.models.ErrorCode;
+import labyrinth.contracts.models.MovePawnCommandPayload;
+import labyrinth.server.exceptions.ActionErrorException;
 import labyrinth.server.game.abstractions.IGame;
 import labyrinth.server.messaging.abstractions.IMessageService;
 import labyrinth.server.messaging.abstractions.IPlayerSessionRegistry;
@@ -11,14 +11,13 @@ import labyrinth.server.messaging.mapper.GameMapper;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.WebSocketSession;
 
-
 @Component
-public class DisconnectCommandHandler extends AbstractCommandHandler<DisconnectCommandPayload> {
+public class MovePawnCommandHandler extends AbstractCommandHandler<MovePawnCommandPayload> {
 
     private final IMessageService messageService;
     private final GameMapper gameMapper;
 
-    public DisconnectCommandHandler(IGame game, IPlayerSessionRegistry playerSessionRegistry, IMessageService messageService, GameMapper gameMapper) {
+    public MovePawnCommandHandler(IGame game, IPlayerSessionRegistry playerSessionRegistry, IMessageService messageService, GameMapper gameMapper) {
         super(game, playerSessionRegistry);
 
         this.messageService = messageService;
@@ -27,19 +26,21 @@ public class DisconnectCommandHandler extends AbstractCommandHandler<DisconnectC
 
     @Override
     public CommandType type() {
-        return CommandType.DISCONNECT;
+        return CommandType.MOVE_PAWN;
     }
 
     @Override
-    public void handle(WebSocketSession session, DisconnectCommandPayload payload) throws Exception {
+    public void handle(WebSocketSession session, MovePawnCommandPayload payload) throws Exception {
         var player = requireExistingPlayer(session);
 
-        game.leave(player);
+        requirePlayerIsCurrent(player);
 
-        var disconnectedPayload = new PlayerDisconnectedEventPayload();
-        disconnectedPayload.setType(EventType.PLAYER_DISCONNECTED);
-        disconnectedPayload.setPlayerId(player.getId().toString());
-        messageService.broadcastToPlayers(disconnectedPayload);
+        var coordinates = payload.getTargetCoordinates();
+        var moveSuccessful = game.movePlayerToTile(coordinates.getY(), coordinates.getX(), player);
+
+        if (!moveSuccessful) {
+            throw new ActionErrorException("Cannot move pawn to the specified coordinates.", ErrorCode.INVALID_MOVE);
+        }
 
         var gameState = gameMapper.toGameStateDto(game);
         messageService.broadcastToPlayers(gameState);
