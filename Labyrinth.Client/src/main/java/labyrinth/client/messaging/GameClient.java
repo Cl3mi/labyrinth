@@ -1,5 +1,6 @@
 package labyrinth.client.messaging;
 
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import labyrinth.contracts.models.*;
@@ -40,6 +41,7 @@ public class GameClient extends WebSocketClient {
 
     @Override
     public void onOpen(ServerHandshake handshakedata) {
+
         System.out.println("WebSocket connected");
     }
 
@@ -110,7 +112,7 @@ public class GameClient extends WebSocketClient {
         try {
             ConnectCommandPayload payload = new ConnectCommandPayload();
             payload.setType(CommandType.CONNECT);
-            payload.setUsername(username); // playerId bleibt null → neuer Spieler
+            payload.setUsername(username);
 
             String json = mapper.writeValueAsString(payload);
             send(json);

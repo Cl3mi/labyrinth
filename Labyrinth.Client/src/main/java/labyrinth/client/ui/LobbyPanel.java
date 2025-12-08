@@ -1,6 +1,5 @@
 package labyrinth.client.ui;
 
-import labyrinth.client.ApplicationClient;
 import labyrinth.client.audio.AudioPlayer;
 import labyrinth.client.messaging.GameClient;
 import labyrinth.contracts.models.LobbyStateEventPayload;
@@ -10,10 +9,6 @@ import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.io.IOException;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 
 /**
  * Lobby-UI für den Online-Modus.
