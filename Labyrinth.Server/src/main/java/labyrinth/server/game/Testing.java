@@ -6,7 +6,10 @@ import labyrinth.server.game.factories.TreasureCardFactory;
 import labyrinth.server.game.models.Game;
 import labyrinth.server.game.models.records.GameConfig;
 
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.util.ArrayList;
+import javax.swing.Timer;
 
 public class Testing {
     private static Game game;
@@ -33,11 +36,35 @@ public class Testing {
         var board = boardFactory.createBoard(gameConfig.boardWidth(), gameConfig.boardHeight());
         var cards = treasureCardFactory.createTreasureCards(gameConfig.treasureCardCount(), game.getPlayers().size());
 
+
+        var p2 = game.getPlayers().get(1);
+        game.toggleAiForPlayer(p2);
+
+        var p1 = game.getPlayers().get(0);
+        game.toggleAiForPlayer(p1);
+
+        var p3 = game.getPlayers().get(2);
+        game.toggleAiForPlayer(p3);
+
+        var p4 = game.getPlayers().get(3);
+        game.toggleAiForPlayer(p4);
+
         game.startGame(gameConfig, cards, board);
 
         // Open Debug Viewer
         LabyrinthViewer.viewSwing(game);
-    }
+
+        int delay = 500;
+        ActionListener taskPerformer = new ActionListener() {
+            public void actionPerformed(ActionEvent evt) {
+                LabyrinthViewer.repaintView();
+            }
+        };
+
+        Timer timer = new Timer(delay, taskPerformer);
+        timer.setRepeats(true);
+        timer.start();
+        }
 
     public static void simulateGameMoves(Game game, long delayMillis) {
         simulateGameStart();

@@ -67,7 +67,7 @@ public class Game {
         player.setColor(getNextColor());
 
         if (players.isEmpty()) {
-            //first player becomes admin
+            // first player becomes admin
             player.setAdmin(true);
         }
 
@@ -76,12 +76,10 @@ public class Game {
         return player;
     }
 
-
     public void leave(Player player) {
-        //TODO: handle leaving during game
+        // TODO: handle leaving during game
         players.removeIf(p -> p.getId().equals(player.getId()));
     }
-
 
     public Player getPlayer(UUID playerId) {
         return players.stream()
@@ -107,22 +105,23 @@ public class Game {
         this.gameConfig = Objects.requireNonNullElseGet(gameConfig, GameConfig::getDefault);
         System.out.println(treasureCards.size() + " treasureCards have been created");
 
-        var currentPlayerIndex = 0;
+        var playerToAssignCardsToIndex = 0;
         do {
             TreasureCard card = treasureCards.getFirst();
             board.placeRandomTreasure(card);
 
-            Player player = players.get(currentPlayerIndex);
+            Player player = players.get(playerToAssignCardsToIndex);
             player.getAssignedTreasureCards().add(card);
-            currentPlayerIndex++;
-            if (currentPlayerIndex >= players.size()) {
-                currentPlayerIndex = 0;
+            playerToAssignCardsToIndex++;
+            if (playerToAssignCardsToIndex >= players.size()) {
+                playerToAssignCardsToIndex = 0;
             }
 
             treasureCards.removeFirst();
         } while (!treasureCards.isEmpty());
 
-        // Assign starting positions to each player by placing them on the four corners of the board.
+        // Assign starting positions to each player by placing them on the four corners
+        // of the board.
         for (int i = 0; i < players.size(); i++) {
             Player player = players.get(i);
             var position = gameConfig.getStartPosition(i);
@@ -132,10 +131,14 @@ public class Game {
             player.setCurrentTile(startingTile);
         }
 
+        this.board = board;
         this.board.setPlayers(players);
         System.out.println("Game started in GameLobby" + " with " + players.size() + " players.");
-    }
 
+        if (getCurrentPlayer().isAiActive()) {
+            new labyrinth.server.game.ai.AdvancedAiStrategy().performTurn(this, getCurrentPlayer());
+        }
+    }
 
     public Player getCurrentPlayer() {
         return players.get(currentPlayerIndex);
@@ -150,7 +153,7 @@ public class Game {
         guardFor(MoveState.PLACE_TILE);
         guardFor(player);
 
-        //TODO: consider entrances (rotation)
+        // TODO: consider entrances (rotation)
 
         boolean res = switch (direction) {
             case UP -> board.shiftColumnUp(index);
@@ -164,32 +167,27 @@ public class Game {
         }
         currentMoveState = MoveState.MOVE;
 
-        //TODO: return false if shifting is not possible
         return true;
     }
 
     public void toggleAiForPlayer(Player player) {
-        //TODO: implement
+        player.setAiActive(!player.isAiActive());
     }
-
 
     public void useBeamBonus(int row, int col, Player player) {
-        //TODO: implement
+        // TODO: implement
     }
-
 
     public void useSwapBonus(Player currentPlayer, Player targetPlayer) {
-        //TODO: implement
+        // TODO: implement
     }
-
 
     public void usePushTwiceBonus(Player player) {
-        //TODO: implement
+        // TODO: implement
     }
 
-
     public void usePushFixedBonus(Player player) {
-        //TODO: implement
+        // TODO: implement
     }
 
     public boolean movePlayerToTile(int row, int col, Player player) {
@@ -201,13 +199,23 @@ public class Game {
         if (!moved) {
             return false;
         }
-        currentMoveState = MoveState.PLACE_TILE;
 
+        nextPlayer();
+        return true;
+    }
+
+    private void nextPlayer() {
         currentPlayerIndex++;
         if (currentPlayerIndex >= players.size()) {
             currentPlayerIndex = 0;
         }
-        return true;
+        System.out.println("New Player to move: " + getCurrentPlayer().getUsername());
+        currentMoveState = MoveState.PLACE_TILE;
+
+        if (getCurrentPlayer().isAiActive()) {
+            // Using AdvancedAiStrategy for smarter gameplay
+            new labyrinth.server.game.ai.AdvancedAiStrategy().performTurn(this, getCurrentPlayer());
+        }
     }
 
     private void guardFor(MoveState moveState) {
@@ -231,7 +239,8 @@ public class Game {
             return;
         }
         if (!players.get(currentPlayerIndex).equals(playerToMove)) {
-            throw new IllegalStateException("Illegal player. Expected " + players.get(currentPlayerIndex).getId() + " but got " + playerToMove.getId());
+            throw new IllegalStateException("Illegal player. Expected " + players.get(currentPlayerIndex).getId()
+                    + " but got " + playerToMove.getId());
         }
     }
 
@@ -243,7 +252,6 @@ public class Game {
     private boolean isFull() {
         return players.size() >= gameConfig.maxPlayers();
     }
-
 
     @Override
     public String toString() {
