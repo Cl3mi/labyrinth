@@ -64,16 +64,24 @@ public class Board {
         Board newBoard = new Board(this.width, this.height, newTileMap, newExtraTile);
 
         // Copy other state
-        // Note: players list is shared reference or shallow copy? For simulation, we
-        // probably don't need real players,
-        // but reachability checks might rely on player's current tile.
-        // The simulation replaces player objects or just assumes 'currentTile' from
-        // context?
-        // Actually, Board.getReachableTiles takes a Player argument.
-        // If we clone the board, the 'tiles' in the new board are DIFFERENT objects.
-        // So 'player.getCurrentTile()' (which points to OLD tile) will not be found in
-        // NEW graph.
-        // We will need a way to find the equivalent tile on the new board.
+        newBoard.setFreeRoam(this.freeRoam);
+
+        if (this.players != null) {
+            List<Player> newPlayers = new ArrayList<>();
+            for (Player p : this.players) {
+                Player newP = p.copy();
+                // Map old tile to new tile
+                if (p.getCurrentTile() != null) {
+                    Position pos = this.getPositionOfTile(p.getCurrentTile());
+                    if (pos != null) {
+                        Tile newTile = newTileMap.getForward(pos);
+                        newP.setCurrentTile(newTile);
+                    }
+                }
+                newPlayers.add(newP);
+            }
+            newBoard.setPlayers(newPlayers);
+        }
 
         return newBoard;
     }

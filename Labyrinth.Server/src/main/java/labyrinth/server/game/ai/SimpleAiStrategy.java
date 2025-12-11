@@ -132,25 +132,18 @@ public class SimpleAiStrategy implements AiStrategy {
     }
 
     private SimulationResult simulate(Game game, Player realPlayer, TreasureCard targetCard, ShiftOp op) {
-        // 1. Clone Game State (Board + Players)
+        // 1. Clone Game State (Board + Players internal copy)
         Board clonedBoard = game.getBoard().copy();
-        List<Player> clonedPlayers = new ArrayList<>();
-        Player clonedMe = null;
 
-        for (Player p : game.getPlayers()) {
-            Player cp = p.copy();
-            // Link cp to clonedBoard
-            if (p.getCurrentTile() != null) {
-                Position pos = game.getBoard().getPositionOfTile(p.getCurrentTile());
-                Tile newTile = clonedBoard.getTileAt(pos);
-                cp.setCurrentTile(newTile);
-            }
-            clonedPlayers.add(cp);
-            if (p.equals(realPlayer)) {
-                clonedMe = cp;
-            }
+        // Find "me" in the cloned board
+        Player clonedMe = clonedBoard.getPlayers().stream()
+                .filter(p -> p.getId().equals(realPlayer.getId()))
+                .findFirst()
+                .orElse(null);
+
+        if (clonedMe == null) {
+            return null;
         }
-        clonedBoard.setPlayers(clonedPlayers);
 
         // 2. Perform Shift on Clone
         boolean shifted = switch (op.type) {
@@ -162,10 +155,6 @@ public class SimpleAiStrategy implements AiStrategy {
 
         if (!shifted)
             return null; // Should have been filtered by containsFixedTile check but safe to double check
-
-        if (clonedMe == null) {
-            return null;
-        }
 
         // 3. Calculate Reachability
         Set<Tile> reachable = clonedBoard.getReachableTiles(clonedMe);
