@@ -1,64 +1,60 @@
 package labyrinth.client.models;
 
-import jdk.jshell.spi.ExecutionControl;
+import labyrinth.contracts.models.Tile;
+import labyrinth.contracts.models.Treasure;
 import lombok.Getter;
 import lombok.Setter;
 
 import java.util.*;
 
 /**
- * Represents a player in the Labyrinth game.
- * Each player has a unique ID, a name, a list of assigned treasure cards,
- * and a current position on the board.
+ * Client-seitiges Player-Modell für das Labyrinth-Spiel.
+ * Entkoppelt von den Contracts (PlayerState), damit die UI frei ist.
  */
-
 @Getter
 @Setter
 public class Player {
 
     private final String id;
     private final String name;
-    private final List<TreasureCard> assignedTreasureCards;
-    private Position currentPosition;
-    private Set<Tile> reachableTiles; // Optional cache for reachable tiles
 
     /**
-     * Creates a new player with a given ID, name, and list of treasure cards.
-     *
-     * @param id                    unique identifier
-     * @param name                  player name
+     * Schätze, die diesem Spieler zugewiesen sind (Zielkarten).
+     * Du kannst diese Liste später aus PlayerState/TreasureCard-Logik befüllen.
      */
+    private final List<Treasure> assignedTreasureCards = new ArrayList<>();
+
+    /**
+     * Aktuelle Position auf dem Brett (Zeile/Spalte im Client).
+     */
+    private Position currentPosition;
+
+    /**
+     * Start-/Heimatfeld des Spielers (falls vom Server geliefert).
+     */
+    private Position homePosition;
+
+    /**
+     * Optionaler Cache für erreichbare Tiles (nur UI-Hilfe).
+     */
+    private Set<Tile> reachableTiles = new HashSet<>();
+
     public Player(String id, String name) {
-        this.id = Objects.requireNonNull(id);
-        this.name = Objects.requireNonNull(name);
-        this.assignedTreasureCards = new ArrayList<>();
-        this.currentPosition = null;
-        this.reachableTiles = null;
+        this.id = Objects.requireNonNull(id, "id must not be null");
+        this.name = Objects.requireNonNull(name, "name must not be null");
     }
 
-
-
+    /**
+     * Gibt eine Kopie der erreichbaren Tiles zurück, damit der interne Set nicht von außen manipuliert wird.
+     */
     public Set<Tile> getReachableTiles() {
         return reachableTiles == null ? Set.of() : new HashSet<>(reachableTiles);
     }
 
     public void setReachableTiles(Set<Tile> reachableTiles) {
-        this.reachableTiles = new HashSet<>(reachableTiles);
-    }
-
-    /**
-     * Moves the player to the specified tile.
-     *
-     * @param tile the tile to move to
-     */
-    public void moveTo(Tile tile) throws ExecutionControl.NotImplementedException {
-        throw new ExecutionControl.NotImplementedException("Not implemented yet");
-    }
-    /**
-     * Collects the treasure if the player is on a tile with a matching treasure card.
-     */
-    public void collectTreasure() throws ExecutionControl.NotImplementedException {
-        throw new ExecutionControl.NotImplementedException("Not implemented yet");
+        this.reachableTiles = (reachableTiles == null)
+                ? null
+                : new HashSet<>(reachableTiles);
     }
 
     @Override
@@ -67,6 +63,7 @@ public class Player {
                 "id='" + id + '\'' +
                 ", name='" + name + '\'' +
                 ", currentPosition=" + currentPosition +
+                ", homePosition=" + homePosition +
                 ", treasures=" + assignedTreasureCards +
                 '}';
     }

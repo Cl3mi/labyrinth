@@ -2,13 +2,13 @@ package labyrinth.client.ui;
 
 import labyrinth.client.audio.AudioPlayer;
 import labyrinth.client.messaging.GameClient;
+import labyrinth.contracts.models.BoardSize;
 import labyrinth.contracts.models.LobbyStateEventPayload;
 import labyrinth.contracts.models.PlayerInfo;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
-import java.io.IOException;
 
 /**
  * Lobby-UI für den Online-Modus.
@@ -50,7 +50,6 @@ public class LobbyPanel extends JPanel {
         connectionLabel.setForeground(new Color(0, 120, 0));
 
         header.add(connectionLabel, BorderLayout.WEST);
-
         add(header, BorderLayout.NORTH);
 
         // ===== Mitte: halbtransparente Spieler-Liste =====
@@ -89,21 +88,17 @@ public class LobbyPanel extends JPanel {
         startButton = new JButton("Spiel starten");
         startButton.setFont(new Font("Arial", Font.BOLD, 14));
 
-        startButton.addActionListener(e -> {
-            try {
-                onStartGameClicked();
-            } catch (IOException ex) {
-                throw new RuntimeException(ex);
-            } catch (InterruptedException ex) {
-                throw new RuntimeException(ex);
-            }
-        });
-
+        startButton.addActionListener(e -> onStartGameClicked());
 
         footer.add(startButton);
         add(footer, BorderLayout.SOUTH);
 
-        backgroundMusic.play();
+        // Startbutton initial deaktivieren, bis Lobby-Infos vom Server kommen
+        startButton.setEnabled(true);
+
+        if (backgroundMusic != null) {
+            backgroundMusic.play();
+        }
     }
 
     public void setLocalPlayerId(String localPlayerId) {
@@ -130,7 +125,7 @@ public class LobbyPanel extends JPanel {
     private void initMusic() {
         try {
             backgroundMusic = new AudioPlayer("/sounds/06-Kokiri-Forest.wav");
-            backgroundMusic.setVolume(0.4f);
+            backgroundMusic.setVolume(0.8f);
             backgroundMusic.loop();
         } catch (Exception e) {
             System.err.println("Error starting lobby music: " + e.getMessage());
@@ -167,10 +162,13 @@ public class LobbyPanel extends JPanel {
     public void updateLobby(LobbyStateEventPayload lobby) {
         playerListModel.clear();
         if (lobby == null || lobby.getPlayers() == null) {
+            startButton.setEnabled(true);
             return;
         }
 
         PlayerInfo[] players = lobby.getPlayers();
+        boolean isAdmin = false;
+
         for (PlayerInfo p : players) {
             StringBuilder sb = new StringBuilder();
 
@@ -184,41 +182,37 @@ public class LobbyPanel extends JPanel {
             // Lokaler Spieler?
             if (p.getId() != null && p.getId().equals(localPlayerId)) {
                 sb.append(" (Du)");
+                // Lokal ist Admin?
+                isAdmin = Boolean.TRUE.equals(p.getIsAdmin());
             }
 
             playerListModel.addElement(sb.toString());
         }
 
-        // Start-Button aktivieren, wenn DU Admin bist
-        boolean isAdmin = false;
-        for (PlayerInfo p : players) {
-            if (p.getId() != null && p.getId().equals(localPlayerId)) {
-                isAdmin = Boolean.TRUE.equals(p.getIsAdmin());
-                break;
-            }
-        }
-        startButton.setEnabled(true);
+        // Start-Button nur aktiv, wenn der lokale Spieler Admin ist
+        startButton.setEnabled(isAdmin);
     }
 
     // --------------------------------------------------------------------------------
     // Start-Button → StartGameCommandPayload über GameClient senden
     // --------------------------------------------------------------------------------
 
-    private void onStartGameClicked() throws IOException, InterruptedException {
-        // einfache Default-Werte (7x7, 7 Schätze); kannst du später parametrisieren
-        labyrinth.contracts.models.BoardSize bs = new labyrinth.contracts.models.BoardSize();
+    private void onStartGameClicked() {
+        BoardSize bs = new BoardSize();
         bs.setRows(7);
         bs.setCols(7);
+
         int treasuresPerPlayer = 7;
+        int totalBonusCount = 0;        // z.B. keine Boni
+        Integer gameDurationSeconds = null; // null = keine Zeitbegrenzung
 
         try {
-            client.sendStartGame(bs, treasuresPerPlayer);
-            //ApplicationClient.debug();
+            client.sendStartGame(bs, treasuresPerPlayer, totalBonusCount, gameDurationSeconds);
         } catch (Exception ex) {
             ex.printStackTrace();
             JOptionPane.showMessageDialog(
                     this,
-                    "Konnte Spiel nicht starten: " + ex.getMessage(),
+                    "Konnte spiel nicht starten: " + ex.getMessage(),
                     "Fehler",
                     JOptionPane.ERROR_MESSAGE
             );

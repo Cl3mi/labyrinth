@@ -5,10 +5,6 @@ import labyrinth.client.factories.BoardFactory;
 import labyrinth.client.messaging.GameClient;
 import labyrinth.client.ui.LobbyPanel;
 
-import labyrinth.contracts.models.BoardSize;
-import labyrinth.contracts.models.GameStateUpdateEventPayload;
-import labyrinth.contracts.models.PlayerState;
-
 import javax.swing.*;
 import java.awt.*;
 import java.net.URI;
@@ -83,7 +79,7 @@ public class LabyrinthApplication {
 
     private void registerCallbacks() {
 
-        // CONNECT_ACK → eigene PlayerId merken und Lobby als "verbunden" markieren
+        // CONNECT_ACK
         client.setOnConnectAck(ack -> {
             System.out.println("Connected as " + ack.getPlayerId());
             this.playerId = ack.getPlayerId();
@@ -94,22 +90,33 @@ public class LabyrinthApplication {
             });
         });
 
-        // LOBBY_STATE → Spielerliste im LobbyPanel aktualisieren
+        // LOBBY_STATE
         client.setOnLobbyState(lobby -> {
             SwingUtilities.invokeLater(() -> lobbyPanel.updateLobby(lobby));
         });
 
-        // GAME_STATE_UPDATE → Board + Spieler mappen und BoardPanel anzeigen
+        // GAME_STARTED → initiales Board + Spieler anzeigen
+        client.setOnGameStarted(started -> {
+            System.out.println("Received GAME_STARTED");
+
+            Board clientBoard = BoardFactory.fromContracts(started.getInitialBoard());
+            List<Player> clientPlayers = BoardFactory.convertPlayerStates(started.getPlayers());
+
+            // Einfachheit: erster Spieler ist der aktuelle
+            Player currentPlayer = clientPlayers.isEmpty() ? null : clientPlayers.get(0);
+
+            SwingUtilities.invokeLater(() ->
+                    ensureBoardPanel(clientBoard, currentPlayer, clientPlayers)
+            );
+        });
+
+        // GAME_STATE_UPDATE → laufende Updates
         client.setOnGameStateUpdate(update -> {
-            System.out.println("Received game state update");
+            System.out.println("Received GAME_STATE_UPDATE");
 
-            // 1. Board aus Contracts → Client-Board
             Board clientBoard = BoardFactory.fromContracts(update.getBoard());
-
-            // 2. Players aus PlayerState[] → Client-Player-Liste
             List<Player> clientPlayers = BoardFactory.convertPlayerStates(update.getPlayers());
 
-            // 3. aktuellen Spieler finden
             Player currentPlayer = null;
             if (update.getCurrentPlayerId() != null) {
                 for (Player p : clientPlayers) {
@@ -136,4 +143,5 @@ public class LabyrinthApplication {
                 )
         ));
     }
+
 }
