@@ -1,12 +1,11 @@
-# Use ARG so it is easy to change Java version when needed
 ARG JAVA_VERSION=24
 
-# Builder stage: use an OpenJDK image and install Maven manually so we can use JDK 24
+# Builder stage (INFO: i used an OpenJDK image)
 FROM eclipse-temurin:${JAVA_VERSION} AS builder
 
 ARG MAVEN_VERSION=3.9.6
 
-# install curl/tar, download and install Maven
+# manually installing Maven like in the other Dockerfiles
 RUN apt-get update && apt-get install -y --no-install-recommends curl tar ca-certificates \
   && curl -fsSL https://archive.apache.org/dist/maven/maven-3/${MAVEN_VERSION}/binaries/apache-maven-${MAVEN_VERSION}-bin.tar.gz -o /tmp/maven.tar.gz \
   && tar -xzf /tmp/maven.tar.gz -C /opt \
@@ -19,7 +18,7 @@ COPY . /build
 
 RUN mvn -B -DskipTests package
 
-# Runtime stage: smaller image using same Java major version
+# Runtime stage
 FROM eclipse-temurin:${JAVA_VERSION}
 
 WORKDIR /app

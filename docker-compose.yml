@@ -27,5 +27,5 @@ services:
       dockerfile: Dockerfile.test
       args:
         - JAVA_VERSION=24-jdk
-    # We just want to build it, not run it
-    image: labyrinth/test:latest
+        # INFO: Currently we are only building not running
+      image: labyrinth/test:latest

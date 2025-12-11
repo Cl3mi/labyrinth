@@ -6,6 +6,8 @@ FROM eclipse-temurin:${JAVA_VERSION} AS builder
 ARG MAVEN_VERSION=3.9.6
 
 # Install Maven manually
+# kinda hat trouble whith the recommended way
+# TODO: clean up maven install
 RUN apt-get update && apt-get install -y --no-install-recommends curl tar ca-certificates \
   && curl -fsSL https://archive.apache.org/dist/maven/maven-3/${MAVEN_VERSION}/binaries/apache-maven-${MAVEN_VERSION}-bin.tar.gz -o /tmp/maven.tar.gz \
   && tar -xzf /tmp/maven.tar.gz -C /opt \
@@ -13,11 +15,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends curl tar ca-cer
   && ln -s /opt/maven/bin/mvn /usr/bin/mvn \
   && rm -rf /var/lib/apt/lists/* /tmp/maven.tar.gz
 
-# Copy the whole project
 WORKDIR /project
 COPY . .
 
 # Run tests from parent pom.xml
 RUN mvn -B -e -X -f pom.xml test
 
-# No CMD — this is a build-only image
+# INFO: No CMD — this is a build-only image

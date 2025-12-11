@@ -3,6 +3,7 @@ FROM eclipse-temurin:${JAVA_VERSION} AS builder
 
 ARG MAVEN_VERSION=3.9.6
 
+# INFO: same problem like with the other docker files -> instead of recommended it uses the GPT Way
 RUN apt-get update && apt-get install -y --no-install-recommends curl tar ca-certificates \
   && curl -fsSL https://archive.apache.org/dist/maven/maven-3/${MAVEN_VERSION}/binaries/apache-maven-${MAVEN_VERSION}-bin.tar.gz -o /tmp/maven.tar.gz \
   && tar -xzf /tmp/maven.tar.gz -C /opt \
