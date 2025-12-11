@@ -136,7 +136,7 @@ public class Game {
         System.out.println("Game started in GameLobby" + " with " + players.size() + " players.");
 
         if (getCurrentPlayer().isAiActive()) {
-            new labyrinth.server.game.ai.SimpleAiStrategy().performTurn(this, getCurrentPlayer());
+            new labyrinth.server.game.ai.AdvancedAiStrategy().performTurn(this, getCurrentPlayer());
         }
     }
 
@@ -213,11 +213,8 @@ public class Game {
         currentMoveState = MoveState.PLACE_TILE;
 
         if (getCurrentPlayer().isAiActive()) {
-            // We instantiate strategy here or have a singleton/member.
-            // Since it's stateless (mostly), a new instance is fine or a shared one.
-            // Using full qualified name or import if I add import.
-            // I will add import labyrinth.server.game.ai.SimpleAiStrategy;
-            new labyrinth.server.game.ai.SimpleAiStrategy().performTurn(this, getCurrentPlayer());
+            // Using AdvancedAiStrategy for smarter gameplay
+            new labyrinth.server.game.ai.AdvancedAiStrategy().performTurn(this, getCurrentPlayer());
         }
     }
 
