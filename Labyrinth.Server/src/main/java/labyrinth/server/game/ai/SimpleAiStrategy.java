@@ -21,7 +21,6 @@ public class SimpleAiStrategy implements AiStrategy {
     public void performTurn(Game game, Player realPlayer) {
         System.out.println("AI performing turn for " + realPlayer.getUsername());
 
-        // Correct chaining implementation:
         java.util.concurrent.CompletableFuture.supplyAsync(() -> {
             TreasureCard targetCard = realPlayer.getAssignedTreasureCards().isEmpty() ? null
                     : realPlayer.getAssignedTreasureCards().getFirst();
@@ -84,7 +83,7 @@ public class SimpleAiStrategy implements AiStrategy {
     }
 
     private int randomDelay() {
-        return 500 + random.nextInt(1000); // 500ms to 1500ms
+        return 100 + random.nextInt(100);
     }
 
     private SimulationResult findBestMove(Game game, Player realPlayer, TreasureCard targetCard) {

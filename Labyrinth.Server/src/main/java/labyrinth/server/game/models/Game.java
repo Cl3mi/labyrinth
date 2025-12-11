@@ -134,6 +134,10 @@ public class Game {
         this.board = board;
         this.board.setPlayers(players);
         System.out.println("Game started in GameLobby" + " with " + players.size() + " players.");
+
+        if (getCurrentPlayer().isAiActive()) {
+            new labyrinth.server.game.ai.SimpleAiStrategy().performTurn(this, getCurrentPlayer());
+        }
     }
 
     public Player getCurrentPlayer() {
