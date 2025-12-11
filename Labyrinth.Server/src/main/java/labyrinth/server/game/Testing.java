@@ -35,6 +35,10 @@ public class Testing {
 
         game.startGame(gameConfig, cards, board);
 
+        var p2 = game.getPlayers().get(1);
+
+        game.toggleAiForPlayer(p2);
+
         // Open Debug Viewer
         LabyrinthViewer.viewSwing(game);
     }

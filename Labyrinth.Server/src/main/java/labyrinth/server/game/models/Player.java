@@ -35,14 +35,28 @@ public class Player {
     /**
      * Creates a new player with a given ID, name, and list of treasure cards.
      *
-     * @param id                    unique identifier
-     * @param username                  player name
+     * @param id       unique identifier
+     * @param username player name
      */
     public Player(UUID id, String username) {
         this.id = Objects.requireNonNull(id);
         this.username = Objects.requireNonNull(username);
         this.assignedTreasureCards = new ArrayList<>();
         this.currentTile = null;
+    }
+
+    public Player copy() {
+        Player newPlayer = new Player(this.id, this.username);
+        newPlayer.setJoinDate(this.joinDate);
+        newPlayer.setScore(this.score);
+        newPlayer.setAiActive(this.isAiActive);
+        newPlayer.setAdmin(this.isAdmin);
+        newPlayer.setColor(this.color);
+        // Shallow copy list, contents are assumed immutable during simulation
+        newPlayer.getAssignedTreasureCards().addAll(this.assignedTreasureCards);
+        // currentTile is NOT set here, must be set by caller to point to the new
+        // board's tiles
+        return newPlayer;
     }
 
     @Override
