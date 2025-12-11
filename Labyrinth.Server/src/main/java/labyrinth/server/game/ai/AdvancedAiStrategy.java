@@ -29,6 +29,14 @@ public class AdvancedAiStrategy implements AiStrategy {
                     return delay(randomDelay()).thenApply(v -> bestTurn);
                 })
                 .thenAccept(bestTurn -> {
+                    // Update AI Memory
+                    if (bestTurn != null) {
+                        realPlayer.setLastShiftDescription(bestTurn.shiftType + ":" + bestTurn.shiftIndex);
+                    }
+
+                    Position beforePos = game.getCurrentPositionOfPlayer(realPlayer); // Unused but kept for reference
+                                                                                      // logic if needed
+
                     // Execute Move
                     if (bestTurn != null && bestTurn.moveTarget != null) {
                         System.out.println("Advanced AI move: " + bestTurn.moveTarget);
@@ -38,6 +46,16 @@ public class AdvancedAiStrategy implements AiStrategy {
                         Position curr = game.getCurrentPositionOfPlayer(realPlayer);
                         game.movePlayerToTile(curr.row(), curr.column(), realPlayer);
                     }
+
+                    Position afterPos = game.getCurrentPositionOfPlayer(realPlayer);
+
+                    // Check Stuck
+                    if (afterPos.equals(realPlayer.getLastTurnPosition())) {
+                        realPlayer.setTurnsStuck(realPlayer.getTurnsStuck() + 1);
+                    } else {
+                        realPlayer.setTurnsStuck(0);
+                    }
+                    realPlayer.setLastTurnPosition(afterPos);
                 })
                 .exceptionally(ex -> {
                     ex.printStackTrace();
@@ -57,7 +75,15 @@ public class AdvancedAiStrategy implements AiStrategy {
         TreasureCard myTarget = getTargetCard(me);
         TreasureCard opTarget = (opponent != null) ? getTargetCard(opponent) : null;
 
+        Position currentPos = game.getCurrentPositionOfPlayer(me);
+        boolean isStuck = me.getTurnsStuck() > 2;
+
         for (ShiftOp shift : possibleShifts) {
+            // Prune: Don't undo immediate last move if stuck score is low
+            if (!isStuck && isUndoMove(shift, me.getLastShiftDescription())) {
+                continue;
+            }
+
             // 1. Simulate My Shift
             Board simBoard = board.copy();
             Player simMe = getPlayerOnBoard(simBoard, me);
@@ -70,40 +96,40 @@ public class AdvancedAiStrategy implements AiStrategy {
             // 2. Find My Best Move on this board
             MoveResult myBestMove = findBestMoveForPlayer(simBoard, simMe, myTarget);
 
-            // Apply move (update player position on board logic)
-            // Current findBestMoveForPlayer returns the target position, does not mutate
-            // board 'move' logic
-            // because movePlayerToTile does complex stuff (collect treasure).
-            // For scoring, we assume I moved there.
-
             // 3. Score My State
             double myScore = myBestMove.score;
             if (myBestMove.collectedTreasure) {
                 myScore += 1000;
             }
 
+            // Stuck / Boredom Logic
+            if (isStuck) {
+                // If stuck, we prioritize changing effective position
+                int movedDist = distance(currentPos, myBestMove.targetPos);
+                if (movedDist > 0) {
+                    myScore += (movedDist * 100); // Incentive to MOVE
+                    myScore += 500; // Bonus for ANY change
+                }
+            }
+
             // 4. Lookahead: Simulate Opponent's Best Response from this new state
             double opponentBestScore = 0;
             if (opponent != null) {
-                // To simulate opponent, we need the board state AFTER my move.
-                // Simulating 'collect' is hard without replicating Game logic fully.
-                // We will assume board layout is fixed after my shift (except if I shift again?
-                // no turn ends).
-                // My move changes my position.
-                // Opponent will shift THIS simBoard.
-
-                // Update simMe position to target
+                // Update simMe
                 if (myBestMove.targetPos != null) {
                     Tile targetTile = simBoard.getTileAt(myBestMove.targetPos);
                     simMe.setCurrentTile(targetTile);
                 }
-
                 opponentBestScore = calculateOpponentMaxScore(simBoard, opponent, opTarget);
             }
 
             // 5. Total Utility = My Score - (Weight * Opponent Score)
-            // Weight logic: If opponent is about to win, punish heavily.
             double totalScore = myScore - (0.8 * opponentBestScore);
+
+            // Avoid repeating same shift forever if it leads nowhere
+            if (isStuck && isRepeatMove(shift, me.getLastShiftDescription())) {
+                totalScore -= 200;
+            }
 
             if (totalScore > maxScore) {
                 maxScore = totalScore;
@@ -257,6 +283,34 @@ public class AdvancedAiStrategy implements AiStrategy {
             case LEFT -> game.shift(index, Direction.LEFT, null, p);
             case RIGHT -> game.shift(index, Direction.RIGHT, null, p);
         };
+    }
+
+    private boolean isUndoMove(ShiftOp op, String lastDesc) {
+        if (lastDesc == null)
+            return false;
+        // Format: "TYPE:INDEX"
+        String[] parts = lastDesc.split(":");
+        if (parts.length < 2)
+            return false;
+        ShiftType lastType = ShiftType.valueOf(parts[0]);
+        int lastIndex = Integer.parseInt(parts[1]);
+
+        if (lastIndex != op.index)
+            return false;
+
+        return switch (lastType) {
+            case UP -> op.type == ShiftType.DOWN;
+            case DOWN -> op.type == ShiftType.UP;
+            case LEFT -> op.type == ShiftType.RIGHT;
+            case RIGHT -> op.type == ShiftType.LEFT;
+        };
+    }
+
+    private boolean isRepeatMove(ShiftOp op, String lastDesc) {
+        if (lastDesc == null)
+            return false;
+        String cur = op.type + ":" + op.index;
+        return cur.equals(lastDesc);
     }
 
     private void forceRandomShift(Game game, Player player) {
