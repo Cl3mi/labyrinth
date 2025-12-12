@@ -51,6 +51,7 @@ public class Testing {
 
         game.startGame(gameConfig, cards, board);
 
+
         // Open Debug Viewer
         LabyrinthViewer.viewSwing(game);
 

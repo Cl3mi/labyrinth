@@ -56,27 +56,6 @@ public class Tile {
     }
 
     /**
-     * Tiles no longer maintain a direct reference to a player. To determine which
-     * player occupies a tile, inspect the {@code currentTile} reference on each
-     * {@link Player} instead.
-     */
-    @Deprecated
-    public Player getPlayer() {
-        return null;
-    }
-
-    /**
-     * Tiles no longer maintain a direct reference to a player. Player movement is
-     * tracked via {@link Player#setCurrentTile(Tile)}.
-     *
-     * @param player the player to set (ignored)
-     */
-    @Deprecated
-    public void setPlayer(Player player) {
-        // no-op: occupancy handled by Player
-    }
-
-    /**
      * Rotates the tile 90 degrees clockwise.
      * Updates the entrances accordingly.
      */

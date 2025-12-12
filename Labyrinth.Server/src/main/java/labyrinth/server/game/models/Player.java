@@ -1,6 +1,7 @@
 package labyrinth.server.game.models;
 
 import labyrinth.contracts.models.PlayerColor;
+import labyrinth.server.game.enums.BonusTypes;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -30,6 +31,7 @@ public class Player {
     private String lastShiftDescription;
 
     private final List<TreasureCard> assignedTreasureCards;
+    private final List<BonusTypes> bonuses;
 
     /**
      * The tile on which the player is currently standing. The board is
@@ -47,6 +49,7 @@ public class Player {
         this.id = Objects.requireNonNull(id);
         this.username = Objects.requireNonNull(username);
         this.assignedTreasureCards = new ArrayList<>();
+        this.bonuses = new ArrayList<>();
         this.currentTile = null;
     }
 
@@ -57,10 +60,6 @@ public class Player {
         newPlayer.setAiActive(this.isAiActive);
         newPlayer.setAdmin(this.isAdmin);
         newPlayer.setColor(this.color);
-        // Copy AI State
-        newPlayer.setLastTurnPosition(this.lastTurnPosition);
-        newPlayer.setTurnsStuck(this.turnsStuck);
-        newPlayer.setLastShiftDescription(this.lastShiftDescription);
 
         // Shallow copy list, contents are assumed immutable during simulation
         newPlayer.getAssignedTreasureCards().addAll(this.assignedTreasureCards);
@@ -69,29 +68,8 @@ public class Player {
         return newPlayer;
     }
 
-    // Explicit Getters/Setters for AI logic
-    public labyrinth.server.game.models.records.Position getLastTurnPosition() {
-        return lastTurnPosition;
-    }
-
-    public void setLastTurnPosition(labyrinth.server.game.models.records.Position lastTurnPosition) {
-        this.lastTurnPosition = lastTurnPosition;
-    }
-
-    public int getTurnsStuck() {
-        return turnsStuck;
-    }
-
-    public void setTurnsStuck(int turnsStuck) {
-        this.turnsStuck = turnsStuck;
-    }
-
-    public String getLastShiftDescription() {
-        return lastShiftDescription;
-    }
-
-    public void setLastShiftDescription(String lastShiftDescription) {
-        this.lastShiftDescription = lastShiftDescription;
+    boolean useBonus(BonusTypes bonusType){
+        return bonuses.remove(bonusType);
     }
 
     @Override

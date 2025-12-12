@@ -51,8 +51,13 @@ public class SimpleAiStrategy implements AiStrategy {
                     if (bestResult != null && bestResult.targetPosition != null) {
                         System.out.println("AI moving to: " + bestResult.targetPosition.row() + "/"
                                 + bestResult.targetPosition.column());
-                        game.movePlayerToTile(bestResult.targetPosition.row(), bestResult.targetPosition.column(),
+                        var moveSuccess = game.movePlayerToTile(bestResult.targetPosition.row(), bestResult.targetPosition.column(),
                                 realPlayer);
+
+                        if(!moveSuccess){
+                            Position current = game.getCurrentPositionOfPlayer(realPlayer);
+                            game.movePlayerToTile(current.row(), current.column(), realPlayer);
+                        }
                     } else {
                         // Stay put / fallback
                         Position current = game.getCurrentPositionOfPlayer(realPlayer);
@@ -146,10 +151,10 @@ public class SimpleAiStrategy implements AiStrategy {
 
         // 2. Perform Shift on Clone
         boolean shifted = switch (op.type) {
-            case UP -> clonedBoard.shiftColumnUp(op.index);
-            case DOWN -> clonedBoard.shiftColumnDown(op.index);
-            case LEFT -> clonedBoard.shiftRowLeft(op.index);
-            case RIGHT -> clonedBoard.shiftRowRight(op.index);
+            case UP -> clonedBoard.shiftColumnUp(op.index, false);
+            case DOWN -> clonedBoard.shiftColumnDown(op.index, false);
+            case LEFT -> clonedBoard.shiftRowLeft(op.index, false);
+            case RIGHT -> clonedBoard.shiftRowRight(op.index, false);
         };
 
         if (!shifted)
