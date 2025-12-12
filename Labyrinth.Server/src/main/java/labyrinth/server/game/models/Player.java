@@ -60,10 +60,6 @@ public class Player {
         newPlayer.setAiActive(this.isAiActive);
         newPlayer.setAdmin(this.isAdmin);
         newPlayer.setColor(this.color);
-        // Copy AI State
-        newPlayer.setLastTurnPosition(this.lastTurnPosition);
-        newPlayer.setTurnsStuck(this.turnsStuck);
-        newPlayer.setLastShiftDescription(this.lastShiftDescription);
 
         // Shallow copy list, contents are assumed immutable during simulation
         newPlayer.getAssignedTreasureCards().addAll(this.assignedTreasureCards);
@@ -74,31 +70,6 @@ public class Player {
 
     boolean useBonus(BonusTypes bonusType){
         return bonuses.remove(bonusType);
-    }
-
-    // Explicit Getters/Setters for AI logic
-    public labyrinth.server.game.models.records.Position getLastTurnPosition() {
-        return lastTurnPosition;
-    }
-
-    public void setLastTurnPosition(labyrinth.server.game.models.records.Position lastTurnPosition) {
-        this.lastTurnPosition = lastTurnPosition;
-    }
-
-    public int getTurnsStuck() {
-        return turnsStuck;
-    }
-
-    public void setTurnsStuck(int turnsStuck) {
-        this.turnsStuck = turnsStuck;
-    }
-
-    public String getLastShiftDescription() {
-        return lastShiftDescription;
-    }
-
-    public void setLastShiftDescription(String lastShiftDescription) {
-        this.lastShiftDescription = lastShiftDescription;
     }
 
     @Override

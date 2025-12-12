@@ -139,7 +139,7 @@ public class Game {
         System.out.println("Game started in GameLobby" + " with " + players.size() + " players.");
 
         if (getCurrentPlayer().isAiActive()) {
-            new labyrinth.server.game.ai.AdvancedAiStrategy().performTurn(this, getCurrentPlayer());
+            new labyrinth.server.game.ai.SimpleAiStrategy().performTurn(this, getCurrentPlayer());
         }
     }
 
@@ -273,7 +273,7 @@ public class Game {
 
         if (getCurrentPlayer().isAiActive()) {
             // Using AdvancedAiStrategy for smarter gameplay
-            new labyrinth.server.game.ai.AdvancedAiStrategy().performTurn(this, getCurrentPlayer());
+            new labyrinth.server.game.ai.SimpleAiStrategy().performTurn(this, getCurrentPlayer());
         }
     }
 
