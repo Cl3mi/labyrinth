@@ -5,7 +5,10 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.time.OffsetDateTime;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+import java.util.UUID;
 
 /**
  * Represents a player in the Labyrinth game.
@@ -19,10 +22,11 @@ public class Player {
     private final String username;
 
     private OffsetDateTime joinDate;
-    private int score;
+
     private boolean isAiActive;
     private boolean isAdmin;
     private PlayerColor color;
+    private PlayerStatistics statistics;
 
     // AI State Memory
     private labyrinth.server.game.models.records.Position lastTurnPosition;
@@ -48,12 +52,13 @@ public class Player {
         this.username = Objects.requireNonNull(username);
         this.assignedTreasureCards = new ArrayList<>();
         this.currentTile = null;
+        this.statistics = new PlayerStatistics();
     }
 
     public Player copy() {
         Player newPlayer = new Player(this.id, this.username);
         newPlayer.setJoinDate(this.joinDate);
-        newPlayer.setScore(this.score);
+        newPlayer.setStatistics(this.statistics);
         newPlayer.setAiActive(this.isAiActive);
         newPlayer.setAdmin(this.isAdmin);
         newPlayer.setColor(this.color);
