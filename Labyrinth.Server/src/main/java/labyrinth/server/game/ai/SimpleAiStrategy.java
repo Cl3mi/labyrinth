@@ -51,8 +51,13 @@ public class SimpleAiStrategy implements AiStrategy {
                     if (bestResult != null && bestResult.targetPosition != null) {
                         System.out.println("AI moving to: " + bestResult.targetPosition.row() + "/"
                                 + bestResult.targetPosition.column());
-                        game.movePlayerToTile(bestResult.targetPosition.row(), bestResult.targetPosition.column(),
+                        var moveSuccess = game.movePlayerToTile(bestResult.targetPosition.row(), bestResult.targetPosition.column(),
                                 realPlayer);
+
+                        if(!moveSuccess){
+                            Position current = game.getCurrentPositionOfPlayer(realPlayer);
+                            game.movePlayerToTile(current.row(), current.column(), realPlayer);
+                        }
                     } else {
                         // Stay put / fallback
                         Position current = game.getCurrentPositionOfPlayer(realPlayer);
