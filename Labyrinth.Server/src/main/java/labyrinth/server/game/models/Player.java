@@ -1,6 +1,7 @@
 package labyrinth.server.game.models;
 
 import labyrinth.contracts.models.PlayerColor;
+import labyrinth.server.game.enums.BonusTypes;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -30,6 +31,7 @@ public class Player {
     private String lastShiftDescription;
 
     private final List<TreasureCard> assignedTreasureCards;
+    private final List<BonusTypes> bonuses;
 
     /**
      * The tile on which the player is currently standing. The board is
@@ -47,6 +49,7 @@ public class Player {
         this.id = Objects.requireNonNull(id);
         this.username = Objects.requireNonNull(username);
         this.assignedTreasureCards = new ArrayList<>();
+        this.bonuses = new ArrayList<>();
         this.currentTile = null;
     }
 
@@ -67,6 +70,10 @@ public class Player {
         // currentTile is NOT set here, must be set by caller to point to the new
         // board's tiles
         return newPlayer;
+    }
+
+    boolean useBonus(BonusTypes bonusType){
+        return bonuses.remove(bonusType);
     }
 
     // Explicit Getters/Setters for AI logic

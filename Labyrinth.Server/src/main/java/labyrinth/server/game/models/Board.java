@@ -117,8 +117,9 @@ public class Board {
         return tileMap.getBackward(tile);
     }
 
-    public boolean shiftColumnDown(int columnIndex) {
-        if (colContainsFixedTile(columnIndex)) {
+
+    public boolean shiftColumnDown(int columnIndex, boolean fixedBonusActive) {
+        if (colContainsFixedTile(columnIndex) && !fixedBonusActive) {
             return false;
         }
 
@@ -137,8 +138,8 @@ public class Board {
         return true;
     }
 
-    public boolean shiftColumnUp(int columnIndex) {
-        if (colContainsFixedTile(columnIndex)) {
+    public boolean shiftColumnUp(int columnIndex, boolean fixedBonusActive) {
+        if (colContainsFixedTile(columnIndex) && !fixedBonusActive) {
             return false;
         }
 
@@ -155,8 +156,8 @@ public class Board {
         return true;
     }
 
-    public boolean shiftRowLeft(int rowIndex) {
-        if (rowContainsFixedTile(rowIndex)) {
+    public boolean shiftRowLeft(int rowIndex, boolean fixedBonusActive) {
+        if (rowContainsFixedTile(rowIndex) && !fixedBonusActive) {
             return false;
         }
 
@@ -175,8 +176,8 @@ public class Board {
         return true;
     }
 
-    public boolean shiftRowRight(int rowIndex) {
-        if (rowContainsFixedTile(rowIndex)) {
+    public boolean shiftRowRight(int rowIndex, boolean fixedBonusActive) {
+        if (rowContainsFixedTile(rowIndex) && !fixedBonusActive) {
             return false;
         }
 
@@ -257,7 +258,7 @@ public class Board {
         return isTopLeft || isTopRight || isBottomLeft || isBottomRight;
     }
 
-    public boolean movePlayerToTile(Player player, int targetRow, int targetCol) {
+    boolean movePlayerToTile(Player player, int targetRow, int targetCol) {
         // Lookup the player's current tile and the target tile using the bi-directional
         // mapping
         Tile currentTile = player.getCurrentTile();

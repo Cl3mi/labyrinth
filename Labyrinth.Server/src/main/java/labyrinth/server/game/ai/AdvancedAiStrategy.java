@@ -269,10 +269,10 @@ public class AdvancedAiStrategy implements AiStrategy {
 
     private boolean executeSimulatedShift(Board board, ShiftOp op) {
         return switch (op.type) {
-            case UP -> board.shiftColumnUp(op.index);
-            case DOWN -> board.shiftColumnDown(op.index);
-            case LEFT -> board.shiftRowLeft(op.index);
-            case RIGHT -> board.shiftRowRight(op.index);
+            case UP -> board.shiftColumnUp(op.index, false);
+            case DOWN -> board.shiftColumnDown(op.index, false);
+            case LEFT -> board.shiftRowLeft(op.index, false);
+            case RIGHT -> board.shiftRowRight(op.index, false);
         };
     }
 

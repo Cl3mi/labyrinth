@@ -1,6 +1,7 @@
 package labyrinth.server.game.models;
 
 import labyrinth.contracts.models.PlayerColor;
+import labyrinth.server.game.enums.BonusTypes;
 import labyrinth.server.game.enums.Direction;
 import labyrinth.server.game.enums.MoveState;
 import labyrinth.server.game.enums.RoomState;
@@ -28,6 +29,8 @@ public class Game {
 
     private final List<Player> players;
     private RoomState roomState;
+
+    private BonusTypes activeBonus;
 
     @Setter(lombok.AccessLevel.NONE)
     @Getter(lombok.AccessLevel.NONE)
@@ -155,17 +158,29 @@ public class Game {
 
         // TODO: consider entrances (rotation)
 
+        var fixedBonusActive = activeBonus == BonusTypes.PUSH_FIXED;
+
         boolean res = switch (direction) {
-            case UP -> board.shiftColumnUp(index);
-            case DOWN -> board.shiftColumnDown(index);
-            case LEFT -> board.shiftRowLeft(index);
-            case RIGHT -> board.shiftRowRight(index);
+            case UP -> board.shiftColumnUp(index, fixedBonusActive);
+            case DOWN -> board.shiftColumnDown(index, fixedBonusActive);
+            case LEFT -> board.shiftRowLeft(index, fixedBonusActive);
+            case RIGHT -> board.shiftRowRight(index, fixedBonusActive);
         };
 
         if (!res) {
             return false;
         }
+
+        if(fixedBonusActive){
+            activeBonus = null;
+        }
+
         currentMoveState = MoveState.MOVE;
+
+        if(activeBonus == BonusTypes.PUSH_TWICE){
+            currentMoveState = MoveState.PLACE_TILE;
+            activeBonus = null;
+        }
 
         return true;
     }
@@ -175,19 +190,63 @@ public class Game {
     }
 
     public void useBeamBonus(int row, int col, Player player) {
-        // TODO: implement
+        guardFor(player);
+        guardFor(MoveState.PLACE_TILE);
+
+        Tile targetTile = board.getTileMap().getForward(new Position(row, col));
+
+        for (Player other : players) {
+            if (other != player && other.getCurrentTile() == targetTile) {
+                System.out.println("Cant move a player is already on the target tile!");
+                return;
+            }
+        }
+
+        var allowedToUse = player.useBonus(BonusTypes.SWAP);
+
+        player.setCurrentTile(targetTile);
     }
 
+
     public void useSwapBonus(Player currentPlayer, Player targetPlayer) {
-        // TODO: implement
+        guardFor(currentPlayer);
+        guardFor(MoveState.PLACE_TILE);
+        var allowedToUse = currentPlayer.useBonus(BonusTypes.SWAP);
+
+        if(!allowedToUse){
+            // return false?
+            return;
+        }
+
+        var currentPlayerTile = currentPlayer.getCurrentTile();
+        var targetPlayerTile = targetPlayer.getCurrentTile();
+
+        currentPlayer.setCurrentTile(targetPlayerTile);
+        targetPlayer.setCurrentTile(currentPlayerTile);
+
+        // return true;
     }
 
     public void usePushTwiceBonus(Player player) {
-        // TODO: implement
+        guardFor(player);
+        var allowedToUse = player.useBonus(BonusTypes.PUSH_TWICE);
+
+        if(!allowedToUse){
+            return;
+        }
+
+        activeBonus = BonusTypes.PUSH_TWICE;
     }
 
     public void usePushFixedBonus(Player player) {
-        // TODO: implement
+        guardFor(player);
+        var allowedToUse = player.useBonus(BonusTypes.PUSH_FIXED);
+
+        if(!allowedToUse){
+            return;
+        }
+
+        activeBonus = BonusTypes.PUSH_FIXED;
     }
 
     public boolean movePlayerToTile(int row, int col, Player player) {
