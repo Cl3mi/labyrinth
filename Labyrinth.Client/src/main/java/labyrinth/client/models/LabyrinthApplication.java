@@ -16,6 +16,8 @@ import java.util.List;
 public class LabyrinthApplication {
 
     private static final URI SERVER_URI = URI.create("ws://localhost:8080/game");
+    private volatile boolean loginSent = false;
+    private volatile boolean connectAckReceived = false;
 
     /**
      * Für mehrere lokale Instanzen:
@@ -43,7 +45,7 @@ public class LabyrinthApplication {
 
     public void start() throws Exception {
 
-        // 1) Frame + Layout
+        // UI zuerst
         frame = new JFrame("Labyrinth Online (" + PROFILE + ")");
         installWindowCloseHandler();
         frame.setSize(1400, 900);
@@ -51,36 +53,66 @@ public class LabyrinthApplication {
 
         mainPanel = new JPanel(new CardLayout());
 
-        // 2) Client erstellen
+        // Client erstellen
         client = new GameClient(SERVER_URI);
         registerCallbacks();
 
-        // 3) LobbyPanel mit client erstellen
         lobbyPanel = new LobbyPanel(client, null);
         mainPanel.add(lobbyPanel, "lobby");
 
         frame.setContentPane(mainPanel);
         frame.setVisible(true);
 
-        // 4) Login nur einmal, nur in onOpen
-        final boolean[] loginSent = {false};
+        // Login-Flags pro Start resetten
+        loginSent = false;
+        connectAckReceived = false;
 
         client.setOnOpenHook(() -> {
-            if (loginSent[0]) return;
-            loginSent[0] = true;
+            if (loginSent) return;          // ✅ verhindert Doppel-Login
+            loginSent = true;
 
-            // Reconnect ist bei eurem Server nach Neustart/Disconnect nicht stabil -> daher immer CONNECT.
-            username = JOptionPane.showInputDialog(frame, "Bitte Username eingeben (" + PROFILE + "):");
-            if (username == null || username.isBlank()) username = "Player";
+            String token = loadToken();
+            if (token != null) {
+                System.out.println("[" + PROFILE + "] onOpen -> RECONNECT");
+                client.sendReconnect(token);
+            } else {
+                username = JOptionPane.showInputDialog(frame, "Bitte Username eingeben (" + PROFILE + "):");
+                if (username == null || username.isBlank()) username = "Player";
+                lobbyPanel.setLocalUsername(username);
 
-            // Für Lobby-UI ("Du" und Admin via Name)
-            lobbyPanel.setLocalUsername(username);
+                System.out.println("[" + PROFILE + "] onOpen -> CONNECT username=" + username);
+                client.sendConnect(username);
+            }
 
-            System.out.println("[" + PROFILE + "] onOpen -> CONNECT username=" + username);
-            client.sendConnect(username);
+            // Fallback: wenn nach 1.5s kein ACK kam, dann token löschen + normal CONNECT
+            new Thread(() -> {
+                try { Thread.sleep(1500); } catch (InterruptedException ignored) {}
+                if (connectAckReceived) return;
+
+                SwingUtilities.invokeLater(() -> {
+                    // Wenn reconnect probiert wurde und nicht geklappt hat: Token löschen und CONNECT
+                    String t = loadToken();
+                    if (t != null) {
+                        System.out.println("[" + PROFILE + "] No CONNECT_ACK after reconnect -> deleting token + CONNECT fallback");
+                        deleteToken();
+                    }
+
+                    // Nur fallbacken, wenn wir noch keinen username haben (oder reconnect war)
+                    if (username == null || username.isBlank()) {
+                        username = JOptionPane.showInputDialog(frame, "Reconnect nicht möglich. Bitte Username eingeben (" + PROFILE + "):");
+                        if (username == null || username.isBlank()) username = "Player";
+                        lobbyPanel.setLocalUsername(username);
+                    }
+
+                    // Wichtig: NICHT nochmal senden, wenn ACK inzwischen doch kam
+                    if (!connectAckReceived) {
+                        System.out.println("[" + PROFILE + "] Fallback -> CONNECT username=" + username);
+                        client.sendConnect(username);
+                    }
+                });
+            }, "login-fallback-" + PROFILE).start();
         });
 
-        // 5) connect() starten
         client.connect();
     }
 
@@ -100,20 +132,11 @@ public class LabyrinthApplication {
 
     private void shutdownAndExit() {
         try {
-            if (lobbyPanel != null) lobbyPanel.stopMusic();
-
             if (client != null && client.isOpen()) {
                 client.sendDisconnect();
+                try { Thread.sleep(100); } catch (InterruptedException ignored) {}
             }
-            if (client != null) {
-                client.close();
-            }
-
-            // Wichtig: keine Reconnect-Versuche beim nächsten Start -> verhindert "Reconnect nicht möglich"
-            deleteToken();
-
-        } catch (Exception ex) {
-            ex.printStackTrace();
+            if (client != null) client.close();
         } finally {
             if (frame != null) frame.dispose();
             System.exit(0);
@@ -170,63 +193,42 @@ public class LabyrinthApplication {
 
     private void registerCallbacks() {
 
-        // CONNECT_ACK
         client.setOnConnectAck(ack -> {
+            connectAckReceived = true; // ✅ stoppt den Fallback-Thread
+
             System.out.println("[" + PROFILE + "] CONNECT_ACK identifierToken=" + ack.getIdentifierToken());
             this.identifierToken = ack.getIdentifierToken();
-
-            // Optional speichern (falls ihr später serverseitig Reconnect stabil macht)
             saveToken(identifierToken);
 
             SwingUtilities.invokeLater(() -> {
                 lobbyPanel.setConnected(true);
-
-                // Hinweis: das ist ein Token, keine Player-ID (Admin-Erkennung daher im LobbyPanel über localUsername lösen)
                 lobbyPanel.setLocalPlayerId(identifierToken);
             });
         });
 
         // LOBBY_STATE
-        client.setOnLobbyState(lobby -> SwingUtilities.invokeLater(() -> lobbyPanel.updateLobby(lobby)));
+        client.setOnLobbyState(lobby ->
+                SwingUtilities.invokeLater(() -> lobbyPanel.updateLobby(lobby))
+        );
 
-        // GAME_STARTED
+        // GAME_STARTED (optional): wenn Server es NICHT sendet, kannst du das entfernen
         client.setOnGameStarted(started -> {
-            System.out.println("[" + PROFILE + "] Received GAME_STARTED");
-
-            Board clientBoard = BoardFactory.fromContracts(started.getInitialBoard());
-            List<Player> clientPlayers = BoardFactory.convertPlayerStates(started.getPlayers());
-
-            Player currentPlayer = resolveLocalPlayer(clientPlayers);
-
-            SwingUtilities.invokeLater(() -> {
-                frame.setTitle("Labyrinth Online (" + PROFILE + ") - Board " +
-                        clientBoard.getHeight() + "x" + clientBoard.getWidth());
-
-                ensureBoardPanel(clientBoard, currentPlayer, clientPlayers);
-            });
+            System.out.println("[" + PROFILE + "] Received GAME_STARTED (ignored - using GAME_STATE_UPDATE)");
+            // bewusst leer lassen oder später entfernen
         });
 
-        // GAME_STATE_UPDATE
-        client.setOnGameStateUpdate(update -> {
+        // ✅ GAME_STATE_UPDATE: darüber initialisieren UND laufend updaten
+        client.setOnGameStateUpdate(state -> {
             System.out.println("[" + PROFILE + "] Received GAME_STATE_UPDATE");
 
-            Board clientBoard = BoardFactory.fromContracts(update.getBoard());
-            List<Player> clientPlayers = BoardFactory.convertPlayerStates(update.getPlayers());
+            // Contracts -> Client-Model
+            Board clientBoard = BoardFactory.fromContracts(state.getBoard());
+            List<Player> clientPlayers = BoardFactory.convertPlayerStates(state.getPlayers());
 
+            // "aktueller Spieler" für UI: heuristisch über username
             Player currentPlayer = resolveLocalPlayer(clientPlayers);
 
             SwingUtilities.invokeLater(() -> {
-                // Wenn Boardgröße sich ändert, Panel neu erstellen
-                if (boardPanel != null) {
-                    Board old = boardPanel.getBoard();
-                    if (old != null &&
-                            (old.getHeight() != clientBoard.getHeight() ||
-                                    old.getWidth() != clientBoard.getWidth())) {
-                        mainPanel.remove(boardPanel);
-                        boardPanel = null;
-                    }
-                }
-
                 frame.setTitle("Labyrinth Online (" + PROFILE + ") - Board " +
                         clientBoard.getHeight() + "x" + clientBoard.getWidth());
 
@@ -235,9 +237,9 @@ public class LabyrinthApplication {
         });
 
         // Fehler → Dialog
-        client.setOnErrorMessage(msg -> SwingUtilities.invokeLater(() -> {
-            JOptionPane.showMessageDialog(frame, msg, "Fehler", JOptionPane.ERROR_MESSAGE);
-        }));
+        client.setOnErrorMessage(msg -> SwingUtilities.invokeLater(() ->
+                JOptionPane.showMessageDialog(frame, msg, "Fehler", JOptionPane.ERROR_MESSAGE)
+        ));
     }
 
     // --------------------------------------------------------------------
