@@ -46,6 +46,11 @@ public class StartGameCommandHandler extends AbstractCommandHandler<StartGameCom
         var boardWidth = payload.getBoardSize().getCols();
         var boardHeight = payload.getBoardSize().getRows();
         var gameDurationInSeconds = payload.getGameDurationInSeconds();
+
+        if(gameDurationInSeconds == null) {
+            gameDurationInSeconds = 0;
+        }
+
         var treasureCardCount = payload.getTreasureCardCount();
         var totalBonusCount = payload.getTotalBonusCount();
 
