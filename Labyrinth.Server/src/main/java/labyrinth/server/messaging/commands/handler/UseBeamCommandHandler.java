@@ -26,6 +26,6 @@ public class UseBeamCommandHandler extends AbstractCommandHandler<UseBeamCommand
         requirePlayerIsCurrent(player);
 
         var targetCoordinates = payload.getTargetCoordinates();
-        gameService.useBeamBonus(targetCoordinates.getY(), targetCoordinates.getX(), player);
+        gameService.useBeamBonus(targetCoordinates.getRow(), targetCoordinates.getColumn(), player);
     }
 }

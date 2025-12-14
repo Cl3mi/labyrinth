@@ -1,18 +1,13 @@
 package labyrinth.contracts.models;
-import labyrinth.contracts.models.SlashGame;
-import labyrinth.contracts.models.EventType;
+import labyrinth.contracts.models.CommandType;
 import java.util.Map;
 import java.util.Objects;
-public class PlayerDisconnectedEventPayload implements SlashGame {
-  private EventType type;
-  private String playerId;
+public class RotateTileCommandPayload {
+  private CommandType type;
   private Map<String, Object> additionalProperties;
 
-  public EventType getType() { return this.type; }
-  public void setType(EventType type) { this.type = type; }
-
-  public String getPlayerId() { return this.playerId; }
-  public void setPlayerId(String playerId) { this.playerId = playerId; }
+  public CommandType getType() { return this.type; }
+  public void setType(CommandType type) { this.type = type; }
 
   public Map<String, Object> getAdditionalProperties() { return this.additionalProperties; }
   public void setAdditionalProperties(Map<String, Object> additionalProperties) { this.additionalProperties = additionalProperties; }
@@ -25,23 +20,21 @@ public class PlayerDisconnectedEventPayload implements SlashGame {
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    PlayerDisconnectedEventPayload self = (PlayerDisconnectedEventPayload) o;
+    RotateTileCommandPayload self = (RotateTileCommandPayload) o;
       return 
         Objects.equals(this.type, self.type) &&
-        Objects.equals(this.playerId, self.playerId) &&
         Objects.equals(this.additionalProperties, self.additionalProperties);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash((Object)type, (Object)playerId, (Object)additionalProperties);
+    return Objects.hash((Object)type, (Object)additionalProperties);
   }
 
   @Override
   public String toString() {
-    return "class PlayerDisconnectedEventPayload {\n" +   
+    return "class RotateTileCommandPayload {\n" +   
       "    type: " + toIndentedString(type) + "\n" +
-      "    playerId: " + toIndentedString(playerId) + "\n" +
       "    additionalProperties: " + toIndentedString(additionalProperties) + "\n" +
     "}";
   }

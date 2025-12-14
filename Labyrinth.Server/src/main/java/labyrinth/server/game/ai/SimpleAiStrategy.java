@@ -7,11 +7,6 @@ import labyrinth.server.game.models.records.Position;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
 
 public class SimpleAiStrategy implements AiStrategy {
 
@@ -22,20 +17,20 @@ public class SimpleAiStrategy implements AiStrategy {
         System.out.println("AI performing turn for " + realPlayer.getUsername());
 
         java.util.concurrent.CompletableFuture.supplyAsync(() -> {
-            TreasureCard targetCard = realPlayer.getAssignedTreasureCards().isEmpty() ? null
-                    : realPlayer.getAssignedTreasureCards().getFirst();
-            return findBestMove(game, realPlayer, targetCard);
-        }).thenCompose(result -> delay(randomDelay()).thenApply(v -> result))
+                    TreasureCard targetCard = realPlayer.getAssignedTreasureCards().isEmpty() ? null
+                            : realPlayer.getAssignedTreasureCards().getFirst();
+                    return findBestMove(game, realPlayer, targetCard);
+                }).thenCompose(result -> delay(randomDelay()).thenApply(v -> result))
                 .thenCompose(bestResult -> {
                     // Execute Shift
                     if (bestResult != null) {
                         System.out.println(
                                 "AI executing shift: " + bestResult.shiftType + " index " + bestResult.shiftIndex);
                         boolean shiftSuccess = switch (bestResult.shiftType) {
-                            case UP -> game.shift(bestResult.shiftIndex, Direction.UP, null, realPlayer);
-                            case DOWN -> game.shift(bestResult.shiftIndex, Direction.DOWN, null, realPlayer);
-                            case LEFT -> game.shift(bestResult.shiftIndex, Direction.LEFT, null, realPlayer);
-                            case RIGHT -> game.shift(bestResult.shiftIndex, Direction.RIGHT, null, realPlayer);
+                            case UP -> game.shift(bestResult.shiftIndex, Direction.UP, realPlayer);
+                            case DOWN -> game.shift(bestResult.shiftIndex, Direction.DOWN, realPlayer);
+                            case LEFT -> game.shift(bestResult.shiftIndex, Direction.LEFT, realPlayer);
+                            case RIGHT -> game.shift(bestResult.shiftIndex, Direction.RIGHT, realPlayer);
                         };
                         if (!shiftSuccess)
                             forceRandomShift(game, realPlayer);
@@ -54,7 +49,7 @@ public class SimpleAiStrategy implements AiStrategy {
                         var moveSuccess = game.movePlayerToTile(bestResult.targetPosition.row(), bestResult.targetPosition.column(),
                                 realPlayer);
 
-                        if(!moveSuccess){
+                        if (!moveSuccess) {
                             Position current = game.getCurrentPositionOfPlayer(realPlayer);
                             game.movePlayerToTile(current.row(), current.column(), realPlayer);
                         }
@@ -72,8 +67,8 @@ public class SimpleAiStrategy implements AiStrategy {
 
     private void forceRandomShift(Game game, Player player) {
         try {
-            if (!game.shift(1, Direction.RIGHT, null, player)) {
-                game.shift(0, Direction.DOWN, null, player);
+            if (!game.shift(1, Direction.RIGHT, player)) {
+                game.shift(0, Direction.DOWN, player);
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -82,7 +77,7 @@ public class SimpleAiStrategy implements AiStrategy {
 
     private java.util.concurrent.CompletableFuture<Void> delay(int millis) {
         return java.util.concurrent.CompletableFuture.runAsync(() -> {
-        },
+                },
                 java.util.concurrent.CompletableFuture.delayedExecutor(millis,
                         java.util.concurrent.TimeUnit.MILLISECONDS));
     }

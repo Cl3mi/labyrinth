@@ -3,11 +3,11 @@ package labyrinth.server.messaging.commands.handler;
 import labyrinth.contracts.models.CommandType;
 import labyrinth.contracts.models.DisconnectCommandPayload;
 import labyrinth.contracts.models.EventType;
-import labyrinth.contracts.models.PlayerDisconnectedEventPayload;
+import labyrinth.contracts.models.PlayerUpdatedEventPayload;
 import labyrinth.server.game.GameService;
 import labyrinth.server.messaging.MessageService;
 import labyrinth.server.messaging.PlayerSessionRegistry;
-import labyrinth.server.messaging.mapper.GameMapper;
+import labyrinth.server.messaging.mapper.PlayerInfoMapper;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.WebSocketSession;
 
@@ -16,16 +16,16 @@ import org.springframework.web.socket.WebSocketSession;
 public class DisconnectCommandHandler extends AbstractCommandHandler<DisconnectCommandPayload> {
 
     private final MessageService messageService;
-    private final GameMapper gameMapper;
+    private final PlayerInfoMapper playerInfoMapper;
 
     public DisconnectCommandHandler(GameService gameService,
                                     PlayerSessionRegistry playerSessionRegistry,
                                     MessageService messageService,
-                                    GameMapper gameMapper) {
+                                    PlayerInfoMapper playerInfoMapper) {
         super(gameService, playerSessionRegistry);
 
         this.messageService = messageService;
-        this.gameMapper = gameMapper;
+        this.playerInfoMapper = playerInfoMapper;
     }
 
     @Override
@@ -39,12 +39,10 @@ public class DisconnectCommandHandler extends AbstractCommandHandler<DisconnectC
 
         gameService.leave(player);
 
-        var disconnectedPayload = new PlayerDisconnectedEventPayload();
-        disconnectedPayload.setType(EventType.PLAYER_DISCONNECTED);
-        disconnectedPayload.setPlayerId(player.getId().toString());
-        messageService.broadcastToPlayers(disconnectedPayload);
+        var playerUpdatedEventPayload = new PlayerUpdatedEventPayload();
+        playerUpdatedEventPayload.setType(EventType.PLAYER_UPDATED);
+        playerUpdatedEventPayload.setPlayer(playerInfoMapper.toDto(player));
 
-        var gameState = gameService.withGameReadLock(gameMapper::toGameStateDto);
-        messageService.broadcastToPlayers(gameState);
+        messageService.broadcastToPlayers(playerUpdatedEventPayload);
     }
 }

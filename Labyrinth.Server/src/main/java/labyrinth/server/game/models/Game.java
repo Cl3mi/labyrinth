@@ -11,7 +11,10 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.time.OffsetDateTime;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+import java.util.UUID;
 
 /**
  * Represents a game room for the Labyrinth game.
@@ -152,11 +155,18 @@ public class Game {
         return board.getPositionOfTile(tileOfPlayer);
     }
 
-    public boolean shift(int index, Direction direction, Set<Direction> entrances, Player player) {
+    public void rotateExtraTileClockwise(Player player) {
+        //TODO: check if correct
         guardFor(MoveState.PLACE_TILE);
         guardFor(player);
 
-        // TODO: consider entrances (rotation)
+        var board = getBoard();
+        board.getExtraTile().rotate();
+    }
+
+    public boolean shift(int index, Direction direction, Player player) {
+        guardFor(MoveState.PLACE_TILE);
+        guardFor(player);
 
         var fixedBonusActive = activeBonus == BonusTypes.PUSH_FIXED;
 

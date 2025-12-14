@@ -8,7 +8,6 @@ import org.springframework.stereotype.Component;
 @Component
 public class RankingMapper {
     public RankingEntry toDto(Player player, int rank) {
-
         var entry = new RankingEntry();
 
         var sourceStats = player.getStatistics();

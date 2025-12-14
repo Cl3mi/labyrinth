@@ -40,7 +40,7 @@ public class MovePawnCommandHandler extends AbstractCommandHandler<MovePawnComma
         requirePlayerIsCurrent(player);
 
         var coordinates = payload.getTargetCoordinates();
-        var moveSuccessful = gameService.movePlayerToTile(coordinates.getY(), coordinates.getX(), player);
+        var moveSuccessful = gameService.movePlayerToTile(coordinates.getRow(), coordinates.getColumn(), player);
 
         if (!moveSuccessful) {
             throw new ActionErrorException("Cannot move pawn to the specified coordinates.", ErrorCode.INVALID_MOVE);
