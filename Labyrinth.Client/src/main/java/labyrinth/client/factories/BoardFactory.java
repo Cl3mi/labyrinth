@@ -91,8 +91,8 @@ public class BoardFactory implements IBoardFactory {
         for (PlayerState s : states) {
             if (s == null) continue;
 
-            String id = s.getId();
-            String name = s.getName();
+            String id = s.getPlayerInfo().getId();
+            String name = s.getPlayerInfo().getName();
             Player p = new Player(id, name);
 
             // aktuelle Position

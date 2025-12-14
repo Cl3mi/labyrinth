@@ -1,12 +1,13 @@
 package labyrinth.client;
 
+import labyrinth.client.audio.AudioPlayer;
+import labyrinth.client.messaging.GameClient;
 import labyrinth.client.models.Board;
 import labyrinth.client.models.Player;
-import labyrinth.client.models.Position;
-import labyrinth.client.audio.AudioPlayer;
 import labyrinth.contracts.models.Direction;
 import labyrinth.contracts.models.Tile;
 import labyrinth.contracts.models.Treasure;
+import lombok.Getter;
 
 import javax.swing.*;
 import java.awt.*;
@@ -19,40 +20,52 @@ import java.util.*;
 import java.util.List;
 
 /**
- * Panel, das das Labyrinth-Board zeichnet, inklusive Spieler, erreichbarer Felder
- * und Pfeilen zum Verschieben der Reihen/Spalten.
+ * Server-autoratives BoardPanel:
+ * - Rendert den letzten State vom Server.
+ * - User-Input sendet ausschließlich Commands (MOVE_PAWN, PUSH_TILE).
+ * - Keine lokale Spielzustands-Mutation.
+ * - Reachable Tiles (Highlighting) werden optional vom Server gesetzt.
  */
 public class BoardPanel extends JPanel {
 
     private static final int CARD_PANEL_WIDTH = 40;
     private static final int PANEL_PADDING = 20;
     private static final int ARROW_MARGIN = 5;
+
     private static final Font DEBUG_INFO_FONT = new Font("Arial", Font.BOLD, 16);
     private static final Font PLAYER_MARKER_FONT = new Font("Arial", Font.BOLD, 30);
     private static final Font COORDINATE_FONT = new Font("Arial", Font.PLAIN, 10);
+
     private static final Color BACKGROUND_COLOR = Color.DARK_GRAY;
     private static final Color CORRIDOR_COLOR = new Color(235, 235, 220);
     private static final Color WALL_COLOR = new Color(50, 50, 50);
-    private static final Color REACHABLE_TILE_HIGHLIGHT_COLOR = new Color(80, 160, 80);
-    private static final Color NORMAL_TILE_BACKGROUND_COLOR = new Color(100, 100, 100);
     private static final Color FIXED_TILE_BACKGROUND_COLOR = new Color(160, 160, 0);
     private static final Color ARROW_COLOR = new Color(70, 130, 180);
     private static final Color ARROW_COLOR_HOVER = new Color(120, 180, 230);
+
     private static final Color[] PLAYER_COLORS = {
             new Color(200, 80, 80), new Color(80, 180, 80),
             new Color(80, 120, 200), new Color(230, 200, 80)
     };
 
+    private final GameClient client;
+
     private final Map<String, BufferedImage> tileImages = new HashMap<>();
     private final List<BufferedImage> playerIcons = new ArrayList<>();
     private Image backgroundImage;
-    private static final int TILE_PADDING = 0;
 
+    @Getter
     private Board board;
+
     private Player currentPlayer;
     private List<Player> players;
-    private int currentPlayerIndex = 0;
-    private final Set<Tile> reachableTiles;
+
+    /**
+     * Reachable Tiles kommen vom Server (optional).
+     * Wenn du (noch) nichts vom Server bekommst, bleibt es leer -> kein Highlighting.
+     */
+    private final Set<Tile> reachableTiles = new HashSet<>();
+
     private final List<ArrowButton> arrowButtons = new ArrayList<>();
     private ArrowButton hoveredArrow = null;
 
@@ -63,27 +76,27 @@ public class BoardPanel extends JPanel {
 
     private AudioPlayer backgroundMusic;
 
-    public BoardPanel(Board board, Player currentPlayer, List<Player> players) {
-        this.board = board;
+    /**
+     * Optionaler Lock: verhindert Command-Spam bis ein Server-Update eintrifft.
+     */
+    private boolean inputLocked = false;
+
+    public BoardPanel(GameClient client, Board board, Player currentPlayer, List<Player> players) {
+        this.client = Objects.requireNonNull(client, "client must not be null");
+        this.board = Objects.requireNonNull(board, "board must not be null");
         this.currentPlayer = currentPlayer;
         this.players = players != null ? players : List.of();
-        this.reachableTiles = new HashSet<>();
 
         loadBackgroundImage();
         loadTileImages();
         loadPlayerIcons();
 
-        updateReachableTilesAndRepaint();
         setBackground(BACKGROUND_COLOR);
         setPreferredSize(new Dimension(1400, 800));
         setupMouseListener();
 
         backgroundMusic = new AudioPlayer("/sounds/06-Kokiri-Forest.wav");
         backgroundMusic.loop();
-    }
-
-    public BoardPanel(Board board, Player currentPlayer) {
-        this(board, currentPlayer, currentPlayer != null ? List.of(currentPlayer) : List.of());
     }
 
     // =================================================================================
@@ -154,42 +167,22 @@ public class BoardPanel extends JPanel {
         Collections.addAll(dirs, entrancesArray);
 
         if (dirs.size() == 2) {
-            if (dirs.contains(Direction.UP) && dirs.contains(Direction.DOWN)) {
-                return new TileImageInfo("I", 0);
-            }
-            if (dirs.contains(Direction.LEFT) && dirs.contains(Direction.RIGHT)) {
-                return new TileImageInfo("I", 90);
-            }
+            if (dirs.contains(Direction.UP) && dirs.contains(Direction.DOWN)) return new TileImageInfo("I", 0);
+            if (dirs.contains(Direction.LEFT) && dirs.contains(Direction.RIGHT)) return new TileImageInfo("I", 90);
         }
 
         if (dirs.size() == 2) {
-            if (dirs.contains(Direction.UP) && dirs.contains(Direction.RIGHT)) {
-                return new TileImageInfo("L", 0);
-            }
-            if (dirs.contains(Direction.RIGHT) && dirs.contains(Direction.DOWN)) {
-                return new TileImageInfo("L", 90);
-            }
-            if (dirs.contains(Direction.DOWN) && dirs.contains(Direction.LEFT)) {
-                return new TileImageInfo("L", 180);
-            }
-            if (dirs.contains(Direction.LEFT) && dirs.contains(Direction.UP)) {
-                return new TileImageInfo("L", 270);
-            }
+            if (dirs.contains(Direction.UP) && dirs.contains(Direction.RIGHT)) return new TileImageInfo("L", 0);
+            if (dirs.contains(Direction.RIGHT) && dirs.contains(Direction.DOWN)) return new TileImageInfo("L", 90);
+            if (dirs.contains(Direction.DOWN) && dirs.contains(Direction.LEFT)) return new TileImageInfo("L", 180);
+            if (dirs.contains(Direction.LEFT) && dirs.contains(Direction.UP)) return new TileImageInfo("L", 270);
         }
 
         if (dirs.size() == 3) {
-            if (!dirs.contains(Direction.DOWN)) {
-                return new TileImageInfo("T", 0);
-            }
-            if (!dirs.contains(Direction.LEFT)) {
-                return new TileImageInfo("T", 90);
-            }
-            if (!dirs.contains(Direction.UP)) {
-                return new TileImageInfo("T", 180);
-            }
-            if (!dirs.contains(Direction.RIGHT)) {
-                return new TileImageInfo("T", 270);
-            }
+            if (!dirs.contains(Direction.DOWN)) return new TileImageInfo("T", 0);
+            if (!dirs.contains(Direction.LEFT)) return new TileImageInfo("T", 90);
+            if (!dirs.contains(Direction.UP)) return new TileImageInfo("T", 180);
+            if (!dirs.contains(Direction.RIGHT)) return new TileImageInfo("T", 270);
         }
 
         return null;
@@ -199,24 +192,34 @@ public class BoardPanel extends JPanel {
         if (img == null) return;
 
         Graphics2D g = (Graphics2D) g2.create();
+        try {
+            Shape oldClip = g.getClip();
+            g.setClip(new Rectangle(x, y, size, size));
 
-        Shape oldClip = g.getClip();
-        g.setClip(new Rectangle(x, y, size, size));
+            double scale = 1.2;
+            int drawSize = (int) Math.round(size * scale);
 
-        double scale = 1.2;
-        int drawSize = (int) Math.round(size * scale);
+            int drawX = x - (drawSize - size) / 2;
+            int drawY = y - (drawSize - size) / 2;
 
-        int drawX = x - (drawSize - size) / 2;
-        int drawY = y - (drawSize - size) / 2;
+            int cx = drawX + drawSize / 2;
+            int cy = drawY + drawSize / 2;
 
-        int cx = drawX + drawSize / 2;
-        int cy = drawY + drawSize / 2;
+            g.rotate(Math.toRadians(rotationDeg), cx, cy);
+            g.drawImage(img, drawX, drawY, drawSize, drawSize, null);
 
-        g.rotate(Math.toRadians(rotationDeg), cx, cy);
-        g.drawImage(img, drawX, drawY, drawSize, drawSize, null);
+            g.setClip(oldClip);
+        } finally {
+            g.dispose();
+        }
+    }
 
-        g.setClip(oldClip);
-        g.dispose();
+    private boolean hasEntrance(Direction[] entrances, Direction dir) {
+        if (entrances == null) return false;
+        for (Direction d : entrances) {
+            if (d == dir) return true;
+        }
+        return false;
     }
 
     private void drawCorridorsFallback(Graphics2D g2, Tile tile, int x, int y) {
@@ -225,9 +228,7 @@ public class BoardPanel extends JPanel {
         int corridorWidth = Math.max(4, size / 6);
 
         Direction[] entrances = tile.getEntrances();
-        if (entrances == null || entrances.length == 0) {
-            return;
-        }
+        if (entrances == null || entrances.length == 0) return;
 
         g2.setColor(CORRIDOR_COLOR);
 
@@ -245,18 +246,8 @@ public class BoardPanel extends JPanel {
         }
 
         int dotSize = Math.max(4, corridorWidth);
-        g2.setColor(Boolean.TRUE.equals(tile.getIsFixed())
-                ? FIXED_TILE_BACKGROUND_COLOR
-                : WALL_COLOR);
+        g2.setColor(Boolean.TRUE.equals(tile.getIsFixed()) ? FIXED_TILE_BACKGROUND_COLOR : WALL_COLOR);
         g2.fillOval(cx - dotSize / 2, cy - dotSize / 2, dotSize, dotSize);
-    }
-
-    private boolean hasEntrance(Direction[] entrances, Direction dir) {
-        if (entrances == null) return false;
-        for (Direction d : entrances) {
-            if (d == dir) return true;
-        }
-        return false;
     }
 
     private void drawTileHighlight(Graphics2D g2, int x, int y) {
@@ -265,16 +256,17 @@ public class BoardPanel extends JPanel {
     }
 
     // =================================================================================
-    // MOUSE EVENT HANDLING
+    // INPUT (SERVER-AUTORITATIV)
     // =================================================================================
 
     private void setupMouseListener() {
         addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
-                if (handleArrowClick(e.getPoint())) {
-                    return;
-                }
+                if (inputLocked) return;
+                if (board == null) return;
+
+                if (handleArrowClick(e.getPoint())) return;
                 handleTileClick(e.getPoint());
             }
         });
@@ -297,12 +289,13 @@ public class BoardPanel extends JPanel {
     private boolean handleArrowClick(Point p) {
         for (ArrowButton arrow : arrowButtons) {
             if (arrow.contains(p)) {
-                if (arrow.isRow) {
-                    board.shiftRow(arrow.index, arrow.direction, currentPlayer);
-                } else {
-                    board.shiftColumn(arrow.index, arrow.direction, currentPlayer);
-                }
-                updateReachableTilesAndRepaint();
+
+                // Extra-Tile-Entrances kommen idealerweise vom Server/UI-Auswahl – aktuell leer.
+                Set<labyrinth.contracts.models.Direction> extraEntrances = Set.of();
+
+                client.sendPushTile(arrow.index, arrow.direction, extraEntrances);
+
+                inputLocked = true;
                 return true;
             }
         }
@@ -310,38 +303,25 @@ public class BoardPanel extends JPanel {
     }
 
     private void handleTileClick(Point p) {
-        System.out.println("---------");
-        System.out.println("Current player: " + currentPlayer);
+        if (board == null) return;
 
         outer:
         for (int row = 0; row < board.getHeight(); row++) {
             for (int col = 0; col < board.getWidth(); col++) {
                 Rectangle tileRect = new Rectangle(xOffset + col * size, yOffset + row * size, size, size);
                 if (tileRect.contains(p)) {
-                    Tile clickedTile = board.getTiles()[row][col];
-                    if (reachableTiles.contains(clickedTile)) {
-                        boolean moved = board.movePlayerToTile(currentPlayer, row, col);
-                        if (moved) {
-                            updateReachableTilesAndRepaint();
-                        }
-                    }
+                    // Server entscheidet, ob Zug erlaubt ist.
+                    client.sendMovePawn(row, col);
+
+                    inputLocked = true;
                     break outer;
                 }
             }
         }
-        System.out.println("---------");
-    }
-
-    private void updateReachableTilesAndRepaint() {
-        reachableTiles.clear();
-        if (currentPlayer != null && board != null) {
-            reachableTiles.addAll(board.getReachableTiles(currentPlayer));
-        }
-        repaint();
     }
 
     // =================================================================================
-    // PAINTING LOGIC
+    // PAINTING
     // =================================================================================
 
     @Override
@@ -384,12 +364,18 @@ public class BoardPanel extends JPanel {
         for (int row = 0; row < board.getHeight(); row++) {
             for (int col = 0; col < board.getWidth(); col++) {
                 Tile tile = board.getTiles()[row][col];
-                if (tile != null) {
-                    int x = xOffset + col * size;
-                    int y = yOffset + row * size;
-                    drawTileAt(g2, tile, x, y, row, col, true);
-                    drawPlayersOnTile(g2, row, col);
+                if (tile == null) continue;
+
+                int x = xOffset + col * size;
+                int y = yOffset + row * size;
+
+                // Highlighting nur, wenn Server reachableTiles setzt
+                if (reachableTiles.contains(tile)) {
+                    drawTileHighlight(g2, x, y);
                 }
+
+                drawTileAt(g2, tile, x, y, row, col, true);
+                drawPlayersOnTile(g2, row, col);
             }
         }
     }
@@ -397,6 +383,7 @@ public class BoardPanel extends JPanel {
     private void drawTileAt(Graphics2D g2, Tile tile, int x, int y, int row, int col, boolean drawDetails) {
         TileImageInfo info = getTileImageInfo(tile);
         boolean drewImage = false;
+
         if (info != null) {
             BufferedImage img = tileImages.get(info.type);
             if (img != null) {
@@ -429,8 +416,11 @@ public class BoardPanel extends JPanel {
     }
 
     private void drawCoordinates(Graphics2D g2, int x, int y, int row, int col) {
+        if (row < 0 || col < 0) return;
+
         String coords = "(" + row + "," + col + ")";
         g2.setColor(Color.WHITE);
+
         Font oldFont = g2.getFont();
         g2.setFont(COORDINATE_FONT);
         g2.drawString(coords, x + 3, y + size - 3);
@@ -440,8 +430,9 @@ public class BoardPanel extends JPanel {
     private void drawPlayersOnTile(Graphics2D g2, int row, int col) {
         for (int i = 0; i < players.size(); i++) {
             Player p = players.get(i);
-            if (p != null && p.getCurrentPosition() != null &&
-                    p.getCurrentPosition().getRow() == row &&
+            if (p == null || p.getCurrentPosition() == null) continue;
+
+            if (p.getCurrentPosition().getRow() == row &&
                     p.getCurrentPosition().getColumn() == col) {
 
                 int cx = xOffset + col * size + size / 2;
@@ -460,10 +451,14 @@ public class BoardPanel extends JPanel {
                     g2.setColor(PLAYER_COLORS[i % PLAYER_COLORS.length]);
                     Font oldFont = g2.getFont();
                     g2.setFont(PLAYER_MARKER_FONT);
+
                     FontMetrics fm = g2.getFontMetrics();
                     String text = "P" + (i + 1);
                     int textWidth = fm.stringWidth(text);
-                    g2.drawString(text, cx - textWidth / 2, cy + fm.getAscent() / 2 - fm.getDescent());
+
+                    g2.drawString(text, cx - textWidth / 2,
+                            cy + fm.getAscent() / 2 - fm.getDescent());
+
                     g2.setFont(oldFont);
                 }
             }
@@ -478,7 +473,6 @@ public class BoardPanel extends JPanel {
         int cols = board.getWidth();
 
         for (int row = 0; row < rows; row++) {
-
             if (row % 2 == 0) continue;
 
             int y = yOffset + row * size + (size - arrowSize) / 2;
@@ -495,7 +489,6 @@ public class BoardPanel extends JPanel {
         }
 
         for (int col = 0; col < cols; col++) {
-
             if (col % 2 == 0) continue;
 
             int x = xOffset + col * size + (size - arrowSize) / 2;
@@ -548,10 +541,10 @@ public class BoardPanel extends JPanel {
         g2.setColor(Color.RED);
 
         List<String> infoLines = new ArrayList<>();
-        var players = board.getPlayers();
+        var serverPlayers = board.getPlayers();
 
-        if (players != null && !players.isEmpty()) {
-            var current = players.get(board.getCurrentPlayerIndex());
+        if (serverPlayers != null && !serverPlayers.isEmpty()) {
+            var current = serverPlayers.get(board.getCurrentPlayerIndex());
             infoLines.add("Player to move: " + current.getName());
         } else {
             infoLines.add("Player to move: None");
@@ -562,8 +555,8 @@ public class BoardPanel extends JPanel {
         infoLines.add("");
         infoLines.add("=== Players ===");
 
-        if (players != null && !players.isEmpty()) {
-            for (Player p : players) {
+        if (serverPlayers != null && !serverPlayers.isEmpty()) {
+            for (Player p : serverPlayers) {
                 var pos = p.getCurrentPosition();
                 String positionText = (pos != null) ? "(" + pos.getRow() + "," + pos.getColumn() + ")" : "(not placed)";
                 infoLines.add(p.getName() + " at " + positionText);
@@ -583,7 +576,7 @@ public class BoardPanel extends JPanel {
         int startX = 10;
         int startY = 40;
 
-        List<Treasure> cards = player.getAssignedTreasureCards(); // muss deine Player-Klasse liefern
+        List<Treasure> cards = player.getAssignedTreasureCards();
         if (cards == null) return;
 
         for (int i = 0; i < cards.size(); i++) {
@@ -602,51 +595,6 @@ public class BoardPanel extends JPanel {
                     startX + (cardWidth - textWidth) / 2,
                     y + cardHeight / 2);
         }
-    }
-
-    // =================================================================================
-    // PUBLIC GAME LOGIC METHODS
-    // =================================================================================
-
-    public void switchPlayer() {
-        currentPlayerIndex = (currentPlayerIndex + 1) % players.size();
-        this.currentPlayer = players.get(currentPlayerIndex);
-        System.out.println("Switching player " + (currentPlayerIndex + 1));
-        updateReachableTilesAndRepaint();
-    }
-
-    public void rotateExtraTile() {
-        Tile extra = board.getExtraTile();
-        if (extra == null) {
-            return;
-        }
-
-        Direction[] entrances = extra.getEntrances();
-        if (entrances == null || entrances.length == 0) {
-            return;
-        }
-
-        Direction[] rotated = new Direction[entrances.length];
-        for (int i = 0; i < entrances.length; i++) {
-            rotated[i] = rotateDirectionClockwise(entrances[i]);
-        }
-        extra.setEntrances(rotated);
-
-        repaint();
-    }
-
-    private Direction rotateDirectionClockwise(Direction d) {
-        return switch (d) {
-            case UP -> Direction.RIGHT;
-            case RIGHT -> Direction.DOWN;
-            case DOWN -> Direction.LEFT;
-            case LEFT -> Direction.UP;
-        };
-    }
-
-    public void toggleFreeRoam() {
-        board.setFreeRoam(!board.isFreeRoam());
-        repaint();
     }
 
     // =================================================================================
@@ -706,12 +654,16 @@ public class BoardPanel extends JPanel {
     }
 
     // =================================================================================
-    // SETTER für dynamische Updates
+    // SETTER (aus Server-Events)
     // =================================================================================
 
     public void setBoard(Board board) {
-        this.board = board;
-        updateReachableTilesAndRepaint();
+        this.board = Objects.requireNonNull(board, "board must not be null");
+
+        // Unlock nach Server-Update
+        this.inputLocked = false;
+
+        repaint();
     }
 
     public void setPlayers(List<Player> players) {
@@ -721,6 +673,16 @@ public class BoardPanel extends JPanel {
 
     public void setCurrentPlayer(Player currentPlayer) {
         this.currentPlayer = currentPlayer;
-        updateReachableTilesAndRepaint();
+        repaint();
+    }
+
+    /**
+     * Reachable Tiles werden idealerweise aus einem Server-Payload gesetzt.
+     * Du musst dazu deine Event-Payloads erweitern (z.B. GAME_STATE_UPDATE).
+     */
+    public void setReachableTiles(Collection<Tile> tiles) {
+        reachableTiles.clear();
+        if (tiles != null) reachableTiles.addAll(tiles);
+        repaint();
     }
 }

@@ -5,6 +5,7 @@ import labyrinth.client.messaging.GameClient;
 import labyrinth.contracts.models.BoardSize;
 import labyrinth.contracts.models.LobbyStateEventPayload;
 import labyrinth.contracts.models.PlayerInfo;
+import lombok.Setter;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -18,6 +19,7 @@ import java.awt.*;
 public class LobbyPanel extends JPanel {
 
     private final GameClient client;
+    @Setter
     private String localPlayerId;
 
     // UI-Komponenten
@@ -29,6 +31,9 @@ public class LobbyPanel extends JPanel {
     // Hintergrund & Musik
     private Image backgroundImage;
     private AudioPlayer backgroundMusic;
+
+    @Setter
+    private String localUsername;
 
     public LobbyPanel(GameClient client, String localPlayerId) {
         this.client = client;
@@ -94,15 +99,11 @@ public class LobbyPanel extends JPanel {
         add(footer, BorderLayout.SOUTH);
 
         // Startbutton initial deaktivieren, bis Lobby-Infos vom Server kommen
-        startButton.setEnabled(true);
+        startButton.setEnabled(false);
 
         if (backgroundMusic != null) {
             backgroundMusic.play();
         }
-    }
-
-    public void setLocalPlayerId(String localPlayerId) {
-        this.localPlayerId = localPlayerId;
     }
 
     // --------------------------------------------------------------------------------
@@ -174,7 +175,7 @@ public class LobbyPanel extends JPanel {
 
             // Admin-Markierung
             if (Boolean.TRUE.equals(p.getIsAdmin())) {
-                sb.append("★ ");
+                sb.append("(Admin) ");
             }
 
             sb.append(p.getName());
@@ -189,7 +190,20 @@ public class LobbyPanel extends JPanel {
             playerListModel.addElement(sb.toString());
         }
 
-        // Start-Button nur aktiv, wenn der lokale Spieler Admin ist
+        for (PlayerInfo p : players) {
+            StringBuilder sb = new StringBuilder();
+
+            if (Boolean.TRUE.equals(p.getIsAdmin())) sb.append("(Admin) ");
+            sb.append(p.getName());
+
+            if (localUsername != null && localUsername.equals(p.getName())) {
+                sb.append(" (Du)");
+                isAdmin = Boolean.TRUE.equals(p.getIsAdmin());
+            }
+
+            playerListModel.addElement(sb.toString());
+        }
+
         startButton.setEnabled(isAdmin);
     }
 
@@ -202,11 +216,16 @@ public class LobbyPanel extends JPanel {
         bs.setRows(7);
         bs.setCols(7);
 
-        int treasuresPerPlayer = 7;
-        int totalBonusCount = 0;        // z.B. keine Boni
-        Integer gameDurationSeconds = null; // null = keine Zeitbegrenzung
+        int treasuresPerPlayer = 12;
+        int totalBonusCount = 0;
+        Integer gameDurationSeconds = 3600;
 
         try {
+            System.out.println("START clicked -> sending START_GAME");
+            System.out.println("rows=" + bs.getRows() + " cols=" + bs.getCols()
+                    + " treasureCardCount=" + treasuresPerPlayer
+                    + " totalBonusCount=" + totalBonusCount
+                    + " gameDurationSeconds=" + gameDurationSeconds);
             client.sendStartGame(bs, treasuresPerPlayer, totalBonusCount, gameDurationSeconds);
         } catch (Exception ex) {
             ex.printStackTrace();
