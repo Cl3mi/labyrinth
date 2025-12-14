@@ -2,8 +2,8 @@ package labyrinth.server.messaging.events.listeners;
 
 import labyrinth.contracts.models.EventType;
 import labyrinth.contracts.models.NextTreasureCardEventPayload;
+import labyrinth.server.game.events.NextTreasureCardEvent;
 import labyrinth.server.messaging.MessageService;
-import labyrinth.server.messaging.events.records.NextTreasureCardEvent;
 import labyrinth.server.messaging.mapper.TreasureMapper;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;

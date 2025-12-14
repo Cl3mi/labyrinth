@@ -32,7 +32,7 @@ public class UseSwapCommandHandler extends AbstractCommandHandler<UseSwapCommand
         var playerToSwap = gameService.getPlayer(UUID.fromString(payload.getTargetPlayerId()));
 
         if (playerToSwap == null) {
-            throw new ActionErrorException("Player with ID " + payload.getTargetPlayerId() + " not found", ErrorCode.GENERAL); //TODO: error code?
+            throw new ActionErrorException("Player with ID " + payload.getTargetPlayerId() + " not found", ErrorCode.PLAYER_NOT_FOUND);
         }
 
         gameService.useSwapBonus(player, playerToSwap);

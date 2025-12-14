@@ -42,8 +42,6 @@ public class UsePushFixedCommandHandler extends AbstractCommandHandler<UsePushFi
 
         gameService.usePushFixedBonus(player);
 
-        //TODO: do not allow to shift border rows/columns because it would move home tiles
-
         var direction = directionMapper.toModel(payload.getDirection());
         var shiftSuccessful = gameService.shift(payload.getRowOrColIndex(), direction, player);
 

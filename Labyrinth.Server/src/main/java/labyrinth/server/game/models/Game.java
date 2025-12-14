@@ -1,12 +1,14 @@
 package labyrinth.server.game.models;
 
 import labyrinth.contracts.models.PlayerColor;
+import labyrinth.server.game.abstractions.IGameTimer;
 import labyrinth.server.game.enums.BonusTypes;
 import labyrinth.server.game.enums.Direction;
 import labyrinth.server.game.enums.MoveState;
 import labyrinth.server.game.enums.RoomState;
 import labyrinth.server.game.models.records.GameConfig;
 import labyrinth.server.game.models.records.Position;
+import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -24,8 +26,12 @@ import java.util.UUID;
 @Setter
 public class Game {
 
+    private final int MAX_PLAYERS = 4;
+
     private int currentPlayerIndex;
     private MoveState currentMoveState = MoveState.PLACE_TILE;
+
+    private IGameTimer nextTurnTimer;
 
     @Setter(lombok.AccessLevel.NONE)
     private Board board;
@@ -35,18 +41,20 @@ public class Game {
 
     private BonusTypes activeBonus;
 
-    @Setter(lombok.AccessLevel.NONE)
-    @Getter(lombok.AccessLevel.NONE)
+    @Setter(AccessLevel.NONE)
+    @Getter(AccessLevel.NONE)
     private GameConfig gameConfig;
 
-    public Game() {
+    @Setter(AccessLevel.PRIVATE)
+    @Getter(AccessLevel.NONE)
+    private OffsetDateTime gameStartTime;
+
+    public Game(IGameTimer nextTurnTimer) {
+        this.nextTurnTimer = nextTurnTimer;
         this.players = new ArrayList<>();
         this.roomState = RoomState.LOBBY;
         this.board = null;
-
-        // start with a default config
         this.gameConfig = GameConfig.getDefault();
-
         this.currentPlayerIndex = 0;
     }
 
@@ -134,6 +142,7 @@ public class Game {
 
             Tile startingTile = board.getTileAt(position);
             System.out.println(player.getUsername() + " starts on tile: " + position.row() + "/" + position.column());
+            player.setHomeTile(startingTile);
             player.setCurrentTile(startingTile);
         }
 
@@ -144,6 +153,8 @@ public class Game {
         if (getCurrentPlayer().isAiActive()) {
             new labyrinth.server.game.ai.SimpleAiStrategy().performTurn(this, getCurrentPlayer());
         }
+
+        gameStartTime = OffsetDateTime.now();
     }
 
     public Player getCurrentPlayer() {
@@ -170,6 +181,10 @@ public class Game {
 
         var fixedBonusActive = activeBonus == BonusTypes.PUSH_FIXED;
 
+        if (fixedBonusActive) {
+            //TODO: do not allow to shift border rows/columns because it would move home tiles
+        }
+
         boolean res = switch (direction) {
             case UP -> board.shiftColumnUp(index, fixedBonusActive);
             case DOWN -> board.shiftColumnDown(index, fixedBonusActive);
@@ -181,13 +196,13 @@ public class Game {
             return false;
         }
 
-        if(fixedBonusActive){
+        if (fixedBonusActive) {
             activeBonus = null;
         }
 
         currentMoveState = MoveState.MOVE;
 
-        if(activeBonus == BonusTypes.PUSH_TWICE){
+        if (activeBonus == BonusTypes.PUSH_TWICE) {
             currentMoveState = MoveState.PLACE_TILE;
             activeBonus = null;
         }
@@ -223,7 +238,7 @@ public class Game {
         guardFor(MoveState.PLACE_TILE);
         var allowedToUse = currentPlayer.useBonus(BonusTypes.SWAP);
 
-        if(!allowedToUse){
+        if (!allowedToUse) {
             // return false?
             return;
         }
@@ -241,7 +256,7 @@ public class Game {
         guardFor(player);
         var allowedToUse = player.useBonus(BonusTypes.PUSH_TWICE);
 
-        if(!allowedToUse){
+        if (!allowedToUse) {
             return;
         }
 
@@ -252,7 +267,7 @@ public class Game {
         guardFor(player);
         var allowedToUse = player.useBonus(BonusTypes.PUSH_FIXED);
 
-        if(!allowedToUse){
+        if (!allowedToUse) {
             return;
         }
 
@@ -273,7 +288,9 @@ public class Game {
         return true;
     }
 
-    private void nextPlayer() {
+    private synchronized void nextPlayer() {
+        nextTurnTimer.stop();
+
         currentPlayerIndex++;
         if (currentPlayerIndex >= players.size()) {
             currentPlayerIndex = 0;
@@ -284,8 +301,11 @@ public class Game {
         if (getCurrentPlayer().isAiActive()) {
             // Using AdvancedAiStrategy for smarter gameplay
             new labyrinth.server.game.ai.SimpleAiStrategy().performTurn(this, getCurrentPlayer());
+        } else {
+            nextTurnTimer.start(gameConfig.turnTimeInSeconds(), this::nextPlayer);
         }
     }
+
 
     private void guardFor(MoveState moveState) {
         if (board.isFreeRoam()) {
@@ -319,7 +339,7 @@ public class Game {
     }
 
     private boolean isFull() {
-        return players.size() >= gameConfig.maxPlayers();
+        return players.size() >= MAX_PLAYERS;
     }
 
     @Override
@@ -338,5 +358,16 @@ public class Game {
             }
         }
         throw new IllegalStateException("No available colors left");
+    }
+
+    public OffsetDateTime getGameEndTime() {
+        if (gameStartTime == null) {
+            return null;
+        }
+        return gameStartTime.plusSeconds(gameConfig.gameDurationInSeconds());
+    }
+
+    public OffsetDateTime getTurnEndTime() {
+        return nextTurnTimer.getExpirationTime();
     }
 }

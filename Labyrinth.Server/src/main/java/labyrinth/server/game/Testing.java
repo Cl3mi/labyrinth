@@ -1,10 +1,13 @@
 package labyrinth.server.game;
 
+import labyrinth.server.game.abstractions.IGameTimer;
 import labyrinth.server.game.enums.Direction;
 import labyrinth.server.game.factories.BoardFactory;
 import labyrinth.server.game.factories.TreasureCardFactory;
 import labyrinth.server.game.models.Game;
 import labyrinth.server.game.models.records.GameConfig;
+import labyrinth.server.game.util.GameTimer;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 
 import javax.swing.*;
 import java.awt.event.ActionEvent;
@@ -15,12 +18,17 @@ public class Testing {
     private static Game game;
 
     public static void main(String[] args) {
-        game = new Game();
+        ThreadPoolTaskScheduler scheduler = new ThreadPoolTaskScheduler();
+        scheduler.setPoolSize(1);
+        scheduler.initialize();
+
+        IGameTimer gameTimer = new GameTimer(scheduler);
+        game = new Game(gameTimer);
         simulateGameStart();
         //simulateGameMoves(1000);
     }
 
-    public static void simulateGameStart(){
+    public static void simulateGameStart() {
         // Lets Simulate creating a room here. Player presses something like "create lobby"
         game.join("Alice");
         // More Players join the lobby
@@ -32,8 +40,8 @@ public class Testing {
         var treasureCardFactory = new TreasureCardFactory();
         var boardFactory = new BoardFactory();
 
-        var gameConfig = new GameConfig(7, 7, 4, 24, 1800, 4);
-        var board = boardFactory.createBoard(gameConfig.boardWidth(), gameConfig.boardHeight());
+        var gameConfig = new GameConfig(7, 7, 24, 1800, 4, 30);
+        var board = boardFactory.createBoard(gameConfig.boardWidth(), gameConfig.boardHeight(), gameConfig.totalBonusCount());
         var cards = treasureCardFactory.createTreasureCards(gameConfig.treasureCardCount(), game.getPlayers().size());
 
 
@@ -65,7 +73,7 @@ public class Testing {
         Timer timer = new Timer(delay, taskPerformer);
         timer.setRepeats(true);
         timer.start();
-        }
+    }
 
     public static void simulateGameMoves(Game game, long delayMillis) {
         simulateGameStart();
@@ -106,7 +114,7 @@ public class Testing {
             int shiftIndex = random.nextInt(board.getHeight());
             Direction direction = Direction.values()[random.nextInt(Direction.values().length)];
 
-            game.shift(shiftIndex, direction,  currentPlayer);
+            game.shift(shiftIndex, direction, currentPlayer);
 
             // Determine reachable tiles after shifting
             var reachableTiles = board.getReachableTiles(currentPlayer);

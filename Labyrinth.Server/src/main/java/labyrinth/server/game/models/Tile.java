@@ -1,6 +1,9 @@
 package labyrinth.server.game.models;
 
-import labyrinth.server.game.enums.*;
+import labyrinth.server.game.enums.BonusTypes;
+import labyrinth.server.game.enums.Direction;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.util.EnumSet;
 import java.util.Set;
@@ -12,8 +15,16 @@ import java.util.Set;
 public class Tile {
 
     private final EnumSet<Direction> entrances;
+
+    @Getter
     private boolean isFixed;
+    @Setter
+    @Getter
     private TreasureCard treasureCard;
+
+    @Setter
+    @Getter
+    private BonusTypes bonus;
 
     /**
      * Creates a tile with specified entrances and optional treasure.
@@ -31,10 +42,6 @@ public class Tile {
         return EnumSet.copyOf(entrances);
     }
 
-    public boolean isFixed() {
-        return isFixed;
-    }
-
     public void setIsFixed(boolean isFixed) {
         this.isFixed = isFixed;
     }
@@ -45,14 +52,6 @@ public class Tile {
         newTile.setTreasureCard(this.treasureCard); // Reference copy is fine for treasure card as it's not mutated
                                                     // during simulation
         return newTile;
-    }
-
-    public TreasureCard getTreasureCard() {
-        return treasureCard;
-    }
-
-    public void setTreasureCard(TreasureCard treasureCard) {
-        this.treasureCard = treasureCard;
     }
 
     /**
@@ -91,7 +90,7 @@ public class Tile {
         // Tiles no longer store the occupant; the calling code updates
         // the player's current tile instead.
         if (treasureCard != null) {
-            if (player.getAssignedTreasureCards().contains(treasureCard)) {
+            if (player.getCurrentTreasureCard() == treasureCard) {
                 System.out.println("Card: " + treasureCard.getTreasureName());
                 treasureCard.collect();
                 this.treasureCard = null;

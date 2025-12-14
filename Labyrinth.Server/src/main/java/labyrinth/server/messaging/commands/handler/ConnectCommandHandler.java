@@ -38,7 +38,7 @@ public class ConnectCommandHandler extends AbstractCommandHandler<ConnectCommand
     @Override
     public void handle(WebSocketSession session, ConnectCommandPayload payload) throws Exception {
         if (playerSessionRegistry.isSessionRegistered(session)) {
-            throw new ActionErrorException("Session is already connected", ErrorCode.GENERAL); //TODO: error code?
+            throw new ActionErrorException("Session is already connected", ErrorCode.GENERAL);
         }
 
         if (payload.getIdentifierToken() != null) {
@@ -48,7 +48,7 @@ public class ConnectCommandHandler extends AbstractCommandHandler<ConnectCommand
 
             var player = gameService.getPlayer(playerId);
             if (player == null) {
-                throw new ActionErrorException("Player with ID " + playerId + " not found", ErrorCode.GENERAL); //TODO: error code?
+                throw new ActionErrorException("Player with ID " + playerId + " not found", ErrorCode.PLAYER_NOT_FOUND);
             }
 
             playerSessionRegistry.registerPlayer(playerId, identifierToken, session);

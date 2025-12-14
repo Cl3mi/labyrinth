@@ -3,14 +3,12 @@ package labyrinth.server.game.models.records;
 public record GameConfig(
         int boardWidth,
         int boardHeight,
-        int maxPlayers,
         int treasureCardCount,
         int gameDurationInSeconds,
-        int totalBonusCount
+        int totalBonusCount,
+        int turnTimeInSeconds
 ) {
     public GameConfig {
-        if (maxPlayers < 2 || maxPlayers > 4)
-            throw new IllegalArgumentException("Player count must be between 2 and 4");
         if (boardWidth <= 0 || boardHeight <= 0)
             throw new IllegalArgumentException("Board size must be positive");
         if (treasureCardCount <= 0 || treasureCardCount > 100)
@@ -22,7 +20,7 @@ public record GameConfig(
     }
 
     public static GameConfig getDefault() {
-        return new GameConfig(7, 7,  4, 24, 1800, 3);
+        return new GameConfig(7, 7,  24, 1800, 3, 30);
     }
 
     public int getLastRowIndex(){

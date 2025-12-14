@@ -38,7 +38,6 @@ public class StartGameCommandHandler extends AbstractCommandHandler<StartGameCom
         var treasureCardCount = payload.getTreasureCardCount();
         var totalBonusCount = payload.getTotalBonusCount();
 
-        //TODO: max player settable?
-        return new GameConfig(boardWidth, boardHeight, 4, treasureCardCount, gameDurationInSeconds, totalBonusCount);
+        return new GameConfig(boardWidth, boardHeight,  treasureCardCount, gameDurationInSeconds, totalBonusCount, 30);
     }
 }
