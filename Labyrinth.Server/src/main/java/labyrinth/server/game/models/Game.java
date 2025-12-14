@@ -90,6 +90,15 @@ public class Game {
         return player;
     }
 
+    private void addAiPlayer() {
+        Player player = new Player(UUID.randomUUID(), "Bot " + (players.size() + 1));
+        player.setColor(getNextColor());
+        player.setAiActive(true);
+
+        player.setJoinDate(OffsetDateTime.now());
+        players.add(player);
+    }
+
     public void leave(Player player) {
         // TODO: handle leaving during game
         players.removeIf(p -> p.getId().equals(player.getId()));
@@ -112,8 +121,12 @@ public class Game {
             throw new IllegalStateException("Cannot start a game that is in progress or finished!");
         }
 
-        if (players.size() < 2) {
-            throw new IllegalStateException("At least 2 players required to start the game");
+        if (players.isEmpty()) {
+            throw new IllegalStateException("At least 1 player is required to start the game");
+        }
+
+        while (players.size() < MAX_PLAYERS) {
+            addAiPlayer();
         }
 
         this.gameConfig = Objects.requireNonNullElseGet(gameConfig, GameConfig::getDefault);

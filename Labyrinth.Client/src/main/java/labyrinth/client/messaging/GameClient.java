@@ -2,6 +2,7 @@ package labyrinth.client.messaging;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import labyrinth.contracts.models.*;
 import lombok.Setter;
 import org.java_websocket.client.WebSocketClient;
@@ -13,7 +14,7 @@ import java.util.function.Consumer;
 
 public class GameClient extends WebSocketClient {
 
-    private final ObjectMapper mapper = new ObjectMapper();
+    private final ObjectMapper mapper;
 
     @Setter private Consumer<ConnectAckEventPayload> onConnectAck;
     @Setter private Consumer<LobbyStateEventPayload> onLobbyState;
@@ -27,6 +28,9 @@ public class GameClient extends WebSocketClient {
 
     public GameClient(URI serverUri) {
         super(serverUri);
+
+        mapper = new ObjectMapper();
+        mapper.registerModule(new JavaTimeModule());
     }
 
     @Override

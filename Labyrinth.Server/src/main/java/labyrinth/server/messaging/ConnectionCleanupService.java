@@ -8,7 +8,7 @@ import org.springframework.stereotype.Service;
 @Service
 @RequiredArgsConstructor
 public class ConnectionCleanupService {
-    public GameService gameService;
+    private final GameService gameService;
     private final PlayerSessionRegistry playerSessionRegistry;
 
     @Scheduled(fixedRate = 1000)
