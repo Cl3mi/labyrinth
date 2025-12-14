@@ -1,13 +1,13 @@
 package labyrinth.contracts.models;
 import labyrinth.contracts.models.Direction;
 import labyrinth.contracts.models.Treasure;
-import labyrinth.contracts.models.Bonus;
+import labyrinth.contracts.models.BonusType;
 import java.util.Map;
 import java.util.Objects;
 public class Tile {
   private Direction[] entrances;
   private Treasure treasure;
-  private Bonus bonus;
+  private BonusType bonus;
   private Boolean isFixed;
   private Map<String, Object> additionalProperties;
 
@@ -17,8 +17,8 @@ public class Tile {
   public Treasure getTreasure() { return this.treasure; }
   public void setTreasure(Treasure treasure) { this.treasure = treasure; }
 
-  public Bonus getBonus() { return this.bonus; }
-  public void setBonus(Bonus bonus) { this.bonus = bonus; }
+  public BonusType getBonus() { return this.bonus; }
+  public void setBonus(BonusType bonus) { this.bonus = bonus; }
 
   public Boolean getIsFixed() { return this.isFixed; }
   public void setIsFixed(Boolean isFixed) { this.isFixed = isFixed; }

@@ -36,11 +36,8 @@ public class StartGameCommandHandler extends AbstractCommandHandler<StartGameCom
         requireAdmin(player);
 
         var gameConfig = createGameConfig(payload);
-
-        // Spiel starten (State wird gesetzt)
         gameService.startGame(gameConfig);
 
-        // Direkt danach: initialen Game-State als Event broadcasten
         var gameStateDto = gameService.withGameReadLock(gameMapper::toGameStateDto);
         messageService.broadcastToPlayers(gameStateDto);
     }
@@ -48,13 +45,15 @@ public class StartGameCommandHandler extends AbstractCommandHandler<StartGameCom
     private GameConfig createGameConfig(StartGameCommandPayload payload) {
         var boardWidth = payload.getBoardSize().getCols();
         var boardHeight = payload.getBoardSize().getRows();
+        var gameDurationInSeconds = payload.getGameDurationInSeconds();
 
-        Integer duration = payload.getGameDurationInSeconds();
-        if (duration == null) duration = 0; // niemals null
+        if(gameDurationInSeconds == null) {
+            gameDurationInSeconds = 0;
+        }
 
         var treasureCardCount = payload.getTreasureCardCount();
         var totalBonusCount = payload.getTotalBonusCount();
 
-        return new GameConfig(boardWidth, boardHeight, 4, treasureCardCount, duration, totalBonusCount);
+        return new GameConfig(boardWidth, boardHeight,  treasureCardCount, gameDurationInSeconds, totalBonusCount, 30);
     }
 }

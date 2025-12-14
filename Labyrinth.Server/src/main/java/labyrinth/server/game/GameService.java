@@ -2,15 +2,16 @@ package labyrinth.server.game;
 
 import labyrinth.server.game.enums.Achievement;
 import labyrinth.server.game.enums.Direction;
+import labyrinth.server.game.events.AchievementUnlockedEvent;
 import labyrinth.server.game.factories.BoardFactory;
 import labyrinth.server.game.factories.TreasureCardFactory;
 import labyrinth.server.game.models.Board;
 import labyrinth.server.game.models.Game;
 import labyrinth.server.game.models.Player;
 import labyrinth.server.game.models.records.GameConfig;
+import labyrinth.server.game.util.GameTimer;
 import labyrinth.server.messaging.events.EventPublisher;
-import labyrinth.server.messaging.events.records.AchievementUnlockedEvent;
-import lombok.RequiredArgsConstructor;
+import org.springframework.scheduling.TaskScheduler;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -20,15 +21,27 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Function;
 
 @Service
-@RequiredArgsConstructor
 public class GameService {
 
-    private final Game game = new Game();
+    private final Game game;
     private final ReadWriteLock rwLock = new ReentrantReadWriteLock();
 
     private final TreasureCardFactory treasureCardFactory;
     private final BoardFactory boardFactory;
     private final EventPublisher eventPublisher;
+
+    public GameService(TreasureCardFactory treasureCardFactory,
+                       BoardFactory boardFactory,
+                       EventPublisher eventPublisher,
+                       TaskScheduler scheduler) {
+
+        this.treasureCardFactory = treasureCardFactory;
+        this.boardFactory = boardFactory;
+        this.eventPublisher = eventPublisher;
+
+        var gameTimer = new GameTimer(scheduler);
+        game = new Game(gameTimer);
+    }
 
 
     public Player join(String username) {
@@ -81,7 +94,7 @@ public class GameService {
         try {
             int playersCount = game.getPlayers().size();
 
-            var board = boardFactory.createBoard(gameConfig.boardWidth(), gameConfig.boardHeight());
+            var board = boardFactory.createBoard(gameConfig.boardWidth(), gameConfig.boardHeight(), gameConfig.totalBonusCount());
             var treasureCards = treasureCardFactory.createTreasureCards(gameConfig.treasureCardCount(), playersCount);
 
             game.startGame(gameConfig, treasureCards, board);

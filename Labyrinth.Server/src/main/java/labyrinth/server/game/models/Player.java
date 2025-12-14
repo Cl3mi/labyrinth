@@ -41,6 +41,7 @@ public class Player {
      * responsible for updating this reference when the player moves.
      */
     private Tile currentTile;
+    private Tile homeTile;
 
     /**
      * Creates a new player with a given ID, name, and list of treasure cards.
@@ -74,6 +75,15 @@ public class Player {
 
     boolean useBonus(BonusTypes bonusType){
         return bonuses.remove(bonusType);
+    }
+
+    public TreasureCard getCurrentTreasureCard(){
+        for (TreasureCard card : assignedTreasureCards) {
+            if (!card.isCollected()) {
+                return card;
+            }
+        }
+        return null;
     }
 
     @Override

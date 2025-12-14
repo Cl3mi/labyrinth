@@ -2,8 +2,8 @@ package labyrinth.server.messaging.events.listeners;
 
 import labyrinth.contracts.models.AchievementUnlockedEventPayload;
 import labyrinth.contracts.models.EventType;
+import labyrinth.server.game.events.AchievementUnlockedEvent;
 import labyrinth.server.messaging.MessageService;
-import labyrinth.server.messaging.events.records.AchievementUnlockedEvent;
 import labyrinth.server.messaging.mapper.AchievementTypeMapper;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;

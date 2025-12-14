@@ -10,7 +10,6 @@ public class TurnStateMapper {
         return switch (moveState) {
             case PLACE_TILE -> TurnState.WAITING_FOR_PUSH;
             case MOVE -> TurnState.WAITING_FOR_MOVE;
-            //TODO what about wait for bonus?
         };
     }
 }
