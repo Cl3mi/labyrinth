@@ -93,6 +93,7 @@ public class Game {
     private void addAiPlayer() {
         Player player = new Player(UUID.randomUUID(), "Bot " + (players.size() + 1));
         player.setColor(getNextColor());
+        player.setAiActive(true);
 
         player.setJoinDate(OffsetDateTime.now());
         players.add(player);

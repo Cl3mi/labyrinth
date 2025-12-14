@@ -20,7 +20,11 @@ public class TileMapper {
         } else {
             tileDto.setTreasure(null);
         }
-        tileDto.setBonus(bonusMapper.toDto(tile.getBonus()));
+
+        var bonus = tile.getBonus();
+        if(bonus != null) {
+            tileDto.setBonus(bonusMapper.toDto(bonus));
+        }
 
         tileDto.setEntrances(
                 tile.getEntrances().stream()
