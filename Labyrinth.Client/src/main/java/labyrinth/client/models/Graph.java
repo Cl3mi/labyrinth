@@ -1,71 +1,84 @@
 package labyrinth.client.models;
 
+import labyrinth.contracts.models.Direction;
+import labyrinth.contracts.models.Tile;
+
 import java.util.*;
-import labyrinth.client.enums.*;
 
 /**
- * Represents the connectivity graph of the Labyrinth board.
- * Each tile can have neighbors it is directly connected to.
+ * Repräsentiert die Konnektivität des Labyrinth-Bretts als Graph.
+ * Arbeitet mit contracts.Tile und deren entrances[].
  */
 public class Graph {
 
     private final Map<Tile, Set<Tile>> adjacencyList;
 
-    /**
-     * Creates an empty graph.
-     */
     public Graph() {
         this.adjacencyList = new HashMap<>();
     }
 
-    /**
-     * Adds a tile to the graph.
-     *
-     * @param tile the tile to add
-     */
     public void addTile(Tile tile) {
         adjacencyList.putIfAbsent(tile, new HashSet<>());
     }
 
-    /**
-     * Clears all tiles and connections from the graph.
-     */
     public void clear() {
         adjacencyList.clear();
     }
 
     /**
-     * Connects two tiles bidirectionally if they are connected.
+     * Verbindet zwei Tiles, wenn sie über ihre Entrances in der angegebenen Richtung verbunden sind.
      *
-     * @param tile1 first tile
-     * @param tile2 second tile
-     * @param direction direction from tile1 to tile2
+     * @param tile1     Starttile
+     * @param tile2     Nachbartile
+     * @param direction Richtung von tile1 nach tile2
      */
     public void connect(Tile tile1, Tile tile2, Direction direction) {
-        if (tile1.isConnectedTo(tile2, direction)) {
+        if (tile1 == null || tile2 == null) return;
+
+        if (areConnected(tile1, tile2, direction)) {
             adjacencyList.computeIfAbsent(tile1, k -> new HashSet<>()).add(tile2);
             adjacencyList.computeIfAbsent(tile2, k -> new HashSet<>()).add(tile1);
         }
     }
 
-    /**
-     * Returns the neighboring tiles directly connected to the given tile.
-     *
-     * @param tile the tile
-     * @return set of neighboring tiles
-     */
+    private boolean areConnected(Tile t1, Tile t2, Direction dir) {
+        Direction[] e1 = t1.getEntrances();
+        Direction[] e2 = t2.getEntrances();
+
+        if (e1 == null || e2 == null) return false;
+
+        Direction opposite = switch (dir) {
+            case UP -> Direction.DOWN;
+            case DOWN -> Direction.UP;
+            case LEFT -> Direction.RIGHT;
+            case RIGHT -> Direction.LEFT;
+        };
+
+        boolean t1HasDir = hasEntrance(e1, dir);
+        boolean t2HasOpp = hasEntrance(e2, opposite);
+
+        return t1HasDir && t2HasOpp;
+    }
+
+    private boolean hasEntrance(Direction[] entrances, Direction dir) {
+        if (entrances == null) return false;
+        for (Direction d : entrances) {
+            if (d == dir) return true;
+        }
+        return false;
+    }
+
     public Set<Tile> getNeighbors(Tile tile) {
         return adjacencyList.getOrDefault(tile, Collections.emptySet());
     }
 
     /**
-     * Finds all tiles reachable from the start tile using BFS.
-     *
-     * @param start the starting tile
-     * @return set of reachable tiles
+     * BFS über den Graphen, um alle erreichbaren Tiles zu finden.
      */
     public Set<Tile> findReachable(Tile start) {
         Set<Tile> visited = new HashSet<>();
+        if (start == null) return visited;
+
         Queue<Tile> queue = new ArrayDeque<>();
         queue.add(start);
         visited.add(start);
@@ -83,11 +96,7 @@ public class Graph {
     }
 
     /**
-     * Finds the shortest path from start to target using BFS.
-     *
-     * @param start  starting tile
-     * @param target target tile
-     * @return list of tiles forming the path, or empty list if no path exists
+     * Kürzester Pfad von start zu target über BFS.
      */
     public List<Tile> findPath(Tile start, Tile target) {
         Map<Tile, Tile> parentMap = new HashMap<>();
@@ -112,7 +121,6 @@ public class Graph {
             }
         }
 
-        // Reconstruct path
         List<Tile> path = new ArrayList<>();
         Tile current = target;
         while (current != null && parentMap.containsKey(current)) {
@@ -120,8 +128,9 @@ public class Graph {
             current = parentMap.get(current);
         }
         Collections.reverse(path);
+
         if (path.isEmpty() || !path.get(0).equals(start)) {
-            return Collections.emptyList(); // no path found
+            return Collections.emptyList();
         }
         return path;
     }

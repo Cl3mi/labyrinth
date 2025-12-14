@@ -21,7 +21,6 @@ import java.util.UUID;
 public class Player {
     private final UUID id;
     private final String username;
-
     private OffsetDateTime joinDate;
 
     private boolean isAiActive;

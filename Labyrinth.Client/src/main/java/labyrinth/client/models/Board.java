@@ -1,14 +1,17 @@
 package labyrinth.client.models;
 
-import labyrinth.client.enums.*;
+import labyrinth.client.enums.MoveState;
+import labyrinth.contracts.models.Direction;
+import labyrinth.contracts.models.Tile;
+import labyrinth.contracts.models.Treasure;
 import lombok.Getter;
 import lombok.Setter;
 
 import java.util.*;
 
 /**
- * Represents the game board for the Labyrinth game.
- * Contains a 2D grid of tiles and a graph representing tile connectivity.
+ * Repräsentiert das Spielfeld für das Labyrinth-Spiel.
+ * Nutzt contracts.Tile und contracts.Direction.
  */
 
 @Getter
@@ -19,19 +22,13 @@ public class Board {
     private final int height;
     private final Tile[][] tiles;
     private final Graph graph;
+
     private List<Player> players;
     private int currentPlayerIndex;
     private MoveState currentMoveState = MoveState.PLACE_TILE;
     private Tile extraTile;
     private boolean freeRoam = false;
 
-    /**
-     * Creates a board with the given dimensions and tiles.
-     *
-     * @param width  number of columns
-     * @param height number of rows
-     * @param tiles  2D array of tiles (height x width)
-     */
     public Board(int width, int height, Tile[][] tiles, Tile extraTile) {
         if (tiles.length != height || tiles[0].length != width) {
             throw new IllegalArgumentException("Tile array dimensions must match width and height");
@@ -40,14 +37,11 @@ public class Board {
         this.height = height;
         this.tiles = tiles;
         this.graph = new Graph();
-        initializeGraph();
         this.extraTile = extraTile;
+
+        initializeGraph();
     }
 
-
-    /**
-     * Initializes the graph by connecting adjacent tiles based on entrances.
-     */
     private void initializeGraph() {
         graph.clear();
         for (int row = 0; row < height; row++) {
@@ -55,7 +49,6 @@ public class Board {
                 Tile tile = tiles[row][col];
                 graph.addTile(tile);
 
-                // Connect with neighbors if entrances match
                 if (row > 0) {
                     Tile upNeighbor = tiles[row - 1][col];
                     graph.connect(tile, upNeighbor, Direction.UP);
@@ -76,12 +69,10 @@ public class Board {
         }
     }
 
-    /**
-     * Shifts a row in the specified direction. Tiles wrap around.
-     *
-     * @param rowIndex the row to shift
-     * @param direction LEFT or RIGHT
-     */
+    // =================================================================================
+    // Row / Column shifts
+    // =================================================================================
+
     public void shiftRow(int rowIndex, Direction direction, Player player) {
         if (currentMoveState == MoveState.MOVE && !freeRoam) {
             System.out.println("Player needs to move a tile first");
@@ -99,7 +90,7 @@ public class Board {
             throw new IllegalArgumentException("Row can only be shifted LEFT or RIGHT");
 
         for (int col = 0; col < width; col++) {
-            if (tiles[rowIndex][col].isFixed() && !freeRoam) {
+            if (Boolean.TRUE.equals(tiles[rowIndex][col].getIsFixed()) && !freeRoam) {
                 System.out.println("Row " + rowIndex + " contains fixed tiles. Cannot shift.");
                 return;
             }
@@ -155,13 +146,6 @@ public class Board {
         initializeGraph();
     }
 
-
-    /**
-     * Shifts a column in the specified direction. Tiles wrap around.
-     *
-     * @param columnIndex the column to shift
-     * @param direction   UP or DOWN
-     */
     public void shiftColumn(int columnIndex, Direction direction, Player player) {
         if (currentMoveState == MoveState.MOVE && !freeRoam) {
             System.out.println("Player needs to move a tile first");
@@ -180,7 +164,7 @@ public class Board {
 
         for (int row = 0; row < height; row++) {
             Tile tile = tiles[row][columnIndex];
-            if (tile.isFixed() && !freeRoam) {
+            if (Boolean.TRUE.equals(tile.getIsFixed()) && !freeRoam) {
                 System.out.println("Column " + columnIndex + " contains fixed tiles. Cannot shift.");
                 return;
             }
@@ -214,7 +198,7 @@ public class Board {
 
                 p.setCurrentPosition(new Position(newRow, columnIndex));
             }
-        } else { // UP
+        } else {
             Tile top = tiles[0][columnIndex];
             for (int row = 0; row < height - 1; row++) {
                 tiles[row][columnIndex] = tiles[row + 1][columnIndex];
@@ -240,25 +224,16 @@ public class Board {
         initializeGraph();
     }
 
-    /**
-     * Returns all tiles reachable by a player from their current position.
-     *
-     * @param player the player
-     * @return set of reachable tiles
-     */
+    // =================================================================================
+    // Reachability
+    // =================================================================================
+
     public Set<Tile> getReachableTiles(Player player) {
         Position pos = player.getCurrentPosition();
         Tile startTile = tiles[pos.getRow()][pos.getColumn()];
         return graph.findReachable(startTile);
     }
 
-    /**
-     * Calculates reachable tiles for a player directly using the board array
-     * instead of the prebuilt Graph. Uses BFS for traversal.
-     *
-     * @param player the player whose reachable tiles should be calculated
-     * @return set of reachable tiles
-     */
     public Set<Tile> getReachableTilesArrayBased(Player player) {
         Position pos = player.getCurrentPosition();
         Tile start = tiles[pos.getRow()][pos.getColumn()];
@@ -284,22 +259,19 @@ public class Board {
                     case RIGHT -> newCol++;
                 }
 
-                // Bounds check BEFORE creating a Position
                 if (newRow < 0 || newRow >= height || newCol < 0 || newCol >= width) {
                     continue;
                 }
 
-                Position neighborPos = new Position(newRow, newCol);
                 Tile neighbor = tiles[newRow][newCol];
-                Direction oppositeDir = dir.opposite();
+                Direction oppositeDir = opposite(dir);
 
-                // Check if tiles are connected in this direction
-                if (currentTile.isConnectedTo(neighbor, dir) &&
-                        neighbor.isConnectedTo(currentTile, oppositeDir) &&
+                if (hasEntrance(currentTile, dir) &&
+                        hasEntrance(neighbor, oppositeDir) &&
                         !visited.contains(neighbor)) {
 
                     visited.add(neighbor);
-                    queue.add(neighborPos);
+                    queue.add(new Position(newRow, newCol));
                 }
             }
         }
@@ -307,7 +279,29 @@ public class Board {
         return visited;
     }
 
-    public void placeRandomTreasure(TreasureCard treasureCard) {
+    private boolean hasEntrance(Tile tile, Direction dir) {
+        Direction[] entrances = tile.getEntrances();
+        if (entrances == null) return false;
+        for (Direction d : entrances) {
+            if (d == dir) return true;
+        }
+        return false;
+    }
+
+    private Direction opposite(Direction dir) {
+        return switch (dir) {
+            case UP -> Direction.DOWN;
+            case DOWN -> Direction.UP;
+            case LEFT -> Direction.RIGHT;
+            case RIGHT -> Direction.LEFT;
+        };
+    }
+
+    // =================================================================================
+    // Treasures & Movement
+    // =================================================================================
+
+    public void placeRandomTreasure(Treasure treasure) {
         Random random = new Random();
         Tile tile;
         int row, col;
@@ -318,44 +312,50 @@ public class Board {
             col = random.nextInt(tiles[0].length);
 
             tile = tiles[row][col];
-            tileHasTreasure = tile.getTreasureCard() != null;
+            tileHasTreasure = tile.getTreasure() != null;
         } while (isCornerCoordinate(row, col) || tileHasTreasure);
-        System.out.println("Placing " + treasureCard.getTreasureName() + " at " + row + "/" + col);
+        System.out.println("Placing " + treasure.getName() + " at " + row + "/" + col);
 
-        tile.setTreasureCard(treasureCard);
+        tile.setTreasure(treasure);
     }
 
     public boolean isCornerCoordinate(int row, int col) {
-        int height = tiles.length;
-        int width = tiles[0].length;
+        int h = tiles.length;
+        int w = tiles[0].length;
 
         boolean isTopLeft = (row == 0 && col == 0);
-        boolean isTopRight = (row == 0 && col == width - 1);
-        boolean isBottomLeft = (row == height - 1 && col == 0);
-        boolean isBottomRight = (row == height - 1 && col == width - 1);
+        boolean isTopRight = (row == 0 && col == w - 1);
+        boolean isBottomLeft = (row == h - 1 && col == 0);
+        boolean isBottomRight = (row == h - 1 && col == w - 1);
 
         return isTopLeft || isTopRight || isBottomLeft || isBottomRight;
     }
 
     public boolean movePlayerToTile(Player player, int targetRow, int targetCol) {
-        if(player != players.get(currentPlayerIndex) && !freeRoam) {
+        if (player != players.get(currentPlayerIndex) && !freeRoam) {
             System.out.println("It's not the players turn!");
             return false;
         }
 
-        if(currentMoveState != MoveState.MOVE && !freeRoam) {
+        if (currentMoveState != MoveState.MOVE && !freeRoam) {
             System.out.println("A tile needs to be moved!");
             return false;
         }
 
-        Tile currentTile = tiles[player.getCurrentPosition().getRow()][player.getCurrentPosition().getColumn()];
+        Position currentPos = player.getCurrentPosition();
+        Tile currentTile = tiles[currentPos.getRow()][currentPos.getColumn()];
         Tile targetTile = tiles[targetRow][targetCol];
 
-        System.out.println("Current position: " + player.getCurrentPosition().getRow() + "/" + player.getCurrentPosition().getColumn());
+        System.out.println("Current position: " + currentPos.getRow() + "/" + currentPos.getColumn());
         System.out.println("Moving " + player.getName() + " to " + targetRow + "/" + targetCol);
-        if(targetTile.getPlayer() != null){
-            System.out.println("Cant move a player is already on the target tile!");
-            return false;
+
+        for (Player p : players) {
+            if (p == player) continue;
+            Position pPos = p.getCurrentPosition();
+            if (pPos != null && pPos.getRow() == targetRow && pPos.getColumn() == targetCol) {
+                System.out.println("Cant move, another player is already on the target tile!");
+                return false;
+            }
         }
 
         Set<Tile> reachable = getReachableTiles(player);
@@ -364,9 +364,7 @@ public class Board {
             return false;
         }
 
-        targetTile.getSteppedOnBy(player);
         player.setCurrentPosition(new Position(targetRow, targetCol));
-        currentTile.setPlayer(null);
 
         System.out.println("Player moved to " + player.getCurrentPosition());
         currentPlayerIndex++;
@@ -375,6 +373,6 @@ public class Board {
         }
         currentMoveState = MoveState.PLACE_TILE;
 
-        return  true;
+        return true;
     }
 }

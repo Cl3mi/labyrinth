@@ -3,6 +3,7 @@ package labyrinth.client.factories;
 import labyrinth.client.abstractions.ITreasureCardFactory;
 import labyrinth.client.models.Game;
 import labyrinth.client.models.TreasureCard;
+import labyrinth.contracts.models.Treasure;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -27,7 +28,7 @@ public class TreasureCardFactory implements ITreasureCardFactory {
     );
 
     @Override
-    public List<TreasureCard> createCardsForGame(Game game) {
+    public List<Treasure> createCardsForGame(Game game) {
         var playerCount = game.getPlayers().size();
         var treasuresToGenerate = game.getAmountOfTreasuresPerPlayer() * playerCount;
 
@@ -38,12 +39,12 @@ public class TreasureCardFactory implements ITreasureCardFactory {
         List<String> shuffledNames = new ArrayList<>(TREASURE_NAMES);
         Collections.shuffle(shuffledNames);
 
-        List<TreasureCard> cards = new ArrayList<>();
+        List<Treasure> cards = new ArrayList<>();
         for (int i = 0; i < treasuresToGenerate; i++) {
             String name = shuffledNames.get(i);
             String id = UUID.randomUUID().toString();
             String imagePath = "/images/treasures/" + name.toLowerCase() + ".png";
-            cards.add(new TreasureCard(id, name, imagePath));
+            cards.add(new Treasure());
         }
 
         return cards;

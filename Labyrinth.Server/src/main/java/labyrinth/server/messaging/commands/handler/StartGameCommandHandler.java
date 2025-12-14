@@ -4,17 +4,25 @@ import labyrinth.contracts.models.CommandType;
 import labyrinth.contracts.models.StartGameCommandPayload;
 import labyrinth.server.game.GameService;
 import labyrinth.server.game.models.records.GameConfig;
+import labyrinth.server.messaging.MessageService;
 import labyrinth.server.messaging.PlayerSessionRegistry;
+import labyrinth.server.messaging.mapper.GameMapper;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.WebSocketSession;
 
 @Component
 public class StartGameCommandHandler extends AbstractCommandHandler<StartGameCommandPayload> {
 
-    public StartGameCommandHandler(GameService gameService,
-                                   PlayerSessionRegistry playerSessionRegistry) {
+    private final MessageService messageService;
+    private final GameMapper gameMapper;
 
+    public StartGameCommandHandler(GameService gameService,
+                                   PlayerSessionRegistry playerSessionRegistry,
+                                   MessageService messageService,
+                                   GameMapper gameMapper) {
         super(gameService, playerSessionRegistry);
+        this.messageService = messageService;
+        this.gameMapper = gameMapper;
     }
 
     @Override
@@ -29,6 +37,9 @@ public class StartGameCommandHandler extends AbstractCommandHandler<StartGameCom
 
         var gameConfig = createGameConfig(payload);
         gameService.startGame(gameConfig);
+
+        var gameStateDto = gameService.withGameReadLock(gameMapper::toGameStateDto);
+        messageService.broadcastToPlayers(gameStateDto);
     }
 
     private GameConfig createGameConfig(StartGameCommandPayload payload) {

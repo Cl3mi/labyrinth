@@ -1,6 +1,7 @@
 package labyrinth.client.models;
 
 import labyrinth.client.enums.RoomState;
+import labyrinth.contracts.models.Treasure;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -91,7 +92,7 @@ public class Game {
      * Starts the game. This method could be extended to initialize
      * player positions, shuffle treasure cards, and set up the board.
      */
-    public void startGame(List<TreasureCard> cards) {
+    public void startGame(List<Treasure> cards) {
         if(roomState != RoomState.LOBBY) {
             throw new IllegalStateException("Cannot start a game that is in progress or finished!");
         }
@@ -106,7 +107,7 @@ public class Game {
 
         System.out.println(cards.size() + " cards have been created");
         do {
-            TreasureCard card = cards.getFirst();
+            Treasure card = cards.getFirst();
             board.placeRandomTreasure(card);
             for (Player player : players) {
                 if(player.getAssignedTreasureCards().size() < amountOfTreasuresPerPlayer) {

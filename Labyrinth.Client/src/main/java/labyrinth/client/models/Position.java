@@ -9,7 +9,7 @@ import java.util.Objects;
  * Represents a position on the Labyrinth board with row and column coordinates.
  */
 
-@Setter
+
 @Getter
 public final class Position {
 
