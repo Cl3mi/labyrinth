@@ -4,17 +4,25 @@ import labyrinth.contracts.models.CommandType;
 import labyrinth.contracts.models.StartGameCommandPayload;
 import labyrinth.server.game.GameService;
 import labyrinth.server.game.models.records.GameConfig;
+import labyrinth.server.messaging.MessageService;
 import labyrinth.server.messaging.PlayerSessionRegistry;
+import labyrinth.server.messaging.mapper.GameMapper;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.WebSocketSession;
 
 @Component
 public class StartGameCommandHandler extends AbstractCommandHandler<StartGameCommandPayload> {
 
-    public StartGameCommandHandler(GameService gameService,
-                                   PlayerSessionRegistry playerSessionRegistry) {
+    private final MessageService messageService;
+    private final GameMapper gameMapper;
 
+    public StartGameCommandHandler(GameService gameService,
+                                   PlayerSessionRegistry playerSessionRegistry,
+                                   MessageService messageService,
+                                   GameMapper gameMapper) {
         super(gameService, playerSessionRegistry);
+        this.messageService = messageService;
+        this.gameMapper = gameMapper;
     }
 
     @Override
@@ -28,17 +36,25 @@ public class StartGameCommandHandler extends AbstractCommandHandler<StartGameCom
         requireAdmin(player);
 
         var gameConfig = createGameConfig(payload);
+
+        // Spiel starten (State wird gesetzt)
         gameService.startGame(gameConfig);
+
+        // Direkt danach: initialen Game-State als Event broadcasten
+        var gameStateDto = gameService.withGameReadLock(gameMapper::toGameStateDto);
+        messageService.broadcastToPlayers(gameStateDto);
     }
 
     private GameConfig createGameConfig(StartGameCommandPayload payload) {
         var boardWidth = payload.getBoardSize().getCols();
         var boardHeight = payload.getBoardSize().getRows();
-        var gameDurationInSeconds = payload.getGameDurationInSeconds();
+
+        Integer duration = payload.getGameDurationInSeconds();
+        if (duration == null) duration = 0; // niemals null
+
         var treasureCardCount = payload.getTreasureCardCount();
         var totalBonusCount = payload.getTotalBonusCount();
 
-        //TODO: max player settable?
-        return new GameConfig(boardWidth, boardHeight, 4, treasureCardCount, gameDurationInSeconds, totalBonusCount);
+        return new GameConfig(boardWidth, boardHeight, 4, treasureCardCount, duration, totalBonusCount);
     }
 }

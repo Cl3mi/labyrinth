@@ -162,8 +162,9 @@ public class LobbyPanel extends JPanel {
      */
     public void updateLobby(LobbyStateEventPayload lobby) {
         playerListModel.clear();
+
         if (lobby == null || lobby.getPlayers() == null) {
-            startButton.setEnabled(true);
+            startButton.setEnabled(false);
             return;
         }
 
@@ -180,22 +181,7 @@ public class LobbyPanel extends JPanel {
 
             sb.append(p.getName());
 
-            // Lokaler Spieler?
-            if (p.getId() != null && p.getId().equals(localPlayerId)) {
-                sb.append(" (Du)");
-                // Lokal ist Admin?
-                isAdmin = Boolean.TRUE.equals(p.getIsAdmin());
-            }
-
-            playerListModel.addElement(sb.toString());
-        }
-
-        for (PlayerInfo p : players) {
-            StringBuilder sb = new StringBuilder();
-
-            if (Boolean.TRUE.equals(p.getIsAdmin())) sb.append("(Admin) ");
-            sb.append(p.getName());
-
+            // Lokaler Spieler (über Username, NICHT über Token!)
             if (localUsername != null && localUsername.equals(p.getName())) {
                 sb.append(" (Du)");
                 isAdmin = Boolean.TRUE.equals(p.getIsAdmin());
@@ -204,6 +190,7 @@ public class LobbyPanel extends JPanel {
             playerListModel.addElement(sb.toString());
         }
 
+        // Start-Button nur für lokalen Admin
         startButton.setEnabled(isAdmin);
     }
 

@@ -9,26 +9,21 @@ import org.java_websocket.handshake.ServerHandshake;
 
 import javax.swing.*;
 import java.net.URI;
-import java.util.Set;
 import java.util.function.Consumer;
 
 public class GameClient extends WebSocketClient {
 
     private final ObjectMapper mapper = new ObjectMapper();
 
-    // Callback-Hooks fürs UI
-    @Setter
-    private Consumer<ConnectAckEventPayload> onConnectAck;
-    @Setter
-    private Consumer<LobbyStateEventPayload> onLobbyState;
-    @Setter
-    private Consumer<GameStartedEventPayload> onGameStarted;
-    @Setter
-    private Consumer<GameStateUpdateEventPayload> onGameStateUpdate;
-    @Setter
-    private Consumer<String> onErrorMessage;
-    @Setter
-    private Runnable onOpenHook;
+    @Setter private Consumer<ConnectAckEventPayload> onConnectAck;
+    @Setter private Consumer<LobbyStateEventPayload> onLobbyState;
+    @Setter private Consumer<GameStateUpdateEventPayload> onGameStarted;
+
+    // ✅ einzig vorhandenes State-Payload
+    @Setter private Consumer<GameStateUpdateEventPayload> onGameStateUpdate;
+
+    @Setter private Consumer<String> onErrorMessage;
+    @Setter private Runnable onOpenHook;
 
     public GameClient(URI serverUri) {
         super(serverUri);
@@ -40,91 +35,66 @@ public class GameClient extends WebSocketClient {
         if (onOpenHook != null) onOpenHook.run();
     }
 
-
     @Override
     public void onMessage(String message) {
         try {
-            JsonNode root = mapper.readTree(message);
-
             System.out.println("WS IN: " + message);
 
+            JsonNode root = mapper.readTree(message);
             JsonNode typeNode = root.get("type");
-            if (typeNode == null) {
+            if (typeNode == null || typeNode.isNull()) {
                 runOnUiThread(() -> {
-                    if (onErrorMessage != null) {
-                        onErrorMessage.accept("Unknown message (no type): " + message);
-                    }
+                    if (onErrorMessage != null) onErrorMessage.accept("Unknown message (no type): " + message);
                 });
                 return;
             }
 
-            EventType type = EventType.valueOf(typeNode.asText());
-
-            // If the server uses an envelope: { "type": "...", "payload": { ... } }
-            // deserialize from "payload". If there's no payload field, fall back to root.
-            JsonNode payloadNode = root.get("payload");
-            if (payloadNode == null || payloadNode.isNull()) {
-                payloadNode = root;
+            final EventType type;
+            try {
+                type = EventType.valueOf(typeNode.asText());
+            } catch (IllegalArgumentException iae) {
+                runOnUiThread(() -> {
+                    if (onErrorMessage != null) onErrorMessage.accept("Unknown EventType: " + typeNode.asText());
+                });
+                return;
             }
+
+            // Envelope support {type, payload}, fallback root
+            JsonNode payloadNode = root.get("payload");
+            if (payloadNode == null || payloadNode.isNull()) payloadNode = root;
 
             switch (type) {
                 case CONNECT_ACK -> {
-                    ConnectAckEventPayload payload =
-                            mapper.treeToValue(payloadNode, ConnectAckEventPayload.class);
-
-                    if (onConnectAck != null) {
-                        runOnUiThread(() -> onConnectAck.accept(payload));
-                    }
+                    ConnectAckEventPayload payload = mapper.treeToValue(payloadNode, ConnectAckEventPayload.class);
+                    if (onConnectAck != null) runOnUiThread(() -> onConnectAck.accept(payload));
                 }
                 case LOBBY_STATE -> {
-                    LobbyStateEventPayload payload =
-                            mapper.treeToValue(payloadNode, LobbyStateEventPayload.class);
-
-                    if (onLobbyState != null) {
-                        runOnUiThread(() -> onLobbyState.accept(payload));
-                    }
+                    LobbyStateEventPayload payload = mapper.treeToValue(payloadNode, LobbyStateEventPayload.class);
+                    if (onLobbyState != null) runOnUiThread(() -> onLobbyState.accept(payload));
                 }
                 case GAME_STARTED -> {
-                    System.out.println("WS EVENT: GAME_STARTED");
-                    GameStartedEventPayload payload =
-                            mapper.treeToValue(payloadNode, GameStartedEventPayload.class);
-
-                    if (onGameStarted != null) {
-                        runOnUiThread(() -> onGameStarted.accept(payload));
-                    }
+                    GameStateUpdateEventPayload payload = mapper.treeToValue(payloadNode, GameStateUpdateEventPayload.class);
+                    if (onGameStarted != null) runOnUiThread(() -> onGameStarted.accept(payload));
                 }
                 case GAME_STATE_UPDATE -> {
-                    System.out.println("WS EVENT: GAME_STATE_UPDATE");
-                    GameStateUpdateEventPayload payload =
-                            mapper.treeToValue(payloadNode, GameStateUpdateEventPayload.class);
-
-                    if (onGameStateUpdate != null) {
-                        runOnUiThread(() -> onGameStateUpdate.accept(payload));
-                    }
+                    // ✅ korrektes Payload
+                    GameStateUpdateEventPayload payload = mapper.treeToValue(payloadNode, GameStateUpdateEventPayload.class);
+                    if (onGameStateUpdate != null) runOnUiThread(() -> onGameStateUpdate.accept(payload));
                 }
                 case ACTION_ERROR -> {
-                    System.out.println("WS EVENT: ACTION_ERROR " + message);
-                    ActionErrorEventPayload payload =
-                            mapper.treeToValue(payloadNode, ActionErrorEventPayload.class);
-
-                    if (onErrorMessage != null) {
-                        String msg = payload.getMessage() != null ? payload.getMessage() : payload.toString();
-                        runOnUiThread(() -> onErrorMessage.accept(msg));
-                    }
+                    ActionErrorEventPayload payload = mapper.treeToValue(payloadNode, ActionErrorEventPayload.class);
+                    String msg = payload.getMessage() != null ? payload.getMessage() : payload.toString();
+                    if (onErrorMessage != null) runOnUiThread(() -> onErrorMessage.accept(msg));
                 }
-                default -> System.out.println("Unhandled event type: " + type + " message=" + message);
+                default -> System.out.println("Unhandled event type: " + type + " raw=" + message);
             }
         } catch (Exception e) {
             e.printStackTrace();
             runOnUiThread(() -> {
-                if (onErrorMessage != null) {
-                    onErrorMessage.accept("Failed to parse message: " + e.getMessage());
-                }
+                if (onErrorMessage != null) onErrorMessage.accept("Failed to parse message: " + e.getMessage());
             });
         }
     }
-
-
 
     @Override
     public void onClose(int code, String reason, boolean remote) {
@@ -146,36 +116,30 @@ public class GameClient extends WebSocketClient {
         });
     }
 
-    // =================================================================================
-    // COMMANDS SENDEN
-    // =================================================================================
+    // ===================== COMMANDS =====================
 
     public void sendConnect(String username) {
         try {
             ConnectCommandPayload payload = new ConnectCommandPayload();
             payload.setType(CommandType.CONNECT);
             payload.setUsername(username);
-
-            String json = mapper.writeValueAsString(payload);
-            send(json);
+            send(mapper.writeValueAsString(payload));
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    public void sendReconnect(String playerId) {
+    public void sendReconnect(String identifierToken) {
         try {
             ConnectCommandPayload payload = new ConnectCommandPayload();
             payload.setType(CommandType.CONNECT);
-            payload.setIdentifierToken(playerId);
-
-            String json = mapper.writeValueAsString(payload);
-            send(json);
+            payload.setIdentifierToken(identifierToken);
+            send(mapper.writeValueAsString(payload));
         } catch (Exception e) {
             e.printStackTrace();
-            if (onErrorMessage != null) {
-                onErrorMessage.accept("Failed to send reconnect: " + e.getMessage());
-            }
+            runOnUiThread(() -> {
+                if (onErrorMessage != null) onErrorMessage.accept("Failed to send reconnect: " + e.getMessage());
+            });
         }
     }
 
@@ -183,25 +147,23 @@ public class GameClient extends WebSocketClient {
         try {
             DisconnectCommandPayload payload = new DisconnectCommandPayload();
             payload.setType(CommandType.DISCONNECT);
-
-            String json = mapper.writeValueAsString(payload);
-            send(json);
+            send(mapper.writeValueAsString(payload));
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
     public void sendStartGame(BoardSize boardSize,
-                              int treasureCardCountPerPlayer,
+                              int treasureCardCount,
                               int totalBonusCount,
                               Integer gameDurationInSeconds) {
         try {
             StartGameCommandPayload payload = new StartGameCommandPayload();
             payload.setType(CommandType.START_GAME);
             payload.setBoardSize(boardSize);
-            payload.setTreasureCardCount(treasureCardCountPerPlayer);
+            payload.setTreasureCardCount(treasureCardCount);
             payload.setTotalBonusCount(totalBonusCount);
-            payload.setGameDurationInSeconds(gameDurationInSeconds);
+            payload.setGameDurationInSeconds(gameDurationInSeconds != null ? gameDurationInSeconds : 0);
 
             String json = mapper.writeValueAsString(payload);
             System.out.println("sendStartGame isOpen=" + isOpen() + " isClosing=" + isClosing() + " isClosed=" + isClosed());
@@ -209,9 +171,9 @@ public class GameClient extends WebSocketClient {
             send(json);
         } catch (Exception e) {
             e.printStackTrace();
-            if (onErrorMessage != null) {
-                onErrorMessage.accept("Failed to send start game: " + e.getMessage());
-            }
+            runOnUiThread(() -> {
+                if (onErrorMessage != null) onErrorMessage.accept("Failed to send start game: " + e.getMessage());
+            });
         }
     }
 
@@ -221,43 +183,44 @@ public class GameClient extends WebSocketClient {
             payload.setType(CommandType.MOVE_PAWN);
 
             Coordinates coords = new Coordinates();
-            coords.setX(targetCol);
-            coords.setY(targetRow);
+            coords.setX(targetRow);
+            coords.setY(targetCol);
             payload.setTargetCoordinates(coords);
 
             String json = mapper.writeValueAsString(payload);
+            System.out.println("sendMovePawn -> " + json);
             send(json);
         } catch (Exception e) {
             e.printStackTrace();
+            runOnUiThread(() -> {
+                if (onErrorMessage != null) {
+                    onErrorMessage.accept("Failed to send move pawn: " + e.getMessage());
+                }
+            });
         }
     }
 
-    public void sendPushTile(
-            int rowOrColIndex,
-            labyrinth.contracts.models.Direction direction,
-            Set<labyrinth.contracts.models.Direction> extraTileEntrances
-    ) {
+    // ✅ Korrekt gemäß Contract: nur direction, kein extraTileEntrances
+    public void sendPushTile(int rowOrColIndex, Direction direction) {
         try {
             PushTileCommandPayload payload = new PushTileCommandPayload();
             payload.setType(CommandType.PUSH_TILE);
             payload.setRowOrColIndex(rowOrColIndex);
             payload.setDirection(direction);
 
-            Direction[] entrances = extraTileEntrances.toArray(new Direction[0]);
-            payload.setTileEntrances(entrances);
-
             String json = mapper.writeValueAsString(payload);
+            System.out.println("sendPushTile -> " + json);
             send(json);
         } catch (Exception e) {
             e.printStackTrace();
+            if (onErrorMessage != null) {
+                runOnUiThread(() -> onErrorMessage.accept("Failed to send push tile: " + e.getMessage()));
+            }
         }
     }
 
     private void runOnUiThread(Runnable r) {
-        if (SwingUtilities.isEventDispatchThread()) {
-            r.run();
-        } else {
-            SwingUtilities.invokeLater(r);
-        }
+        if (SwingUtilities.isEventDispatchThread()) r.run();
+        else SwingUtilities.invokeLater(r);
     }
 }

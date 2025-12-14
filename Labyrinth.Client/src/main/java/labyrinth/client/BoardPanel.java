@@ -289,12 +289,7 @@ public class BoardPanel extends JPanel {
     private boolean handleArrowClick(Point p) {
         for (ArrowButton arrow : arrowButtons) {
             if (arrow.contains(p)) {
-
-                // Extra-Tile-Entrances kommen idealerweise vom Server/UI-Auswahl – aktuell leer.
-                Set<labyrinth.contracts.models.Direction> extraEntrances = Set.of();
-
-                client.sendPushTile(arrow.index, arrow.direction, extraEntrances);
-
+                client.sendPushTile(arrow.index, arrow.direction);
                 inputLocked = true;
                 return true;
             }
