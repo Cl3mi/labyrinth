@@ -7,7 +7,6 @@ public class PushTileCommandPayload {
   private CommandType type;
   private int rowOrColIndex;
   private Direction direction;
-  private Direction[] tileEntrances;
   private Map<String, Object> additionalProperties;
 
   public CommandType getType() { return this.type; }
@@ -18,9 +17,6 @@ public class PushTileCommandPayload {
 
   public Direction getDirection() { return this.direction; }
   public void setDirection(Direction direction) { this.direction = direction; }
-
-  public Direction[] getTileEntrances() { return this.tileEntrances; }
-  public void setTileEntrances(Direction[] tileEntrances) { this.tileEntrances = tileEntrances; }
 
   public Map<String, Object> getAdditionalProperties() { return this.additionalProperties; }
   public void setAdditionalProperties(Map<String, Object> additionalProperties) { this.additionalProperties = additionalProperties; }
@@ -38,13 +34,12 @@ public class PushTileCommandPayload {
         Objects.equals(this.type, self.type) &&
         Objects.equals(this.rowOrColIndex, self.rowOrColIndex) &&
         Objects.equals(this.direction, self.direction) &&
-        Objects.equals(this.tileEntrances, self.tileEntrances) &&
         Objects.equals(this.additionalProperties, self.additionalProperties);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash((Object)type, (Object)rowOrColIndex, (Object)direction, (Object)tileEntrances, (Object)additionalProperties);
+    return Objects.hash((Object)type, (Object)rowOrColIndex, (Object)direction, (Object)additionalProperties);
   }
 
   @Override
@@ -53,7 +48,6 @@ public class PushTileCommandPayload {
       "    type: " + toIndentedString(type) + "\n" +
       "    rowOrColIndex: " + toIndentedString(rowOrColIndex) + "\n" +
       "    direction: " + toIndentedString(direction) + "\n" +
-      "    tileEntrances: " + toIndentedString(tileEntrances) + "\n" +
       "    additionalProperties: " + toIndentedString(additionalProperties) + "\n" +
     "}";
   }

@@ -8,6 +8,7 @@ public class PlayerInfo {
   private PlayerColor color;
   private Boolean isAdmin;
   private Boolean isAiControlled;
+  private Boolean isConnected;
   private Map<String, Object> additionalProperties;
 
   public String getId() { return this.id; }
@@ -24,6 +25,9 @@ public class PlayerInfo {
 
   public Boolean getIsAiControlled() { return this.isAiControlled; }
   public void setIsAiControlled(Boolean isAiControlled) { this.isAiControlled = isAiControlled; }
+
+  public Boolean getIsConnected() { return this.isConnected; }
+  public void setIsConnected(Boolean isConnected) { this.isConnected = isConnected; }
 
   public Map<String, Object> getAdditionalProperties() { return this.additionalProperties; }
   public void setAdditionalProperties(Map<String, Object> additionalProperties) { this.additionalProperties = additionalProperties; }
@@ -43,12 +47,13 @@ public class PlayerInfo {
         Objects.equals(this.color, self.color) &&
         Objects.equals(this.isAdmin, self.isAdmin) &&
         Objects.equals(this.isAiControlled, self.isAiControlled) &&
+        Objects.equals(this.isConnected, self.isConnected) &&
         Objects.equals(this.additionalProperties, self.additionalProperties);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash((Object)id, (Object)name, (Object)color, (Object)isAdmin, (Object)isAiControlled, (Object)additionalProperties);
+    return Objects.hash((Object)id, (Object)name, (Object)color, (Object)isAdmin, (Object)isAiControlled, (Object)isConnected, (Object)additionalProperties);
   }
 
   @Override
@@ -59,6 +64,7 @@ public class PlayerInfo {
       "    color: " + toIndentedString(color) + "\n" +
       "    isAdmin: " + toIndentedString(isAdmin) + "\n" +
       "    isAiControlled: " + toIndentedString(isAiControlled) + "\n" +
+      "    isConnected: " + toIndentedString(isConnected) + "\n" +
       "    additionalProperties: " + toIndentedString(additionalProperties) + "\n" +
     "}";
   }

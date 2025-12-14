@@ -2,7 +2,7 @@ package labyrinth.contracts.models;
 
 
 public enum AchievementType {
-  RUNNER((String)"RUNNER"), PUSHER((String)"PUSHER"), BLOCKER((String)"BLOCKER");
+  RUNNER((String)"RUNNER"), PUSHER((String)"PUSHER");
 
   private final String value;
 
