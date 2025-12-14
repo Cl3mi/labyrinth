@@ -1,0 +1,30 @@
+package labyrinth.server.messaging.commands.handler;
+
+import labyrinth.contracts.models.CommandType;
+import labyrinth.contracts.models.UsePushTwiceCommandPayload;
+import labyrinth.server.game.GameService;
+import labyrinth.server.messaging.PlayerSessionRegistry;
+import org.springframework.stereotype.Component;
+import org.springframework.web.socket.WebSocketSession;
+
+@Component
+public class UsePushTwiceCommandHandler extends AbstractCommandHandler<UsePushTwiceCommandPayload> {
+
+    public UsePushTwiceCommandHandler(GameService gameService,
+                                      PlayerSessionRegistry playerSessionRegistry) {
+        super(gameService, playerSessionRegistry);
+    }
+
+    @Override
+    public CommandType type() {
+        return CommandType.USE_PUSH_TWICE;
+    }
+
+    @Override
+    public void handle(WebSocketSession session, UsePushTwiceCommandPayload payload) throws Exception {
+        var player = requireExistingPlayer(session);
+        requirePlayerIsCurrent(player);
+
+        gameService.usePushTwiceBonus(player);
+    }
+}

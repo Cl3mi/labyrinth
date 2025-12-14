@@ -1,57 +1,74 @@
 package labyrinth.server.game;
 
-import labyrinth.server.game.abstractions.IBoardFactory;
-import labyrinth.server.game.abstractions.ITreasureCardFactory;
 import labyrinth.server.game.enums.Direction;
 import labyrinth.server.game.factories.BoardFactory;
 import labyrinth.server.game.factories.TreasureCardFactory;
-import labyrinth.server.game.models.*;
+import labyrinth.server.game.models.Game;
+import labyrinth.server.game.models.records.GameConfig;
 
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.util.ArrayList;
-import java.util.UUID;
+import javax.swing.Timer;
 
 public class Testing {
+    private static Game game;
+
     public static void main(String[] args) {
+        game = new Game();
         simulateGameStart();
         //simulateGameMoves(1000);
     }
 
     public static void simulateGameStart(){
         // Lets Simulate creating a room here. Player presses something like "create lobby"
-        var game = Game.getInstance();
-        ITreasureCardFactory treasureCardsFactory = new TreasureCardFactory();
-        IBoardFactory boardFactory = new BoardFactory();
-
-        var p1 = new Player(UUID.randomUUID(), "Alice");
-        game.join(p1);
-
-        // Different settings are made in the lobby screen
-        game.setGameConfig(
-                new GameConfig(7, 7, 7, 4)
-        );
-
+        game.join("Alice");
         // More Players join the lobby
-        Player p2 = new Player(UUID.randomUUID(), "Bob");
-        Player p3 = new Player(UUID.randomUUID(), "Charlie");
-        Player p4 = new Player(UUID.randomUUID(), "Dover");
-
-        game.join(p2);
-        game.join(p3);
-        game.join(p4);
+        game.join("Bob");
+        game.join("Charlie");
+        game.join("Dover");
 
         // Request to start the game is sent
-        var board = boardFactory.createBoardForGame(game);
-        var treasureCards = treasureCardsFactory.createCardsForGame(game);
-        game.setBoard(board);
-        game.startGame(treasureCards);
+        var treasureCardFactory = new TreasureCardFactory();
+        var boardFactory = new BoardFactory();
+
+        var gameConfig = new GameConfig(7, 7, 4, 24, 1800, 4);
+        var board = boardFactory.createBoard(gameConfig.boardWidth(), gameConfig.boardHeight());
+        var cards = treasureCardFactory.createTreasureCards(gameConfig.treasureCardCount(), game.getPlayers().size());
+
+
+        var p2 = game.getPlayers().get(1);
+        game.toggleAiForPlayer(p2);
+
+        var p1 = game.getPlayers().get(0);
+        game.toggleAiForPlayer(p1);
+
+        var p3 = game.getPlayers().get(2);
+        game.toggleAiForPlayer(p3);
+
+        var p4 = game.getPlayers().get(3);
+        game.toggleAiForPlayer(p4);
+
+        game.startGame(gameConfig, cards, board);
+
 
         // Open Debug Viewer
         LabyrinthViewer.viewSwing(game);
-    }
 
-    public static void simulateGameMoves(long delayMillis) {
+        int delay = 500;
+        ActionListener taskPerformer = new ActionListener() {
+            public void actionPerformed(ActionEvent evt) {
+                LabyrinthViewer.repaintView();
+            }
+        };
+
+        Timer timer = new Timer(delay, taskPerformer);
+        timer.setRepeats(true);
+        timer.start();
+        }
+
+    public static void simulateGameMoves(Game game, long delayMillis) {
         simulateGameStart();
-        var game = Game.getInstance();
         var players = game.getPlayers();
         var board = game.getBoard();
         var random = new java.util.Random();
@@ -89,7 +106,7 @@ public class Testing {
             int shiftIndex = random.nextInt(board.getHeight());
             Direction direction = Direction.values()[random.nextInt(Direction.values().length)];
 
-            game.shift(shiftIndex, direction, currentPlayer);
+            game.shift(shiftIndex, direction, null, currentPlayer);
 
             // Determine reachable tiles after shifting
             var reachableTiles = board.getReachableTiles(currentPlayer);
@@ -110,7 +127,7 @@ public class Testing {
             }
 
             // Move player
-            game.movePlayerToTile(positionOpt.getRow(), positionOpt.getColumn(), currentPlayer);
+            game.movePlayerToTile(positionOpt.row(), positionOpt.column(), currentPlayer);
 
             System.out.printf(
                     "Move %d: Player %s -> shifted row/col %d %s and moved to (%d,%d)%n",
@@ -118,8 +135,8 @@ public class Testing {
                     currentPlayer.getUsername(),
                     shiftIndex,
                     direction,
-                    positionOpt.getRow(),
-                    positionOpt.getColumn()
+                    positionOpt.row(),
+                    positionOpt.column()
             );
 
             LabyrinthViewer.repaintView();

@@ -5,7 +5,7 @@ import labyrinth.server.exceptions.ActionErrorException;
 import labyrinth.server.game.GameService;
 import labyrinth.server.messaging.MessageService;
 import labyrinth.server.messaging.PlayerSessionRegistry;
-import labyrinth.server.messaging.commands.ICommandHandler;
+import labyrinth.server.messaging.mapper.PlayerInfoMapper;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.WebSocketSession;
 
@@ -13,17 +13,21 @@ import java.util.UUID;
 
 
 @Component
-public class ConnectCommandHandler implements ICommandHandler<ConnectCommandPayload> {
-    private final GameService gameService;
-    private final PlayerSessionRegistry playerSessionRegistry;
+public class ConnectCommandHandler extends AbstractCommandHandler<ConnectCommandPayload> {
+
     private final MessageService messageService;
+    private final PlayerInfoMapper playerInfoMapper;
+
 
     public ConnectCommandHandler(GameService gameService,
                                  PlayerSessionRegistry playerSessionRegistry,
-                                 MessageService messageService) {
-        this.gameService = gameService;
-        this.playerSessionRegistry = playerSessionRegistry;
+                                 MessageService messageService,
+                                 PlayerInfoMapper playerInfoMapper) {
+
+        super(gameService, playerSessionRegistry);
+
         this.messageService = messageService;
+        this.playerInfoMapper = playerInfoMapper;
     }
 
     @Override
@@ -33,44 +37,43 @@ public class ConnectCommandHandler implements ICommandHandler<ConnectCommandPayl
 
     @Override
     public void handle(WebSocketSession session, ConnectCommandPayload payload) throws Exception {
-
-        if (playerSessionRegistry.isSessionRegistered(session.getId())) {
+        if (playerSessionRegistry.isSessionRegistered(session)) {
             throw new ActionErrorException("Session is already connected", ErrorCode.GENERAL); //TODO: error code?
         }
 
-        if (payload.getPlayerId() != null) {
-            var playerId = UUID.fromString(payload.getPlayerId());
-            var player = gameService.getPlayer(playerId);
+        if (payload.getIdentifierToken() != null) {
+            var identifierToken = UUID.fromString(payload.getIdentifierToken());
 
-            playerSessionRegistry.registerPlayer(player, session);
+            var playerId = playerSessionRegistry.getPlayerIdByIdentifierToken(identifierToken);
+
+            var player = gameService.getPlayer(playerId);
+            if (player == null) {
+                throw new ActionErrorException("Player with ID " + playerId + " not found", ErrorCode.GENERAL); //TODO: error code?
+            }
+
+            playerSessionRegistry.registerPlayer(playerId, identifierToken, session);
 
             var ackPayload = new ConnectAckEventPayload();
             ackPayload.setType(EventType.CONNECT_ACK);
-            ackPayload.setPlayerId(player.getId().toString());
-            messageService.sendToPlayer(player, ackPayload);
+            ackPayload.setIdentifierToken(identifierToken.toString());
+            messageService.sendToPlayer(playerId, ackPayload);
             return;
         }
 
-        var player = gameService.connectPlayer(payload.getUsername());
+        var player = gameService.join(payload.getUsername());
 
-        playerSessionRegistry.registerPlayer(player, session);
+        var identifierToken = UUID.randomUUID();
+        playerSessionRegistry.registerPlayer(player.getId(), identifierToken, session);
 
         var ackPayload = new ConnectAckEventPayload();
         ackPayload.setType(EventType.CONNECT_ACK);
-        ackPayload.setPlayerId(player.getId().toString());
+        ackPayload.setIdentifierToken(identifierToken.toString());
 
-        messageService.sendToPlayer(player, ackPayload);
+        messageService.sendToPlayer(player.getId(), ackPayload);
 
-        var players = gameService.getPlayersInLobby()
+        var players = gameService.getPlayers()
                 .stream()
-                .map(p -> {
-                    var playerInfo = new PlayerInfo();
-                    playerInfo.setId(p.getId().toString());
-                    playerInfo.setIsAdmin(p.isAdmin());
-                    playerInfo.setColor(p.getColor());
-                    playerInfo.setName(p.getUsername());
-                    return playerInfo;
-                })
+                .map(playerInfoMapper::toDto)
                 .toArray(PlayerInfo[]::new);
 
         var lobbyStateUpdated = new LobbyStateEventPayload();

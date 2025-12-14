@@ -1,6 +1,5 @@
 package labyrinth.server.messaging;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import labyrinth.contracts.models.ActionErrorEventPayload;
 import labyrinth.contracts.models.ErrorCode;
 import labyrinth.contracts.models.EventType;
@@ -8,6 +7,7 @@ import labyrinth.contracts.models.ServerInfoPayload;
 import labyrinth.server.exceptions.ActionErrorException;
 import labyrinth.server.messaging.commands.CommandMessageDispatcher;
 import labyrinth.server.messaging.commands.CommandMessageParser;
+import lombok.RequiredArgsConstructor;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
@@ -18,23 +18,13 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 import java.time.OffsetDateTime;
 
 @Component
+@RequiredArgsConstructor
 public class GameWebSocketHandler extends TextWebSocketHandler {
-    private final ObjectMapper mapper = new ObjectMapper();
-
     private final CommandMessageParser messageParser;
     private final CommandMessageDispatcher dispatcher;
-    private final PlayerSessionRegistry playerSessionRegistry;
+    private final PlayerSessionRegistry IPlayerSessionRegistry;
     private final MessageService messageService;
 
-    public GameWebSocketHandler(CommandMessageParser messageParser,
-                                CommandMessageDispatcher dispatcher,
-                                PlayerSessionRegistry playerSessionRegistry,
-                                MessageService messageService) {
-        this.messageParser = messageParser;
-        this.dispatcher = dispatcher;
-        this.playerSessionRegistry = playerSessionRegistry;
-        this.messageService = messageService;
-    }
 
     @Override
     public void afterConnectionEstablished(@NonNull WebSocketSession session) {
@@ -51,7 +41,7 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
 
     @Override
     public void afterConnectionClosed(@NonNull WebSocketSession session, @NonNull CloseStatus status) {
-        playerSessionRegistry.markDisconnected(session);
+        IPlayerSessionRegistry.markDisconnected(session);
     }
 
     @Override

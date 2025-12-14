@@ -3,36 +3,46 @@ package labyrinth.server.game.models;
 import labyrinth.server.game.abstractions.IBoardEventListener;
 import labyrinth.server.game.enums.*;
 import labyrinth.server.game.events.BoardEvent;
+import labyrinth.server.game.models.records.Position;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.util.*;
 
 /**
  * Represents the game board for the Labyrinth game.
  * The layout of tiles is stored in a bidirectional map between {@link Position}
- * instances and {@link Tile} instances. A separate graph tracks the connectivity
+ * instances and {@link Tile} instances. A separate graph tracks the
+ * connectivity
  * of neighboring tiles based on their entrances.
  */
+@Getter
 public class Board {
 
     private final int width;
     private final int height;
     private final BiMap<Position, Tile> tileMap;
     private final Graph graph;
-    private List<Player> players;
     private int currentPlayerIndex;
     private MoveState currentMoveState = MoveState.PLACE_TILE;
     private Tile extraTile;
+
+    @Setter
+    private List<Player> players;
+    @Setter
     private boolean freeRoam = false;
 
     /**
-     * Creates a board with the given dimensions. Although the constructor accepts a 2D
+     * Creates a board with the given dimensions. Although the constructor accepts a
+     * 2D
      * array of tiles for backwards compatibility, it immediately populates a
-     * {@link BiMap} mapping each {@link Position} to its associated {@link Tile}. The
+     * {@link BiMap} mapping each {@link Position} to its associated {@link Tile}.
+     * The
      * original array reference is not stored internally.
      *
-     * @param width  number of columns
-     * @param height number of rows
-     * @param tileMap  the bidirectional tilemap
+     * @param width     number of columns
+     * @param height    number of rows
+     * @param tileMap   the bidirectional tilemap
      * @param extraTile the spare tile which will be inserted during shifts
      */
     public Board(int width, int height, BiMap<Position, Tile> tileMap, Tile extraTile) {
@@ -44,16 +54,36 @@ public class Board {
         this.extraTile = extraTile;
     }
 
-    public int getWidth() {
-        return width;
-    }
+    public Board copy() {
+        // Deep copy tileMap: Position is immutable (record), Tile needs copy()
+        BiMap<Position, Tile> newTileMap = this.tileMap.copy(p -> p, Tile::copy);
 
-    public int getHeight() {
-        return height;
-    }
+        // Deep copy extraTile
+        Tile newExtraTile = this.extraTile.copy();
 
-    public BiMap<Position, Tile> getTileMap() {
-        return tileMap;
+        Board newBoard = new Board(this.width, this.height, newTileMap, newExtraTile);
+
+        // Copy other state
+        newBoard.setFreeRoam(this.freeRoam);
+
+        if (this.players != null) {
+            List<Player> newPlayers = new ArrayList<>();
+            for (Player p : this.players) {
+                Player newP = p.copy();
+                // Map old tile to new tile
+                if (p.getCurrentTile() != null) {
+                    Position pos = this.getPositionOfTile(p.getCurrentTile());
+                    if (pos != null) {
+                        Tile newTile = newTileMap.getForward(pos);
+                        newP.setCurrentTile(newTile);
+                    }
+                }
+                newPlayers.add(newP);
+            }
+            newBoard.setPlayers(newPlayers);
+        }
+
+        return newBoard;
     }
 
     /**
@@ -68,6 +98,16 @@ public class Board {
     }
 
     /**
+     * Retrieves the tile at the specified coordinates.
+     *
+     * @param position the position
+     * @return the tile located at (row, column), or null if not present
+     */
+    public Tile getTileAt(Position position) {
+        return tileMap.getForward(position);
+    }
+
+    /**
      * Retrieves the {@link Position} of the given tile on the board.
      *
      * @param tile the tile to look up
@@ -77,40 +117,9 @@ public class Board {
         return tileMap.getBackward(tile);
     }
 
-    public Graph getGraph() {
-        return graph;
-    }
 
-    public List<Player> getPlayers() {
-        return new ArrayList<>(players);
-    }
-
-    public void setPlayers(List<Player> players) {
-        this.players = players;
-    }
-
-    public Tile getExtraTile() {
-        return extraTile;
-    }
-
-    public void setFreeRoam(boolean freeRoam){
-        this.freeRoam = freeRoam;
-    }
-
-    public boolean getFreeRoam(){
-        return freeRoam;
-    }
-
-    public MoveState getCurrentMoveState() {
-        return currentMoveState;
-    }
-
-    public int getCurrentPlayerIndex() {
-        return currentPlayerIndex;
-    }
-
-    protected boolean shiftColumnDown(int columnIndex) {
-        if(colContainsFixedTile(columnIndex)) {
+    public boolean shiftColumnDown(int columnIndex, boolean fixedBonusActive) {
+        if (colContainsFixedTile(columnIndex) && !fixedBonusActive) {
             return false;
         }
 
@@ -129,8 +138,8 @@ public class Board {
         return true;
     }
 
-    protected boolean shiftColumnUp(int columnIndex) {
-        if(colContainsFixedTile(columnIndex)) {
+    public boolean shiftColumnUp(int columnIndex, boolean fixedBonusActive) {
+        if (colContainsFixedTile(columnIndex) && !fixedBonusActive) {
             return false;
         }
 
@@ -147,8 +156,8 @@ public class Board {
         return true;
     }
 
-    protected boolean shiftRowLeft(int rowIndex) {
-        if(rowContainsFixedTile(rowIndex)) {
+    public boolean shiftRowLeft(int rowIndex, boolean fixedBonusActive) {
+        if (rowContainsFixedTile(rowIndex) && !fixedBonusActive) {
             return false;
         }
 
@@ -167,8 +176,8 @@ public class Board {
         return true;
     }
 
-    protected boolean shiftRowRight(int rowIndex) {
-        if(rowContainsFixedTile(rowIndex)) {
+    public boolean shiftRowRight(int rowIndex, boolean fixedBonusActive) {
+        if (rowContainsFixedTile(rowIndex) && !fixedBonusActive) {
             return false;
         }
 
@@ -249,15 +258,17 @@ public class Board {
         return isTopLeft || isTopRight || isBottomLeft || isBottomRight;
     }
 
-    public boolean movePlayerToTile(Player player, int targetRow, int targetCol) {
-        // Lookup the player's current tile and the target tile using the bi-directional mapping
+    boolean movePlayerToTile(Player player, int targetRow, int targetCol) {
+        // Lookup the player's current tile and the target tile using the bi-directional
+        // mapping
         Tile currentTile = player.getCurrentTile();
         Tile targetTile = tileMap.getForward(new Position(targetRow, targetCol));
 
         Position currPos = (currentTile != null) ? getPositionOfTile(currentTile) : null;
-        System.out.println("Current position: " + (currPos != null ? currPos.getRow() + "/" + currPos.getColumn() : "none"));
+        System.out.println("Current position: " + (currPos != null ? currPos.row() + "/" + currPos.column() : "none"));
         System.out.println("Moving " + player.getUsername() + " to " + targetRow + "/" + targetCol);
-        // Check if another player is already on the target tile by inspecting players' currentTile
+        // Check if another player is already on the target tile by inspecting players'
+        // currentTile
         for (Player other : players) {
             if (other != player && other.getCurrentTile() == targetTile) {
                 System.out.println("Cant move a player is already on the target tile!");
@@ -294,7 +305,6 @@ public class Board {
             }
         }
     }
-
 
     // Obserser stuff, refactor later
     private final List<IBoardEventListener> listeners = new ArrayList<>();

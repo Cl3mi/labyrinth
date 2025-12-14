@@ -18,7 +18,7 @@ public class Tile {
     /**
      * Creates a tile with specified entrances and optional treasure.
      *
-     * @param entrances    directions where the tile has openings (at least 2)
+     * @param entrances directions where the tile has openings (at least 2)
      */
     public Tile(Set<Direction> entrances) {
         if (entrances.size() < 2) {
@@ -39,33 +39,20 @@ public class Tile {
         this.isFixed = isFixed;
     }
 
+    public Tile copy() {
+        Tile newTile = new Tile(this.entrances);
+        newTile.setIsFixed(this.isFixed);
+        newTile.setTreasureCard(this.treasureCard); // Reference copy is fine for treasure card as it's not mutated
+                                                    // during simulation
+        return newTile;
+    }
+
     public TreasureCard getTreasureCard() {
-        return treasureCard ;
+        return treasureCard;
     }
 
     public void setTreasureCard(TreasureCard treasureCard) {
         this.treasureCard = treasureCard;
-    }
-
-    /**
-     * Tiles no longer maintain a direct reference to a player. To determine which
-     * player occupies a tile, inspect the {@code currentTile} reference on each
-     * {@link Player} instead.
-     */
-    @Deprecated
-    public Player getPlayer() {
-        return null;
-    }
-
-    /**
-     * Tiles no longer maintain a direct reference to a player. Player movement is
-     * tracked via {@link Player#setCurrentTile(Tile)}.
-     *
-     * @param player the player to set (ignored)
-     */
-    @Deprecated
-    public void setPlayer(Player player) {
-        // no-op: occupancy handled by Player
     }
 
     /**
@@ -88,9 +75,10 @@ public class Tile {
 
     /**
      * Checks if this tile is connected to another tile.
-     * Two tiles are connected if they have matching entrances in opposite directions.
+     * Two tiles are connected if they have matching entrances in opposite
+     * directions.
      *
-     * @param neighbor the neighboring tile to check connection with
+     * @param neighbor  the neighboring tile to check connection with
      * @param direction the direction from this tile to the neighbor
      * @return true if connected, false otherwise
      */
@@ -98,7 +86,7 @@ public class Tile {
         return entrances.contains(direction) && neighbor.getEntrances().contains(direction.opposite());
     }
 
-    public void getSteppedOnBy(Player player){
+    public void getSteppedOnBy(Player player) {
         // When a player steps on this tile, collect treasure if appropriate.
         // Tiles no longer store the occupant; the calling code updates
         // the player's current tile instead.

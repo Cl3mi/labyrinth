@@ -1,11 +1,15 @@
 package labyrinth.server.game.models;
 
 import labyrinth.contracts.models.PlayerColor;
+import labyrinth.server.game.enums.BonusTypes;
 import lombok.Getter;
 import lombok.Setter;
 
 import java.time.OffsetDateTime;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+import java.util.UUID;
 
 /**
  * Represents a player in the Labyrinth game.
@@ -18,12 +22,19 @@ public class Player {
     private final UUID id;
     private final String username;
     private OffsetDateTime joinDate;
-    private int score;
+
     private boolean isAiActive;
     private boolean isAdmin;
     private PlayerColor color;
+    private PlayerStatistics statistics;
+
+    // AI State Memory
+    private labyrinth.server.game.models.records.Position lastTurnPosition;
+    private int turnsStuck = 0;
+    private String lastShiftDescription;
 
     private final List<TreasureCard> assignedTreasureCards;
+    private final List<BonusTypes> bonuses;
 
     /**
      * The tile on which the player is currently standing. The board is
@@ -34,14 +45,35 @@ public class Player {
     /**
      * Creates a new player with a given ID, name, and list of treasure cards.
      *
-     * @param id                    unique identifier
-     * @param username                  player name
+     * @param id       unique identifier
+     * @param username player name
      */
     public Player(UUID id, String username) {
         this.id = Objects.requireNonNull(id);
         this.username = Objects.requireNonNull(username);
         this.assignedTreasureCards = new ArrayList<>();
+        this.bonuses = new ArrayList<>();
         this.currentTile = null;
+        this.statistics = new PlayerStatistics();
+    }
+
+    public Player copy() {
+        Player newPlayer = new Player(this.id, this.username);
+        newPlayer.setJoinDate(this.joinDate);
+        newPlayer.setStatistics(this.statistics);
+        newPlayer.setAiActive(this.isAiActive);
+        newPlayer.setAdmin(this.isAdmin);
+        newPlayer.setColor(this.color);
+
+        // Shallow copy list, contents are assumed immutable during simulation
+        newPlayer.getAssignedTreasureCards().addAll(this.assignedTreasureCards);
+        // currentTile is NOT set here, must be set by caller to point to the new
+        // board's tiles
+        return newPlayer;
+    }
+
+    boolean useBonus(BonusTypes bonusType){
+        return bonuses.remove(bonusType);
     }
 
     @Override
