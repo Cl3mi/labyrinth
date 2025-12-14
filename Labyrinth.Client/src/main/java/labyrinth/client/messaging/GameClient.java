@@ -17,10 +17,10 @@ public class GameClient extends WebSocketClient {
 
     @Setter private Consumer<ConnectAckEventPayload> onConnectAck;
     @Setter private Consumer<LobbyStateEventPayload> onLobbyState;
-    @Setter private Consumer<GameStateUpdateEventPayload> onGameStarted;
+    @Setter private Consumer<GameStateEventPayload> onGameStarted;
 
     // ✅ einzig vorhandenes State-Payload
-    @Setter private Consumer<GameStateUpdateEventPayload> onGameStateUpdate;
+    @Setter private Consumer<GameStateEventPayload> onGameStateUpdate;
 
     @Setter private Consumer<String> onErrorMessage;
     @Setter private Runnable onOpenHook;
@@ -73,12 +73,12 @@ public class GameClient extends WebSocketClient {
                     if (onLobbyState != null) runOnUiThread(() -> onLobbyState.accept(payload));
                 }
                 case GAME_STARTED -> {
-                    GameStateUpdateEventPayload payload = mapper.treeToValue(payloadNode, GameStateUpdateEventPayload.class);
+                    GameStateEventPayload payload = mapper.treeToValue(payloadNode, GameStateEventPayload.class);
                     if (onGameStarted != null) runOnUiThread(() -> onGameStarted.accept(payload));
                 }
                 case GAME_STATE_UPDATE -> {
                     // ✅ korrektes Payload
-                    GameStateUpdateEventPayload payload = mapper.treeToValue(payloadNode, GameStateUpdateEventPayload.class);
+                    GameStateEventPayload payload = mapper.treeToValue(payloadNode, GameStateEventPayload.class);
                     if (onGameStateUpdate != null) runOnUiThread(() -> onGameStateUpdate.accept(payload));
                 }
                 case ACTION_ERROR -> {
@@ -183,8 +183,8 @@ public class GameClient extends WebSocketClient {
             payload.setType(CommandType.MOVE_PAWN);
 
             Coordinates coords = new Coordinates();
-            coords.setX(targetRow);
-            coords.setY(targetCol);
+            coords.setRow(targetRow);
+            coords.setColumn(targetCol);
             payload.setTargetCoordinates(coords);
 
             String json = mapper.writeValueAsString(payload);

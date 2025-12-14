@@ -98,13 +98,13 @@ public class BoardFactory implements IBoardFactory {
             // aktuelle Position
             Coordinates currentPos = s.getCurrentPosition();
             if (currentPos != null) {
-                p.setCurrentPosition(new Position(currentPos.getX(), currentPos.getY()));
+                p.setCurrentPosition(new Position(currentPos.getRow(), currentPos.getColumn()));
             }
 
             // Heimatposition
             Coordinates homePos = s.getHomePosition();
             if (homePos != null) {
-                p.setHomePosition(new Position(homePos.getX(), homePos.getY()));
+                p.setHomePosition(new Position(homePos.getRow(), homePos.getColumn()));
             }
 
             // hier könntest du später noch Farbe, Achievements, Boni etc. mappen
