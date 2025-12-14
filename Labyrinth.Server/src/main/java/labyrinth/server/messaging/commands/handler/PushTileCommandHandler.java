@@ -12,9 +12,6 @@ import labyrinth.server.messaging.mapper.GameMapper;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.WebSocketSession;
 
-import java.util.Arrays;
-import java.util.stream.Collectors;
-
 @Component
 public class PushTileCommandHandler extends AbstractCommandHandler<PushTileCommandPayload> {
 
@@ -46,11 +43,7 @@ public class PushTileCommandHandler extends AbstractCommandHandler<PushTileComma
         requirePlayerIsCurrent(player);
 
         var direction = directionMapper.toModel(payload.getDirection());
-        var entrances = Arrays.stream(payload.getTileEntrances())
-                .map(directionMapper::toModel)
-                .collect(Collectors.toSet());
-
-        var shiftSuccessful = gameService.shift(payload.getRowOrColIndex(), direction, entrances, player);
+        var shiftSuccessful = gameService.shift(payload.getRowOrColIndex(), direction, player);
 
         if (!shiftSuccessful) {
             throw new ActionErrorException("Cannot push tile with the specified parameters.", ErrorCode.INVALID_PUSH);

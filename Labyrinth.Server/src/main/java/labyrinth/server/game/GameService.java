@@ -14,7 +14,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -117,10 +116,19 @@ public class GameService {
         }
     }
 
-    public boolean shift(int index, Direction direction, Set<Direction> entrances, Player player) {
+    public void rotateExtraTileClockwise(Player player) {
         rwLock.writeLock().lock();
         try {
-            return game.shift(index, direction, entrances, player);
+            game.rotateExtraTileClockwise(player);
+        } finally {
+            rwLock.writeLock().unlock();
+        }
+    }
+
+    public boolean shift(int index, Direction direction, Player player) {
+        rwLock.writeLock().lock();
+        try {
+            return game.shift(index, direction, player);
         } finally {
             rwLock.writeLock().unlock();
         }

@@ -6,10 +6,10 @@ import labyrinth.server.game.factories.TreasureCardFactory;
 import labyrinth.server.game.models.Game;
 import labyrinth.server.game.models.records.GameConfig;
 
+import javax.swing.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.ArrayList;
-import javax.swing.Timer;
 
 public class Testing {
     private static Game game;
@@ -106,7 +106,7 @@ public class Testing {
             int shiftIndex = random.nextInt(board.getHeight());
             Direction direction = Direction.values()[random.nextInt(Direction.values().length)];
 
-            game.shift(shiftIndex, direction, null, currentPlayer);
+            game.shift(shiftIndex, direction,  currentPlayer);
 
             // Determine reachable tiles after shifting
             var reachableTiles = board.getReachableTiles(currentPlayer);

@@ -1,7 +1,8 @@
 package labyrinth.server.messaging.mapper;
 
+import labyrinth.contracts.models.CurrentTurnInfo;
 import labyrinth.contracts.models.EventType;
-import labyrinth.contracts.models.GameStateUpdateEventPayload;
+import labyrinth.contracts.models.GameStateEventPayload;
 import labyrinth.contracts.models.PlayerState;
 import labyrinth.server.game.models.Game;
 import lombok.RequiredArgsConstructor;
@@ -18,8 +19,8 @@ public class GameMapper {
     private final TurnStateMapper turnStateMapper;
     private final CoordinatesMapper coordinatesMapper;
 
-    public GameStateUpdateEventPayload toGameStateDto(Game game) {
-        var gameState = new GameStateUpdateEventPayload();
+    public GameStateEventPayload toGameStateDto(Game game) {
+        var gameState = new GameStateEventPayload();
         gameState.setType(EventType.GAME_STATE_UPDATE);
 
         var gameBoard = game.getBoard();
@@ -44,8 +45,14 @@ public class GameMapper {
         }
 
         gameState.setPlayers(playerStates.toArray(PlayerState[]::new));
-        gameState.setCurrentTurnState(turnStateMapper.toDto(game.getCurrentMoveState()));
-        gameState.setCurrentPlayerId(game.getCurrentPlayer().getId().toString());
+
+        var currentTurnInfo = new CurrentTurnInfo();
+        currentTurnInfo.setCurrentPlayerId(game.getCurrentPlayer().getId().toString());
+        currentTurnInfo.setState(turnStateMapper.toDto(game.getCurrentMoveState()));
+        //currentTurnInfo.setTurnEndTime();
+
+        gameState.setCurrentTurnInfo(currentTurnInfo);
+
         gameState.setBoard(gameBoardMapper.toDto(gameBoard));
 
         return gameState;

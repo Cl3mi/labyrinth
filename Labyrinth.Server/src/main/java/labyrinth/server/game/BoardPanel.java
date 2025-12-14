@@ -68,7 +68,6 @@ public class BoardPanel extends JPanel {
     }
 
 
-
     // =================================================================================
     // MOUSE EVENT HANDLING
     // =================================================================================
@@ -89,15 +88,16 @@ public class BoardPanel extends JPanel {
 
     /**
      * Checks for and handles a click on a row/column shift arrow.
+     *
      * @return true if an arrow was clicked, false otherwise.
      */
     private boolean handleArrowClick(Point p) {
         for (ArrowButton arrow : arrowButtons) {
             if (arrow.contains(p)) {
                 if (arrow.isRow) {
-                    game.shift(arrow.index, arrow.direction, null, currentPlayer);
+                    game.shift(arrow.index, arrow.direction, currentPlayer);
                 } else {
-                    game.shift(arrow.index, arrow.direction, null, currentPlayer);
+                    game.shift(arrow.index, arrow.direction, currentPlayer);
                 }
                 updateReachableTilesAndRepaint();
                 return true;
@@ -213,6 +213,7 @@ public class BoardPanel extends JPanel {
 
     /**
      * Draws a single, complete tile at a specified location.
+     *
      * @param drawDetails Toggles drawing of player-specific details like treasures and coordinates.
      */
     private void drawTileAt(Graphics2D g2, Tile tile, int x, int y, int row, int col, boolean drawDetails) {
@@ -227,9 +228,12 @@ public class BoardPanel extends JPanel {
         // Corridors
         g2.setColor(CORRIDOR_COLOR);
         if (tile.getEntrances().contains(Direction.UP)) g2.fillRect(cx - corridorWidth / 2, y, corridorWidth, size / 2);
-        if (tile.getEntrances().contains(Direction.DOWN)) g2.fillRect(cx - corridorWidth / 2, cy, corridorWidth, size / 2);
-        if (tile.getEntrances().contains(Direction.LEFT)) g2.fillRect(x, cy - corridorWidth / 2, size / 2, corridorWidth);
-        if (tile.getEntrances().contains(Direction.RIGHT)) g2.fillRect(cx, cy - corridorWidth / 2, size / 2, corridorWidth);
+        if (tile.getEntrances().contains(Direction.DOWN))
+            g2.fillRect(cx - corridorWidth / 2, cy, corridorWidth, size / 2);
+        if (tile.getEntrances().contains(Direction.LEFT))
+            g2.fillRect(x, cy - corridorWidth / 2, size / 2, corridorWidth);
+        if (tile.getEntrances().contains(Direction.RIGHT))
+            g2.fillRect(cx, cy - corridorWidth / 2, size / 2, corridorWidth);
 
         // Center dot
         int dotSize = Math.max(4, corridorWidth);

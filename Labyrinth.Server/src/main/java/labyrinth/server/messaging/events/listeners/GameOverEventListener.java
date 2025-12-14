@@ -37,15 +37,20 @@ public class GameOverEventListener {
                             .reversed())
                     .toList();
 
+            var payload = new GameOverEventPayload();
             var rank = 1;
             for (Player p : sortedPlayers) {
+
+                if(rank == 1) {
+                    payload.setWinnerId(p.getId().toString());
+                }
+
                 var entry = rankingMapper.toDto(p, rank);
 
                 ranking.add(entry);
                 rank++;
             }
 
-            var payload = new GameOverEventPayload();
             payload.setType(EventType.GAME_OVER);
             payload.setRanking(ranking.toArray(RankingEntry[]::new));
 
