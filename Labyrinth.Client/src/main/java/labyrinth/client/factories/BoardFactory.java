@@ -1,119 +1,134 @@
 package labyrinth.client.factories;
 
 import labyrinth.client.abstractions.IBoardFactory;
-import labyrinth.client.models.*;
-import labyrinth.client.enums.*;
+import labyrinth.client.models.Board;
+import labyrinth.client.models.Game;
+import labyrinth.client.models.Player;
+import labyrinth.client.models.Position;
+import labyrinth.contracts.models.Coordinates;
+import labyrinth.contracts.models.GameBoard;
+import labyrinth.contracts.models.PlayerState;
+import labyrinth.contracts.models.Tile;
 
-import java.security.DigestException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
- * Factory class to generate random labyrinth boards.
+ * Factory / Mapper für Boards und Spielerzustände vom Server.
+ *
+ * Wichtig:
+ * - Das Board wird vollständig vom Server geliefert (GameBoard).
+ * - Diese Factory generiert KEINE zufälligen lokalen Boards mehr.
  */
 public class BoardFactory implements IBoardFactory {
 
-    private static final Random RANDOM = new Random();
-
-
+    /**
+     * Alte Debug-Methode. Im echten Spiel nicht mehr nutzen.
+     * Wenn du sie noch irgendwo aufrufst, siehst du es sofort durch die Exception.
+     */
     @Override
     public Board createBoardForGame(Game game) {
-        var width = game.getBoardWidth();
-        var height = game.getBoardHeight();
-        Tile[][] tiles = new Tile[height][width];
+        throw new UnsupportedOperationException(
+                "BoardFactory.createBoardForGame(Game) wird nicht mehr verwendet. " +
+                        "Das Board kommt vollständig vom Server (GameBoard)."
+        );
+    }
 
-        for (int row = 0; row < height; row++) {
-            for (int col = 0; col < width; col++) {
-                Tile tile;
+    // =================================================================================
+    // Mapping: GameBoard (Contracts) -> Board (Client)
+    // =================================================================================
 
-                // Since the board is not always uneven we need a more sophisticated logic
-                // than % 2. If one direction is even, keep the middle two fixed and every
-                // second from there on also
-                boolean rowFixed = shouldBeFixed(row, height);
-                boolean colFixed = shouldBeFixed(col, width);
+    /**
+     * Baut aus einem vom Server gelieferten GameBoard ein Client-Board.
+     * Verwendet direkt die Contracts-Tiles.
+     *
+     * @param gb Server-Board
+     * @return Client-Board
+     */
+    public static Board fromContracts(GameBoard gb) {
+        if (gb == null)
+            throw new IllegalArgumentException("GameBoard is null");
 
-                if (rowFixed && colFixed) {
-                    // Fixed tiles should always have 3 entrances
-                    // Fixed tiles on the outside should always look to the inside
-                    if(row == 0) {
-                        tile = new Tile(EnumSet.of(Direction.DOWN, Direction.RIGHT, Direction.LEFT));
-                    } else if(col == 0) {
-                        tile = new Tile(EnumSet.of(Direction.DOWN, Direction.UP, Direction.RIGHT));
-                    } else if(row == height - 1) {
-                        tile = new Tile(EnumSet.of(Direction.UP, Direction.LEFT, Direction.RIGHT));
-                    }  else if(col == width - 1) {
-                        tile = new Tile(EnumSet.of(Direction.DOWN, Direction.UP, Direction.LEFT));
-                    } else {
-                        tile = new Tile(EnumSet.of(Direction.DOWN, Direction.RIGHT, Direction.LEFT));
-                        int rotations = RANDOM.nextInt(4);
-                        for (int i = 0; i < rotations; i++) {
-                            tile.rotate();
-                        }
-                    }
-                    tile.setFixed(true);
-                } else {
-                    tile = createRandomTile();
-                }
+        int rows = gb.getRows() != null ? gb.getRows() : 0;
+        int cols = gb.getCols() != null ? gb.getCols() : 0;
 
-                tiles[row][col] = tile;
-            }
+        if (rows <= 0 || cols <= 0)
+            throw new IllegalArgumentException("GameBoard.rows/cols must be > 0");
+
+        Tile[][] tiles = gb.getTiles();
+        if (tiles == null)
+            throw new IllegalArgumentException("GameBoard.tiles is null");
+
+        if (tiles.length != rows || tiles[0].length != cols) {
+            throw new IllegalArgumentException(
+                    "GameBoard.tiles dimensions do not match rows/cols: " +
+                            "rows=" + rows + ", cols=" + cols +
+                            ", tiles.length=" + tiles.length +
+                            ", tiles[0].length=" + (tiles.length > 0 ? tiles[0].length : -1)
+            );
         }
 
-        // Replace corner tiles, maybe we can do the in the loop already, but rn im too lazy
-        tiles[0][0] = new Tile(EnumSet.of(Direction.DOWN, Direction.RIGHT));
-        tiles[0][0].setFixed(true);
-        tiles[0][width-1] = new Tile(EnumSet.of(Direction.DOWN, Direction.LEFT));
-        tiles[0][width-1].setFixed(true);
-        tiles[height-1][0] = new Tile(EnumSet.of(Direction.UP, Direction.RIGHT));
-        tiles[height-1][0].setFixed(true);
-        tiles[height-1][width-1] = new Tile(EnumSet.of(Direction.UP, Direction.LEFT));
-        tiles[height-1][width-1].setFixed(true);
+        // Extra-Tile kommt im PlayerTurnEventPayload (extraTile), nicht im GameBoard.
+        // Wir setzen sie hier auf null; sie wird später durch PlayerTurnEvent aktualisiert.
+        Tile extraTile = null;
 
-        return new Board(width, height, tiles,createRandomTile());
+        // Board-Konstruktor: (width, height, tiles, extraTile)
+        // width = cols (Spalten), height = rows (Zeilen)
+        return new Board(cols, rows, tiles, extraTile);
+    }
+
+    // =================================================================================
+    // Mapping: PlayerState[] (Contracts) -> List<Player> (Client)
+    // =================================================================================
+
+    /**
+     * Basis-Mapping von PlayerState[] → Client-Player.
+     */
+    public static List<Player> playersFromState(PlayerState[] states) {
+        List<Player> list = new ArrayList<>();
+        if (states == null) return list;
+
+        for (PlayerState s : states) {
+            if (s == null) continue;
+
+            String id = s.getPlayerInfo().getId();
+            String name = s.getPlayerInfo().getName();
+            Player p = new Player(id, name);
+
+            // aktuelle Position
+            Coordinates currentPos = s.getCurrentPosition();
+            if (currentPos != null) {
+                p.setCurrentPosition(new Position(currentPos.getX(), currentPos.getY()));
+            }
+
+            // Heimatposition
+            Coordinates homePos = s.getHomePosition();
+            if (homePos != null) {
+                p.setHomePosition(new Position(homePos.getX(), homePos.getY()));
+            }
+
+            // hier könntest du später noch Farbe, Achievements, Boni etc. mappen
+
+            list.add(p);
+        }
+
+        return list;
     }
 
     /**
-     * Creates a random tile (corner, straight, or T-junction) with random rotation.
+     * Alias, damit Aufrufer den alten Namen verwenden können.
+     * Wird in LabyrinthApplication genutzt.
      */
-    private static Tile createRandomTile() {
-        int type = RANDOM.nextInt(3); // 0=corner, 1=straight, 2=t-junction
-        Set<Direction> entrances = switch (type) {
-            case 0 -> EnumSet.of(Direction.UP, Direction.RIGHT); // corner
-            case 1 -> EnumSet.of(Direction.UP, Direction.DOWN);  // straight
-            case 2 -> EnumSet.of(Direction.UP, Direction.LEFT, Direction.RIGHT); // T-junction
-            default -> throw new IllegalStateException("Unexpected tile type");
-        };
-
-        Tile tile = new Tile(entrances);
-
-        // Rotate randomly 0–3 times
-        int rotations = RANDOM.nextInt(4);
-        for (int i = 0; i < rotations; i++) {
-            tile.rotate();
-        }
-
-        return tile;
+    public static List<Player> convertPlayerStates(PlayerState[] states) {
+        return playersFromState(states);
     }
 
-    private static boolean shouldBeFixed(int index, int dimension) {
-        if (dimension % 2 == 0) {
-            int mid1 = dimension / 2 - 1;
-            int mid2 = dimension / 2;
+    // =================================================================================
+    // Extra-Tile aus PlayerTurnEventPayload anwenden
+    // =================================================================================
 
-            if (index == mid1 || index == mid2) {
-                return true;
-            }
-
-            if (index < mid1) {
-                return index % 2 == 0;
-            }
-
-            if (index > mid2) {
-                return (index - mid2) % 2 == 0;
-            }
-        } else {
-            return index % 2 == 0;
-        }
-
-        return false;
+    public static void applyExtraTile(Board board, Tile extraTile) {
+        if (board == null) return;
+        board.setExtraTile(extraTile);
     }
 }
