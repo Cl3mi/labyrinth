@@ -2,10 +2,12 @@ package labyrinth.server.messaging.events.listeners;
 
 import labyrinth.contracts.models.EventType;
 import labyrinth.contracts.models.GameOverEventPayload;
+import labyrinth.contracts.models.LobbyStateEventPayload;
 import labyrinth.contracts.models.RankingEntry;
 import labyrinth.server.game.events.GameOverEvent;
 import labyrinth.server.game.models.Player;
 import labyrinth.server.messaging.MessageService;
+import labyrinth.server.messaging.mapper.PlayerInfoMapper;
 import labyrinth.server.messaging.mapper.RankingMapper;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -24,6 +26,7 @@ public class GameOverEventListener {
 
     private final MessageService messageService;
     private final RankingMapper rankingMapper;
+    private final PlayerInfoMapper playerInfoMapper;
 
 
     @EventListener
@@ -53,8 +56,17 @@ public class GameOverEventListener {
 
             payload.setType(EventType.GAME_OVER);
             payload.setRanking(ranking.toArray(RankingEntry[]::new));
-
             messageService.broadcastToPlayers(payload);
+
+            var lobbyStateUpdated = new LobbyStateEventPayload();
+            lobbyStateUpdated.setType(EventType.LOBBY_STATE);
+            lobbyStateUpdated.setPlayers(event
+                    .players()
+                    .stream()
+                    .map(playerInfoMapper::toDto)
+                    .toArray(labyrinth.contracts.models.PlayerInfo[]::new));
+
+            messageService.broadcastToPlayers(lobbyStateUpdated);
         } catch (Exception ex) {
             log.error("Error while handling GameOverEvent", ex);
         }
