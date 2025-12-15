@@ -1,70 +1,71 @@
 package labyrinth.server.messaging;
 
+import labyrinth.server.messaging.models.PlayerRegistration;
 import org.springframework.stereotype.Service;
 import org.springframework.web.socket.WebSocketSession;
 
-import java.util.Collection;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 @Service
 public class PlayerSessionRegistry {
 
-    private final Map<UUID, WebSocketSession> sessionByPlayerId = new ConcurrentHashMap<>();
-    private final Map<UUID, Long> disconnectedAt = new ConcurrentHashMap<>();
+    private final Map<UUID, PlayerRegistration> registrations = new ConcurrentHashMap<>();
 
     private static final String PLAYER_ID_KEY = "PLAYER_ID";
-    private static final String IDENTIFIER_TOKEN_KEY = "IDENTIFIER_TOKEN";
 
     public void registerPlayer(UUID playerId, UUID identifierToken, WebSocketSession session) {
         session.getAttributes().put(PLAYER_ID_KEY, playerId);
-        session.getAttributes().put(IDENTIFIER_TOKEN_KEY, identifierToken);
-
-        sessionByPlayerId.put(playerId, session);
-        disconnectedAt.remove(playerId);
+        registrations.put(playerId, new PlayerRegistration(playerId, identifierToken, session));
     }
 
     public void removePlayer(UUID playerId) {
-        sessionByPlayerId.remove(playerId);
-        disconnectedAt.remove(playerId);
+        registrations.remove(playerId);
     }
 
     public void markDisconnected(WebSocketSession session) {
         UUID playerId = getPlayerId(session);
-        if (playerId == null) {
-            return;
-        }
+        if (playerId == null) return;
 
-        disconnectedAt.put(playerId, System.currentTimeMillis());
-        sessionByPlayerId.remove(playerId);
+        PlayerRegistration reg = registrations.get(playerId);
+        if (reg != null) {
+            reg.markDisconnected();
+        }
     }
 
-    public Map<UUID, Long> getDisconnectedEntries() {
-        return disconnectedAt;
+    public UUID getPlayerIdByIdentifierToken(UUID identifierToken) {
+        return registrations.values().stream()
+                .filter(reg -> reg.getIdentifierToken().equals(identifierToken))
+                .map(PlayerRegistration::getPlayerId)
+                .findFirst()
+                .orElse(null);
     }
 
     public WebSocketSession getSession(UUID playerId) {
-        return sessionByPlayerId.get(playerId);
+        PlayerRegistration reg = registrations.get(playerId);
+        return (reg != null) ? reg.getSession() : null;
+    }
+
+    public Map<UUID, Long> getDisconnectedEntries() {
+        Map<UUID, Long> result = new HashMap<>();
+        for (PlayerRegistration reg : registrations.values()) {
+            if (!reg.isConnected()) {
+                result.put(reg.getPlayerId(), reg.getDisconnectedAt());
+            }
+        }
+        return result;
+    }
+
+    public Collection<WebSocketSession> getAllPlayerSessions() {
+        return registrations.values().stream()
+                .map(PlayerRegistration::getSession)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
     }
 
     public UUID getPlayerId(WebSocketSession session) {
         return (UUID) session.getAttributes().get(PLAYER_ID_KEY);
-    }
-
-    public UUID getPlayerIdByIdentifierToken(UUID identifierToken) {
-        for (Map.Entry<UUID, WebSocketSession> entry : sessionByPlayerId.entrySet()) {
-            WebSocketSession session = entry.getValue();
-            UUID token = (UUID) session.getAttributes().get(IDENTIFIER_TOKEN_KEY);
-            if (identifierToken.equals(token)) {
-                return entry.getKey();
-            }
-        }
-        return null;
-    }
-
-    public Collection<WebSocketSession> getAllPlayerSessions() {
-        return sessionByPlayerId.values();
     }
 
     public boolean isSessionRegistered(WebSocketSession session) {

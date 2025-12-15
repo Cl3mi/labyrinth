@@ -53,10 +53,8 @@ public class ConnectCommandHandler extends AbstractCommandHandler<ConnectCommand
 
             playerSessionRegistry.registerPlayer(playerId, identifierToken, session);
 
-            var ackPayload = new ConnectAckEventPayload();
-            ackPayload.setType(EventType.CONNECT_ACK);
-            ackPayload.setIdentifierToken(identifierToken.toString());
-            messageService.sendToPlayer(playerId, ackPayload);
+            var ackPayload = createAckPayload(player.getId(), identifierToken);
+            messageService.sendToPlayer(player.getId(), ackPayload);
             return;
         }
 
@@ -65,12 +63,22 @@ public class ConnectCommandHandler extends AbstractCommandHandler<ConnectCommand
         var identifierToken = UUID.randomUUID();
         playerSessionRegistry.registerPlayer(player.getId(), identifierToken, session);
 
-        var ackPayload = new ConnectAckEventPayload();
-        ackPayload.setType(EventType.CONNECT_ACK);
-        ackPayload.setIdentifierToken(identifierToken.toString());
-
+        var ackPayload = createAckPayload(player.getId(), identifierToken);
         messageService.sendToPlayer(player.getId(), ackPayload);
 
+        var lobbyStatePayload = createLobbyStatePayload();
+        messageService.broadcastToPlayers(lobbyStatePayload);
+    }
+
+    private  ConnectAckEventPayload createAckPayload(UUID playerId, UUID identifierToken) {
+        var ackPayload = new ConnectAckEventPayload();
+        ackPayload.setType(EventType.CONNECT_ACK);
+        ackPayload.setPlayerId(playerId.toString());
+        ackPayload.setIdentifierToken(identifierToken.toString());
+        return ackPayload;
+    }
+
+    private LobbyStateEventPayload createLobbyStatePayload() {
         var players = gameService.getPlayers()
                 .stream()
                 .map(playerInfoMapper::toDto)
@@ -80,6 +88,6 @@ public class ConnectCommandHandler extends AbstractCommandHandler<ConnectCommand
         lobbyStateUpdated.setType(EventType.LOBBY_STATE);
         lobbyStateUpdated.setPlayers(players);
 
-        messageService.broadcastToPlayers(lobbyStateUpdated);
+        return lobbyStateUpdated;
     }
 }
