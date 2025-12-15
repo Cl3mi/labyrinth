@@ -187,8 +187,8 @@ public class GameClient extends WebSocketClient {
             payload.setType(CommandType.MOVE_PAWN);
 
             Coordinates coords = new Coordinates();
-            coords.setRow(targetRow);
-            coords.setColumn(targetCol);
+            coords.setRow(targetCol);
+            coords.setColumn(targetRow);
             payload.setTargetCoordinates(coords);
 
             String json = mapper.writeValueAsString(payload);

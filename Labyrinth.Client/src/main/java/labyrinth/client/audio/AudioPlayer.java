@@ -57,4 +57,14 @@ public class AudioPlayer {
         float gainValue = min + (max - min) * volume;
         gain.setValue(gainValue);
     }
+
+    public float getVolume() {
+        if (clip == null) return 1.0f;
+
+        FloatControl gain = (FloatControl) clip.getControl(FloatControl.Type.MASTER_GAIN);
+        float min = gain.getMinimum();
+        float max = gain.getMaximum();
+
+        return (gain.getValue() - min) / (max - min);
+    }
 }

@@ -28,6 +28,8 @@ import java.util.List;
  */
 public class BoardPanel extends JPanel {
 
+    private JButton optionsButton;
+
     private static final int CARD_PANEL_WIDTH = 40;
     private static final int PANEL_PADDING = 20;
     private static final int ARROW_MARGIN = 5;
@@ -93,6 +95,17 @@ public class BoardPanel extends JPanel {
 
         setBackground(BACKGROUND_COLOR);
         setPreferredSize(new Dimension(1400, 800));
+
+        setLayout(null); // Overlay-Button
+
+        optionsButton = new JButton("⚙");
+        optionsButton.setToolTipText("Options");
+        optionsButton.setBounds(10, 10, 45, 30);
+
+        optionsButton.addActionListener(e -> showOptionsDialog());
+
+        add(optionsButton);
+
         setupMouseListener();
 
         backgroundMusic = new AudioPlayer("/sounds/06-Kokiri-Forest.wav");
@@ -679,5 +692,37 @@ public class BoardPanel extends JPanel {
         reachableTiles.clear();
         if (tiles != null) reachableTiles.addAll(tiles);
         repaint();
+    }
+
+    private void showOptionsDialog() {
+        JDialog dialog = new JDialog(
+                SwingUtilities.getWindowAncestor(this),
+                "Options",
+                Dialog.ModalityType.APPLICATION_MODAL
+        );
+
+        int currentVolume = (int) (backgroundMusic.getVolume() * 100);
+
+        JSlider volumeSlider = new JSlider(0, 100, currentVolume);
+        volumeSlider.setMajorTickSpacing(20);
+        volumeSlider.setMinorTickSpacing(5);
+        volumeSlider.setPaintTicks(true);
+        volumeSlider.setPaintLabels(true);
+
+        volumeSlider.addChangeListener(e -> {
+            float volume = volumeSlider.getValue() / 100f;
+            backgroundMusic.setVolume(volume);
+        });
+
+        JPanel panel = new JPanel(new BorderLayout(10, 10));
+        panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+
+        panel.add(new JLabel("Music Volume"), BorderLayout.NORTH);
+        panel.add(volumeSlider, BorderLayout.CENTER);
+
+        dialog.setContentPane(panel);
+        dialog.pack();
+        dialog.setLocationRelativeTo(this);
+        dialog.setVisible(true);
     }
 }
