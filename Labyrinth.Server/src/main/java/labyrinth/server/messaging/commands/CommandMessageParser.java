@@ -14,6 +14,8 @@ public class CommandMessageParser {
 
     private final Map<CommandType, Class<?>> dtoTypes = Map.ofEntries(
             Map.entry(CommandType.CONNECT, ConnectCommandPayload.class),
+            Map.entry(CommandType.DISCONNECT, DisconnectCommandPayload.class),
+            Map.entry(CommandType.ROTATE_TILE, RotateTileCommandPayload.class),
             Map.entry(CommandType.START_GAME, StartGameCommandPayload.class),
             Map.entry(CommandType.PUSH_TILE, PushTileCommandPayload.class),
             Map.entry(CommandType.MOVE_PAWN, MovePawnCommandPayload.class),
