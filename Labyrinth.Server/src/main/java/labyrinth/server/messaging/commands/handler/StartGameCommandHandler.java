@@ -1,6 +1,7 @@
 package labyrinth.server.messaging.commands.handler;
 
 import labyrinth.contracts.models.CommandType;
+import labyrinth.contracts.models.EventType;
 import labyrinth.contracts.models.StartGameCommandPayload;
 import labyrinth.server.game.GameService;
 import labyrinth.server.game.models.records.GameConfig;
@@ -39,6 +40,8 @@ public class StartGameCommandHandler extends AbstractCommandHandler<StartGameCom
         gameService.startGame(gameConfig);
 
         var gameStateDto = gameService.withGameReadLock(gameMapper::toGameStateDto);
+        gameStateDto.setType(EventType.GAME_STARTED);
+
         messageService.broadcastToPlayers(gameStateDto);
     }
 
