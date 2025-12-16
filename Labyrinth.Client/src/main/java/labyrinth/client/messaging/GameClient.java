@@ -20,7 +20,7 @@ public class GameClient extends WebSocketClient {
     @Setter private Consumer<LobbyStateEventPayload> onLobbyState;
     @Setter private Consumer<GameStateEventPayload> onGameStarted;
 
-    // ✅ einzig vorhandenes State-Payload
+    // einzig vorhandenes State-Payload
     @Setter private Consumer<GameStateEventPayload> onGameStateUpdate;
 
     @Setter private Consumer<String> onErrorMessage;
@@ -81,7 +81,7 @@ public class GameClient extends WebSocketClient {
                     if (onGameStarted != null) runOnUiThread(() -> onGameStarted.accept(payload));
                 }
                 case GAME_STATE_UPDATE -> {
-                    // ✅ korrektes Payload
+                    // korrektes Payload
                     GameStateEventPayload payload = mapper.treeToValue(payloadNode, GameStateEventPayload.class);
                     if (onGameStateUpdate != null) runOnUiThread(() -> onGameStateUpdate.accept(payload));
                 }
@@ -139,6 +139,7 @@ public class GameClient extends WebSocketClient {
             payload.setType(CommandType.CONNECT);
             payload.setIdentifierToken(identifierToken);
             send(mapper.writeValueAsString(payload));
+            System.out.println("sendReconnect -> " + mapper.writeValueAsString(payload));
         } catch (Exception e) {
             e.printStackTrace();
             runOnUiThread(() -> {
@@ -152,6 +153,7 @@ public class GameClient extends WebSocketClient {
             DisconnectCommandPayload payload = new DisconnectCommandPayload();
             payload.setType(CommandType.DISCONNECT);
             send(mapper.writeValueAsString(payload));
+            System.out.println("sendDisconnect -> " + mapper.writeValueAsString(payload));
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -204,7 +206,7 @@ public class GameClient extends WebSocketClient {
         }
     }
 
-    // ✅ Korrekt gemäß Contract: nur direction, kein extraTileEntrances
+    //  nur direction, kein extraTileEntrances
     public void sendPushTile(int rowOrColIndex, Direction direction) {
         try {
             PushTileCommandPayload payload = new PushTileCommandPayload();

@@ -1,4 +1,4 @@
-package labyrinth.client;
+package labyrinth.client.ui;
 
 import labyrinth.client.audio.AudioPlayer;
 import labyrinth.client.messaging.GameClient;
@@ -52,7 +52,6 @@ public class BoardPanel extends JPanel {
 
     private final GameClient client;
 
-    private final Map<String, BufferedImage> tileImages = new HashMap<>();
     private final List<BufferedImage> playerIcons = new ArrayList<>();
     private Image backgroundImage;
 
@@ -76,12 +75,38 @@ public class BoardPanel extends JPanel {
     private int size;
     private int arrowSize = 30;
 
+    private final Random random = new Random();
+
     private AudioPlayer backgroundMusic;
 
     /**
      * Optionaler Lock: verhindert Command-Spam bis ein Server-Update eintrifft.
      */
     private boolean inputLocked = false;
+
+    // ================================================================================
+    // TILE IMAGE RANDOMIZATION (stable per cell)
+    // ================================================================================
+    /**
+     * Alle Varianten pro Typ (I/L/T).
+     */
+    private final Map<String, List<BufferedImage>> tileVariants = new HashMap<>();
+
+    /**
+     * “Ziehbeutel” pro Typ (zufällige Reihenfolge).
+     * - I/L: wenn leer -> neu befüllen & shufflen (Reuse erlaubt)
+     * - T: wenn leer -> NICHT neu befüllen (Unique-Only)
+     */
+    private final Map<String, Deque<BufferedImage>> tileBags = new HashMap<>();
+
+    /**
+     * Pro Feld (row:col) merken wir, welche Variante (und welcher Typ) gewählt wurde,
+     * damit bei repaint() nicht ständig neue Random-Images entstehen.
+     */
+    private final Map<String, String> cellAssignedType = new HashMap<>();
+    private final Map<String, BufferedImage> cellAssignedImage = new HashMap<>();
+
+    private static final String EXTRA_KEY = "EXTRA";
 
     public BoardPanel(GameClient client, Board board, Player currentPlayer, List<Player> players) {
         this.client = Objects.requireNonNull(client, "client must not be null");
@@ -143,10 +168,108 @@ public class BoardPanel extends JPanel {
         }
     }
 
+    /**
+     * Lädt ALLE Varianten in tileVariants und initialisiert die tileBags.
+     */
     private void loadTileImages() {
-        tileImages.put("I", loadImage("/images/tiles/tile_I.png"));
-        tileImages.put("L", loadImage("/images/tiles/tile_L.png"));
-        tileImages.put("T", loadImage("/images/tiles/tile_princess.png"));
+
+        tileVariants.put("I", nonNullList(List.of(
+                loadImage("/images/tiles/I_tile.png")
+        )));
+
+        tileVariants.put("L", nonNullList(List.of(
+                loadImage("/images/tiles/L_tile.png"),
+                loadImage("/images/tiles/L_bug.png"),
+                loadImage("/images/tiles/L_insect.png"),
+                loadImage("/images/tiles/L_owl.png"),
+                loadImage("/images/tiles/L_rat.png"),
+                loadImage("/images/tiles/L_spider.png")
+        )));
+
+        tileVariants.put("T", nonNullList(List.of(
+                loadImage("/images/tiles/T_bat.png"),
+                loadImage("/images/tiles/T_dragon.png"),
+                loadImage("/images/tiles/T_genie.png"),
+                loadImage("/images/tiles/T_ghost.png"),
+                loadImage("/images/tiles/T_pig.png"),
+                loadImage("/images/tiles/T_princess.png")
+        )));
+
+        // Bags initial füllen
+        refillAndShuffleBag("I");
+        refillAndShuffleBag("L");
+        refillAndShuffleBag("T");
+    }
+
+    private static List<BufferedImage> nonNullList(List<BufferedImage> in) {
+        List<BufferedImage> out = new ArrayList<>();
+        for (BufferedImage bi : in) {
+            if (bi != null) out.add(bi);
+        }
+        return out;
+    }
+
+    private void refillAndShuffleBag(String type) {
+        List<BufferedImage> all = tileVariants.get(type);
+        if (all == null || all.isEmpty()) {
+            tileBags.put(type, new ArrayDeque<>());
+            System.err.println("No tile variants loaded for type " + type);
+            return;
+        }
+        List<BufferedImage> copy = new ArrayList<>(all);
+        Collections.shuffle(copy, random);
+        tileBags.put(type, new ArrayDeque<>(copy));
+    }
+
+    /**
+     * Ziehe eine Variante aus dem Beutel:
+     * - I/L: wenn leer -> refill + shuffle
+     * - T: wenn leer -> KEIN refill (Unique), fallback auf erste Variante
+     */
+    private BufferedImage drawVariant(String type) {
+        Deque<BufferedImage> bag = tileBags.get(type);
+        if (bag == null) {
+            refillAndShuffleBag(type);
+            bag = tileBags.get(type);
+        }
+
+        if (bag == null || bag.isEmpty()) {
+            if ("T".equals(type)) {
+                List<BufferedImage> allT = tileVariants.get("T");
+                if (allT != null && !allT.isEmpty()) {
+                    System.err.println("T bag empty (unique variants exhausted). Falling back to first T variant.");
+                    return allT.getFirst();
+                }
+                return null;
+            }
+
+            // I/L: refill erlaubt
+            refillAndShuffleBag(type);
+            bag = tileBags.get(type);
+            if (bag == null || bag.isEmpty()) return null;
+        }
+
+        return bag.pollFirst();
+    }
+
+    /**
+     * Liefert für ein Board-Feld eine STABILE Tile-Variante pro Typ.
+     * Wenn sich der Typ (I/L/T) an einer Position ändert, wird neu gezogen.
+     */
+    private BufferedImage getStableTileImage(String type, int row, int col, boolean isExtra) {
+        String key = isExtra ? EXTRA_KEY : (row + ":" + col);
+
+        String assignedType = cellAssignedType.get(key);
+        BufferedImage assignedImg = cellAssignedImage.get(key);
+
+        if (assignedImg != null && Objects.equals(assignedType, type)) {
+            return assignedImg;
+        }
+
+        BufferedImage img = drawVariant(type);
+        cellAssignedType.put(key, type);
+        cellAssignedImage.put(key, img);
+        return img;
     }
 
     private void loadPlayerIcons() {
@@ -179,11 +302,13 @@ public class BoardPanel extends JPanel {
         EnumSet<Direction> dirs = EnumSet.noneOf(Direction.class);
         Collections.addAll(dirs, entrancesArray);
 
+        // I
         if (dirs.size() == 2) {
             if (dirs.contains(Direction.UP) && dirs.contains(Direction.DOWN)) return new TileImageInfo("I", 0);
             if (dirs.contains(Direction.LEFT) && dirs.contains(Direction.RIGHT)) return new TileImageInfo("I", 90);
         }
 
+        // L
         if (dirs.size() == 2) {
             if (dirs.contains(Direction.UP) && dirs.contains(Direction.RIGHT)) return new TileImageInfo("L", 0);
             if (dirs.contains(Direction.RIGHT) && dirs.contains(Direction.DOWN)) return new TileImageInfo("L", 90);
@@ -191,6 +316,7 @@ public class BoardPanel extends JPanel {
             if (dirs.contains(Direction.LEFT) && dirs.contains(Direction.UP)) return new TileImageInfo("L", 270);
         }
 
+        // T
         if (dirs.size() == 3) {
             if (!dirs.contains(Direction.DOWN)) return new TileImageInfo("T", 0);
             if (!dirs.contains(Direction.LEFT)) return new TileImageInfo("T", 90);
@@ -318,9 +444,7 @@ public class BoardPanel extends JPanel {
             for (int col = 0; col < board.getWidth(); col++) {
                 Rectangle tileRect = new Rectangle(xOffset + col * size, yOffset + row * size, size, size);
                 if (tileRect.contains(p)) {
-                    // Server entscheidet, ob Zug erlaubt ist.
                     client.sendMovePawn(row, col);
-
                     inputLocked = true;
                     break outer;
                 }
@@ -377,7 +501,6 @@ public class BoardPanel extends JPanel {
                 int x = xOffset + col * size;
                 int y = yOffset + row * size;
 
-                // Highlighting nur, wenn Server reachableTiles setzt
                 if (reachableTiles.contains(tile)) {
                     drawTileHighlight(g2, x, y);
                 }
@@ -393,7 +516,7 @@ public class BoardPanel extends JPanel {
         boolean drewImage = false;
 
         if (info != null) {
-            BufferedImage img = tileImages.get(info.type);
+            BufferedImage img = getStableTileImage(info.type, row, col, false);
             if (img != null) {
                 drawRotatedImage(g2, img, x, y, info.rotation);
                 drewImage = true;
@@ -532,12 +655,34 @@ public class BoardPanel extends JPanel {
     }
 
     private void drawExtraTile(Graphics2D g2) {
+        int margin = 20;
+        int x = getWidth() - size - margin;
+        int y = getHeight() - size - margin;
+
+        // Debug-Rahmen: zeigt dir immer, WO die Extra-Tile sein sollte
+        g2.setColor(new Color(255, 0, 0, 140));
+        g2.drawRect(x, y, size, size);
+        g2.drawString("EXTRA", x + 5, y + 15);
+
         Tile extraTile = board.getExtraTile();
-        if (extraTile != null) {
-            int margin = 20;
-            int x = getWidth() - size - margin;
-            int y = getHeight() - size - margin;
-            drawTileAt(g2, extraTile, x, y, -1, -1, false);
+        if (extraTile == null) {
+            // Debug: du siehst den roten Rahmen, aber keine Tile -> extraTile ist null
+            return;
+        }
+
+        TileImageInfo info = getTileImageInfo(extraTile);
+        boolean drewImage = false;
+
+        if (info != null) {
+            BufferedImage img = getStableTileImage(info.type, -1, -1, true);
+            if (img != null) {
+                drawRotatedImage(g2, img, x, y, info.rotation);
+                drewImage = true;
+            }
+        }
+
+        if (!drewImage) {
+            drawCorridorsFallback(g2, extraTile, x, y);
         }
     }
 
@@ -546,7 +691,7 @@ public class BoardPanel extends JPanel {
         int infoY = 40;
 
         g2.setFont(DEBUG_INFO_FONT);
-        g2.setColor(Color.RED);
+        g2.setColor(Color.BLACK);
 
         List<String> infoLines = new ArrayList<>();
         var serverPlayers = board.getPlayers();

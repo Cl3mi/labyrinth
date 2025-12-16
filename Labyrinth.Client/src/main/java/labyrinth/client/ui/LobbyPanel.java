@@ -10,17 +10,35 @@ import lombok.Setter;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
+import java.util.Objects;
 
 /**
  * Lobby-UI für den Online-Modus.
- * Zeigt Verbindungsstatus, Spieler in der Lobby und einen "Spiel starten"-Button.
- * Design: gleicher Hintergrund & Musik wie im BoardPanel.
+ * - zeigt Verbindungsstatus
+ * - listet Spieler in der Lobby
+ * - Start-Button nur für lokalen Admin
+ *
+ * Robustheit:
+ * - primär: lokaler Spieler über localPlayerId
+ * - fallback: lokaler Spieler über localUsername (falls PlayerId stale/noch nicht gesetzt)
+ * - alle UI-Updates laufen im EDT
  */
 public class LobbyPanel extends JPanel {
 
     private final GameClient client;
+
+    /**
+     * MUSS nach CONNECT_ACK vom Client gesetzt werden (ack.getPlayerId()).
+     * Kann zu Beginn null sein.
+     */
     @Setter
     private String localPlayerId;
+
+    /**
+     * Username als Fallback (nicht ideal als Identifier, aber praktisch bis localPlayerId stabil ist).
+     */
+    @Setter
+    private String localUsername;
 
     // UI-Komponenten
     private final JLabel connectionLabel;
@@ -32,32 +50,32 @@ public class LobbyPanel extends JPanel {
     private Image backgroundImage;
     private AudioPlayer backgroundMusic;
 
-    @Setter
-    private String localUsername;
+    // Letzter Lobby-State (für Retry/Restore)
+    private volatile LobbyStateEventPayload lastLobbyState;
 
     public LobbyPanel(GameClient client, String localPlayerId) {
-        this.client = client;
+        this.client = Objects.requireNonNull(client, "client must not be null");
         this.localPlayerId = localPlayerId;
 
         loadBackgroundImage();
         initMusic();
-        setOpaque(false); // wir malen den Hintergrund selbst
 
+        setOpaque(false);
         setLayout(new BorderLayout());
         setBorder(new EmptyBorder(10, 10, 10, 10));
 
-        // ===== Header (Statuszeile) =====
+        // ===== Header =====
         JPanel header = new JPanel(new BorderLayout());
         header.setOpaque(false);
 
         connectionLabel = new JLabel("Verbindung wird aufgebaut …");
         connectionLabel.setFont(new Font("Arial", Font.BOLD, 16));
-        connectionLabel.setForeground(new Color(0, 120, 0));
+        connectionLabel.setForeground(new Color(170, 120, 0));
 
         header.add(connectionLabel, BorderLayout.WEST);
         add(header, BorderLayout.NORTH);
 
-        // ===== Mitte: halbtransparente Spieler-Liste =====
+        // ===== Center: Spieler-Liste =====
         playerListModel = new DefaultListModel<>();
         playerList = new JList<>(playerListModel);
         playerList.setFont(new Font("Arial", Font.BOLD, 14));
@@ -69,7 +87,6 @@ public class LobbyPanel extends JPanel {
         JScrollPane scrollPane = new JScrollPane(playerList) {
             @Override
             protected void paintComponent(Graphics g) {
-                // halbtransparenter weißer Hintergrund
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setColor(new Color(255, 255, 255, 180));
                 g2.fillRect(0, 0, getWidth(), getHeight());
@@ -92,14 +109,11 @@ public class LobbyPanel extends JPanel {
 
         startButton = new JButton("Spiel starten");
         startButton.setFont(new Font("Arial", Font.BOLD, 14));
-
+        startButton.setEnabled(false); // initial deaktiviert
         startButton.addActionListener(e -> onStartGameClicked());
 
         footer.add(startButton);
         add(footer, BorderLayout.SOUTH);
-
-        // Startbutton initial deaktivieren, bis Lobby-Infos vom Server kommen
-        startButton.setEnabled(false);
 
         if (backgroundMusic != null) {
             backgroundMusic.play();
@@ -126,16 +140,13 @@ public class LobbyPanel extends JPanel {
     private void initMusic() {
         try {
             backgroundMusic = new AudioPlayer("/sounds/06-Kokiri-Forest.wav");
-            backgroundMusic.setVolume(0.8f);
+            backgroundMusic.setVolume(0.0f);
             backgroundMusic.loop();
         } catch (Exception e) {
             System.err.println("Error starting lobby music: " + e.getMessage());
         }
     }
 
-    /**
-     * Sollte beim Wechsel ins BoardPanel aufgerufen werden.
-     */
     public void stopMusic() {
         if (backgroundMusic != null) {
             backgroundMusic.stop();
@@ -143,62 +154,103 @@ public class LobbyPanel extends JPanel {
     }
 
     // --------------------------------------------------------------------------------
-    // Öffentliche API für LabyrinthApplication
+    // Public API
     // --------------------------------------------------------------------------------
 
-    /** Wird vom Client aufgerufen, wenn die Verbindung steht / verloren geht. */
     public void setConnected(boolean connected) {
-        if (connected) {
-            connectionLabel.setText("Verbunden mit Server");
-            connectionLabel.setForeground(new Color(0, 150, 0));
-        } else {
-            connectionLabel.setText("Nicht verbunden");
-            connectionLabel.setForeground(new Color(170, 0, 0));
-        }
+        SwingUtilities.invokeLater(() -> {
+            if (connected) {
+                connectionLabel.setText("Verbunden mit Server");
+                connectionLabel.setForeground(new Color(0, 150, 0));
+            } else {
+                connectionLabel.setText("Nicht verbunden");
+                connectionLabel.setForeground(new Color(170, 0, 0));
+                startButton.setEnabled(false);
+            }
+        });
+    }
+
+    public void setStatusText(String text, Color color) {
+        SwingUtilities.invokeLater(() -> {
+            connectionLabel.setText(text != null ? text : "");
+            if (color != null) {
+                connectionLabel.setForeground(color);
+            }
+        });
     }
 
     /**
      * Aktualisiert die Spieler-Liste basierend auf dem LobbyState-Event.
+     *
+     * Matching-Strategie:
+     * 1) Primär: localPlayerId == p.id
+     * 2) Fallback: localUsername == p.name (nur wenn lokaler Spieler noch nicht gefunden wurde)
+     *
+     * Das behebt deinen aktuellen Zustand (stale localPlayerId), ohne dass du UI-seitig blockierst.
      */
     public void updateLobby(LobbyStateEventPayload lobby) {
-        playerListModel.clear();
+        this.lastLobbyState = lobby;
 
-        if (lobby == null || lobby.getPlayers() == null) {
-            startButton.setEnabled(false);
-            return;
-        }
+        SwingUtilities.invokeLater(() -> {
+            playerListModel.clear();
 
-        PlayerInfo[] players = lobby.getPlayers();
-        boolean isAdmin = false;
-
-        for (PlayerInfo p : players) {
-            StringBuilder sb = new StringBuilder();
-
-            // Admin-Markierung
-            if (Boolean.TRUE.equals(p.getIsAdmin())) {
-                sb.append("(Admin) ");
+            if (lobby == null || lobby.getPlayers() == null) {
+                startButton.setEnabled(false);
+                return;
             }
 
-            sb.append(p.getName());
+            PlayerInfo[] players = lobby.getPlayers();
+            boolean localFound = false;
+            boolean localIsAdmin = false;
 
-            // Lokaler Spieler (über Username, NICHT über Token!)
-            if (localUsername != null && localUsername.equals(p.getName())) {
-                sb.append(" (Du)");
-                isAdmin = Boolean.TRUE.equals(p.getIsAdmin());
+            // Optionales Debug: (kannst du später entfernen)
+            System.out.println("[LobbyPanel] localPlayerId=" + localPlayerId + " localUsername=" + localUsername);
+
+            for (PlayerInfo p : players) {
+                if (p == null) continue;
+
+                // Optionales Debug: (kannst du später entfernen)
+                System.out.println("[LobbyPanel] p.id=" + p.getId() + " p.name=" + p.getName() + " p.isAdmin=" + p.getIsAdmin());
+
+                StringBuilder sb = new StringBuilder();
+
+                if (Boolean.TRUE.equals(p.getIsAdmin())) {
+                    sb.append("(Admin) ");
+                }
+
+                String name = p.getName() != null ? p.getName() : "<unbekannt>";
+                sb.append(name);
+
+                boolean idMatch = localPlayerId != null
+                        && p.getId() != null
+                        && localPlayerId.equals(p.getId());
+
+                boolean nameMatch = localUsername != null
+                        && p.getName() != null
+                        && localUsername.equals(p.getName());
+
+                // Primär über ID; Fallback über Name, aber nur solange noch nicht gefunden
+                if (idMatch || (!localFound && nameMatch)) {
+                    sb.append(" (Du)");
+                    localFound = true;
+                    localIsAdmin = Boolean.TRUE.equals(p.getIsAdmin());
+                }
+
+                playerListModel.addElement(sb.toString());
             }
 
-            playerListModel.addElement(sb.toString());
-        }
-
-        // Start-Button nur für lokalen Admin
-        startButton.setEnabled(isAdmin);
+            startButton.setEnabled(localFound && localIsAdmin);
+        });
     }
 
     // --------------------------------------------------------------------------------
-    // Start-Button → StartGameCommandPayload über GameClient senden
+    // StartGame
     // --------------------------------------------------------------------------------
 
     private void onStartGameClicked() {
+        // Schutz gegen Double-Click
+        startButton.setEnabled(false);
+
         BoardSize bs = new BoardSize();
         bs.setRows(7);
         bs.setCols(7);
@@ -213,15 +265,20 @@ public class LobbyPanel extends JPanel {
                     + " treasureCardCount=" + treasuresPerPlayer
                     + " totalBonusCount=" + totalBonusCount
                     + " gameDurationSeconds=" + gameDurationSeconds);
+
             client.sendStartGame(bs, treasuresPerPlayer, totalBonusCount, gameDurationSeconds);
         } catch (Exception ex) {
             ex.printStackTrace();
-            JOptionPane.showMessageDialog(
+
+            SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(
                     this,
-                    "Konnte spiel nicht starten: " + ex.getMessage(),
+                    "Konnte Spiel nicht starten: " + ex.getMessage(),
                     "Fehler",
                     JOptionPane.ERROR_MESSAGE
-            );
+            ));
+
+            // Button-Status anhand letzter Lobby wiederherstellen
+            updateLobby(lastLobbyState);
         }
     }
 

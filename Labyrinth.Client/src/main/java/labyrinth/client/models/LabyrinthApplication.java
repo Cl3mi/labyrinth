@@ -1,6 +1,6 @@
 package labyrinth.client.models;
 
-import labyrinth.client.BoardPanel;
+import labyrinth.client.ui.BoardPanel;
 import labyrinth.client.factories.BoardFactory;
 import labyrinth.client.messaging.GameClient;
 import labyrinth.client.ui.LobbyPanel;
@@ -12,6 +12,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.prefs.Preferences;
 
 public class LabyrinthApplication {
 
@@ -68,7 +69,7 @@ public class LabyrinthApplication {
         connectAckReceived = false;
 
         client.setOnOpenHook(() -> {
-            if (loginSent) return;          // ✅ verhindert Doppel-Login
+            if (loginSent) return;
             loginSent = true;
 
             String token = loadToken();
@@ -134,7 +135,7 @@ public class LabyrinthApplication {
         try {
             if (client != null && client.isOpen()) {
                 client.sendDisconnect();
-                try { Thread.sleep(100); } catch (InterruptedException ignored) {}
+                try { Thread.sleep(1000); } catch (InterruptedException ignored) {}
             }
             if (client != null) client.close();
         } finally {
@@ -191,55 +192,91 @@ public class LabyrinthApplication {
     // Callbacks für GameClient
     // --------------------------------------------------------------------
 
+    private volatile boolean gameViewShown = false;
+
     private void registerCallbacks() {
 
+        // ============================================================
+        // CONNECT_ACK
+        // ============================================================
         client.setOnConnectAck(ack -> {
-            connectAckReceived = true; // ✅ stoppt den Fallback-Thread
+            connectAckReceived = true;
 
-            System.out.println("[" + PROFILE + "] CONNECT_ACK identifierToken=" + ack.getIdentifierToken());
+            System.out.println("[" + PROFILE + "] CONNECT_ACK playerId=" + ack.getPlayerId()
+                    + " identifierToken=" + ack.getIdentifierToken());
+
+            // Token & PlayerId persistent speichern (optional, aber korrekt)
+            ClientIdentityStore.saveToken(ack.getIdentifierToken());
+            ClientIdentityStore.savePlayerId(ack.getPlayerId());
+
             this.identifierToken = ack.getIdentifierToken();
-            saveToken(identifierToken);
 
             SwingUtilities.invokeLater(() -> {
                 lobbyPanel.setConnected(true);
-                lobbyPanel.setLocalPlayerId(identifierToken);
+
+                // playerId (NICHT token!) ins LobbyPanel
+                lobbyPanel.setLocalPlayerId(ack.getPlayerId());
             });
         });
 
+        // ============================================================
         // LOBBY_STATE
+        // ============================================================
         client.setOnLobbyState(lobby ->
                 SwingUtilities.invokeLater(() -> lobbyPanel.updateLobby(lobby))
         );
 
-        // GAME_STARTED (optional): wenn Server es NICHT sendet, kannst du das entfernen
+        // ============================================================
+        // GAME_STARTED  → initiale Spielansicht
+        // ============================================================
         client.setOnGameStarted(started -> {
-            System.out.println("[" + PROFILE + "] Received GAME_STARTED (ignored - using GAME_STATE_UPDATE)");
-            // bewusst leer lassen oder später entfernen
+            System.out.println("[" + PROFILE + "] Received GAME_STARTED");
+
+            Board board = BoardFactory.fromContracts(started.getBoard());
+            List<Player> players = BoardFactory.convertPlayerStates(started.getPlayers());
+
+            System.out.println("SERVER spareTile = " + (started.getBoard().getSpareTile() == null ? "null" : "present"));
+
+            showGame(board, players);
         });
 
-        // ✅ GAME_STATE_UPDATE: darüber initialisieren UND laufend updaten
+        // ============================================================
+        // GAME_STATE_UPDATE → laufende Updates
+        // ============================================================
         client.setOnGameStateUpdate(state -> {
             System.out.println("[" + PROFILE + "] Received GAME_STATE_UPDATE");
 
-            // Contracts -> Client-Model
-            Board clientBoard = BoardFactory.fromContracts(state.getBoard());
-            List<Player> clientPlayers = BoardFactory.convertPlayerStates(state.getPlayers());
+            Board board = BoardFactory.fromContracts(state.getBoard());
+            List<Player> players = BoardFactory.convertPlayerStates(state.getPlayers());
 
-            // "aktueller Spieler" für UI: heuristisch über username
-            Player currentPlayer = resolveLocalPlayer(clientPlayers);
-
-            SwingUtilities.invokeLater(() -> {
-                frame.setTitle("Labyrinth Online (" + PROFILE + ") - Board " +
-                        clientBoard.getHeight() + "x" + clientBoard.getWidth());
-
-                ensureBoardPanel(clientBoard, currentPlayer, clientPlayers);
-            });
+            showGame(board, players);
         });
 
-        // Fehler → Dialog
-        client.setOnErrorMessage(msg -> SwingUtilities.invokeLater(() ->
-                JOptionPane.showMessageDialog(frame, msg, "Fehler", JOptionPane.ERROR_MESSAGE)
-        ));
+        // ============================================================
+        // ERROR
+        // ============================================================
+        client.setOnErrorMessage(msg ->
+                SwingUtilities.invokeLater(() ->
+                        JOptionPane.showMessageDialog(frame, msg, "Fehler", JOptionPane.ERROR_MESSAGE)
+                )
+        );
+    }
+
+    private void showGame(Board board, List<Player> players) {
+        if (board == null || players == null) return;
+
+        Player currentPlayer = resolveLocalPlayer(players);
+
+        SwingUtilities.invokeLater(() -> {
+            if (!gameViewShown) {
+                gameViewShown = true;
+            }
+
+            frame.setTitle("Labyrinth Online (" + PROFILE + ") - Board " +
+                    board.getHeight() + "x" + board.getWidth());
+
+            ensureBoardPanel(board, currentPlayer, players);
+        });
     }
 
     // --------------------------------------------------------------------
@@ -275,5 +312,18 @@ public class LabyrinthApplication {
             System.out.println("[" + PROFILE + "] Deleted token file " + TOKEN_FILE.toAbsolutePath());
         } catch (Exception ignored) {
         }
+    }
+
+    public final class ClientIdentityStore {
+        private static final Preferences PREFS = Preferences.userNodeForPackage(ClientIdentityStore.class);
+        private static final String KEY_TOKEN = "identifierToken";
+        private static final String KEY_PLAYER_ID = "playerId";
+
+        public static String loadToken() { return PREFS.get(KEY_TOKEN, null); }
+        public static void saveToken(String token) { PREFS.put(KEY_TOKEN, token); }
+        public static void clearToken() { PREFS.remove(KEY_TOKEN); }
+
+        public static String loadPlayerId() { return PREFS.get(KEY_PLAYER_ID, null); }
+        public static void savePlayerId(String playerId) { PREFS.put(KEY_PLAYER_ID, playerId); }
     }
 }
