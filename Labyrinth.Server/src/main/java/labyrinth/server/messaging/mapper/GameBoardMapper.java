@@ -35,6 +35,7 @@ public class GameBoardMapper {
         }
 
         dto.setTiles(tiles);
+        dto.setSpareTile(tileMapper.toDto(board.getExtraTile()));
         dto.setRows(maxRow + 1);
         dto.setCols(maxCol + 1);
 
