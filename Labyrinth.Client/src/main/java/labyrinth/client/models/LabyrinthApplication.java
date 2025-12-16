@@ -249,6 +249,8 @@ public class LabyrinthApplication {
             Board board = BoardFactory.fromContracts(state.getBoard());
             List<Player> players = BoardFactory.convertPlayerStates(state.getPlayers());
 
+            System.out.println("SERVER spareTile = " + (state.getBoard().getSpareTile() == null ? "null" : "present"));
+
             showGame(board, players);
         });
 
