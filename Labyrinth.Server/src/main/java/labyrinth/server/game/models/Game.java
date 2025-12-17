@@ -246,14 +246,13 @@ public class Game {
     }
 
 
-    public void useSwapBonus(Player currentPlayer, Player targetPlayer) {
+    public boolean useSwapBonus(Player currentPlayer, Player targetPlayer) {
         guardFor(currentPlayer);
         guardFor(MoveState.PLACE_TILE);
         var allowedToUse = currentPlayer.useBonus(BonusTypes.SWAP);
 
         if (!allowedToUse) {
-            // return false?
-            return;
+             return false;
         }
 
         var currentPlayerTile = currentPlayer.getCurrentTile();
@@ -262,29 +261,31 @@ public class Game {
         currentPlayer.setCurrentTile(targetPlayerTile);
         targetPlayer.setCurrentTile(currentPlayerTile);
 
-        // return true;
+         return true;
     }
 
-    public void usePushTwiceBonus(Player player) {
+    public boolean usePushTwiceBonus(Player player) {
         guardFor(player);
         var allowedToUse = player.useBonus(BonusTypes.PUSH_TWICE);
 
         if (!allowedToUse) {
-            return;
+            return false;
         }
 
         activeBonus = BonusTypes.PUSH_TWICE;
+        return true;
     }
 
-    public void usePushFixedBonus(Player player) {
+    public boolean usePushFixedBonus(Player player) {
         guardFor(player);
         var allowedToUse = player.useBonus(BonusTypes.PUSH_FIXED);
 
         if (!allowedToUse) {
-            return;
+            return false;
         }
 
         activeBonus = BonusTypes.PUSH_FIXED;
+        return true;
     }
 
     public boolean movePlayerToTile(int row, int col, Player player) {

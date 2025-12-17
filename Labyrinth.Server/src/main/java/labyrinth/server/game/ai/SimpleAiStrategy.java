@@ -18,7 +18,7 @@ public class SimpleAiStrategy implements AiStrategy {
 
         java.util.concurrent.CompletableFuture.supplyAsync(() -> {
                     TreasureCard targetCard = realPlayer.getAssignedTreasureCards().isEmpty() ? null
-                            : realPlayer.getAssignedTreasureCards().getFirst();
+                            : realPlayer.getCurrentTreasureCard();
                     return findBestMove(game, realPlayer, targetCard);
                 }).thenCompose(result -> delay(randomDelay()).thenApply(v -> result))
                 .thenCompose(bestResult -> {
@@ -178,7 +178,6 @@ public class SimpleAiStrategy implements AiStrategy {
             }
         }
 
-        // Score logic
         int score = 0;
         int minDist = Integer.MAX_VALUE;
         Position bestPosForOp = null;
@@ -204,10 +203,9 @@ public class SimpleAiStrategy implements AiStrategy {
                 }
             }
         } else {
-            // No target, random move
             score = 0;
             minDist = 0;
-            // Just move to current
+            // No target, just move to current
             Position cur = clonedBoard.getPositionOfTile(clonedMe.getCurrentTile());
             bestPosForOp = cur;
         }

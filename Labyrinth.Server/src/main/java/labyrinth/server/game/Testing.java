@@ -40,11 +40,11 @@ public class Testing {
         var treasureCardFactory = new TreasureCardFactory();
         var boardFactory = new BoardFactory();
 
-        var gameConfig = new GameConfig(7, 7, 24, 1800, 4, 30);
+        var gameConfig = new GameConfig(7, 7, 24, 1800, 3, 30);
         var board = boardFactory.createBoard(gameConfig.boardWidth(), gameConfig.boardHeight(), gameConfig.totalBonusCount());
         var cards = treasureCardFactory.createTreasureCards(gameConfig.treasureCardCount(), game.getPlayers().size());
 
-
+//
         var p2 = game.getPlayers().get(1);
         game.toggleAiForPlayer(p2);
 
