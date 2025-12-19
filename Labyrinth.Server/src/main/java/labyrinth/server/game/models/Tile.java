@@ -101,6 +101,12 @@ public class Tile {
                 this.treasureCard = null;
             }
         }
+        
+        if (bonus != null) {
+            System.out.println("Bonus collected: " + bonus);
+            player.getBonuses().add(bonus);
+            this.bonus = null;
+        }
     }
 
     @Override

@@ -249,6 +249,26 @@ public class Board {
         tile.setTreasureCard(treasureCard);
     }
 
+    public void placeRandomBonuses(List<BonusTypes> bonuses) {
+        Random random = new Random();
+        Tile tile;
+        int row, col;
+        boolean tileIsOccupied;
+
+        for (BonusTypes bonus : bonuses) {
+            do {
+                row = random.nextInt(height);
+                col = random.nextInt(width);
+                tile = tileMap.getForward(new Position(row, col));
+                // Check if tile has treasure OR bonus
+                tileIsOccupied = tile != null && (tile.getTreasureCard() != null || tile.getBonus() != null);
+            } while (isCornerCoordinate(row, col) || tileIsOccupied);
+            
+            System.out.println("Placing bonus " + bonus + " at " + row + "/" + col);
+            tile.setBonus(bonus);
+        }
+    }
+
     public boolean isCornerCoordinate(int row, int col) {
         boolean isTopLeft = (row == 0 && col == 0);
         boolean isTopRight = (row == 0 && col == this.width - 1);

@@ -1,5 +1,6 @@
 package labyrinth.server.game;
 
+import labyrinth.server.game.enums.BonusTypes;
 import labyrinth.server.game.enums.Direction;
 import labyrinth.server.game.models.*;
 import labyrinth.server.game.models.records.Position;
@@ -245,6 +246,9 @@ public class BoardPanel extends JPanel {
             if (tile.getTreasureCard() != null) {
                 drawTreasureOnTile(g2, tile.getTreasureCard(), cx, cy);
             }
+            if (tile.getBonus() != null) {
+                drawBonusOnTile(g2, tile.getBonus(), cx, cy);
+            }
             // Coordinates
             drawCoordinates(g2, x, y, row, col);
         }
@@ -258,10 +262,25 @@ public class BoardPanel extends JPanel {
      * A helper to draw the treasure name on a tile.
      */
     private void drawTreasureOnTile(Graphics2D g2, TreasureCard card, int centerX, int centerY) {
-        g2.setColor(Color.BLACK);
+        if (currentPlayer != null && currentPlayer.getCurrentTreasureCard() == card){
+             g2.setColor(Color.GREEN.darker());
+        } else if (currentPlayer != null && currentPlayer.getAssignedTreasureCards().contains(card)){
+             g2.setColor(Color.RED);
+        } else {
+             g2.setColor(Color.BLACK);
+        }
+        
         FontMetrics fm = g2.getFontMetrics();
         int textWidth = fm.stringWidth(card.getTreasureName());
         g2.drawString(card.getTreasureName(), centerX - textWidth / 2, (centerY + fm.getAscent() / 2) - 20);
+    }
+
+    private void drawBonusOnTile(Graphics2D g2, BonusTypes bonus, int centerX, int centerY) {
+        g2.setColor(new Color(0, 100, 100)); // Dark Cyan for bonus text
+        FontMetrics fm = g2.getFontMetrics();
+        String text = bonus.name(); // Or short name
+        int textWidth = fm.stringWidth(text);
+        g2.drawString(text, centerX - textWidth / 2, (centerY + fm.getAscent() / 2) + 20); // Shift down
     }
 
     /**
@@ -401,6 +420,9 @@ public class BoardPanel extends JPanel {
                     infoLines.add(String.format(" - Score: %d, Steps: %d", s.getScore(), s.getStepsTaken()));
                     infoLines.add(String.format(" - Pushed: %d, Treasures: %d", s.getTilesPushed(), s.getTreasuresCollected()));
                 }
+                if (!p.getBonuses().isEmpty()) {
+                     infoLines.add(" - Bonuses: " + p.getBonuses());
+                }
             }
         }
 
@@ -426,7 +448,15 @@ public class BoardPanel extends JPanel {
             int y = startY + i * (cardHeight + padding);
             g2.fillRoundRect(startX, y, cardWidth, cardHeight, 10, 10);
 
-            g2.setColor(Color.BLACK);
+            g2.fillRoundRect(startX, y, cardWidth, cardHeight, 10, 10);
+
+            // Text Color Logic: Green for current target, Red for others
+            if (cards.get(i) == player.getCurrentTreasureCard()) {
+                g2.setColor(Color.GREEN.darker()); 
+            } else {
+                g2.setColor(Color.RED);
+            }
+
             String treasureName = cards.get(i).getTreasureName();
             FontMetrics fm = g2.getFontMetrics();
             int textWidth = fm.stringWidth(treasureName);
