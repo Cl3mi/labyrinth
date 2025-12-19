@@ -1,10 +1,12 @@
 package labyrinth.server.game.models;
 
+import labyrinth.server.game.constants.PointRewards;
 import labyrinth.server.game.enums.BonusTypes;
 import labyrinth.server.game.enums.Direction;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.awt.*;
 import java.util.EnumSet;
 import java.util.Set;
 
@@ -93,6 +95,7 @@ public class Tile {
             if (player.getCurrentTreasureCard() == treasureCard) {
                 System.out.println("Card: " + treasureCard.getTreasureName());
                 treasureCard.collect();
+                player.getStatistics().increaseScore(PointRewards.REWARD_TREASURE);
                 this.treasureCard = null;
             }
         }

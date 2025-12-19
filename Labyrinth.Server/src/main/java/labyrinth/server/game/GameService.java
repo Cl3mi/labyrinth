@@ -144,9 +144,6 @@ public class GameService {
         try {
             var shiftSuccessfull = game.shift(index, direction, player);
 
-            if(shiftSuccessfull){
-                player.getStatistics().increaseScore(PointRewards.REWARD_PUSH_TILE);
-            }
             return shiftSuccessfull;
         } finally {
             rwLock.writeLock().unlock();
@@ -168,7 +165,7 @@ public class GameService {
             var useSuccessfull = game.useBeamBonus(row, col, player);
 
             if(useSuccessfull){
-                player.getStatistics().increaseScore(PointRewards.REWARD_PUSH_TILE);
+                player.getStatistics().increaseScore(PointRewards.REWARD_SHIFT_TILE);
             }
 
         } finally {

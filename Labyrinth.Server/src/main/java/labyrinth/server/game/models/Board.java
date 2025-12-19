@@ -258,7 +258,7 @@ public class Board {
         return isTopLeft || isTopRight || isBottomLeft || isBottomRight;
     }
 
-    boolean movePlayerToTile(Player player, int targetRow, int targetCol) {
+    int movePlayerToTile(Player player, int targetRow, int targetCol) {
         // Lookup the player's current tile and the target tile using the bi-directional
         // mapping
         Tile currentTile = player.getCurrentTile();
@@ -272,20 +272,21 @@ public class Board {
         for (Player other : players) {
             if (other != player && other.getCurrentTile() == targetTile) {
                 System.out.println("Cant move a player is already on the target tile!");
-                return false;
+                return -1;
             }
         }
 
         Set<Tile> reachable = getReachableTiles(player);
         if (!reachable.contains(targetTile)) {
             System.out.println("Tile is not reachable!");
-            return false;
+            return -1;
         }
 
         // Step onto the target tile (which may collect treasures)
         targetTile.getSteppedOnBy(player);
         // Update player's logical tile
         player.setCurrentTile(targetTile);
+        var distance = graph.getDistance(currentTile, targetTile);
 
         Position newPos = getPositionOfTile(targetTile);
         System.out.println("Player moved to " + (newPos != null ? newPos : "unknown"));
@@ -295,7 +296,7 @@ public class Board {
         }
         currentMoveState = MoveState.PLACE_TILE;
 
-        return true;
+        return distance;
     }
 
     private void adjustPlayersOnPushedOutTile(Tile pushedOutTile) {

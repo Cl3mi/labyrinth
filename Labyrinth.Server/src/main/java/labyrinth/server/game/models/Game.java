@@ -2,6 +2,7 @@ package labyrinth.server.game.models;
 
 import labyrinth.contracts.models.PlayerColor;
 import labyrinth.server.game.abstractions.IGameTimer;
+import labyrinth.server.game.constants.PointRewards;
 import labyrinth.server.game.enums.BonusTypes;
 import labyrinth.server.game.enums.Direction;
 import labyrinth.server.game.enums.MoveState;
@@ -220,6 +221,8 @@ public class Game {
             activeBonus = null;
         }
 
+        player.getStatistics().increaseScore(PointRewards.REWARD_SHIFT_TILE);
+
         return true;
     }
 
@@ -242,8 +245,14 @@ public class Game {
 
         var allowedToUse = player.useBonus(BonusTypes.SWAP);
 
+        if(!allowedToUse) {
+            return false;
+        }
+
+        player.getStatistics().increaseScore(PointRewards.REWARD_BONUS_USED);
+
         player.setCurrentTile(targetTile);
-        return allowedToUse;
+        return true;
     }
 
 
@@ -261,8 +270,9 @@ public class Game {
 
         currentPlayer.setCurrentTile(targetPlayerTile);
         targetPlayer.setCurrentTile(currentPlayerTile);
+        currentPlayer.getStatistics().increaseScore(PointRewards.REWARD_BONUS_USED);
 
-         return true;
+        return true;
     }
 
     public boolean usePushTwiceBonus(Player player) {
@@ -286,6 +296,8 @@ public class Game {
         }
 
         activeBonus = BonusTypes.PUSH_FIXED;
+        player.getStatistics().increaseScore(PointRewards.REWARD_BONUS_USED);
+
         return true;
     }
 
@@ -293,10 +305,16 @@ public class Game {
         guardFor(MoveState.MOVE);
         guardFor(player);
 
-        var moved = board.movePlayerToTile(player, row, col);
+        var distanceMoved = board.movePlayerToTile(player, row, col);
 
-        if (!moved) {
+        if (distanceMoved != -1) {
             return false;
+        }
+
+        player.getStatistics().increaseScore(PointRewards.REWARD_MOVE * distanceMoved);
+
+        if(player.getCurrentTreasureCard() != null) {
+            player.getStatistics().increaseScore(PointRewards.REWARD_ALL_TREASURES_COLLECTED);
         }
 
         nextPlayer();
@@ -314,7 +332,6 @@ public class Game {
         currentMoveState = MoveState.PLACE_TILE;
 
         if (getCurrentPlayer().isAiActive()) {
-            // Using AdvancedAiStrategy for smarter gameplay
             new labyrinth.server.game.ai.SimpleAiStrategy().performTurn(this, getCurrentPlayer());
         } else {
             nextTurnTimer.start(gameConfig.turnTimeInSeconds(), this::nextPlayer);

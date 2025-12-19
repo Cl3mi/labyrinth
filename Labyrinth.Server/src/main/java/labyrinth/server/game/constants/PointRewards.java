@@ -7,7 +7,7 @@ public final class PointRewards {
 
     public static final int REWARD_MOVE = 1;
     public static final int REWARD_TREASURE = 10;
-    public static final int REWARD_PUSH_TILE = 1;
+    public static final int REWARD_SHIFT_TILE = 1;
     public static final int REWARD_ALL_TREASURES_COLLECTED = 100;
     public static final int REWARD_BONUS_USED = 5;
 }
