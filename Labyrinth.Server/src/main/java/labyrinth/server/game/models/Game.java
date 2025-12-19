@@ -60,7 +60,7 @@ public class Game {
     }
 
     /**
-     * Adds a player to the room.
+     * Adds a player to the room. The first player that joins will become the admin.
      *
      * @param username the username of the player joining the room
      * @throws IllegalStateException if the room is full
@@ -82,7 +82,6 @@ public class Game {
         player.setColor(getNextColor());
 
         if (players.isEmpty()) {
-            // first player becomes admin
             player.setAdmin(true);
         }
 
@@ -181,7 +180,6 @@ public class Game {
     }
 
     public void rotateExtraTileClockwise(Player player) {
-        //TODO: check if correct
         guardFor(MoveState.PLACE_TILE);
         guardFor(player);
 
