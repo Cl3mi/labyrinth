@@ -227,7 +227,7 @@ public class Game {
         player.setAiActive(!player.isAiActive());
     }
 
-    public void useBeamBonus(int row, int col, Player player) {
+    public boolean useBeamBonus(int row, int col, Player player) {
         guardFor(player);
         guardFor(MoveState.PLACE_TILE);
 
@@ -236,13 +236,14 @@ public class Game {
         for (Player other : players) {
             if (other != player && other.getCurrentTile() == targetTile) {
                 System.out.println("Cant move a player is already on the target tile!");
-                return;
+                return false;
             }
         }
 
         var allowedToUse = player.useBonus(BonusTypes.SWAP);
 
         player.setCurrentTile(targetTile);
+        return allowedToUse;
     }
 
 
