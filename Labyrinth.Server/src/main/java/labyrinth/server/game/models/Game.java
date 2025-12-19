@@ -168,6 +168,7 @@ public class Game {
         }
 
         gameStartTime = OffsetDateTime.now();
+        this.roomState = RoomState.IN_GAME;
     }
 
     public Player getCurrentPlayer() {
@@ -181,6 +182,7 @@ public class Game {
 
     public void rotateExtraTileClockwise(Player player) {
         guardFor(MoveState.PLACE_TILE);
+        guardFor(RoomState.IN_GAME);
         guardFor(player);
 
         var board = getBoard();
@@ -190,6 +192,7 @@ public class Game {
     public boolean shift(int index, Direction direction, Player player) {
         guardFor(MoveState.PLACE_TILE);
         guardFor(player);
+        guardFor(RoomState.IN_GAME);
 
         var fixedBonusActive = activeBonus == BonusTypes.PUSH_FIXED;
 
@@ -230,6 +233,7 @@ public class Game {
     }
 
     public boolean useBeamBonus(int row, int col, Player player) {
+        guardFor(RoomState.IN_GAME);
         guardFor(player);
         guardFor(MoveState.PLACE_TILE);
 
@@ -256,6 +260,7 @@ public class Game {
 
 
     public boolean useSwapBonus(Player currentPlayer, Player targetPlayer) {
+        guardFor(RoomState.IN_GAME);
         guardFor(currentPlayer);
         guardFor(MoveState.PLACE_TILE);
         var allowedToUse = currentPlayer.useBonus(BonusTypes.SWAP);
@@ -275,6 +280,7 @@ public class Game {
     }
 
     public boolean usePushTwiceBonus(Player player) {
+        guardFor(RoomState.IN_GAME);
         guardFor(player);
         var allowedToUse = player.useBonus(BonusTypes.PUSH_TWICE);
 
@@ -288,6 +294,7 @@ public class Game {
 
     public boolean usePushFixedBonus(Player player) {
         guardFor(player);
+        guardFor(RoomState.IN_GAME);
         var allowedToUse = player.useBonus(BonusTypes.PUSH_FIXED);
 
         if (!allowedToUse) {
@@ -301,6 +308,7 @@ public class Game {
     }
 
     public boolean movePlayerToTile(int row, int col, Player player) {
+        guardFor(RoomState.IN_GAME);
         guardFor(MoveState.MOVE);
         guardFor(player);
 
@@ -318,11 +326,20 @@ public class Game {
             player.getStatistics().increaseScore(PointRewards.REWARD_ALL_TREASURES_COLLECTED);
         }
 
+        if(player.getCurrentTreasureCard() == null) {
+            gameOver();
+        }
+
         nextPlayer();
         return true;
     }
 
+    private void gameOver(){
+        this.roomState = RoomState.FINISHED;
+    }
+
     private synchronized void nextPlayer() {
+        guardFor(RoomState.IN_GAME);
         nextTurnTimer.stop();
 
         currentPlayerIndex++;
