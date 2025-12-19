@@ -147,8 +147,11 @@ public class Game {
             treasureCards.removeFirst();
         } while (!treasureCards.isEmpty());
 
-        // Assign starting positions to each player by placing them on the four corners
-        // of the board.
+
+        labyrinth.server.game.factories.BonusFactory bonusFactory = new labyrinth.server.game.factories.BonusFactory();
+        var bonuses = bonusFactory.createBonuses(gameConfig.totalBonusCount());
+        board.placeRandomBonuses(bonuses);
+
         for (int i = 0; i < players.size(); i++) {
             Player player = players.get(i);
             var position = gameConfig.getStartPosition(i);
