@@ -2,6 +2,7 @@ package labyrinth.server.game.models;
 
 import labyrinth.contracts.models.PlayerColor;
 import labyrinth.server.game.abstractions.IGameTimer;
+import labyrinth.server.game.constants.PointRewards;
 import labyrinth.server.game.enums.BonusTypes;
 import labyrinth.server.game.enums.Direction;
 import labyrinth.server.game.enums.MoveState;
@@ -59,7 +60,7 @@ public class Game {
     }
 
     /**
-     * Adds a player to the room.
+     * Adds a player to the room. The first player that joins will become the admin.
      *
      * @param username the username of the player joining the room
      * @throws IllegalStateException if the room is full
@@ -81,7 +82,6 @@ public class Game {
         player.setColor(getNextColor());
 
         if (players.isEmpty()) {
-            // first player becomes admin
             player.setAdmin(true);
         }
 
@@ -168,6 +168,7 @@ public class Game {
         }
 
         gameStartTime = OffsetDateTime.now();
+        this.roomState = RoomState.IN_GAME;
     }
 
     public Player getCurrentPlayer() {
@@ -180,8 +181,8 @@ public class Game {
     }
 
     public void rotateExtraTileClockwise(Player player) {
-        //TODO: check if correct
         guardFor(MoveState.PLACE_TILE);
+        guardFor(RoomState.IN_GAME);
         guardFor(player);
 
         var board = getBoard();
@@ -191,6 +192,7 @@ public class Game {
     public boolean shift(int index, Direction direction, Player player) {
         guardFor(MoveState.PLACE_TILE);
         guardFor(player);
+        guardFor(RoomState.IN_GAME);
 
         var fixedBonusActive = activeBonus == BonusTypes.PUSH_FIXED;
 
@@ -220,6 +222,9 @@ public class Game {
             activeBonus = null;
         }
 
+        player.getStatistics().increaseScore(PointRewards.REWARD_SHIFT_TILE);
+        player.getStatistics().increaseTilesPushed(1);
+
         return true;
     }
 
@@ -227,7 +232,8 @@ public class Game {
         player.setAiActive(!player.isAiActive());
     }
 
-    public void useBeamBonus(int row, int col, Player player) {
+    public boolean useBeamBonus(int row, int col, Player player) {
+        guardFor(RoomState.IN_GAME);
         guardFor(player);
         guardFor(MoveState.PLACE_TILE);
 
@@ -236,24 +242,31 @@ public class Game {
         for (Player other : players) {
             if (other != player && other.getCurrentTile() == targetTile) {
                 System.out.println("Cant move a player is already on the target tile!");
-                return;
+                return false;
             }
         }
 
         var allowedToUse = player.useBonus(BonusTypes.SWAP);
 
+        if(!allowedToUse) {
+            return false;
+        }
+
+        player.getStatistics().increaseScore(PointRewards.REWARD_BONUS_USED);
+
         player.setCurrentTile(targetTile);
+        return true;
     }
 
 
-    public void useSwapBonus(Player currentPlayer, Player targetPlayer) {
+    public boolean useSwapBonus(Player currentPlayer, Player targetPlayer) {
+        guardFor(RoomState.IN_GAME);
         guardFor(currentPlayer);
         guardFor(MoveState.PLACE_TILE);
         var allowedToUse = currentPlayer.useBonus(BonusTypes.SWAP);
 
         if (!allowedToUse) {
-            // return false?
-            return;
+             return false;
         }
 
         var currentPlayerTile = currentPlayer.getCurrentTile();
@@ -261,47 +274,72 @@ public class Game {
 
         currentPlayer.setCurrentTile(targetPlayerTile);
         targetPlayer.setCurrentTile(currentPlayerTile);
+        currentPlayer.getStatistics().increaseScore(PointRewards.REWARD_BONUS_USED);
 
-        // return true;
+        return true;
     }
 
-    public void usePushTwiceBonus(Player player) {
+    public boolean usePushTwiceBonus(Player player) {
+        guardFor(RoomState.IN_GAME);
         guardFor(player);
         var allowedToUse = player.useBonus(BonusTypes.PUSH_TWICE);
 
         if (!allowedToUse) {
-            return;
+            return false;
         }
 
         activeBonus = BonusTypes.PUSH_TWICE;
+        return true;
     }
 
-    public void usePushFixedBonus(Player player) {
+    public boolean usePushFixedBonus(Player player) {
         guardFor(player);
+        guardFor(RoomState.IN_GAME);
         var allowedToUse = player.useBonus(BonusTypes.PUSH_FIXED);
 
         if (!allowedToUse) {
-            return;
+            return false;
         }
 
         activeBonus = BonusTypes.PUSH_FIXED;
+        player.getStatistics().increaseScore(PointRewards.REWARD_BONUS_USED);
+
+        return true;
     }
 
     public boolean movePlayerToTile(int row, int col, Player player) {
+        guardFor(RoomState.IN_GAME);
         guardFor(MoveState.MOVE);
         guardFor(player);
 
-        var moved = board.movePlayerToTile(player, row, col);
+        var distanceMoved = board.movePlayerToTile(player, row, col);
 
-        if (!moved) {
+        System.out.println("Moved " + distanceMoved + " steps");
+        if (distanceMoved == -1) {
             return false;
+        }
+
+        player.getStatistics().increaseScore(PointRewards.REWARD_MOVE * distanceMoved);
+        player.getStatistics().increaseStepsTaken(distanceMoved);
+
+        if(player.getCurrentTreasureCard() == null) {
+            player.getStatistics().increaseScore(PointRewards.REWARD_ALL_TREASURES_COLLECTED);
+        }
+
+        if(player.getCurrentTreasureCard() == null) {
+            gameOver();
         }
 
         nextPlayer();
         return true;
     }
 
+    private void gameOver(){
+        this.roomState = RoomState.FINISHED;
+    }
+
     private synchronized void nextPlayer() {
+        guardFor(RoomState.IN_GAME);
         nextTurnTimer.stop();
 
         currentPlayerIndex++;
@@ -312,7 +350,6 @@ public class Game {
         currentMoveState = MoveState.PLACE_TILE;
 
         if (getCurrentPlayer().isAiActive()) {
-            // Using AdvancedAiStrategy for smarter gameplay
             new labyrinth.server.game.ai.SimpleAiStrategy().performTurn(this, getCurrentPlayer());
         } else {
             nextTurnTimer.start(gameConfig.turnTimeInSeconds(), this::nextPlayer);

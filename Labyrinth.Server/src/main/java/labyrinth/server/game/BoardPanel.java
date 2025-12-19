@@ -396,6 +396,11 @@ public class BoardPanel extends JPanel {
                 }
                 String positionText = (pos != null) ? "(" + pos.row() + "," + pos.column() + ")" : "(not placed)";
                 infoLines.add(p.getUsername() + " at " + positionText);
+                if (p.getStatistics() != null) {
+                    var s = p.getStatistics();
+                    infoLines.add(String.format(" - Score: %d, Steps: %d", s.getScore(), s.getStepsTaken()));
+                    infoLines.add(String.format(" - Pushed: %d, Treasures: %d", s.getTilesPushed(), s.getTreasuresCollected()));
+                }
             }
         }
 

@@ -1,5 +1,6 @@
 package labyrinth.server.game;
 
+import labyrinth.server.game.constants.PointRewards;
 import labyrinth.server.game.enums.Achievement;
 import labyrinth.server.game.enums.Direction;
 import labyrinth.server.game.events.AchievementUnlockedEvent;
@@ -141,7 +142,9 @@ public class GameService {
     public boolean shift(int index, Direction direction, Player player) {
         rwLock.writeLock().lock();
         try {
-            return game.shift(index, direction, player);
+            var shiftSuccessfull = game.shift(index, direction, player);
+
+            return shiftSuccessfull;
         } finally {
             rwLock.writeLock().unlock();
         }
@@ -159,7 +162,12 @@ public class GameService {
     public void useBeamBonus(int row, int col, Player player) {
         rwLock.writeLock().lock();
         try {
-            game.useBeamBonus(row, col, player);
+            var useSuccessfull = game.useBeamBonus(row, col, player);
+
+            if(useSuccessfull){
+                player.getStatistics().increaseScore(PointRewards.REWARD_SHIFT_TILE);
+            }
+
         } finally {
             rwLock.writeLock().unlock();
         }
