@@ -220,6 +220,7 @@ public class Game {
         }
 
         player.getStatistics().increaseScore(PointRewards.REWARD_SHIFT_TILE);
+        player.getStatistics().increaseTilesPushed(1);
 
         return true;
     }
@@ -305,13 +306,15 @@ public class Game {
 
         var distanceMoved = board.movePlayerToTile(player, row, col);
 
-        if (distanceMoved != -1) {
+        System.out.println("Moved " + distanceMoved + " steps");
+        if (distanceMoved == -1) {
             return false;
         }
 
         player.getStatistics().increaseScore(PointRewards.REWARD_MOVE * distanceMoved);
+        player.getStatistics().increaseStepsTaken(distanceMoved);
 
-        if(player.getCurrentTreasureCard() != null) {
+        if(player.getCurrentTreasureCard() == null) {
             player.getStatistics().increaseScore(PointRewards.REWARD_ALL_TREASURES_COLLECTED);
         }
 

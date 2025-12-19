@@ -96,6 +96,8 @@ public class Tile {
                 System.out.println("Card: " + treasureCard.getTreasureName());
                 treasureCard.collect();
                 player.getStatistics().increaseScore(PointRewards.REWARD_TREASURE);
+                player.getStatistics().increaseTreasuresCollected(1);
+
                 this.treasureCard = null;
             }
         }
