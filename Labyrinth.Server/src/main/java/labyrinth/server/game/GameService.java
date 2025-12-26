@@ -3,6 +3,7 @@ package labyrinth.server.game;
 import labyrinth.server.game.constants.PointRewards;
 import labyrinth.server.game.enums.Achievement;
 import labyrinth.server.game.enums.Direction;
+import labyrinth.server.game.enums.RoomState;
 import labyrinth.server.game.events.AchievementUnlockedEvent;
 import labyrinth.server.game.factories.BoardFactory;
 import labyrinth.server.game.factories.TreasureCardFactory;
@@ -63,10 +64,23 @@ public class GameService {
         }
     }
 
+    public int getMaxPlayers() {
+        return game.getMAX_PLAYERS();
+    }
+
     public List<Player> getPlayers() {
         rwLock.readLock().lock();
         try {
             return List.copyOf(game.getPlayers());
+        } finally {
+            rwLock.readLock().unlock();
+        }
+    }
+
+    public RoomState getGameState() {
+        rwLock.readLock().lock();
+        try {
+            return game.getRoomState();
         } finally {
             rwLock.readLock().unlock();
         }
@@ -142,9 +156,7 @@ public class GameService {
     public boolean shift(int index, Direction direction, Player player) {
         rwLock.writeLock().lock();
         try {
-            var shiftSuccessfull = game.shift(index, direction, player);
-
-            return shiftSuccessfull;
+            return game.shift(index, direction, player);
         } finally {
             rwLock.writeLock().unlock();
         }
