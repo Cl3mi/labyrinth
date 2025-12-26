@@ -156,9 +156,7 @@ public class GameService {
     public boolean shift(int index, Direction direction, Player player) {
         rwLock.writeLock().lock();
         try {
-            var shiftSuccessfull = game.shift(index, direction, player);
-
-            return shiftSuccessfull;
+            return game.shift(index, direction, player);
         } finally {
             rwLock.writeLock().unlock();
         }
