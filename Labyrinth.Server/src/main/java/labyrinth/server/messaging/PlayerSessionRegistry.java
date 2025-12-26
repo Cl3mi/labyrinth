@@ -44,7 +44,16 @@ public class PlayerSessionRegistry {
 
     public WebSocketSession getSession(UUID playerId) {
         PlayerRegistration reg = registrations.get(playerId);
-        return (reg != null) ? reg.getSession() : null;
+        if (reg != null && reg.isConnected()) {
+            WebSocketSession session = reg.getSession();
+            // Validate session is still open
+            if (session != null && session.isOpen()) {
+                return session;
+            }
+            // Session is closed but registry thinks it's connected - fix state
+            reg.markDisconnected();
+        }
+        return null;
     }
 
     public Map<UUID, Long> getDisconnectedEntries() {
@@ -61,6 +70,7 @@ public class PlayerSessionRegistry {
         return registrations.values().stream()
                 .map(PlayerRegistration::getSession)
                 .filter(Objects::nonNull)
+                .filter(WebSocketSession::isOpen)  // Only return open sessions
                 .collect(Collectors.toList());
     }
 
@@ -70,5 +80,15 @@ public class PlayerSessionRegistry {
 
     public boolean isSessionRegistered(WebSocketSession session) {
         return getPlayerId(session) != null;
+    }
+
+    /**
+     * Checks if a player is currently connected.
+     * @param playerId The player's UUID
+     * @return true if player is connected, false if disconnected or not registered
+     */
+    public boolean isPlayerConnected(UUID playerId) {
+        PlayerRegistration reg = registrations.get(playerId);
+        return reg != null && reg.isConnected();
     }
 }

@@ -9,10 +9,8 @@ import labyrinth.client.models.LabyrinthApplication;
 import labyrinth.client.models.Player;
 
 public class ApplicationClient {
-    static void main(String[] args) throws Exception {
-
-            startOnline();
-
+    public static void main(String[] args) throws Exception {
+        startOnline();
     }
 
     private static void startOnline() throws Exception {

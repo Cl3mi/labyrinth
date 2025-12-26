@@ -16,6 +16,11 @@ public class GameClient extends WebSocketClient {
 
     private final ObjectMapper mapper;
 
+    // Connection state management
+    private volatile ConnectionState connectionState = ConnectionState.DISCONNECTED;
+    private volatile boolean intentionalDisconnect = false;
+
+    // Callbacks
     @Setter private Consumer<ConnectAckEventPayload> onConnectAck;
     @Setter private Consumer<LobbyStateEventPayload> onLobbyState;
     @Setter private Consumer<GameStateEventPayload> onGameStarted;
@@ -25,6 +30,10 @@ public class GameClient extends WebSocketClient {
 
     @Setter private Consumer<String> onErrorMessage;
     @Setter private Runnable onOpenHook;
+
+    // Reconnection callbacks
+    @Setter private Runnable onConnectionLost;        // Triggered on unintentional disconnect
+    @Setter private Consumer<String> onStatusUpdate;  // Status messages for UI
 
     public GameClient(URI serverUri) {
         super(serverUri);
@@ -36,7 +45,20 @@ public class GameClient extends WebSocketClient {
     @Override
     public void onOpen(ServerHandshake handshakedata) {
         System.out.println("WebSocket connected");
-        if (onOpenHook != null) onOpenHook.run();
+
+        // Update connection state
+        connectionState = ConnectionState.CONNECTED;
+        intentionalDisconnect = false; // Reset flag on successful connection
+
+        // Notify UI
+        if (onStatusUpdate != null) {
+            runOnUiThread(() -> onStatusUpdate.accept("Verbunden mit Server"));
+        }
+
+        // Fire original hook for backward compatibility
+        if (onOpenHook != null) {
+            runOnUiThread(onOpenHook);
+        }
     }
 
     @Override
@@ -87,7 +109,9 @@ public class GameClient extends WebSocketClient {
                 }
                 case ACTION_ERROR -> {
                     ActionErrorEventPayload payload = mapper.treeToValue(payloadNode, ActionErrorEventPayload.class);
-                    String msg = payload.getMessage() != null ? payload.getMessage() : payload.toString();
+                    // Include error code in the message so handlers can detect specific error types
+                    String errorCode = payload.getErrorCode() != null ? payload.getErrorCode().toString() : "UNKNOWN";
+                    String msg = errorCode + ": " + (payload.getMessage() != null ? payload.getMessage() : "No details");
                     if (onErrorMessage != null) runOnUiThread(() -> onErrorMessage.accept(msg));
                 }
                 default -> System.out.println("Unhandled event type: " + type + " raw=" + message);
@@ -103,19 +127,57 @@ public class GameClient extends WebSocketClient {
     @Override
     public void onClose(int code, String reason, boolean remote) {
         System.out.println("WebSocket closed. code=" + code + " remote=" + remote + " reason=" + reason);
-        runOnUiThread(() -> {
-            if (onErrorMessage != null) {
-                onErrorMessage.accept("Disconnected (code=" + code + "): " + (reason == null ? "" : reason));
+
+        ConnectionState previousState = connectionState;
+
+        // Update state based on whether disconnect was intentional
+        if (connectionState == ConnectionState.DISCONNECTING) {
+            connectionState = ConnectionState.DISCONNECTED;
+            System.out.println("Intentional disconnect completed");
+            return; // Don't trigger reconnection
+        }
+
+        // Unintentional disconnect - prepare for reconnection
+        connectionState = ConnectionState.DISCONNECTED;
+
+        // Determine if this was an unexpected disconnect
+        boolean shouldReconnect = !intentionalDisconnect &&
+                                  previousState == ConnectionState.CONNECTED;
+
+        if (shouldReconnect) {
+            System.out.println("Unintentional disconnect detected - triggering reconnection");
+            if (onConnectionLost != null) {
+                runOnUiThread(onConnectionLost);
             }
-        });
+        } else {
+            // Normal error message for expected disconnects
+            runOnUiThread(() -> {
+                if (onErrorMessage != null) {
+                    onErrorMessage.accept("Disconnected (code=" + code + "): " +
+                                        (reason == null ? "" : reason));
+                }
+            });
+        }
     }
 
     @Override
     public void onError(Exception ex) {
         ex.printStackTrace();
+
+        // If we're connected or connecting, this is an unexpected error
+        boolean shouldReconnect = (connectionState == ConnectionState.CONNECTED ||
+                                   connectionState == ConnectionState.CONNECTING) &&
+                                  !intentionalDisconnect;
+
+        if (shouldReconnect) {
+            System.out.println("WebSocket error during active connection - may trigger reconnection");
+            // Note: onClose() will be called after this, which handles reconnection
+        }
+
         runOnUiThread(() -> {
             if (onErrorMessage != null) {
-                onErrorMessage.accept("WebSocket error: " + ex.getClass().getSimpleName() + ": " + ex.getMessage());
+                onErrorMessage.accept("WebSocket error: " +
+                                    ex.getClass().getSimpleName() + ": " + ex.getMessage());
             }
         });
     }
@@ -223,6 +285,112 @@ public class GameClient extends WebSocketClient {
                 runOnUiThread(() -> onErrorMessage.accept("Failed to send push tile: " + e.getMessage()));
             }
         }
+    }
+
+    // ===================== CONNECTION MANAGEMENT =====================
+
+    /**
+     * Initiates a clean disconnect. Sets intentionalDisconnect flag to prevent reconnection.
+     * Uses CloseCode.NORMAL (1000) to signal intentional disconnect to server.
+     */
+    public void disconnectCleanly() {
+        intentionalDisconnect = true;
+        connectionState = ConnectionState.DISCONNECTING;
+
+        try {
+            // Send DISCONNECT command first
+            sendDisconnect();
+
+            // Brief delay to allow message to flush (50ms should be enough)
+            Thread.sleep(50);
+
+            // Close with NORMAL code (1000) to signal intentional disconnect
+            closeConnection(1000, "Client disconnecting normally");
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            // Force close anyway
+            closeConnection(1000, "Client disconnecting normally");
+        }
+    }
+
+    /**
+     * Attempts to reconnect to the server using stored credentials.
+     * @param identifierToken The reconnection token
+     * @return true if reconnect attempt was initiated, false if connection state doesn't allow it
+     */
+    public boolean attemptReconnect(String identifierToken) {
+        if (connectionState == ConnectionState.CONNECTED ||
+            connectionState == ConnectionState.CONNECTING ||
+            connectionState == ConnectionState.RECONNECTING) {
+            System.out.println("Cannot reconnect - already connected or connecting");
+            return false;
+        }
+
+        try {
+            connectionState = ConnectionState.RECONNECTING;
+            intentionalDisconnect = false; // This is an intentional reconnect, not a disconnect
+
+            // Close existing connection if any
+            if (!isClosed()) {
+                closeBlocking();
+            }
+
+            // Reconnect to server
+            reconnectBlocking(); // Blocking call to ensure socket is ready
+
+            // Send reconnect command
+            sendReconnect(identifierToken);
+            return true;
+        } catch (Exception e) {
+            e.printStackTrace();
+            connectionState = ConnectionState.DISCONNECTED;
+            if (onErrorMessage != null) {
+                runOnUiThread(() -> onErrorMessage.accept("Reconnect failed: " + e.getMessage()));
+            }
+            return false;
+        }
+    }
+
+    /**
+     * Initiates a fresh connection (not a reconnection).
+     * @param username The username for new connection
+     * @return true if connect attempt was initiated
+     */
+    public boolean attemptConnect(String username) {
+        if (connectionState == ConnectionState.CONNECTED ||
+            connectionState == ConnectionState.CONNECTING) {
+            System.out.println("Cannot connect - already connected or connecting");
+            return false;
+        }
+
+        try {
+            connectionState = ConnectionState.CONNECTING;
+            intentionalDisconnect = false;
+
+            if (!isClosed()) {
+                closeBlocking();
+            }
+
+            reconnectBlocking();
+            sendConnect(username);
+            return true;
+        } catch (Exception e) {
+            e.printStackTrace();
+            connectionState = ConnectionState.DISCONNECTED;
+            if (onErrorMessage != null) {
+                runOnUiThread(() -> onErrorMessage.accept("Connect failed: " + e.getMessage()));
+            }
+            return false;
+        }
+    }
+
+    // Getters for state
+    public ConnectionState getConnectionState() {
+        return connectionState;
+    }
+
+    public boolean isIntentionalDisconnect() {
+        return intentionalDisconnect;
     }
 
     private void runOnUiThread(Runnable r) {

@@ -45,6 +45,7 @@ public class LobbyPanel extends JPanel {
     private final DefaultListModel<String> playerListModel;
     private final JList<String> playerList;
     private final JButton startButton;
+    private final JButton cancelReconnectButton;
 
     // Hintergrund & Musik
     private Image backgroundImage;
@@ -84,6 +85,22 @@ public class LobbyPanel extends JPanel {
         playerList.setSelectionBackground(new Color(255, 255, 255, 80));
         playerList.setSelectionForeground(Color.BLACK);
 
+        // Custom cell renderer to show disconnected players in gray/italic
+        playerList.setCellRenderer(new DefaultListCellRenderer() {
+            @Override
+            public Component getListCellRendererComponent(JList<?> list, Object value,
+                                                           int index, boolean isSelected,
+                                                           boolean cellHasFocus) {
+                Component c = super.getListCellRendererComponent(list, value, index,
+                                                                 isSelected, cellHasFocus);
+                if (value != null && value.toString().startsWith("[OFFLINE]")) {
+                    setForeground(Color.GRAY);
+                    setFont(getFont().deriveFont(Font.ITALIC));
+                }
+                return c;
+            }
+        });
+
         JScrollPane scrollPane = new JScrollPane(playerList) {
             @Override
             protected void paintComponent(Graphics g) {
@@ -103,7 +120,7 @@ public class LobbyPanel extends JPanel {
         centerPanel.add(scrollPane, BorderLayout.CENTER);
         add(centerPanel, BorderLayout.CENTER);
 
-        // ===== Footer: Start-Button =====
+        // ===== Footer: Start-Button + Cancel Reconnect =====
         JPanel footer = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         footer.setOpaque(false);
 
@@ -112,6 +129,12 @@ public class LobbyPanel extends JPanel {
         startButton.setEnabled(false); // initial deaktiviert
         startButton.addActionListener(e -> onStartGameClicked());
 
+        cancelReconnectButton = new JButton("Wiederverbindung abbrechen");
+        cancelReconnectButton.setFont(new Font("Arial", Font.BOLD, 12));
+        cancelReconnectButton.setVisible(false); // Hidden by default
+        cancelReconnectButton.addActionListener(e -> onCancelReconnect());
+
+        footer.add(cancelReconnectButton);
         footer.add(startButton);
         add(footer, BorderLayout.SOUTH);
 
@@ -180,6 +203,33 @@ public class LobbyPanel extends JPanel {
     }
 
     /**
+     * Shows/hides the cancel reconnect button during reconnection attempts.
+     */
+    public void setReconnecting(boolean reconnecting) {
+        SwingUtilities.invokeLater(() -> {
+            cancelReconnectButton.setVisible(reconnecting);
+            startButton.setVisible(!reconnecting);
+        });
+    }
+
+    /**
+     * Called when user clicks cancel reconnect button.
+     */
+    private void onCancelReconnect() {
+        int choice = JOptionPane.showConfirmDialog(
+            this,
+            "Wiederverbindung abbrechen und Anwendung beenden?",
+            "Abbrechen bestätigen",
+            JOptionPane.YES_NO_OPTION
+        );
+
+        if (choice == JOptionPane.YES_OPTION) {
+            // Signal to exit application
+            System.exit(0);
+        }
+    }
+
+    /**
      * Aktualisiert die Spieler-Liste basierend auf dem LobbyState-Event.
      *
      * Matching-Strategie:
@@ -213,6 +263,11 @@ public class LobbyPanel extends JPanel {
                 System.out.println("[LobbyPanel] p.id=" + p.getId() + " p.name=" + p.getName() + " p.isAdmin=" + p.getIsAdmin());
 
                 StringBuilder sb = new StringBuilder();
+
+                // Show disconnected status
+                if (Boolean.FALSE.equals(p.getIsConnected())) {
+                    sb.append("[OFFLINE] ");
+                }
 
                 if (Boolean.TRUE.equals(p.getIsAdmin())) {
                     sb.append("(Admin) ");

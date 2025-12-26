@@ -1,5 +1,6 @@
 package labyrinth.server.game.ai;
 
+import labyrinth.server.game.abstractions.IGameTimer;
 import labyrinth.server.game.enums.Direction;
 import labyrinth.server.game.models.*;
 import labyrinth.server.game.models.records.GameConfig;
@@ -9,12 +10,15 @@ import org.junit.jupiter.api.Test;
 
 import java.util.*;
 
+import static org.mockito.Mockito.mock;
+
 class AiLogicTest {
 
     @Test
     void testAiTriggersOnNextPlayer() {
         // Setup simple game
-        Game game = new Game();
+        IGameTimer mockTimer = mock(IGameTimer.class);
+        Game game = new Game(mockTimer);
 
         Player p1 = game.join("P1");
         Player p2 = game.join("P2");
@@ -40,7 +44,7 @@ class AiLogicTest {
         // P1 does a move (dummy move)
         // We need to simulate P1 turn.
         // Shift a fake row/col that is safe
-        game.shift(1, Direction.RIGHT, null, p1);
+        game.shift(1, Direction.RIGHT, p1);
         game.movePlayerToTile(game.getCurrentPositionOfPlayer(p1).row(), game.getCurrentPositionOfPlayer(p1).column(),
                 p1);
         // This triggers nextPlayer -> P2 (Async AI) start

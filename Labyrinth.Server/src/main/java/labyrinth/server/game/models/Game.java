@@ -59,12 +59,25 @@ public class Game {
     }
 
     /**
-     * Adds a player to the room.
+     * Adds a player to the room, or rejoins if player with same username exists.
      *
      * @param username the username of the player joining the room
-     * @throws IllegalStateException if the room is full
+     * @throws IllegalStateException if the room is full (when adding new player)
      */
     public Player join(String username) {
+        // Allow rejoining by username if player already exists (for reconnection fallback)
+        Player existingPlayer = players.stream()
+                .filter(p -> p.getUsername().equals(username))
+                .findFirst()
+                .orElse(null);
+
+        if (existingPlayer != null) {
+            // Player with this username exists - allow rejoining
+            System.out.println("Player '" + username + "' rejoining by username (reconnection fallback)");
+            return existingPlayer;
+        }
+
+        // New player joining
         if (roomState != RoomState.LOBBY) {
             throw new IllegalStateException("Cannot join a game that is in progress!");
         }
@@ -100,8 +113,56 @@ public class Game {
     }
 
     public void leave(Player player) {
-        // TODO: handle leaving during game
+        boolean wasAdmin = player.isAdmin();
+
+        // Remove player from game
         players.removeIf(p -> p.getId().equals(player.getId()));
+
+        // If admin left and players remain, reassign admin to first remaining player
+        if (wasAdmin && !players.isEmpty()) {
+            // Clear all admin flags first (defensive programming)
+            players.forEach(p -> p.setAdmin(false));
+
+            // Assign admin to first non-AI player if possible, otherwise first player
+            Player newAdmin = players.stream()
+                .filter(p -> !p.isAiActive())
+                .findFirst()
+                .orElse(players.get(0));
+
+            newAdmin.setAdmin(true);
+            System.out.println("Admin reassigned from " + player.getUsername() +
+                              " to " + newAdmin.getUsername());
+        }
+
+        // TODO: handle leaving during active game (future enhancement)
+        // - If game is IN_GAME state, may need different behavior
+        // - Consider making AI take over, or ending game if too few players
+    }
+
+    /**
+     * Resets the game to lobby state after game ends.
+     * Removes all AI players and reassigns admin to the first remaining player.
+     */
+    public void resetToLobby() {
+        // Remove all AI players
+        players.removeIf(Player::isAiActive);
+
+        // Reset room state to lobby
+        roomState = RoomState.LOBBY;
+
+        // Reset all players' admin status
+        players.forEach(p -> p.setAdmin(false));
+
+        // Assign admin to first player if any remain
+        if (!players.isEmpty()) {
+            players.get(0).setAdmin(true);
+        }
+
+        // Clear board and game state
+        board = null;
+        currentPlayerIndex = 0;
+        currentMoveState = MoveState.PLACE_TILE;
+        activeBonus = null;
     }
 
     public Player getPlayer(UUID playerId) {
@@ -109,6 +170,14 @@ public class Game {
                 .filter(p -> p.getId().equals(playerId))
                 .findFirst()
                 .orElse(null);
+    }
+
+    public List<Player> getPlayers() {
+        return players;
+    }
+
+    public RoomState getRoomState() {
+        return roomState;
     }
 
     /**
@@ -161,6 +230,10 @@ public class Game {
 
         this.board = board;
         this.board.setPlayers(players);
+
+        // Set room state to IN_GAME
+        roomState = RoomState.IN_GAME;
+
         System.out.println("Game started in GameLobby" + " with " + players.size() + " players.");
 
         if (getCurrentPlayer().isAiActive()) {

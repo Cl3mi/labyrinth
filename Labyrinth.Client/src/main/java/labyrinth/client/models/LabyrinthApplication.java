@@ -3,6 +3,7 @@ package labyrinth.client.models;
 import labyrinth.client.ui.BoardPanel;
 import labyrinth.client.factories.BoardFactory;
 import labyrinth.client.messaging.GameClient;
+import labyrinth.client.messaging.ReconnectionManager;
 import labyrinth.client.ui.LobbyPanel;
 
 import javax.swing.*;
@@ -16,7 +17,7 @@ import java.util.prefs.Preferences;
 
 public class LabyrinthApplication {
 
-    private static final URI SERVER_URI = URI.create("ws://localhost:8080/game");
+    private static final URI SERVER_URI = URI.create("ws://localhost:8081/game");
     private volatile boolean loginSent = false;
     private volatile boolean connectAckReceived = false;
 
@@ -28,7 +29,7 @@ public class LabyrinthApplication {
      */
     private static final String PROFILE = System.getProperty("labyrinth.profile", "default");
 
-    // Token-Datei bleibt optional; wir löschen sie beim Beenden, weil Reconnect serverseitig nicht stabil ist.
+    // Token wird persistent gespeichert und überlebt Neustarts für automatisches Reconnect
     private static final Path TOKEN_FILE =
             Path.of(System.getProperty("user.home"), ".labyrinth", "identifier_" + PROFILE + ".token");
 
@@ -44,6 +45,10 @@ public class LabyrinthApplication {
     /** Reconnect-Token vom Server (identifierToken) */
     private String identifierToken;
 
+    /** Reconnection manager for automatic retry logic */
+    private ReconnectionManager reconnectionManager;
+    private volatile boolean isShuttingDown = false;
+
     public void start() throws Exception {
 
         // UI zuerst
@@ -56,6 +61,10 @@ public class LabyrinthApplication {
 
         // Client erstellen
         client = new GameClient(SERVER_URI);
+
+        // Create reconnection manager
+        reconnectionManager = new ReconnectionManager(client, this);
+
         registerCallbacks();
 
         lobbyPanel = new LobbyPanel(client, null);
@@ -68,40 +77,76 @@ public class LabyrinthApplication {
         loginSent = false;
         connectAckReceived = false;
 
+        // Register connection lost handler (auto-reconnect trigger)
+        client.setOnConnectionLost(() -> {
+            if (isShuttingDown) {
+                System.out.println("Connection lost during shutdown - ignoring");
+                return;
+            }
+
+            SwingUtilities.invokeLater(() -> {
+                lobbyPanel.setStatusText("Verbindung unterbrochen - Wiederverbinden...",
+                                        new Color(170, 120, 0));
+            });
+
+            // Start automatic reconnection
+            reconnectionManager.startAutoReconnect();
+        });
+
+        // Register status update handler
+        client.setOnStatusUpdate(status -> {
+            SwingUtilities.invokeLater(() -> {
+                lobbyPanel.setStatusText(status, new Color(0, 150, 0));
+            });
+        });
+
         client.setOnOpenHook(() -> {
             if (loginSent) return;
             loginSent = true;
 
-            String token = loadToken();
+            String token = ClientIdentityStore.loadToken();
+            String storedUsername = ClientIdentityStore.loadUsername();
+
             if (token != null) {
-                System.out.println("[" + PROFILE + "] onOpen -> RECONNECT");
+                System.out.println("[" + PROFILE + "] onOpen -> RECONNECT with token");
                 client.sendReconnect(token);
             } else {
-                username = JOptionPane.showInputDialog(frame, "Bitte Username eingeben (" + PROFILE + "):");
-                if (username == null || username.isBlank()) username = "Player";
+                // Use stored username as default, or "Player" if none
+                String defaultUsername = storedUsername != null ? storedUsername : "Player";
+                username = JOptionPane.showInputDialog(frame,
+                    "Bitte Username eingeben (" + PROFILE + "):",
+                    defaultUsername);
+                if (username == null || username.isBlank()) {
+                    username = defaultUsername;
+                }
                 lobbyPanel.setLocalUsername(username);
 
                 System.out.println("[" + PROFILE + "] onOpen -> CONNECT username=" + username);
                 client.sendConnect(username);
             }
 
-            // Fallback: wenn nach 1.5s kein ACK kam, dann token löschen + normal CONNECT
+            // Fallback: wenn nach 2s kein ACK kam, dann token löschen + normal CONNECT
             new Thread(() -> {
-                try { Thread.sleep(1500); } catch (InterruptedException ignored) {}
+                try { Thread.sleep(2000); } catch (InterruptedException ignored) {}
                 if (connectAckReceived) return;
 
                 SwingUtilities.invokeLater(() -> {
                     // Wenn reconnect probiert wurde und nicht geklappt hat: Token löschen und CONNECT
-                    String t = loadToken();
+                    String t = ClientIdentityStore.loadToken();
                     if (t != null) {
-                        System.out.println("[" + PROFILE + "] No CONNECT_ACK after reconnect -> deleting token + CONNECT fallback");
-                        deleteToken();
+                        System.out.println("[" + PROFILE + "] No CONNECT_ACK after reconnect -> token invalid");
+                        ClientIdentityStore.clearToken(); // Clear invalid token
                     }
 
                     // Nur fallbacken, wenn wir noch keinen username haben (oder reconnect war)
                     if (username == null || username.isBlank()) {
-                        username = JOptionPane.showInputDialog(frame, "Reconnect nicht möglich. Bitte Username eingeben (" + PROFILE + "):");
-                        if (username == null || username.isBlank()) username = "Player";
+                        String defaultUsername = storedUsername != null ? storedUsername : "Player";
+                        username = JOptionPane.showInputDialog(frame,
+                            "Reconnect nicht möglich. Bitte Username eingeben (" + PROFILE + "):",
+                            defaultUsername);
+                        if (username == null || username.isBlank()) {
+                            username = defaultUsername;
+                        }
                         lobbyPanel.setLocalUsername(username);
                     }
 
@@ -132,12 +177,31 @@ public class LabyrinthApplication {
     }
 
     private void shutdownAndExit() {
+        isShuttingDown = true; // Prevent reconnection attempts during shutdown
+
         try {
-            if (client != null && client.isOpen()) {
-                client.sendDisconnect();
-                try { Thread.sleep(1000); } catch (InterruptedException ignored) {}
+            // Cancel any ongoing reconnection attempts
+            if (reconnectionManager != null) {
+                reconnectionManager.cancelReconnection();
+                reconnectionManager.shutdown();
             }
-            if (client != null) client.close();
+
+            // Send clean disconnect to server
+            if (client != null && client.isOpen()) {
+                client.disconnectCleanly(); // Uses new method with intentionalDisconnect flag
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException ignored) {}
+            }
+
+            // Close connection
+            if (client != null) {
+                client.close();
+            }
+
+            // NOTE: We NO LONGER delete token here - it persists across sessions
+            // Token is only deleted when server explicitly rejects it (PLAYER_NOT_FOUND)
+
         } finally {
             if (frame != null) frame.dispose();
             System.exit(0);
@@ -205,17 +269,26 @@ public class LabyrinthApplication {
             System.out.println("[" + PROFILE + "] CONNECT_ACK playerId=" + ack.getPlayerId()
                     + " identifierToken=" + ack.getIdentifierToken());
 
-            // Token & PlayerId persistent speichern (optional, aber korrekt)
+            // Save credentials persistently
             ClientIdentityStore.saveToken(ack.getIdentifierToken());
             ClientIdentityStore.savePlayerId(ack.getPlayerId());
+            ClientIdentityStore.saveUsername(username); // NEW: Save username for next session
 
             this.identifierToken = ack.getIdentifierToken();
+
+            // Reset reconnection manager on successful connection
+            if (reconnectionManager != null) {
+                reconnectionManager.reset();
+            }
 
             SwingUtilities.invokeLater(() -> {
                 lobbyPanel.setConnected(true);
 
                 // playerId (NICHT token!) ins LobbyPanel
                 lobbyPanel.setLocalPlayerId(ack.getPlayerId());
+
+                // Update status to show successful connection
+                lobbyPanel.setStatusText("Verbunden mit Server", new Color(0, 150, 0));
             });
         });
 
@@ -255,13 +328,44 @@ public class LabyrinthApplication {
         });
 
         // ============================================================
-        // ERROR
+        // ACTION_ERROR - Enhanced with token invalidation handling
         // ============================================================
-        client.setOnErrorMessage(msg ->
-                SwingUtilities.invokeLater(() ->
-                        JOptionPane.showMessageDialog(frame, msg, "Fehler", JOptionPane.ERROR_MESSAGE)
-                )
-        );
+        client.setOnErrorMessage(msg -> {
+            SwingUtilities.invokeLater(() -> {
+                // Check if this is a PLAYER_NOT_FOUND error (invalid token)
+                if (msg != null && msg.contains("PLAYER_NOT_FOUND")) {
+                    System.out.println("[" + PROFILE + "] Token rejected by server - clearing stored credentials");
+                    ClientIdentityStore.clearToken();
+                    ClientIdentityStore.clearUsername();
+
+                    JOptionPane.showMessageDialog(
+                        frame,
+                        "Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.\n\n" + msg,
+                        "Sitzung abgelaufen",
+                        JOptionPane.WARNING_MESSAGE
+                    );
+
+                    // Prompt for new username
+                    String newUsername = JOptionPane.showInputDialog(
+                        frame,
+                        "Bitte Username eingeben (" + PROFILE + "):",
+                        "Player"
+                    );
+
+                    if (newUsername != null && !newUsername.isBlank()) {
+                        username = newUsername;
+                        lobbyPanel.setLocalUsername(username);
+
+                        if (client != null && client.isOpen()) {
+                            client.sendConnect(username);
+                        }
+                    }
+                } else {
+                    // Standard error display
+                    JOptionPane.showMessageDialog(frame, msg, "Fehler", JOptionPane.ERROR_MESSAGE);
+                }
+            });
+        });
     }
 
     private void showGame(Board board, List<Player> players) {
@@ -316,16 +420,98 @@ public class LabyrinthApplication {
         }
     }
 
+    // --------------------------------------------------------------------
+    // Reconnection Helper Methods
+    // --------------------------------------------------------------------
+
+    /**
+     * Called by ReconnectionManager to show manual reconnect dialog when auto-retry exhausted.
+     */
+    public void showManualReconnectDialog() {
+        SwingUtilities.invokeLater(() -> {
+            int choice = JOptionPane.showConfirmDialog(
+                frame,
+                "Automatische Wiederverbindung fehlgeschlagen.\n" +
+                "Möchten Sie es manuell erneut versuchen?",
+                "Verbindung unterbrochen",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.WARNING_MESSAGE
+            );
+
+            if (choice == JOptionPane.YES_OPTION) {
+                // User wants to retry
+                String token = ClientIdentityStore.loadToken();
+                if (token != null) {
+                    lobbyPanel.setStatusText("Manueller Wiederverbindungsversuch...",
+                                            new Color(170, 120, 0));
+                    reconnectionManager.startAutoReconnect(); // Restart auto-reconnect
+                } else {
+                    // No token - need fresh connection
+                    username = JOptionPane.showInputDialog(
+                        frame,
+                        "Bitte Username eingeben (" + PROFILE + "):",
+                        username != null ? username : "Player"
+                    );
+
+                    if (username != null && !username.isBlank()) {
+                        lobbyPanel.setLocalUsername(username);
+                        if (client.attemptConnect(username)) {
+                            lobbyPanel.setStatusText("Verbindungsversuch...",
+                                                    new Color(170, 120, 0));
+                        }
+                    }
+                }
+            } else {
+                // User wants to exit
+                shutdownAndExit();
+            }
+        });
+    }
+
+    /**
+     * Called by ReconnectionManager to update UI with reconnection status.
+     */
+    public void updateReconnectionStatus(int attemptNumber, int maxAttempts, int delaySeconds) {
+        SwingUtilities.invokeLater(() -> {
+            String status = String.format(
+                "Wiederverbinden... Versuch %d/%d (nächster Versuch in %ds)",
+                attemptNumber, maxAttempts, delaySeconds
+            );
+            lobbyPanel.setStatusText(status, new Color(170, 120, 0));
+        });
+    }
+
+    // --------------------------------------------------------------------
+    // Client Identity Store (Preferences-based persistence)
+    // --------------------------------------------------------------------
+
     public final class ClientIdentityStore {
         private static final Preferences PREFS = Preferences.userNodeForPackage(ClientIdentityStore.class);
         private static final String KEY_TOKEN = "identifierToken";
         private static final String KEY_PLAYER_ID = "playerId";
+        private static final String KEY_USERNAME = "username";
 
         public static String loadToken() { return PREFS.get(KEY_TOKEN, null); }
-        public static void saveToken(String token) { PREFS.put(KEY_TOKEN, token); }
+        public static void saveToken(String token) {
+            if (token != null && !token.isBlank()) {
+                PREFS.put(KEY_TOKEN, token);
+            }
+        }
         public static void clearToken() { PREFS.remove(KEY_TOKEN); }
 
         public static String loadPlayerId() { return PREFS.get(KEY_PLAYER_ID, null); }
-        public static void savePlayerId(String playerId) { PREFS.put(KEY_PLAYER_ID, playerId); }
+        public static void savePlayerId(String playerId) {
+            if (playerId != null && !playerId.isBlank()) {
+                PREFS.put(KEY_PLAYER_ID, playerId);
+            }
+        }
+
+        public static String loadUsername() { return PREFS.get(KEY_USERNAME, null); }
+        public static void saveUsername(String username) {
+            if (username != null && !username.isBlank()) {
+                PREFS.put(KEY_USERNAME, username);
+            }
+        }
+        public static void clearUsername() { PREFS.remove(KEY_USERNAME); }
     }
 }

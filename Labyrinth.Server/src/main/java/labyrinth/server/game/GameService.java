@@ -2,6 +2,7 @@ package labyrinth.server.game;
 
 import labyrinth.server.game.enums.Achievement;
 import labyrinth.server.game.enums.Direction;
+import labyrinth.server.game.enums.RoomState;
 import labyrinth.server.game.events.AchievementUnlockedEvent;
 import labyrinth.server.game.factories.BoardFactory;
 import labyrinth.server.game.factories.TreasureCardFactory;
@@ -62,10 +63,28 @@ public class GameService {
         }
     }
 
+    public void resetToLobby() {
+        rwLock.writeLock().lock();
+        try {
+            game.resetToLobby();
+        } finally {
+            rwLock.writeLock().unlock();
+        }
+    }
+
     public List<Player> getPlayers() {
         rwLock.readLock().lock();
         try {
             return List.copyOf(game.getPlayers());
+        } finally {
+            rwLock.readLock().unlock();
+        }
+    }
+
+    public RoomState getRoomState() {
+        rwLock.readLock().lock();
+        try {
+            return game.getRoomState();
         } finally {
             rwLock.readLock().unlock();
         }

@@ -4,6 +4,7 @@ import labyrinth.contracts.models.EventType;
 import labyrinth.contracts.models.GameOverEventPayload;
 import labyrinth.contracts.models.LobbyStateEventPayload;
 import labyrinth.contracts.models.RankingEntry;
+import labyrinth.server.game.GameService;
 import labyrinth.server.game.events.GameOverEvent;
 import labyrinth.server.game.models.Player;
 import labyrinth.server.messaging.MessageService;
@@ -27,6 +28,7 @@ public class GameOverEventListener {
     private final MessageService messageService;
     private final RankingMapper rankingMapper;
     private final PlayerInfoMapper playerInfoMapper;
+    private final GameService gameService;
 
 
     @EventListener
@@ -58,10 +60,13 @@ public class GameOverEventListener {
             payload.setRanking(ranking.toArray(RankingEntry[]::new));
             messageService.broadcastToPlayers(payload);
 
+            // Reset game to lobby: remove bots, reassign admin
+            gameService.resetToLobby();
+
+            // Broadcast updated lobby state (without bots, with correct admin)
             var lobbyStateUpdated = new LobbyStateEventPayload();
             lobbyStateUpdated.setType(EventType.LOBBY_STATE);
-            lobbyStateUpdated.setPlayers(event
-                    .players()
+            lobbyStateUpdated.setPlayers(gameService.getPlayers()
                     .stream()
                     .map(playerInfoMapper::toDto)
                     .toArray(labyrinth.contracts.models.PlayerInfo[]::new));

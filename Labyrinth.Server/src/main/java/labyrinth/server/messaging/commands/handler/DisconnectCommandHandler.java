@@ -37,12 +37,15 @@ public class DisconnectCommandHandler extends AbstractCommandHandler<DisconnectC
     public void handle(WebSocketSession session, DisconnectCommandPayload payload) throws Exception {
         var player = requireExistingPlayer(session);
 
-        gameService.leave(player);
+        // Don't remove player from game - keep them for reconnection
+        // They are automatically marked as disconnected in afterConnectionClosed()
+        // gameService.leave(player);
 
-        var playerUpdatedEventPayload = new PlayerUpdatedEventPayload();
-        playerUpdatedEventPayload.setType(EventType.PLAYER_UPDATED);
-        playerUpdatedEventPayload.setPlayer(playerInfoMapper.toDto(player));
-
-        messageService.broadcastToPlayers(playerUpdatedEventPayload);
+        // Note: We don't broadcast PLAYER_UPDATED or LOBBY_STATE here
+        // The player stays in the lobby and can reconnect seamlessly
+        // If we want to show disconnected status in UI, we would need to:
+        // 1. Add a 'disconnected' flag to Player model
+        // 2. Set it here and broadcast LOBBY_STATE
+        // For now, keep it simple - player just temporarily disconnects
     }
 }

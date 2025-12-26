@@ -821,6 +821,11 @@ public class BoardPanel extends JPanel {
 
     public void setPlayers(List<Player> players) {
         this.players = players != null ? players : List.of();
+        System.out.println("[BoardPanel] setPlayers called with " + this.players.size() + " players:");
+        for (int i = 0; i < this.players.size(); i++) {
+            Player p = this.players.get(i);
+            System.out.println("  [" + i + "] " + p.getName() + " at " + p.getCurrentPosition());
+        }
         repaint();
     }
 
