@@ -74,7 +74,7 @@ public class SligthlyLessSimpleAiStrategy implements AiStrategy {
                     result.targetPosition.row(),
                     result.targetPosition.column(),
                     player
-            );
+            ).moveSuccess();
 
             if (!success) {
                 // Fallback: stay put (explicitly move to current pos to trigger turn end if required by engine)

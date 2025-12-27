@@ -121,7 +121,7 @@ public class BoardPanel extends JPanel {
                 if (tileRect.contains(p)) {
                     Tile clickedTile = game.getBoard().getTileAt(row, col);
                     if (reachableTiles.contains(clickedTile)) {
-                        boolean moved = game.movePlayerToTile(row, col, currentPlayer);
+                        boolean moved = game.movePlayerToTile(row, col, currentPlayer).moveSuccess();
                         if (moved) {
                             updateReachableTilesAndRepaint();
                         }

@@ -9,6 +9,7 @@ import labyrinth.server.game.enums.MoveState;
 import labyrinth.server.game.enums.RoomState;
 import labyrinth.server.game.models.records.GameConfig;
 import labyrinth.server.game.models.records.Position;
+import labyrinth.server.game.results.movePlayerToTileResult;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.Setter;
@@ -115,7 +116,6 @@ public class Game {
      * Starts the game. This method could be extended to initialize
      * player positions, shuffle treasure treasureCards, and set up the board.
      */
-
     public void startGame(GameConfig gameConfig, List<TreasureCard> treasureCards, Board board) {
         if (roomState != RoomState.LOBBY) {
             throw new IllegalStateException("Cannot start a game that is in progress or finished!");
@@ -261,7 +261,6 @@ public class Game {
         return true;
     }
 
-
     public boolean useSwapBonus(Player currentPlayer, Player targetPlayer) {
         guardFor(RoomState.IN_GAME);
         guardFor(currentPlayer);
@@ -310,31 +309,38 @@ public class Game {
         return true;
     }
 
-    public boolean movePlayerToTile(int row, int col, Player player) {
+    public movePlayerToTileResult movePlayerToTile(int row, int col, Player player) {
         guardFor(RoomState.IN_GAME);
         guardFor(MoveState.MOVE);
         guardFor(player);
 
+        var currentTreasureCardBeforeMove = player.getCurrentTreasureCard();
         var distanceMoved = board.movePlayerToTile(player, row, col);
 
         System.out.println("Moved " + distanceMoved + " steps");
         if (distanceMoved == -1) {
-            return false;
+            return new movePlayerToTileResult(false, distanceMoved, false, false);
         }
 
         player.getStatistics().increaseScore(PointRewards.REWARD_MOVE * distanceMoved);
         player.getStatistics().increaseStepsTaken(distanceMoved);
 
-        if(player.getCurrentTreasureCard() == null) {
+        var currentTreasureCardAfterMove = player.getCurrentTreasureCard();
+
+        if(currentTreasureCardAfterMove == null) {
             player.getStatistics().increaseScore(PointRewards.REWARD_ALL_TREASURES_COLLECTED);
         }
 
-        if(player.getCurrentTreasureCard() == null) {
+        var gameOver = false;
+        if(currentTreasureCardAfterMove == null) {
             gameOver();
+            gameOver = true;
         }
 
+        var treasureCollected = currentTreasureCardAfterMove != currentTreasureCardBeforeMove;
+
         nextPlayer();
-        return true;
+        return new movePlayerToTileResult(true, distanceMoved, treasureCollected, gameOver);
     }
 
     private void gameOver(){

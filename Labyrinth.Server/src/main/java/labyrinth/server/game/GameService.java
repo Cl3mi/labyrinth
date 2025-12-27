@@ -5,6 +5,8 @@ import labyrinth.server.game.enums.Achievement;
 import labyrinth.server.game.enums.Direction;
 import labyrinth.server.game.enums.RoomState;
 import labyrinth.server.game.events.AchievementUnlockedEvent;
+import labyrinth.server.game.events.GameOverEvent;
+import labyrinth.server.game.events.NextTreasureCardEvent;
 import labyrinth.server.game.factories.BoardFactory;
 import labyrinth.server.game.factories.TreasureCardFactory;
 import labyrinth.server.game.models.Board;
@@ -130,15 +132,26 @@ public class GameService {
     public boolean movePlayerToTile(int row, int col, Player player) {
         rwLock.writeLock().lock();
         try {
-            boolean result = game.movePlayerToTile(row, col, player);
+            var result = game.movePlayerToTile(row, col, player);
+            boolean moveSuccess = result.moveSuccess();
 
             // TODO: this is just an example, replace with actual achievement unlocking logic
-            if (result) {
+            if (moveSuccess) {
                 var achievementEvent = new AchievementUnlockedEvent(player, Achievement.RUNNER);
                 eventPublisher.publishAsync(achievementEvent);
             }
 
-            return result;
+            if(result.treasureCollected()){
+                var treasureCardEvent = new NextTreasureCardEvent(player, player.getCurrentTreasureCard());
+                eventPublisher.publishAsync(treasureCardEvent);
+            }
+
+            if(result.gameOver()){
+                var gameOverEvent = new GameOverEvent(game.getPlayers());
+                eventPublisher.publishAsync(gameOverEvent);
+            }
+
+            return moveSuccess;
         } finally {
             rwLock.writeLock().unlock();
         }
