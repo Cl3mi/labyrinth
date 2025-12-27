@@ -38,7 +38,8 @@ class GameServiceTest {
     void testAdminReassignmentOnLeave() {
         // Create real Game object for testing admin reassignment logic
         IGameTimer mockTimer = mock(IGameTimer.class);
-        Game game = new Game(mockTimer);
+        org.springframework.context.ApplicationEventPublisher mockEventPublisher = mock(org.springframework.context.ApplicationEventPublisher.class);
+        Game game = new Game(mockTimer, mockEventPublisher);
 
         // Add two players
         Player player1 = game.join("Player1");
@@ -59,7 +60,8 @@ class GameServiceTest {
     @Test
     void testAdminReassignmentPrefersHuman() {
         IGameTimer mockTimer = mock(IGameTimer.class);
-        Game game = new Game(mockTimer);
+        org.springframework.context.ApplicationEventPublisher mockEventPublisher = mock(org.springframework.context.ApplicationEventPublisher.class);
+        Game game = new Game(mockTimer, mockEventPublisher);
 
         // Add human player
         Player human = game.join("HumanPlayer");
@@ -95,7 +97,8 @@ class GameServiceTest {
     @Test
     void testLeaveEmptyLobby() {
         IGameTimer mockTimer = mock(IGameTimer.class);
-        Game game = new Game(mockTimer);
+        org.springframework.context.ApplicationEventPublisher mockEventPublisher = mock(org.springframework.context.ApplicationEventPublisher.class);
+        Game game = new Game(mockTimer, mockEventPublisher);
 
         Player player1 = game.join("Player1");
         assertTrue(player1.isAdmin());
@@ -110,7 +113,8 @@ class GameServiceTest {
     @Test
     void testNonAdminLeave_NoReassignment() {
         IGameTimer mockTimer = mock(IGameTimer.class);
-        Game game = new Game(mockTimer);
+        org.springframework.context.ApplicationEventPublisher mockEventPublisher = mock(org.springframework.context.ApplicationEventPublisher.class);
+        Game game = new Game(mockTimer, mockEventPublisher);
 
         Player player1 = game.join("Player1"); // Admin
         Player player2 = game.join("Player2"); // Not admin
@@ -129,7 +133,8 @@ class GameServiceTest {
     @Test
     void testAdminReassignmentWithMultiplePlayers() {
         IGameTimer mockTimer = mock(IGameTimer.class);
-        Game game = new Game(mockTimer);
+        org.springframework.context.ApplicationEventPublisher mockEventPublisher = mock(org.springframework.context.ApplicationEventPublisher.class);
+        Game game = new Game(mockTimer, mockEventPublisher);
 
         Player player1 = game.join("Player1"); // Admin
         Player player2 = game.join("Player2");

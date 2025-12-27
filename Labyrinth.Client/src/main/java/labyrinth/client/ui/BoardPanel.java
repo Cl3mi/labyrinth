@@ -51,6 +51,8 @@ public class BoardPanel extends JPanel {
     };
 
     private final GameClient client;
+    private final ToastManager toastManager;
+    private final SoundEffects soundEffects;
 
     private final List<BufferedImage> playerIcons = new ArrayList<>();
     private Image backgroundImage;
@@ -58,8 +60,31 @@ public class BoardPanel extends JPanel {
     @Getter
     private Board board;
 
+    // Track previous board state to detect changes
+    private Board previousBoard;
+
+    // Track last push action for visual feedback
+    private Integer lastPushedIndex = null;  // Row or column index
+    private Boolean lastPushedWasRow = null; // true = row, false = column
+    private Direction lastPushDirection = null;
+    private long lastPushTimestamp = 0;
+    private static final long PUSH_HIGHLIGHT_DURATION = 2000; // 2 seconds
+
+    // Track current target to detect changes
+    private String lastTargetTreasureName = null;
+    private boolean showTargetBanner = false; // Show banner until first action
+
+    // Keyboard navigation
+    private int selectedRow = 0;
+    private int selectedCol = 0;
+    private boolean keyboardNavigationActive = false;
+
     private Player currentPlayer;
     private List<Player> players;
+
+    private java.time.OffsetDateTime gameEndTime;
+    private java.time.OffsetDateTime turnEndTime;
+    private labyrinth.contracts.models.TurnState currentTurnState;
 
     /**
      * Reachable Tiles kommen vom Server (optional).
@@ -131,10 +156,19 @@ public class BoardPanel extends JPanel {
 
         add(optionsButton);
 
+        // Initialize toast manager and sound effects
+        this.toastManager = new ToastManager(this);
+        this.soundEffects = new SoundEffects();
+
         setupMouseListener();
+        setupKeyboardListener();
 
         backgroundMusic = new AudioPlayer("/sounds/06-Kokiri-Forest.wav");
         backgroundMusic.loop();
+
+        // Start timer to update sidebar countdowns every second
+        javax.swing.Timer sidebarTimer = new javax.swing.Timer(1000, e -> repaint());
+        sidebarTimer.start();
     }
 
     // =================================================================================
@@ -425,10 +459,147 @@ public class BoardPanel extends JPanel {
         });
     }
 
+    private void setupKeyboardListener() {
+        // Make panel focusable to receive keyboard events
+        setFocusable(true);
+        requestFocusInWindow();
+
+        addKeyListener(new java.awt.event.KeyAdapter() {
+            @Override
+            public void keyPressed(java.awt.event.KeyEvent e) {
+                handleKeyPress(e);
+            }
+        });
+
+        // Request focus when clicked
+        addMouseListener(new MouseAdapter() {
+            @Override
+            public void mousePressed(MouseEvent e) {
+                requestFocusInWindow();
+            }
+        });
+    }
+
+    private void handleKeyPress(java.awt.event.KeyEvent e) {
+        if (inputLocked && e.getKeyCode() != java.awt.event.KeyEvent.VK_ESCAPE) return;
+        if (board == null) return;
+
+        switch (e.getKeyCode()) {
+            // Rotation controls
+            case java.awt.event.KeyEvent.VK_R, java.awt.event.KeyEvent.VK_E -> {
+                // Rotate spare tile clockwise
+                if (currentTurnState == labyrinth.contracts.models.TurnState.WAITING_FOR_PUSH) {
+                    soundEffects.playRotate();
+                    client.sendRotateTile();
+                    showTargetBanner = false; // Hide banner after first action
+                    toastManager.showInfo("ROTATE", "Extra-Tile gedreht", "R/E: im Uhrzeigersinn, Q: gegen Uhrzeigersinn");
+                    inputLocked = true;
+                }
+            }
+            case java.awt.event.KeyEvent.VK_Q -> {
+                // Rotate spare tile counter-clockwise (3 times clockwise = 1 counter-clockwise)
+                if (currentTurnState == labyrinth.contracts.models.TurnState.WAITING_FOR_PUSH) {
+                    soundEffects.playRotate();
+                    // Send 3 rotate commands for counter-clockwise
+                    client.sendRotateTile();
+                    try { Thread.sleep(50); } catch (InterruptedException ignored) {}
+                    client.sendRotateTile();
+                    try { Thread.sleep(50); } catch (InterruptedException ignored) {}
+                    client.sendRotateTile();
+                    showTargetBanner = false; // Hide banner after first action
+                    toastManager.showInfo("ROTATE", "Extra-Tile gedreht", "Gegen Uhrzeigersinn gedreht");
+                    inputLocked = true;
+                }
+            }
+
+            // Arrow key navigation
+            case java.awt.event.KeyEvent.VK_UP -> {
+                keyboardNavigationActive = true;
+                selectedRow = Math.max(0, selectedRow - 1);
+                repaint();
+            }
+            case java.awt.event.KeyEvent.VK_DOWN -> {
+                keyboardNavigationActive = true;
+                selectedRow = Math.min(board.getHeight() - 1, selectedRow + 1);
+                repaint();
+            }
+            case java.awt.event.KeyEvent.VK_LEFT -> {
+                keyboardNavigationActive = true;
+                selectedCol = Math.max(0, selectedCol - 1);
+                repaint();
+            }
+            case java.awt.event.KeyEvent.VK_RIGHT -> {
+                keyboardNavigationActive = true;
+                selectedCol = Math.min(board.getWidth() - 1, selectedCol + 1);
+                repaint();
+            }
+
+            // Confirm selection with Enter or Space
+            case java.awt.event.KeyEvent.VK_ENTER, java.awt.event.KeyEvent.VK_SPACE -> {
+                if (keyboardNavigationActive && currentTurnState == labyrinth.contracts.models.TurnState.WAITING_FOR_MOVE) {
+                    client.sendMovePawn(selectedRow, selectedCol);
+                    showTargetBanner = false; // Hide banner after first action
+                    inputLocked = true;
+                    keyboardNavigationActive = false;
+                } else if (currentTurnState == labyrinth.contracts.models.TurnState.WAITING_FOR_PUSH) {
+                    toastManager.showInfo("INFO", "Hinweis", "Erst Tile einschieben, dann Figur bewegen");
+                }
+            }
+
+            // Escape - pause/options
+            case java.awt.event.KeyEvent.VK_ESCAPE -> {
+                showOptionsDialog();
+            }
+
+            // Tab - toggle keyboard navigation help
+            case java.awt.event.KeyEvent.VK_TAB -> {
+                showKeyboardHelp();
+            }
+        }
+    }
+
+    private void showKeyboardHelp() {
+        String helpText = """
+            TASTATUR-STEUERUNG:
+
+            Pfeiltasten: Tile-Auswahl navigieren
+            Enter/Leertaste: Ausgewähltes Tile bestätigen
+
+            R / E: Extra-Tile im Uhrzeigersinn drehen
+            Q: Extra-Tile gegen Uhrzeigersinn drehen
+
+            Esc: Optionen/Pause
+            Tab: Diese Hilfe anzeigen
+            """;
+
+        toastManager.showInfo("HELP", "Tastatur-Hilfe", helpText);
+    }
+
     private boolean handleArrowClick(Point p) {
         for (ArrowButton arrow : arrowButtons) {
             if (arrow.contains(p)) {
+                // Record push action for visual feedback
+                lastPushedIndex = arrow.index;
+                lastPushedWasRow = arrow.isRow;
+                lastPushDirection = arrow.direction;
+                lastPushTimestamp = System.currentTimeMillis();
+
+                // Play push sound
+                soundEffects.playPush();
+
+                // Show toast notification
+                String rowCol = arrow.isRow ? "Zeile " + arrow.index : "Spalte " + arrow.index;
+                String directionStr = switch (arrow.direction) {
+                    case UP -> "nach oben";
+                    case DOWN -> "nach unten";
+                    case LEFT -> "nach links";
+                    case RIGHT -> "nach rechts";
+                };
+                toastManager.showInfo("PUSH", "Einschub", rowCol + " wird " + directionStr + " geschoben");
+
+                // Send command to server
                 client.sendPushTile(arrow.index, arrow.direction);
+                showTargetBanner = false; // Hide banner after first action
                 inputLocked = true;
                 return true;
             }
@@ -444,7 +615,9 @@ public class BoardPanel extends JPanel {
             for (int col = 0; col < board.getWidth(); col++) {
                 Rectangle tileRect = new Rectangle(xOffset + col * size, yOffset + row * size, size, size);
                 if (tileRect.contains(p)) {
+                    soundEffects.playMove();
                     client.sendMovePawn(row, col);
+                    showTargetBanner = false; // Hide banner after first action
                     inputLocked = true;
                     break outer;
                 }
@@ -473,11 +646,8 @@ public class BoardPanel extends JPanel {
             drawBoardGrid(g2);
             createAndDrawArrowButtons(g2);
             drawExtraTile(g2);
-            drawDebugInfo(g2);
-
-            if (currentPlayer != null) {
-                drawTreasureCards(g2, currentPlayer);
-            }
+            drawSidebar(g2);
+            drawCurrentTargetOverlay(g2); // NEW: Draw target treasure overlay
         } finally {
             g2.dispose();
         }
@@ -493,6 +663,9 @@ public class BoardPanel extends JPanel {
     }
 
     private void drawBoardGrid(Graphics2D g2) {
+        // Draw push highlight overlay first (behind tiles)
+        drawPushHighlight(g2);
+
         for (int row = 0; row < board.getHeight(); row++) {
             for (int col = 0; col < board.getWidth(); col++) {
                 Tile tile = board.getTiles()[row][col];
@@ -500,6 +673,11 @@ public class BoardPanel extends JPanel {
 
                 int x = xOffset + col * size;
                 int y = yOffset + row * size;
+
+                // Show keyboard selection highlight
+                if (keyboardNavigationActive && row == selectedRow && col == selectedCol) {
+                    drawKeyboardSelectionHighlight(g2, x, y);
+                }
 
                 if (reachableTiles.contains(tile)) {
                     drawTileHighlight(g2, x, y);
@@ -509,6 +687,127 @@ public class BoardPanel extends JPanel {
                 drawPlayersOnTile(g2, row, col);
             }
         }
+    }
+
+    private void drawKeyboardSelectionHighlight(Graphics2D g2, int x, int y) {
+        // Draw animated selection border
+        long time = System.currentTimeMillis();
+        int pulseAlpha = 150 + (int) (50 * Math.sin(time / 200.0));
+
+        g2.setColor(new Color(255, 255, 100, pulseAlpha));
+        g2.setStroke(new BasicStroke(4));
+        g2.drawRoundRect(x - 2, y - 2, size + 4, size + 4, 10, 10);
+
+        // Draw corner markers
+        g2.setColor(new Color(255, 255, 0, 200));
+        int cornerSize = 10;
+        // Top-left
+        g2.fillRect(x - 2, y - 2, cornerSize, 3);
+        g2.fillRect(x - 2, y - 2, 3, cornerSize);
+        // Top-right
+        g2.fillRect(x + size - cornerSize + 2, y - 2, cornerSize, 3);
+        g2.fillRect(x + size - 1, y - 2, 3, cornerSize);
+        // Bottom-left
+        g2.fillRect(x - 2, y + size - 1, cornerSize, 3);
+        g2.fillRect(x - 2, y + size - cornerSize + 2, 3, cornerSize);
+        // Bottom-right
+        g2.fillRect(x + size - cornerSize + 2, y + size - 1, cornerSize, 3);
+        g2.fillRect(x + size - 1, y + size - cornerSize + 2, 3, cornerSize);
+    }
+
+    /**
+     * Draws a highlight overlay on the last pushed row or column
+     */
+    private void drawPushHighlight(Graphics2D g2) {
+        if (lastPushedIndex == null || lastPushedWasRow == null) return;
+
+        // Check if highlight has expired
+        long elapsed = System.currentTimeMillis() - lastPushTimestamp;
+        if (elapsed > PUSH_HIGHLIGHT_DURATION) {
+            lastPushedIndex = null;
+            return;
+        }
+
+        // Calculate fade-out alpha based on time
+        float alpha = 1.0f - (elapsed / (float) PUSH_HIGHLIGHT_DURATION);
+        alpha = Math.max(0.2f, alpha); // Minimum 20% opacity
+
+        // Set highlight color with fade
+        Color highlightColor = new Color(70, 130, 180, (int) (100 * alpha));
+        g2.setColor(highlightColor);
+
+        if (lastPushedWasRow) {
+            // Highlight entire row
+            int row = lastPushedIndex;
+            int y = yOffset + row * size;
+            g2.fillRect(xOffset, y, board.getWidth() * size, size);
+
+            // Draw directional indicator
+            drawPushDirectionIndicator(g2, row, -1, lastPushDirection, alpha);
+        } else {
+            // Highlight entire column
+            int col = lastPushedIndex;
+            int x = xOffset + col * size;
+            g2.fillRect(x, yOffset, size, board.getHeight() * size);
+
+            // Draw directional indicator
+            drawPushDirectionIndicator(g2, -1, col, lastPushDirection, alpha);
+        }
+    }
+
+    /**
+     * Draws directional arrows on the pushed row/column
+     */
+    private void drawPushDirectionIndicator(Graphics2D g2, int row, int col, Direction direction, float alpha) {
+        if (direction == null) return;
+
+        g2.setColor(new Color(255, 255, 255, (int) (200 * alpha)));
+        g2.setStroke(new BasicStroke(3));
+
+        if (row >= 0) {
+            // Draw arrows along the row
+            int y = yOffset + row * size + size / 2;
+            for (int c = 0; c < board.getWidth(); c++) {
+                int x = xOffset + c * size + size / 2;
+                drawDirectionArrow(g2, x, y, direction, size / 4);
+            }
+        } else if (col >= 0) {
+            // Draw arrows along the column
+            int x = xOffset + col * size + size / 2;
+            for (int r = 0; r < board.getHeight(); r++) {
+                int y = yOffset + r * size + size / 2;
+                drawDirectionArrow(g2, x, y, direction, size / 4);
+            }
+        }
+    }
+
+    /**
+     * Draws a single directional arrow
+     */
+    private void drawDirectionArrow(Graphics2D g2, int cx, int cy, Direction direction, int arrowSize) {
+        int[] xPoints = new int[3];
+        int[] yPoints = new int[3];
+
+        switch (direction) {
+            case UP -> {
+                xPoints = new int[]{cx - arrowSize / 2, cx, cx + arrowSize / 2};
+                yPoints = new int[]{cy + arrowSize / 3, cy - arrowSize / 3, cy + arrowSize / 3};
+            }
+            case DOWN -> {
+                xPoints = new int[]{cx - arrowSize / 2, cx, cx + arrowSize / 2};
+                yPoints = new int[]{cy - arrowSize / 3, cy + arrowSize / 3, cy - arrowSize / 3};
+            }
+            case LEFT -> {
+                xPoints = new int[]{cx + arrowSize / 3, cx - arrowSize / 3, cx + arrowSize / 3};
+                yPoints = new int[]{cy - arrowSize / 2, cy, cy + arrowSize / 2};
+            }
+            case RIGHT -> {
+                xPoints = new int[]{cx - arrowSize / 3, cx + arrowSize / 3, cx - arrowSize / 3};
+                yPoints = new int[]{cy - arrowSize / 2, cy, cy + arrowSize / 2};
+            }
+        }
+
+        g2.fillPolygon(xPoints, yPoints, 3);
     }
 
     private void drawTileAt(Graphics2D g2, Tile tile, int x, int y, int row, int col, boolean drawDetails) {
@@ -538,12 +837,60 @@ public class BoardPanel extends JPanel {
     }
 
     private void drawTreasureOnTile(Graphics2D g2, Treasure treasure, int centerX, int centerY) {
-        g2.setColor(Color.BLACK);
+        // Check if this is the current player's target treasure
+        boolean isCurrentTarget = false;
+        if (currentPlayer != null && currentPlayer.getAssignedTreasureCards() != null
+            && !currentPlayer.getAssignedTreasureCards().isEmpty()) {
+            Treasure currentTarget = currentPlayer.getAssignedTreasureCards().get(0);
+            isCurrentTarget = currentTarget != null && currentTarget.getName() != null
+                && currentTarget.getName().equals(treasure.getName());
+        }
+
+        if (isCurrentTarget) {
+            // Draw pulsing glow effect for target treasure
+            long time = System.currentTimeMillis();
+            int glowRadius = 25 + (int) (10 * Math.sin(time / 300.0));
+            int glowAlpha = 100 + (int) (50 * Math.sin(time / 300.0));
+
+            // Outer glow
+            g2.setColor(new Color(255, 215, 0, glowAlpha / 2));
+            g2.fillOval(centerX - glowRadius, centerY - glowRadius - 25, glowRadius * 2, glowRadius * 2);
+
+            // Inner glow
+            g2.setColor(new Color(255, 255, 0, glowAlpha));
+            g2.fillOval(centerX - glowRadius / 2, centerY - glowRadius / 2 - 25, glowRadius, glowRadius);
+        }
+
+        // Draw treasure icon/symbol
+        g2.setFont(new Font("Arial", Font.BOLD, 24));
+        g2.setColor(isCurrentTarget ? new Color(255, 215, 0) : new Color(180, 140, 0));
+        g2.drawString("💎", centerX - 12, centerY - 15);
+
+        // Draw treasure name with background for better readability
+        g2.setFont(new Font("Arial", Font.BOLD, isCurrentTarget ? 12 : 10));
         FontMetrics fm = g2.getFontMetrics();
         int textWidth = fm.stringWidth(treasure.getName());
-        g2.drawString(treasure.getName(),
-                centerX - textWidth / 2,
-                (centerY + fm.getAscent() / 2) - 20);
+        int textHeight = fm.getHeight();
+
+        // Background box
+        if (isCurrentTarget) {
+            g2.setColor(new Color(255, 215, 0, 200));
+            g2.fillRoundRect(centerX - textWidth / 2 - 4, centerY - 5, textWidth + 8, textHeight - 2, 6, 6);
+            g2.setColor(new Color(0, 0, 0));
+        } else {
+            g2.setColor(new Color(255, 255, 255, 180));
+            g2.fillRoundRect(centerX - textWidth / 2 - 3, centerY - 4, textWidth + 6, textHeight - 4, 4, 4);
+            g2.setColor(new Color(60, 40, 0));
+        }
+
+        g2.drawString(treasure.getName(), centerX - textWidth / 2, centerY + fm.getAscent() - 2);
+
+        // Draw target indicator for current treasure
+        if (isCurrentTarget) {
+            g2.setFont(new Font("Arial", Font.BOLD, 14));
+            g2.setColor(new Color(255, 255, 255));
+            g2.drawString("⭐", centerX - 7, centerY - 30);
+        }
     }
 
     private void drawCoordinates(Graphics2D g2, int x, int y, int row, int col) {
@@ -559,39 +906,63 @@ public class BoardPanel extends JPanel {
     }
 
     private void drawPlayersOnTile(Graphics2D g2, int row, int col) {
+        // First, collect all players on this tile
+        List<Integer> playersOnTile = new ArrayList<>();
         for (int i = 0; i < players.size(); i++) {
             Player p = players.get(i);
             if (p == null || p.getCurrentPosition() == null) continue;
 
             if (p.getCurrentPosition().getRow() == row &&
                     p.getCurrentPosition().getColumn() == col) {
+                playersOnTile.add(i);
+            }
+        }
 
-                int cx = xOffset + col * size + size / 2;
-                int cy = yOffset + row * size + size / 2;
+        if (playersOnTile.isEmpty()) return;
 
-                BufferedImage icon = (i < playerIcons.size()) ? playerIcons.get(i) : null;
-                if (icon != null) {
-                    int iconSize = (int) (size * 0.6);
-                    g2.drawImage(icon,
-                            cx - iconSize / 2,
-                            cy - iconSize / 2,
-                            iconSize,
-                            iconSize,
-                            null);
-                } else {
-                    g2.setColor(PLAYER_COLORS[i % PLAYER_COLORS.length]);
-                    Font oldFont = g2.getFont();
-                    g2.setFont(PLAYER_MARKER_FONT);
+        // Calculate positions for multiple players in a grid pattern
+        int baseX = xOffset + col * size;
+        int baseY = yOffset + row * size;
 
-                    FontMetrics fm = g2.getFontMetrics();
-                    String text = "P" + (i + 1);
-                    int textWidth = fm.stringWidth(text);
+        // Positions for 1-4 players
+        int[][] offsets = {
+            {size / 2, size / 2},                    // 1 player: center
+            {size / 3, size / 2, 2 * size / 3, size / 2},  // 2 players: left, right
+            {size / 3, size / 3, 2 * size / 3, size / 3, size / 2, 2 * size / 3},  // 3 players: top-left, top-right, bottom-center
+            {size / 3, size / 3, 2 * size / 3, size / 3, size / 3, 2 * size / 3, 2 * size / 3, 2 * size / 3}  // 4 players: all corners
+        };
 
-                    g2.drawString(text, cx - textWidth / 2,
-                            cy + fm.getAscent() / 2 - fm.getDescent());
+        int count = Math.min(playersOnTile.size(), 4);
+        int[] positions = offsets[count - 1];
 
-                    g2.setFont(oldFont);
-                }
+        for (int idx = 0; idx < count; idx++) {
+            int i = playersOnTile.get(idx);
+            int px = baseX + positions[idx * 2];
+            int py = baseY + positions[idx * 2 + 1];
+
+            BufferedImage icon = (i < playerIcons.size()) ? playerIcons.get(i) : null;
+            if (icon != null) {
+                int iconSize = count > 1 ? (int) (size * 0.35) : (int) (size * 0.6);
+                g2.drawImage(icon,
+                        px - iconSize / 2,
+                        py - iconSize / 2,
+                        iconSize,
+                        iconSize,
+                        null);
+            } else {
+                g2.setColor(PLAYER_COLORS[i % PLAYER_COLORS.length]);
+                Font oldFont = g2.getFont();
+                Font scaledFont = count > 1 ? PLAYER_MARKER_FONT.deriveFont(20f) : PLAYER_MARKER_FONT;
+                g2.setFont(scaledFont);
+
+                FontMetrics fm = g2.getFontMetrics();
+                String text = "P" + (i + 1);
+                int textWidth = fm.stringWidth(text);
+
+                g2.drawString(text, px - textWidth / 2,
+                        py + fm.getAscent() / 2 - fm.getDescent());
+
+                g2.setFont(oldFont);
             }
         }
     }
@@ -686,68 +1057,499 @@ public class BoardPanel extends JPanel {
         }
     }
 
-    private void drawDebugInfo(Graphics2D g2) {
-        int infoX = getWidth() - 250;
-        int infoY = 40;
+    private String formatTimeRemaining(java.time.OffsetDateTime endTime) {
+        if (endTime == null) return "--:--";
 
-        g2.setFont(DEBUG_INFO_FONT);
-        g2.setColor(Color.BLACK);
+        java.time.Duration remaining = java.time.Duration.between(
+            java.time.OffsetDateTime.now(),
+            endTime
+        );
 
-        List<String> infoLines = new ArrayList<>();
-        var serverPlayers = board.getPlayers();
+        if (remaining.isNegative()) return "00:00";
 
-        if (serverPlayers != null && !serverPlayers.isEmpty()) {
-            var current = serverPlayers.get(board.getCurrentPlayerIndex());
-            infoLines.add("Player to move: " + current.getName());
+        long totalSeconds = remaining.getSeconds();
+        long hours = totalSeconds / 3600;
+        long minutes = (totalSeconds % 3600) / 60;
+        long seconds = totalSeconds % 60;
+
+        if (hours > 0) {
+            return String.format("%d:%02d:%02d", hours, minutes, seconds);
         } else {
-            infoLines.add("Player to move: None");
-        }
-
-        infoLines.add("Free roam: " + board.isFreeRoam());
-        infoLines.add("Current move state: " + board.getCurrentMoveState());
-        infoLines.add("");
-        infoLines.add("=== Players ===");
-
-        if (serverPlayers != null && !serverPlayers.isEmpty()) {
-            for (Player p : serverPlayers) {
-                var pos = p.getCurrentPosition();
-                String positionText = (pos != null) ? "(" + pos.getRow() + "," + pos.getColumn() + ")" : "(not placed)";
-                infoLines.add(p.getName() + " at " + positionText);
-            }
-        }
-
-        int lineHeight = 25;
-        for (int i = 0; i < infoLines.size(); i++) {
-            g2.drawString(infoLines.get(i), infoX, infoY + i * lineHeight);
+            return String.format("%d:%02d", minutes, seconds);
         }
     }
 
-    private void drawTreasureCards(Graphics2D g2, Player player) {
-        int cardWidth = 60;
-        int cardHeight = 90;
-        int padding = 10;
-        int startX = 10;
-        int startY = 40;
+    private void drawSidebar(Graphics2D g2) {
+        int sidebarWidth = 300;
+        int sidebarX = 10;
+        int sidebarY = 60;
+        int padding = 15;
 
-        List<Treasure> cards = player.getAssignedTreasureCards();
-        if (cards == null) return;
+        // Background panel with gradient
+        GradientPaint gradient = new GradientPaint(
+            sidebarX, sidebarY,
+            new Color(40, 40, 50, 240),
+            sidebarX, getHeight(),
+            new Color(30, 30, 40, 240)
+        );
+        g2.setPaint(gradient);
+        g2.fillRoundRect(sidebarX, sidebarY, sidebarWidth, getHeight() - sidebarY - 20, 15, 15);
 
-        for (int i = 0; i < cards.size(); i++) {
-            Treasure card = cards.get(i);
+        // Border with glow effect
+        g2.setColor(new Color(100, 130, 180, 150));
+        g2.setStroke(new BasicStroke(3));
+        g2.drawRoundRect(sidebarX, sidebarY, sidebarWidth, getHeight() - sidebarY - 20, 15, 15);
 
-            g2.setColor(new Color(220, 220, 250));
+        int currentY = sidebarY + padding;
 
-            int y = startY + i * (cardHeight + padding);
-            g2.fillRoundRect(startX, y, cardWidth, cardHeight, 10, 10);
+        // Header with icon
+        g2.setFont(new Font("Arial", Font.BOLD, 22));
+        g2.setColor(new Color(255, 215, 0)); // Gold color
+        g2.drawString("⚔ LABYRINTH", sidebarX + padding, currentY);
+        currentY += 35;
 
-            g2.setColor(Color.BLACK);
-            String treasureName = card.getName();
-            FontMetrics fm = g2.getFontMetrics();
-            int textWidth = fm.stringWidth(treasureName);
-            g2.drawString(treasureName,
-                    startX + (cardWidth - textWidth) / 2,
-                    y + cardHeight / 2);
+        // Game timer section with icon
+        if (gameEndTime != null) {
+            drawSectionHeader(g2, "⏱ SPIEL-TIMER", sidebarX + padding, currentY);
+            currentY += 22;
+
+            g2.setFont(new Font("Arial", Font.BOLD, 16));
+            g2.setColor(new Color(255, 200, 100));
+            String timeRemaining = formatTimeRemaining(gameEndTime);
+            g2.drawString(timeRemaining, sidebarX + padding + 10, currentY);
+            currentY += 25;
         }
+
+        // Divider
+        drawDivider(g2, sidebarX + padding, sidebarX + sidebarWidth - padding, currentY);
+        currentY += 15;
+
+        // Current turn info
+        List<Player> allPlayers = (players != null && !players.isEmpty()) ? players :
+                                  (board != null && board.getPlayers() != null) ? board.getPlayers() : List.of();
+
+        if (!allPlayers.isEmpty() && board != null) {
+            Player currentTurnPlayer = allPlayers.get(board.getCurrentPlayerIndex());
+
+            drawSectionHeader(g2, "👤 AKTUELLER ZUG", sidebarX + padding, currentY);
+            currentY += 25;
+
+            // Player name with larger font
+            g2.setFont(new Font("Arial", Font.BOLD, 18));
+            g2.setColor(new Color(255, 255, 150));
+            String turnText = currentTurnPlayer.getName();
+            if (currentTurnPlayer.isAiControlled()) {
+                turnText += " 🤖";
+            }
+            g2.drawString("▶ " + turnText, sidebarX + padding + 10, currentY);
+            currentY += 28;
+
+            // Turn state - use server TurnState if available, otherwise client MoveState
+            g2.setFont(new Font("Arial", Font.PLAIN, 11));
+            g2.setColor(new Color(180, 180, 200));
+            String stateText;
+            if (currentTurnState != null) {
+                stateText = switch (currentTurnState) {
+                    case WAITING_FOR_PUSH -> "Waiting for tile push";
+                    case WAITING_FOR_MOVE -> "Waiting for pawn move";
+                };
+            } else {
+                stateText = board.getCurrentMoveState() == null ? "WAITING" :
+                           board.getCurrentMoveState().toString().replace("_", " ");
+            }
+            g2.drawString(stateText, sidebarX + padding + 10, currentY);
+            currentY += 18;
+
+            // Turn timer
+            if (turnEndTime != null) {
+                String turnTime = formatTimeRemaining(turnEndTime);
+                g2.setFont(new Font("Arial", Font.BOLD, 12));
+                g2.setColor(new Color(255, 150, 150));
+                g2.drawString("⏱ " + turnTime, sidebarX + padding + 10, currentY);
+                currentY += 20;
+            } else {
+                currentY += 7;
+            }
+
+            // Hint for staying in place
+            if (currentTurnState != null && currentTurnState == labyrinth.contracts.models.TurnState.WAITING_FOR_MOVE) {
+                g2.setFont(new Font("Arial", Font.ITALIC, 10));
+                g2.setColor(new Color(150, 150, 170));
+                g2.drawString("(Click your tile to stay in place)", sidebarX + padding + 10, currentY);
+                currentY += 15;
+            }
+        }
+
+        // Divider
+        drawDivider(g2, sidebarX + padding, sidebarX + sidebarWidth - padding, currentY);
+        currentY += 15;
+
+        // Players section with icon
+        drawSectionHeader(g2, "👥 SPIELER", sidebarX + padding, currentY);
+        currentY += 25;
+
+        // Draw each player
+        for (int i = 0; i < allPlayers.size(); i++) {
+            Player p = allPlayers.get(i);
+            boolean isCurrentTurn = (board != null && i == board.getCurrentPlayerIndex());
+
+            currentY = drawPlayerCard(g2, p, sidebarX + padding, currentY, sidebarWidth - 2 * padding, isCurrentTurn, i);
+            currentY += 12;
+        }
+
+        // Current player's treasure cards at the bottom
+        if (currentPlayer != null && currentPlayer.getAssignedTreasureCards() != null &&
+            !currentPlayer.getAssignedTreasureCards().isEmpty()) {
+
+            currentY += 10;
+            drawDivider(g2, sidebarX + padding, sidebarX + sidebarWidth - padding, currentY);
+            currentY += 15;
+
+            drawSectionHeader(g2, "🎯 DEINE ZIELE", sidebarX + padding, currentY);
+            currentY += 22;
+
+            // Draw CURRENT TARGET treasure prominently
+            Treasure currentTarget = currentPlayer.getAssignedTreasureCards().get(0);
+
+            // Current target box with pulsing effect
+            long time = System.currentTimeMillis();
+            int pulseAlpha = 200 + (int) (55 * Math.sin(time / 400.0));
+
+            // Background box for current target
+            g2.setColor(new Color(255, 215, 0, pulseAlpha));
+            g2.fillRoundRect(sidebarX + padding + 5, currentY - 15, sidebarWidth - 2 * padding - 10, 50, 10, 10);
+
+            // Border
+            g2.setColor(new Color(255, 255, 255, 200));
+            g2.setStroke(new BasicStroke(2));
+            g2.drawRoundRect(sidebarX + padding + 5, currentY - 15, sidebarWidth - 2 * padding - 10, 50, 10, 10);
+
+            // "AKTUELLES ZIEL" label
+            g2.setFont(new Font("Arial", Font.BOLD, 10));
+            g2.setColor(new Color(100, 70, 0));
+            g2.drawString("AKTUELLES ZIEL:", sidebarX + padding + 15, currentY - 2);
+
+            // Current target name with star
+            g2.setFont(new Font("Arial", Font.BOLD, 16));
+            g2.setColor(new Color(0, 0, 0));
+            g2.drawString("⭐ " + currentTarget.getName(), sidebarX + padding + 15, currentY + 20);
+
+            currentY += 45;
+
+            // Draw remaining treasure cards (if any)
+            if (currentPlayer.getAssignedTreasureCards().size() > 1) {
+                currentY += 10;
+                g2.setFont(new Font("Arial", Font.ITALIC, 11));
+                g2.setColor(new Color(180, 180, 200));
+                g2.drawString("Weitere Ziele:", sidebarX + padding + 10, currentY);
+                currentY += 18;
+
+                for (int i = 1; i < currentPlayer.getAssignedTreasureCards().size(); i++) {
+                    Treasure card = currentPlayer.getAssignedTreasureCards().get(i);
+                    g2.setFont(new Font("Arial", Font.PLAIN, 11));
+                    g2.setColor(new Color(200, 200, 220));
+                    g2.drawString("  • " + card.getName(), sidebarX + padding + 10, currentY);
+                    currentY += 16;
+                }
+            }
+        }
+
+        // Add keyboard hints at the bottom
+        currentY = Math.max(currentY + 10, getHeight() - 80);
+        drawDivider(g2, sidebarX + padding, sidebarX + sidebarWidth - padding, currentY);
+        currentY += 15;
+
+        g2.setFont(new Font("Arial", Font.ITALIC, 10));
+        g2.setColor(new Color(150, 150, 170));
+        g2.drawString("⌨ Pfeiltasten: Navigation", sidebarX + padding, currentY);
+        currentY += 15;
+        g2.drawString("⌨ R/Q/E: Tile drehen", sidebarX + padding, currentY);
+        currentY += 15;
+        g2.drawString("⌨ Tab: Tastaturhilfe", sidebarX + padding, currentY);
+    }
+
+    /**
+     * Draws a large overlay showing the current target treasure at the top of the screen
+     */
+    private void drawCurrentTargetOverlay(Graphics2D g2) {
+        if (currentPlayer == null || currentPlayer.getAssignedTreasureCards() == null
+            || currentPlayer.getAssignedTreasureCards().isEmpty()) {
+            return;
+        }
+
+        Treasure currentTarget = currentPlayer.getAssignedTreasureCards().get(0);
+
+        // Find the position of the target treasure on the board
+        int targetRow = -1;
+        int targetCol = -1;
+
+        for (int row = 0; row < board.getHeight(); row++) {
+            for (int col = 0; col < board.getWidth(); col++) {
+                Tile tile = board.getTiles()[row][col];
+                if (tile != null && tile.getTreasure() != null
+                    && tile.getTreasure().getName() != null
+                    && tile.getTreasure().getName().equals(currentTarget.getName())) {
+                    targetRow = row;
+                    targetCol = col;
+                    break;
+                }
+            }
+            if (targetRow >= 0) break;
+        }
+
+        // Pulsing effect
+        long time = System.currentTimeMillis();
+        int pulseAlpha = 220 + (int) (35 * Math.sin(time / 500.0));
+
+        // Always draw the golden border on the target tile (even after first action)
+        if (targetRow >= 0 && targetCol >= 0) {
+            int tileX = xOffset + targetCol * size;
+            int tileY = yOffset + targetRow * size;
+
+            // Pulsing tile highlight
+            int highlightAlpha = 150 + (int) (50 * Math.sin(time / 400.0));
+            g2.setColor(new Color(255, 215, 0, highlightAlpha));
+            g2.setStroke(new BasicStroke(6));
+            g2.drawRoundRect(tileX - 3, tileY - 3, size + 6, size + 6, 12, 12);
+
+            // Draw thicker inner border
+            g2.setColor(new Color(255, 255, 0, highlightAlpha + 50));
+            g2.setStroke(new BasicStroke(3));
+            g2.drawRoundRect(tileX - 6, tileY - 6, size + 12, size + 12, 15, 15);
+        }
+
+        // Only draw banner and arrow if showTargetBanner is true
+        if (!showTargetBanner) {
+            return;
+        }
+
+        // Draw large banner at the top center
+        int bannerWidth = 400;
+        int bannerHeight = 80;
+        int bannerX = (getWidth() - bannerWidth) / 2;
+        int bannerY = 20;
+
+        // Background with shadow
+        g2.setColor(new Color(0, 0, 0, 100));
+        g2.fillRoundRect(bannerX + 4, bannerY + 4, bannerWidth, bannerHeight, 20, 20);
+
+        // Main background
+        GradientPaint gradient = new GradientPaint(
+            bannerX, bannerY,
+            new Color(255, 215, 0, pulseAlpha),
+            bannerX, bannerY + bannerHeight,
+            new Color(255, 180, 0, pulseAlpha)
+        );
+        g2.setPaint(gradient);
+        g2.fillRoundRect(bannerX, bannerY, bannerWidth, bannerHeight, 20, 20);
+
+        // Border
+        g2.setColor(new Color(255, 255, 255, 230));
+        g2.setStroke(new BasicStroke(3));
+        g2.drawRoundRect(bannerX, bannerY, bannerWidth, bannerHeight, 20, 20);
+
+        // "FINDE" label
+        g2.setFont(new Font("Arial", Font.BOLD, 18));
+        g2.setColor(new Color(100, 70, 0));
+        FontMetrics fm = g2.getFontMetrics();
+        String findLabel = "FINDE:";
+        g2.drawString(findLabel, bannerX + 20, bannerY + 30);
+
+        // Treasure name in large font
+        g2.setFont(new Font("Arial", Font.BOLD, 28));
+        g2.setColor(new Color(0, 0, 0));
+        fm = g2.getFontMetrics();
+        String treasureName = "⭐ " + currentTarget.getName() + " 💎";
+        int nameWidth = fm.stringWidth(treasureName);
+        g2.drawString(treasureName, bannerX + (bannerWidth - nameWidth) / 2, bannerY + 58);
+
+        // Draw arrow and location hint if treasure is on board
+        if (targetRow >= 0 && targetCol >= 0) {
+            int tileX = xOffset + targetCol * size;
+            int tileY = yOffset + targetRow * size;
+
+            // Draw arrow from banner to treasure location
+            int arrowStartX = bannerX + bannerWidth / 2;
+            int arrowStartY = bannerY + bannerHeight + 10;
+            int arrowEndX = tileX + size / 2;
+            int arrowEndY = tileY + size / 2;
+
+            // Only draw arrow if treasure is not directly below banner
+            if (Math.abs(arrowEndY - arrowStartY) > 100) {
+                g2.setColor(new Color(255, 215, 0, 200));
+                g2.setStroke(new BasicStroke(5, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+
+                // Draw curved arrow using quadratic curve
+                int controlX = arrowStartX;
+                int controlY = (arrowStartY + arrowEndY) / 2;
+
+                java.awt.geom.QuadCurve2D curve = new java.awt.geom.QuadCurve2D.Float(
+                    arrowStartX, arrowStartY,
+                    controlX, controlY,
+                    arrowEndX, arrowEndY
+                );
+                g2.draw(curve);
+
+                // Draw arrowhead at the end
+                double angle = Math.atan2(arrowEndY - controlY, arrowEndX - controlX);
+                int arrowSize = 15;
+                int[] xPoints = {
+                    arrowEndX,
+                    (int) (arrowEndX - arrowSize * Math.cos(angle - Math.PI / 6)),
+                    (int) (arrowEndX - arrowSize * Math.cos(angle + Math.PI / 6))
+                };
+                int[] yPoints = {
+                    arrowEndY,
+                    (int) (arrowEndY - arrowSize * Math.sin(angle - Math.PI / 6)),
+                    (int) (arrowEndY - arrowSize * Math.sin(angle + Math.PI / 6))
+                };
+                g2.fillPolygon(xPoints, yPoints, 3);
+            }
+
+            // Location hint text
+            g2.setFont(new Font("Arial", Font.BOLD, 14));
+            g2.setColor(new Color(100, 70, 0));
+            String locationText = "bei (" + targetRow + ", " + targetCol + ")";
+            fm = g2.getFontMetrics();
+            int locationWidth = fm.stringWidth(locationText);
+            g2.drawString(locationText, bannerX + (bannerWidth - locationWidth) / 2, bannerY + bannerHeight - 8);
+        } else {
+            // Treasure not on board yet
+            g2.setFont(new Font("Arial", Font.ITALIC, 12));
+            g2.setColor(new Color(100, 70, 0));
+            fm = g2.getFontMetrics();
+            String notFoundText = "(noch nicht auf dem Spielfeld)";
+            int notFoundWidth = fm.stringWidth(notFoundText);
+            g2.drawString(notFoundText, bannerX + (bannerWidth - notFoundWidth) / 2, bannerY + bannerHeight - 8);
+        }
+    }
+
+    /**
+     * Draws a section header with consistent styling
+     */
+    private void drawSectionHeader(Graphics2D g2, String text, int x, int y) {
+        g2.setFont(new Font("Arial", Font.BOLD, 13));
+        g2.setColor(new Color(180, 200, 255));
+        g2.drawString(text, x, y);
+    }
+
+    /**
+     * Draws a visual divider line
+     */
+    private void drawDivider(Graphics2D g2, int x1, int x2, int y) {
+        // Draw gradient divider
+        GradientPaint dividerGradient = new GradientPaint(
+            x1, y,
+            new Color(100, 130, 180, 50),
+            (x1 + x2) / 2, y,
+            new Color(100, 130, 180, 180)
+        );
+        g2.setPaint(dividerGradient);
+        g2.setStroke(new BasicStroke(2));
+        g2.drawLine(x1, y, x2, y);
+    }
+
+    private int drawPlayerCard(Graphics2D g2, Player player, int x, int y, int width, boolean isCurrentTurn, int playerIndex) {
+        int cardHeight = 95;
+        int padding = 10;
+
+        // Card background
+        Color bgColor = isCurrentTurn ? new Color(80, 100, 140, 200) : new Color(50, 50, 60, 180);
+        g2.setColor(bgColor);
+        g2.fillRoundRect(x, y, width, cardHeight, 10, 10);
+
+        // Border for current turn
+        if (isCurrentTurn) {
+            g2.setColor(new Color(255, 220, 100));
+            g2.setStroke(new BasicStroke(2));
+            g2.drawRoundRect(x, y, width, cardHeight, 10, 10);
+        }
+
+        int currentY = y + padding + 15;
+
+        // Player icon (left side)
+        if (playerIndex < playerIcons.size() && playerIcons.get(playerIndex) != null) {
+            BufferedImage icon = playerIcons.get(playerIndex);
+            int iconSize = 32;
+            g2.drawImage(icon, x + padding, y + padding, iconSize, iconSize, null);
+        } else {
+            // Fallback: Color indicator circle
+            if (player.getColor() != null) {
+                Color playerColor = getAwtColor(player.getColor());
+                g2.setColor(playerColor);
+                g2.fillOval(x + padding, y + padding + 3, 24, 24);
+                g2.setColor(Color.WHITE);
+                g2.setStroke(new BasicStroke(1.5f));
+                g2.drawOval(x + padding, y + padding + 3, 24, 24);
+            }
+        }
+
+        // Player name
+        g2.setFont(new Font("Arial", Font.BOLD, 14));
+        g2.setColor(Color.WHITE);
+        String name = player.getName();
+        if (name.length() > 15) {
+            name = name.substring(0, 12) + "...";
+        }
+        g2.drawString(name, x + padding + 42, currentY);
+
+        // Badges (admin, AI, disconnected)
+        int badgeX = x + width - padding - 20;
+        g2.setFont(new Font("Arial", Font.PLAIN, 10));
+
+        // Show AI badge or OFFLINE badge (but not both - AI bots don't need connections)
+        if (player.isAiControlled()) {
+            g2.setColor(new Color(150, 150, 255));
+            g2.drawString("AI", badgeX, currentY);
+        } else if (!player.isConnected()) {
+            g2.setColor(new Color(200, 80, 80));
+            g2.drawString("OFFLINE", badgeX - 40, currentY);
+        }
+
+        if (player.isAdmin()) {
+            g2.setColor(new Color(255, 215, 0));
+            g2.drawString("★", x + width - padding - 5, currentY);
+        }
+
+        currentY += 20;
+
+        // Score: treasures found / total
+        int treasuresFound = player.getTreasuresFound() != null ? player.getTreasuresFound().size() : 0;
+        int totalTreasures = treasuresFound + player.getRemainingTreasureCount();
+
+        g2.setFont(new Font("Arial", Font.PLAIN, 12));
+        g2.setColor(new Color(200, 200, 220));
+        g2.drawString("Treasures: " + treasuresFound + "/" + totalTreasures, x + padding + 24, currentY);
+        currentY += 18;
+
+        // Progress bar
+        if (totalTreasures > 0) {
+            int barWidth = width - 2 * padding - 24;
+            int barHeight = 8;
+            int barX = x + padding + 24;
+
+            // Background
+            g2.setColor(new Color(60, 60, 70));
+            g2.fillRoundRect(barX, currentY - 6, barWidth, barHeight, 4, 4);
+
+            // Progress
+            int progressWidth = (int) ((double) treasuresFound / totalTreasures * barWidth);
+            if (progressWidth > 0) {
+                g2.setColor(new Color(100, 200, 100));
+                g2.fillRoundRect(barX, currentY - 6, progressWidth, barHeight, 4, 4);
+            }
+        }
+
+        return y + cardHeight;
+    }
+
+    private Color getAwtColor(labyrinth.contracts.models.PlayerColor playerColor) {
+        return switch (playerColor) {
+            case RED -> new Color(220, 80, 80);
+            case BLUE -> new Color(80, 140, 220);
+            case GREEN -> new Color(80, 200, 120);
+            case YELLOW -> new Color(230, 200, 80);
+        };
     }
 
     // =================================================================================
@@ -807,16 +1609,112 @@ public class BoardPanel extends JPanel {
     }
 
     // =================================================================================
+    // TOAST NOTIFICATIONS (Public API)
+    // =================================================================================
+
+    /**
+     * Shows an error toast with structured error code
+     */
+    public void showErrorToast(String errorCode, String title, String message) {
+        toastManager.showError(errorCode, title, message);
+    }
+
+    /**
+     * Shows a warning toast
+     */
+    public void showWarningToast(String id, String title, String message) {
+        toastManager.showWarning(id, title, message);
+    }
+
+    /**
+     * Shows an info toast
+     */
+    public void showInfoToast(String id, String title, String message) {
+        toastManager.showInfo(id, title, message);
+    }
+
+    /**
+     * Shows a success toast
+     */
+    public void showSuccessToast(String id, String title, String message) {
+        toastManager.showSuccess(id, title, message);
+    }
+
+    // =================================================================================
     // SETTER (aus Server-Events)
     // =================================================================================
 
     public void setBoard(Board board) {
         this.board = Objects.requireNonNull(board, "board must not be null");
 
+        // Detect board changes for notifications
+        detectAndNotifyBoardChanges(previousBoard, board);
+
+        // Store current board for next comparison
+        this.previousBoard = copyBoardState(board);
+
         // Unlock nach Server-Update
         this.inputLocked = false;
 
         repaint();
+    }
+
+    /**
+     * Detects changes between previous and current board state and shows notifications
+     */
+    private void detectAndNotifyBoardChanges(Board previous, Board current) {
+        if (previous == null || current == null) return;
+
+        // Check if board size changed (shouldn't happen, but defensive)
+        if (previous.getWidth() != current.getWidth() || previous.getHeight() != current.getHeight()) {
+            return;
+        }
+
+        // Check for tile shifts by comparing positions
+        int shiftedRow = -1;
+        int shiftedCol = -1;
+
+        // Check each position for changes
+        for (int row = 0; row < current.getHeight(); row++) {
+            for (int col = 0; col < current.getWidth(); col++) {
+                Tile prevTile = previous.getTiles()[row][col];
+                Tile currTile = current.getTiles()[row][col];
+
+                // Compare tile entrances to detect if board shifted
+                if (!tilesEqual(prevTile, currTile)) {
+                    // Board changed - likely a shift occurred
+                    // We can't easily determine which row/col was shifted without more data
+                    // So we'll skip detailed shift notifications for now
+                    return;
+                }
+            }
+        }
+    }
+
+    private boolean tilesEqual(Tile t1, Tile t2) {
+        if (t1 == null && t2 == null) return true;
+        if (t1 == null || t2 == null) return false;
+
+        Direction[] e1 = t1.getEntrances();
+        Direction[] e2 = t2.getEntrances();
+
+        if (e1 == null && e2 == null) return true;
+        if (e1 == null || e2 == null) return false;
+        if (e1.length != e2.length) return false;
+
+        EnumSet<Direction> set1 = EnumSet.noneOf(Direction.class);
+        EnumSet<Direction> set2 = EnumSet.noneOf(Direction.class);
+
+        Collections.addAll(set1, e1);
+        Collections.addAll(set2, e2);
+
+        return set1.equals(set2);
+    }
+
+    private Board copyBoardState(Board board) {
+        // Simple shallow copy for comparison purposes
+        // We only need to track tile changes, not deep clone
+        return board;
     }
 
     public void setPlayers(List<Player> players) {
@@ -831,7 +1729,34 @@ public class BoardPanel extends JPanel {
 
     public void setCurrentPlayer(Player currentPlayer) {
         this.currentPlayer = currentPlayer;
+
+        // Initialize keyboard selection to current player's position
+        if (currentPlayer != null && currentPlayer.getCurrentPosition() != null) {
+            selectedRow = currentPlayer.getCurrentPosition().getRow();
+            selectedCol = currentPlayer.getCurrentPosition().getColumn();
+        }
+
+        // Check if target treasure has changed and show toast
+        if (currentPlayer != null && currentPlayer.getAssignedTreasureCards() != null
+            && !currentPlayer.getAssignedTreasureCards().isEmpty()) {
+
+            Treasure currentTarget = currentPlayer.getAssignedTreasureCards().get(0);
+            String currentTargetName = currentTarget.getName();
+
+            if (lastTargetTreasureName == null || !lastTargetTreasureName.equals(currentTargetName)) {
+                // Target changed or first time - show toast and banner
+                showNewTargetToast(currentTargetName);
+                lastTargetTreasureName = currentTargetName;
+                showTargetBanner = true; // Show banner until first action
+            }
+        }
+
         repaint();
+    }
+
+    private void showNewTargetToast(String treasureName) {
+        String message = "Bewege dich zum Feld mit diesem Schatz!";
+        toastManager.showInfo("TARGET", "Dein Ziel: " + treasureName, message);
     }
 
     /**
@@ -843,6 +1768,30 @@ public class BoardPanel extends JPanel {
         if (tiles != null) reachableTiles.addAll(tiles);
         repaint();
     }
+
+    public void setGameEndTime(java.time.OffsetDateTime gameEndTime) {
+        this.gameEndTime = gameEndTime;
+        repaint();
+    }
+
+    public void setTurnEndTime(java.time.OffsetDateTime turnEndTime) {
+        this.turnEndTime = turnEndTime;
+        repaint();
+    }
+
+    public void setCurrentTurnState(labyrinth.contracts.models.TurnState currentTurnState) {
+        this.currentTurnState = currentTurnState;
+        repaint();
+    }
+
+    /**
+     * Unlocks input after an error occurs.
+     * This allows the player to retry their action after receiving an error message.
+     */
+    public void unlockInput() {
+        this.inputLocked = false;
+    }
+
 
     private void showOptionsDialog() {
         JDialog dialog = new JDialog(

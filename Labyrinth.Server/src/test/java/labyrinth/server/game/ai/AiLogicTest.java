@@ -18,7 +18,8 @@ class AiLogicTest {
     void testAiTriggersOnNextPlayer() {
         // Setup simple game
         IGameTimer mockTimer = mock(IGameTimer.class);
-        Game game = new Game(mockTimer);
+        org.springframework.context.ApplicationEventPublisher mockEventPublisher = mock(org.springframework.context.ApplicationEventPublisher.class);
+        Game game = new Game(mockTimer, mockEventPublisher);
 
         Player p1 = game.join("P1");
         Player p2 = game.join("P2");

@@ -267,6 +267,19 @@ public class Board {
         Position currPos = (currentTile != null) ? getPositionOfTile(currentTile) : null;
         System.out.println("Current position: " + (currPos != null ? currPos.row() + "/" + currPos.column() : "none"));
         System.out.println("Moving " + player.getUsername() + " to " + targetRow + "/" + targetCol);
+
+        // Allow staying in place (clicking on current tile)
+        if (currentTile == targetTile) {
+            System.out.println("Player chose to stay in place");
+            // Still advance to next player
+            currentPlayerIndex++;
+            if (currentPlayerIndex >= players.size()) {
+                currentPlayerIndex = 0;
+            }
+            currentMoveState = MoveState.PLACE_TILE;
+            return true;
+        }
+
         // Check if another player is already on the target tile by inspecting players'
         // currentTile
         for (Player other : players) {

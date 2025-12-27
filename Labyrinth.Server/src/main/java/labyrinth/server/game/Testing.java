@@ -23,7 +23,7 @@ public class Testing {
         scheduler.initialize();
 
         IGameTimer gameTimer = new GameTimer(scheduler);
-        game = new Game(gameTimer);
+        game = new Game(gameTimer, null);
         simulateGameStart();
         //simulateGameMoves(1000);
     }

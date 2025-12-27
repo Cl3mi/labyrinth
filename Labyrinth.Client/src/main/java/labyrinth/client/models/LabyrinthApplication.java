@@ -219,7 +219,9 @@ public class LabyrinthApplication {
         cl.show(mainPanel, "game");
     }
 
-    private void ensureBoardPanel(Board board, Player currentPlayer, List<Player> allPlayers) {
+    private void ensureBoardPanel(Board board, Player currentPlayer, List<Player> allPlayers,
+                                   java.time.OffsetDateTime gameEndTime,
+                                   labyrinth.contracts.models.CurrentTurnInfo turnInfo) {
         if (boardPanel == null) {
             boardPanel = new BoardPanel(client, board, currentPlayer, allPlayers);
             mainPanel.add(boardPanel, "game");
@@ -227,6 +229,16 @@ public class LabyrinthApplication {
             boardPanel.setBoard(board);
             boardPanel.setPlayers(allPlayers);
             boardPanel.setCurrentPlayer(currentPlayer);
+        }
+
+        // Set timing information from server
+        if (gameEndTime != null) {
+            boardPanel.setGameEndTime(gameEndTime);
+        }
+
+        if (turnInfo != null) {
+            boardPanel.setTurnEndTime(turnInfo.getTurnEndTime());
+            boardPanel.setCurrentTurnState(turnInfo.getState());
         }
 
         switchToGameView();
@@ -308,9 +320,12 @@ public class LabyrinthApplication {
             Board board = BoardFactory.fromContracts(started.getBoard());
             List<Player> players = BoardFactory.convertPlayerStates(started.getPlayers());
 
+            // Apply turn info from server to board
+            BoardFactory.applyTurnInfo(board, players, started.getCurrentTurnInfo());
+
             System.out.println("SERVER spareTile = " + (started.getBoard().getSpareTile() == null ? "null" : "present"));
 
-            showGame(board, players);
+            showGame(board, players, started.getGameEndTime(), started.getCurrentTurnInfo());
         });
 
         // ============================================================
@@ -322,13 +337,16 @@ public class LabyrinthApplication {
             Board board = BoardFactory.fromContracts(state.getBoard());
             List<Player> players = BoardFactory.convertPlayerStates(state.getPlayers());
 
+            // Apply turn info from server to board
+            BoardFactory.applyTurnInfo(board, players, state.getCurrentTurnInfo());
+
             System.out.println("SERVER spareTile = " + (state.getBoard().getSpareTile() == null ? "null" : "present"));
 
-            showGame(board, players);
+            showGame(board, players, state.getGameEndTime(), state.getCurrentTurnInfo());
         });
 
         // ============================================================
-        // ACTION_ERROR - Enhanced with token invalidation handling
+        // ACTION_ERROR - Enhanced with token invalidation handling and toast notifications
         // ============================================================
         client.setOnErrorMessage(msg -> {
             SwingUtilities.invokeLater(() -> {
@@ -361,14 +379,78 @@ public class LabyrinthApplication {
                         }
                     }
                 } else {
-                    // Standard error display
-                    JOptionPane.showMessageDialog(frame, msg, "Fehler", JOptionPane.ERROR_MESSAGE);
+                    // Use toast notifications if in game view, otherwise show dialog
+                    if (boardPanel != null && gameViewShown) {
+                        handleErrorWithToast(msg);
+                    } else {
+                        // In lobby - use dialog
+                        JOptionPane.showMessageDialog(frame, msg, "Fehler", JOptionPane.ERROR_MESSAGE);
+                    }
                 }
             });
         });
     }
 
-    private void showGame(Board board, List<Player> players) {
+    /**
+     * Handles error messages with structured toast notifications
+     */
+    private void handleErrorWithToast(String msg) {
+        if (msg == null || msg.isBlank()) return;
+        if (boardPanel == null) return;
+
+        // Parse error code and message
+        // Format: "ERROR_CODE: message details"
+        String errorCode;
+        String errorMessage;
+        String errorTitle;
+
+        int colonIndex = msg.indexOf(':');
+        if (colonIndex > 0) {
+            errorCode = msg.substring(0, colonIndex).trim();
+            errorMessage = msg.substring(colonIndex + 1).trim();
+
+            // Map error codes to structured codes and titles
+            switch (errorCode) {
+                case "NOT_YOUR_TURN" -> {
+                    errorCode = "101";
+                    errorTitle = "Nicht an der Reihe";
+                }
+                case "INVALID_PUSH" -> {
+                    errorCode = "102";
+                    errorTitle = "Ungültiger Einschub";
+                }
+                case "INVALID_MOVE" -> {
+                    errorCode = "103";
+                    errorTitle = "Ungültige Bewegung";
+                }
+                case "GAME_NOT_STARTED" -> {
+                    errorCode = "104";
+                    errorTitle = "Spiel nicht gestartet";
+                }
+                case "TIMEOUT" -> {
+                    errorCode = "204";
+                    errorTitle = "Zeitüberschreitung";
+                }
+                default -> {
+                    errorCode = "999";
+                    errorTitle = "Fehler";
+                }
+            }
+        } else {
+            errorCode = "999";
+            errorTitle = "Fehler";
+            errorMessage = msg;
+        }
+
+        boardPanel.showErrorToast(errorCode, errorTitle, errorMessage);
+
+        // Unlock input so player can retry their action after error
+        boardPanel.unlockInput();
+    }
+
+    private void showGame(Board board, List<Player> players,
+                          java.time.OffsetDateTime gameEndTime,
+                          labyrinth.contracts.models.CurrentTurnInfo turnInfo) {
         if (board == null || players == null) return;
 
         Player currentPlayer = resolveLocalPlayer(players);
@@ -381,7 +463,7 @@ public class LabyrinthApplication {
             frame.setTitle("Labyrinth Online (" + PROFILE + ") - Board " +
                     board.getHeight() + "x" + board.getWidth());
 
-            ensureBoardPanel(board, currentPlayer, players);
+            ensureBoardPanel(board, currentPlayer, players, gameEndTime, turnInfo);
         });
     }
 

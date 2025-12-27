@@ -58,6 +58,9 @@ public class SimpleAiStrategy implements AiStrategy {
                         Position current = game.getCurrentPositionOfPlayer(realPlayer);
                         game.movePlayerToTile(current.row(), current.column(), realPlayer);
                     }
+
+                    // Broadcast game state update to all clients after AI turn completes
+                    game.publishTurnCompleted(realPlayer);
                 })
                 .exceptionally(ex -> {
                     ex.printStackTrace();

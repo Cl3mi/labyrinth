@@ -88,6 +88,7 @@ public class BoardFactory implements IBoardFactory {
 
             Player p = new Player(id, name);
 
+            // Position
             Coordinates currentPos = s.getCurrentPosition();
             if (currentPos != null) {
                 p.setCurrentPosition(new Position(currentPos.getRow(), currentPos.getColumn()));
@@ -96,6 +97,41 @@ public class BoardFactory implements IBoardFactory {
             Coordinates homePos = s.getHomePosition();
             if (homePos != null) {
                 p.setHomePosition(new Position(homePos.getRow(), homePos.getColumn()));
+            }
+
+            // Player info fields
+            if (s.getPlayerInfo().getColor() != null) {
+                p.setColor(s.getPlayerInfo().getColor());
+            }
+
+            Boolean isConnected = s.getPlayerInfo().getIsConnected();
+            p.setConnected(isConnected != null && isConnected);
+
+            Boolean isAdmin = s.getPlayerInfo().getIsAdmin();
+            p.setAdmin(isAdmin != null && isAdmin);
+
+            Boolean isAiControlled = s.getPlayerInfo().getIsAiControlled();
+            p.setAiControlled(isAiControlled != null && isAiControlled);
+
+            // Treasures found
+            if (s.getTreasuresFound() != null) {
+                p.getTreasuresFound().clear();
+                for (labyrinth.contracts.models.Treasure treasure : s.getTreasuresFound()) {
+                    if (treasure != null) {
+                        p.getTreasuresFound().add(treasure);
+                    }
+                }
+            }
+
+            // Remaining treasure count
+            if (s.getRemainingTreasureCount() != null) {
+                p.setRemainingTreasureCount(s.getRemainingTreasureCount());
+            }
+
+            // Current treasure card (the one they need to find)
+            if (s.getCurrentTreasureCard() != null) {
+                p.getAssignedTreasureCards().clear();
+                p.getAssignedTreasureCards().add(s.getCurrentTreasureCard());
             }
 
             list.add(p);
@@ -115,5 +151,33 @@ public class BoardFactory implements IBoardFactory {
     public static void applyExtraTile(Board board, Tile extraTile) {
         if (board == null) return;
         board.setExtraTile(extraTile);
+    }
+
+    // =================================================================================
+    // Turn info mapping: CurrentTurnInfo (Contracts) -> Board fields (Client)
+    // =================================================================================
+
+    public static void applyTurnInfo(Board board, List<Player> players,
+                                      labyrinth.contracts.models.CurrentTurnInfo turnInfo) {
+        if (board == null || turnInfo == null) return;
+
+        // Map TurnState to MoveState
+        if (turnInfo.getState() != null) {
+            labyrinth.client.enums.MoveState moveState = switch (turnInfo.getState()) {
+                case WAITING_FOR_PUSH -> labyrinth.client.enums.MoveState.PLACE_TILE;
+                case WAITING_FOR_MOVE -> labyrinth.client.enums.MoveState.MOVE;
+            };
+            board.setCurrentMoveState(moveState);
+        }
+
+        // Find current player index by ID
+        if (turnInfo.getCurrentPlayerId() != null && players != null) {
+            for (int i = 0; i < players.size(); i++) {
+                if (players.get(i).getId().equals(turnInfo.getCurrentPlayerId())) {
+                    board.setCurrentPlayerIndex(i);
+                    break;
+                }
+            }
+        }
     }
 }

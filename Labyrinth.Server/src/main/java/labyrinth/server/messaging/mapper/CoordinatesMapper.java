@@ -8,8 +8,8 @@ import org.springframework.stereotype.Component;
 public class CoordinatesMapper {
     public Coordinates toDto(Position position) {
         var coordinates = new Coordinates();
-        coordinates.setRow(position.column());
-        coordinates.setColumn(position.row());
+        coordinates.setRow(position.row());
+        coordinates.setColumn(position.column());
         return coordinates;
     }
 }

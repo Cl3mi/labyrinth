@@ -33,6 +33,8 @@ public class Game {
 
     private IGameTimer nextTurnTimer;
 
+    private final org.springframework.context.ApplicationEventPublisher eventPublisher;
+
     @Setter(lombok.AccessLevel.NONE)
     private Board board;
 
@@ -49,8 +51,9 @@ public class Game {
     @Getter(AccessLevel.NONE)
     private OffsetDateTime gameStartTime;
 
-    public Game(IGameTimer nextTurnTimer) {
+    public Game(IGameTimer nextTurnTimer, org.springframework.context.ApplicationEventPublisher eventPublisher) {
         this.nextTurnTimer = nextTurnTimer;
+        this.eventPublisher = eventPublisher;
         this.players = new ArrayList<>();
         this.roomState = RoomState.LOBBY;
         this.board = null;
@@ -455,5 +458,15 @@ public class Game {
 
     public OffsetDateTime getTurnEndTime() {
         return nextTurnTimer.getExpirationTime();
+    }
+
+    /**
+     * Publishes a TurnCompletedEvent to notify listeners (e.g., to broadcast game state).
+     * This should be called after AI turns complete.
+     */
+    public void publishTurnCompleted(Player player) {
+        if (eventPublisher != null) {
+            eventPublisher.publishEvent(new labyrinth.server.game.events.TurnCompletedEvent(this, player));
+        }
     }
 }

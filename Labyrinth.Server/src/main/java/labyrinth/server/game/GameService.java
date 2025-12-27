@@ -34,14 +34,15 @@ public class GameService {
     public GameService(TreasureCardFactory treasureCardFactory,
                        BoardFactory boardFactory,
                        EventPublisher eventPublisher,
-                       TaskScheduler scheduler) {
+                       TaskScheduler scheduler,
+                       org.springframework.context.ApplicationEventPublisher applicationEventPublisher) {
 
         this.treasureCardFactory = treasureCardFactory;
         this.boardFactory = boardFactory;
         this.eventPublisher = eventPublisher;
 
         var gameTimer = new GameTimer(scheduler);
-        game = new Game(gameTimer);
+        game = new Game(gameTimer, applicationEventPublisher);
     }
 
 

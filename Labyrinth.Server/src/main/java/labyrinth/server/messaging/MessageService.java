@@ -24,7 +24,9 @@ public class MessageService {
         if (session != null && session.isOpen()) {
             try {
                 String jsonPayload = objectMapper.writeValueAsString(payload);
-                session.sendMessage(new TextMessage(jsonPayload));
+                synchronized (session) {
+                    session.sendMessage(new TextMessage(jsonPayload));
+                }
             } catch (IOException e) {
                 log.error("IOException at sendToSession (SessionId: {}).", session.getId(), e);
             }
@@ -36,7 +38,9 @@ public class MessageService {
         if (session != null && session.isOpen()) {
             try {
                 String jsonPayload = objectMapper.writeValueAsString(payload);
-                session.sendMessage(new TextMessage(jsonPayload));
+                synchronized (session) {
+                    session.sendMessage(new TextMessage(jsonPayload));
+                }
             } catch (IOException e) {
                 log.error("IOException at sendToPlayer (SessionId: {}).", session.getId(), e);
             }
@@ -56,7 +60,9 @@ public class MessageService {
         for (WebSocketSession session : playerSessionService.getAllPlayerSessions()) {
             if (session.isOpen()) {
                 try {
-                    session.sendMessage(textMessage);
+                    synchronized (session) {
+                        session.sendMessage(textMessage);
+                    }
                 } catch (IOException e) {
                     log.error("IOException at broadcastToPlayers (SessionId: {}).", session.getId(), e);
                 }

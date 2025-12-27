@@ -245,14 +245,32 @@ public class GameClient extends WebSocketClient {
         }
     }
 
+    public void sendRotateTile() {
+        try {
+            RotateTileCommandPayload payload = new RotateTileCommandPayload();
+            payload.setType(CommandType.ROTATE_TILE);
+
+            String json = mapper.writeValueAsString(payload);
+            System.out.println("sendRotateTile -> " + json);
+            send(json);
+        } catch (Exception e) {
+            e.printStackTrace();
+            runOnUiThread(() -> {
+                if (onErrorMessage != null) {
+                    onErrorMessage.accept("Failed to send rotate tile: " + e.getMessage());
+                }
+            });
+        }
+    }
+
     public void sendMovePawn(int targetRow, int targetCol) {
         try {
             MovePawnCommandPayload payload = new MovePawnCommandPayload();
             payload.setType(CommandType.MOVE_PAWN);
 
             Coordinates coords = new Coordinates();
-            coords.setRow(targetCol);
-            coords.setColumn(targetRow);
+            coords.setRow(targetRow);
+            coords.setColumn(targetCol);
             payload.setTargetCoordinates(coords);
 
             String json = mapper.writeValueAsString(payload);

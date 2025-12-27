@@ -1,5 +1,6 @@
 package labyrinth.client.models;
 
+import labyrinth.contracts.models.PlayerColor;
 import labyrinth.contracts.models.Tile;
 import labyrinth.contracts.models.Treasure;
 import lombok.Getter;
@@ -38,6 +39,36 @@ public class Player {
      * Optionaler Cache für erreichbare Tiles (nur UI-Hilfe).
      */
     private Set<Tile> reachableTiles = new HashSet<>();
+
+    /**
+     * Player color assigned by server
+     */
+    private PlayerColor color;
+
+    /**
+     * Treasures found by this player
+     */
+    private final List<Treasure> treasuresFound = new ArrayList<>();
+
+    /**
+     * Number of treasures remaining to find
+     */
+    private int remainingTreasureCount = 0;
+
+    /**
+     * Whether this player is connected to the server
+     */
+    private boolean isConnected = true;
+
+    /**
+     * Whether this player is the admin
+     */
+    private boolean isAdmin = false;
+
+    /**
+     * Whether this player is AI controlled
+     */
+    private boolean isAiControlled = false;
 
     public Player(String id, String name) {
         this.id = Objects.requireNonNull(id, "id must not be null");

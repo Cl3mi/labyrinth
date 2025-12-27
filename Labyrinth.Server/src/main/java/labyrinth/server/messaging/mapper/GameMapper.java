@@ -54,6 +54,17 @@ public class GameMapper {
             playerState.setTreasuresFound(foundTreasures);
             playerState.setHomePosition(homeTilePosition);
             playerState.setAvailableBonuses(bonus);
+
+            // Map current treasure card (first uncollected one)
+            var currentTreasureCard = player.getAssignedTreasureCards()
+                    .stream()
+                    .filter(x -> !x.isCollected())
+                    .findFirst()
+                    .orElse(null);
+            if (currentTreasureCard != null) {
+                playerState.setCurrentTreasureCard(treasureMapper.toDto(currentTreasureCard));
+            }
+
             // TODO: playerState.setAchievements();
 
             playerStates.add(playerState);

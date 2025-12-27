@@ -76,7 +76,7 @@ public class LobbyPanel extends JPanel {
         header.add(connectionLabel, BorderLayout.WEST);
         add(header, BorderLayout.NORTH);
 
-        // ===== Center: Spieler-Liste =====
+        // ===== Center: Spieler-Liste mit erweiterten Cards =====
         playerListModel = new DefaultListModel<>();
         playerList = new JList<>(playerListModel);
         playerList.setFont(new Font("Arial", Font.BOLD, 14));
@@ -84,22 +84,10 @@ public class LobbyPanel extends JPanel {
         playerList.setForeground(Color.BLACK);
         playerList.setSelectionBackground(new Color(255, 255, 255, 80));
         playerList.setSelectionForeground(Color.BLACK);
+        playerList.setFixedCellHeight(80); // Taller cells for enhanced cards
 
-        // Custom cell renderer to show disconnected players in gray/italic
-        playerList.setCellRenderer(new DefaultListCellRenderer() {
-            @Override
-            public Component getListCellRendererComponent(JList<?> list, Object value,
-                                                           int index, boolean isSelected,
-                                                           boolean cellHasFocus) {
-                Component c = super.getListCellRendererComponent(list, value, index,
-                                                                 isSelected, cellHasFocus);
-                if (value != null && value.toString().startsWith("[OFFLINE]")) {
-                    setForeground(Color.GRAY);
-                    setFont(getFont().deriveFont(Font.ITALIC));
-                }
-                return c;
-            }
-        });
+        // Enhanced custom cell renderer with player cards
+        playerList.setCellRenderer(new PlayerCardRenderer());
 
         JScrollPane scrollPane = new JScrollPane(playerList) {
             @Override
@@ -117,7 +105,12 @@ public class LobbyPanel extends JPanel {
 
         JPanel centerPanel = new JPanel(new BorderLayout());
         centerPanel.setOpaque(false);
+
+        // Add game settings preview panel
+        JPanel settingsPreview = createSettingsPreviewPanel();
+        centerPanel.add(settingsPreview, BorderLayout.NORTH);
         centerPanel.add(scrollPane, BorderLayout.CENTER);
+
         add(centerPanel, BorderLayout.CENTER);
 
         // ===== Footer: Start-Button + Cancel Reconnect =====
@@ -347,6 +340,192 @@ public class LobbyPanel extends JPanel {
             g.drawImage(backgroundImage, 0, 0, getWidth(), getHeight(), this);
         } else {
             super.paintComponent(g);
+        }
+    }
+
+    // --------------------------------------------------------------------------------
+    // Settings Preview Panel
+    // --------------------------------------------------------------------------------
+
+    private JPanel createSettingsPreviewPanel() {
+        JPanel panel = new JPanel();
+        panel.setOpaque(false);
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+
+        JLabel titleLabel = new JLabel("Spiel-Einstellungen");
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 14));
+        titleLabel.setForeground(new Color(220, 220, 255));
+        titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        JPanel settingsGrid = new JPanel(new GridLayout(2, 2, 10, 5));
+        settingsGrid.setOpaque(false);
+        settingsGrid.setMaximumSize(new Dimension(400, 60));
+        settingsGrid.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        addSettingLabel(settingsGrid, "Spielfeld:", "7x7");
+        addSettingLabel(settingsGrid, "Schätze:", "12 pro Spieler");
+        addSettingLabel(settingsGrid, "Spielzeit:", "60 Minuten");
+        addSettingLabel(settingsGrid, "Bonus:", "Keine");
+
+        panel.add(titleLabel);
+        panel.add(Box.createVerticalStrut(8));
+        panel.add(settingsGrid);
+        panel.add(Box.createVerticalStrut(10));
+
+        return panel;
+    }
+
+    private void addSettingLabel(JPanel panel, String label, String value) {
+        JLabel labelComp = new JLabel(label);
+        labelComp.setFont(new Font("Arial", Font.PLAIN, 12));
+        labelComp.setForeground(new Color(180, 180, 200));
+
+        JLabel valueComp = new JLabel(value);
+        valueComp.setFont(new Font("Arial", Font.BOLD, 12));
+        valueComp.setForeground(new Color(220, 220, 255));
+
+        panel.add(labelComp);
+        panel.add(valueComp);
+    }
+
+    // --------------------------------------------------------------------------------
+    // Enhanced Player Card Renderer
+    // --------------------------------------------------------------------------------
+
+    private class PlayerCardRenderer extends JPanel implements ListCellRenderer<String> {
+        private final JLabel nameLabel;
+        private final JLabel statusLabel;
+        private final JLabel badgeLabel;
+        private final JPanel iconPanel;
+
+        private static final Color[] PLAYER_COLORS = {
+            new Color(220, 80, 80),
+            new Color(80, 180, 80),
+            new Color(80, 140, 220),
+            new Color(230, 200, 80)
+        };
+
+        public PlayerCardRenderer() {
+            setLayout(new BorderLayout(10, 5));
+            setBorder(BorderFactory.createEmptyBorder(8, 12, 8, 12));
+
+            // Left: Color indicator / icon
+            iconPanel = new JPanel() {
+                @Override
+                protected void paintComponent(Graphics g) {
+                    super.paintComponent(g);
+                    Graphics2D g2 = (Graphics2D) g.create();
+                    g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+                    // Draw colored circle
+                    g2.setColor(getBackground());
+                    g2.fillOval(5, 5, 50, 50);
+
+                    // Draw border
+                    g2.setColor(Color.WHITE);
+                    g2.setStroke(new BasicStroke(2));
+                    g2.drawOval(5, 5, 50, 50);
+
+                    g2.dispose();
+                }
+            };
+            iconPanel.setPreferredSize(new Dimension(60, 60));
+            iconPanel.setOpaque(false);
+
+            // Center: Name and status
+            JPanel centerPanel = new JPanel();
+            centerPanel.setLayout(new BoxLayout(centerPanel, BoxLayout.Y_AXIS));
+            centerPanel.setOpaque(false);
+
+            nameLabel = new JLabel();
+            nameLabel.setFont(new Font("Arial", Font.BOLD, 16));
+            nameLabel.setForeground(Color.WHITE);
+            nameLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+            statusLabel = new JLabel();
+            statusLabel.setFont(new Font("Arial", Font.PLAIN, 12));
+            statusLabel.setForeground(new Color(200, 200, 220));
+            statusLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+            centerPanel.add(nameLabel);
+            centerPanel.add(Box.createVerticalStrut(4));
+            centerPanel.add(statusLabel);
+
+            // Right: Badges (admin, you, offline)
+            badgeLabel = new JLabel();
+            badgeLabel.setFont(new Font("Arial", Font.BOLD, 12));
+            badgeLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+            badgeLabel.setVerticalAlignment(SwingConstants.TOP);
+
+            add(iconPanel, BorderLayout.WEST);
+            add(centerPanel, BorderLayout.CENTER);
+            add(badgeLabel, BorderLayout.EAST);
+        }
+
+        @Override
+        public Component getListCellRendererComponent(JList<? extends String> list,
+                                                      String value,
+                                                      int index,
+                                                      boolean isSelected,
+                                                      boolean cellHasFocus) {
+            // Parse player info from string
+            boolean isOffline = value != null && value.contains("[OFFLINE]");
+            boolean isAdmin = value != null && value.contains("(Admin)");
+            boolean isYou = value != null && value.contains("(Du)");
+
+            // Extract clean name
+            String cleanName = value;
+            if (cleanName != null) {
+                cleanName = cleanName.replace("[OFFLINE] ", "")
+                                    .replace("(Admin) ", "")
+                                    .replace(" (Du)", "")
+                                    .trim();
+            }
+
+            // Set background
+            if (isSelected) {
+                setBackground(new Color(100, 120, 160, 200));
+            } else {
+                setBackground(new Color(50, 60, 80, 180));
+            }
+
+            // Set player color icon
+            Color playerColor = PLAYER_COLORS[index % PLAYER_COLORS.length];
+            if (isOffline) {
+                playerColor = new Color(100, 100, 100);
+            }
+            iconPanel.setBackground(playerColor);
+
+            // Set name
+            nameLabel.setText(cleanName);
+            if (isOffline) {
+                nameLabel.setForeground(new Color(150, 150, 150));
+            } else {
+                nameLabel.setForeground(Color.WHITE);
+            }
+
+            // Set status text
+            if (isOffline) {
+                statusLabel.setText("Nicht verbunden");
+                statusLabel.setForeground(new Color(200, 100, 100));
+            } else {
+                statusLabel.setText("Bereit");
+                statusLabel.setForeground(new Color(100, 200, 100));
+            }
+
+            // Set badges
+            StringBuilder badges = new StringBuilder("<html>");
+            if (isAdmin) {
+                badges.append("<span style='color: #FFD700;'>★ Admin</span><br>");
+            }
+            if (isYou) {
+                badges.append("<span style='color: #90EE90;'>● Du</span>");
+            }
+            badges.append("</html>");
+            badgeLabel.setText(badges.toString());
+
+            return this;
         }
     }
 }
