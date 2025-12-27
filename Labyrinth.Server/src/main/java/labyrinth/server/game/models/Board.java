@@ -279,16 +279,12 @@ public class Board {
     }
 
     int movePlayerToTile(Player player, int targetRow, int targetCol) {
-        // Lookup the player's current tile and the target tile using the bi-directional
-        // mapping
         Tile currentTile = player.getCurrentTile();
         Tile targetTile = tileMap.getForward(new Position(targetRow, targetCol));
 
         Position currPos = (currentTile != null) ? getPositionOfTile(currentTile) : null;
         System.out.println("Current position: " + (currPos != null ? currPos.row() + "/" + currPos.column() : "none"));
         System.out.println("Moving " + player.getUsername() + " to " + targetRow + "/" + targetCol);
-        // Check if another player is already on the target tile by inspecting players'
-        // currentTile
         for (Player other : players) {
             if (other != player && other.getCurrentTile() == targetTile) {
                 System.out.println("Cant move a player is already on the target tile!");
@@ -302,10 +298,8 @@ public class Board {
             return -1;
         }
 
-        // Step onto the target tile (which may collect treasures)
         targetTile.getSteppedOnBy(player);
         // Update player's logical tile
-        player.setCurrentTile(targetTile);
         var distance = graph.getDistance(currentTile, targetTile);
 
         Position newPos = getPositionOfTile(targetTile);

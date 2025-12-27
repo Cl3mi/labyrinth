@@ -47,7 +47,7 @@ public class SimpleAiStrategy implements AiStrategy {
                         System.out.println("AI moving to: " + bestResult.targetPosition.row() + "/"
                                 + bestResult.targetPosition.column());
                         var moveSuccess = game.movePlayerToTile(bestResult.targetPosition.row(), bestResult.targetPosition.column(),
-                                realPlayer);
+                                realPlayer).moveSuccess();
 
                         if (!moveSuccess) {
                             Position current = game.getCurrentPositionOfPlayer(realPlayer);
