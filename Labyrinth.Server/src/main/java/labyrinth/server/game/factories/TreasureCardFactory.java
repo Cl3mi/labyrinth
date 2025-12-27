@@ -15,14 +15,28 @@ import java.util.List;
 public class TreasureCardFactory {
 
     private static final List<String> TREASURE_NAMES = List.of(
-            "Crown", "Jewel", "Goblet", "Ring", "Coin",
-            "Scepter", "Amulet", "Diamond", "Emerald", "Ruby",
-            "Pearl", "Chalice", "Scroll", "Helmet", "Sword",
-            "Shield", "Lantern", "Key", "Statue", "Potion",
-            "Gemstone", "Mask", "Orb", "Book", "Cloak",
-            "Staff", "Banner", "Bracelet", "Necklace", "Tiara",
-            "Choker", "Earring", "Medallion", "CoinPouch", "Seal",
-            "Carving", "Figurine", "Crystal", "Talisman", "RingBox"
+            "Geist",       // Ghost
+            "Drache",      // Dragon
+            "Hexe",        // Witch
+            "Eule",        // Owl
+            "Ratte",       // Rat
+            "Käfer",       // Bug
+            "Spinne",      // Spider
+            "Schlange",    // Snake
+            "Fledermaus",  // Bat
+            "Krone",       // Crown
+            "Schlüssel",   // Key
+            "Schatztruhe", // Treasure chest
+            "Helm",        // Helmet (German)
+            "Buch",        // Book
+            "Kerze",       // Candle
+            "Beutel",      // Bag
+            "Totenkopf",   // Skull
+            "Karte",       // Map
+            "Kelch",       // Chalice
+            "Edelstein",   // Gemstone
+            "Krug",        // Jug
+            "Maus"         // Mouse
     );
 
     public List<TreasureCard> createTreasureCards(int treasureCardCount, int playerCount) {

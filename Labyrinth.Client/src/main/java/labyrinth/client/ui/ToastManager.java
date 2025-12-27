@@ -55,7 +55,7 @@ public class ToastManager {
     private final List<Toast> activeToasts = new ArrayList<>();
     private final Timer updateTimer;
 
-    private static final int TOAST_WIDTH = 350;
+    private static final int TOAST_WIDTH = 250;
     private static final int TOAST_HEIGHT = 80;
     private static final int TOAST_SPACING = 10;
     private static final int TOAST_MARGIN = 20;
@@ -134,7 +134,7 @@ public class ToastManager {
         leftPanel.add(iconLabel, BorderLayout.WEST);
 
         JLabel idLabel = new JLabel(toast.type.prefix + "-" + toast.id);
-        idLabel.setFont(new Font("Monospaced", Font.PLAIN, 10));
+        idLabel.setFont(new Font("Monospaced", Font.PLAIN, 5));
         idLabel.setForeground(new Color(150, 150, 170));
         leftPanel.add(idLabel, BorderLayout.SOUTH);
 
@@ -201,21 +201,22 @@ public class ToastManager {
     }
 
     private void updateToastPositions() {
-        int parentHeight = parentPanel.getHeight();
-        int yPosition = parentHeight - TOAST_MARGIN;
+        int yPosition = TOAST_MARGIN; // Start von oben
 
-        // Stack from bottom to top
-        for (int i = activeToasts.size() - 1; i >= 0; i--) {
+        // Stack from top to bottom
+        for (int i = 0; i < activeToasts.size(); i++) {
             Toast toast = activeToasts.get(i);
             if (toast.panel != null) {
                 int x = parentPanel.getWidth() - TOAST_WIDTH - TOAST_MARGIN;
-                int y = yPosition - TOAST_HEIGHT;
+                int y = yPosition;
 
                 toast.panel.setBounds(x, y, TOAST_WIDTH, TOAST_HEIGHT);
-                yPosition -= (TOAST_HEIGHT + TOAST_SPACING);
+                yPosition += (TOAST_HEIGHT + TOAST_SPACING);
             }
         }
     }
+
+
 
     /**
      * Clear all active toasts

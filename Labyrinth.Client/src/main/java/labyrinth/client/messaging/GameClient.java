@@ -24,6 +24,10 @@ public class GameClient extends WebSocketClient {
     @Setter private Consumer<ConnectAckEventPayload> onConnectAck;
     @Setter private Consumer<LobbyStateEventPayload> onLobbyState;
     @Setter private Consumer<GameStateEventPayload> onGameStarted;
+    @Setter private Consumer<AchievementUnlockedEventPayload> onAchievementUnlocked;
+    @Setter private Consumer<GameOverEventPayload> onGameOver;
+    @Setter private Consumer<NextTreasureCardEventPayload> onNextTreasure;
+    @Setter private Consumer<PlayerUpdatedEventPayload> onPlayerUpdated;
 
     // einzig vorhandenes State-Payload
     @Setter private Consumer<GameStateEventPayload> onGameStateUpdate;
@@ -103,17 +107,46 @@ public class GameClient extends WebSocketClient {
                     if (onGameStarted != null) runOnUiThread(() -> onGameStarted.accept(payload));
                 }
                 case GAME_STATE_UPDATE -> {
-                    // korrektes Payload
                     GameStateEventPayload payload = mapper.treeToValue(payloadNode, GameStateEventPayload.class);
                     if (onGameStateUpdate != null) runOnUiThread(() -> onGameStateUpdate.accept(payload));
                 }
                 case ACTION_ERROR -> {
                     ActionErrorEventPayload payload = mapper.treeToValue(payloadNode, ActionErrorEventPayload.class);
-                    // Include error code in the message so handlers can detect specific error types
                     String errorCode = payload.getErrorCode() != null ? payload.getErrorCode().toString() : "UNKNOWN";
                     String msg = errorCode + ": " + (payload.getMessage() != null ? payload.getMessage() : "No details");
                     if (onErrorMessage != null) runOnUiThread(() -> onErrorMessage.accept(msg));
                 }
+
+                // ✅ NEU: ACHIEVEMENT_UNLOCKED
+                case ACHIEVEMENT_UNLOCKED -> {
+                    AchievementUnlockedEventPayload payload = mapper.treeToValue(payloadNode, AchievementUnlockedEventPayload.class);
+                    if (onAchievementUnlocked != null) runOnUiThread(() -> onAchievementUnlocked.accept(payload));
+                }
+
+                // ✅ NEU: GAME_OVER
+                case GAME_OVER -> {
+                    GameOverEventPayload payload = mapper.treeToValue(payloadNode, GameOverEventPayload.class);
+                    if (onGameOver != null) runOnUiThread(() -> onGameOver.accept(payload));
+                }
+
+                // ✅ NEU: NEXT_TREASURE
+                case NEXT_TREASURE -> {
+                    NextTreasureCardEventPayload payload = mapper.treeToValue(payloadNode, NextTreasureCardEventPayload.class);
+                    if (onNextTreasure != null) runOnUiThread(() -> onNextTreasure.accept(payload));
+                }
+
+                // ✅ NEU: PLAYER_UPDATED
+                case PLAYER_UPDATED -> {
+                    PlayerUpdatedEventPayload payload = mapper.treeToValue(payloadNode, PlayerUpdatedEventPayload.class);
+                    if (onPlayerUpdated != null) runOnUiThread(() -> onPlayerUpdated.accept(payload));
+                }
+
+                // ✅ NEU: SERVER_INFO (optional, meist nur Info)
+                case SERVER_INFO -> {
+                    // ServerInfoEventPayload payload = mapper.treeToValue(payloadNode, ServerInfoEventPayload.class);
+                    System.out.println("SERVER_INFO received: " + payloadNode);
+                }
+
                 default -> System.out.println("Unhandled event type: " + type + " raw=" + message);
             }
         } catch (Exception e) {

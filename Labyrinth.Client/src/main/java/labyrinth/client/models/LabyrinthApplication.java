@@ -5,6 +5,8 @@ import labyrinth.client.factories.BoardFactory;
 import labyrinth.client.messaging.GameClient;
 import labyrinth.client.messaging.ReconnectionManager;
 import labyrinth.client.ui.LobbyPanel;
+import labyrinth.contracts.models.GameOverEventPayload;
+import labyrinth.contracts.models.RankingEntry;
 
 import javax.swing.*;
 import java.awt.*;
@@ -93,6 +95,73 @@ public class LabyrinthApplication {
             reconnectionManager.startAutoReconnect();
         });
 
+        client.setOnAchievementUnlocked(achievement -> {
+            System.out.println("[" + PROFILE + "] Achievement unlocked: "
+                    + achievement.getAchievement() + " for player " + achievement.getPlayerId());
+
+            SwingUtilities.invokeLater(() -> {
+                if (boardPanel != null) {
+                    String achievementName = achievement.getAchievement() != null
+                            ? achievement.getAchievement().toString()
+                            : "UNKNOWN";
+
+                    // Formatiere Achievement-Namen schöner
+                    String displayName = formatAchievementName(achievementName);
+
+                    boardPanel.showSuccessToast(
+                            "ACHIEVEMENT",
+                            "🏆 Erfolg freigeschaltet!",
+                            displayName
+                    );
+
+                    // Optional: Spiele Sound
+                    // soundEffects.playAchievement();
+                }
+            });
+        });
+
+        client.setOnNextTreasure(nextTreasure -> {
+            System.out.println("[" + PROFILE + "] Next treasure: "
+                    + nextTreasure.getTreasure());
+
+            SwingUtilities.invokeLater(() -> {
+                if (boardPanel != null && nextTreasure.getTreasure() != null) {
+                    String treasureName = nextTreasure.getTreasure().getName();
+
+                    boardPanel.showInfoToast(
+                            "NEXT_TREASURE",
+                            "🎯 Neues Ziel!",
+                            "Finde: " + treasureName
+                    );
+
+                    // Trigger target banner update
+                    // Das BoardPanel sollte automatisch das neue Ziel anzeigen
+                    // wenn setCurrentPlayer() mit den neuen TreasureCards aufgerufen wird
+                }
+            });
+        });
+
+        client.setOnGameOver(gameOver -> {
+            System.out.println("[" + PROFILE + "] Game Over! Winner: " + gameOver.getWinnerId());
+
+            SwingUtilities.invokeLater(() -> {
+                // Stop background music
+                if (boardPanel != null) {
+                    // boardPanel.stopMusic(); // wenn du diese Methode hast
+                }
+
+                // Zeige Game Over Dialog
+                showGameOverDialog(gameOver);
+            });
+        });
+
+        client.setOnPlayerUpdated(playerUpdate -> {
+            System.out.println("[" + PROFILE + "] Player updated: " + playerUpdate.getPlayer());
+
+            // Meist reicht GAME_STATE_UPDATE, aber falls du spezifische
+            // Player-Updates brauchst, kannst du hier reagieren
+        });
+
         // Register status update handler
         client.setOnStatusUpdate(status -> {
             SwingUtilities.invokeLater(() -> {
@@ -124,6 +193,8 @@ public class LabyrinthApplication {
                 System.out.println("[" + PROFILE + "] onOpen -> CONNECT username=" + username);
                 client.sendConnect(username);
             }
+
+
 
             // Fallback: wenn nach 2s kein ACK kam, dann token löschen + normal CONNECT
             new Thread(() -> {
@@ -319,13 +390,14 @@ public class LabyrinthApplication {
 
             Board board = BoardFactory.fromContracts(started.getBoard());
             List<Player> players = BoardFactory.convertPlayerStates(started.getPlayers());
+            board.setPlayers(players);
+
+            System.out.println(board);
 
             // Apply turn info from server to board
             BoardFactory.applyTurnInfo(board, players, started.getCurrentTurnInfo());
 
-            System.out.println("SERVER spareTile = " + (started.getBoard().getSpareTile() == null ? "null" : "present"));
-
-            showGame(board, players, started.getGameEndTime(), started.getCurrentTurnInfo());
+            showGame(board, started.getGameEndTime(), started.getCurrentTurnInfo());
         });
 
         // ============================================================
@@ -336,13 +408,13 @@ public class LabyrinthApplication {
 
             Board board = BoardFactory.fromContracts(state.getBoard());
             List<Player> players = BoardFactory.convertPlayerStates(state.getPlayers());
+            board.setPlayers(players);
 
-            // Apply turn info from server to board
+            System.out.println(board);
+
             BoardFactory.applyTurnInfo(board, players, state.getCurrentTurnInfo());
 
-            System.out.println("SERVER spareTile = " + (state.getBoard().getSpareTile() == null ? "null" : "present"));
-
-            showGame(board, players, state.getGameEndTime(), state.getCurrentTurnInfo());
+            showGame(board, state.getGameEndTime(), state.getCurrentTurnInfo());
         });
 
         // ============================================================
@@ -448,12 +520,157 @@ public class LabyrinthApplication {
         boardPanel.unlockInput();
     }
 
-    private void showGame(Board board, List<Player> players,
+    private void showGameOverDialog(GameOverEventPayload gameOver) {
+        StringBuilder message = new StringBuilder();
+
+        // ✅ Hole Spielerliste aus BoardPanel
+        List<Player> currentPlayers = (boardPanel != null && boardPanel.getBoard() != null)
+                ? boardPanel.getBoard().getPlayers()
+                : null;
+
+        // Finde Gewinner-Namen
+        String winnerName = null;
+        if (gameOver.getWinnerId() != null && currentPlayers != null) {
+            for (Player p : currentPlayers) {
+                if (p != null && p.getId() != null
+                        && p.getId().equals(gameOver.getWinnerId())) {
+                    winnerName = p.getName();
+                    break;
+                }
+            }
+        }
+
+        if (winnerName != null) {
+            message.append("🏆 Gewinner: ").append(winnerName).append("\n\n");
+        } else {
+            message.append("🎮 Spiel beendet!\n\n");
+        }
+
+        // Zeige detailliertes Ranking mit Statistiken
+        if (gameOver.getRanking() != null && gameOver.getRanking().length > 0) {
+            message.append("═══ ENDERGEBNIS ═══\n\n");
+
+            for (int i = 0; i < gameOver.getRanking().length; i++) {
+                RankingEntry entry = gameOver.getRanking()[i];
+                if (entry == null) continue;
+
+                // Platzierung mit Medal-Emoji
+                String medal = switch (i) {
+                    case 0 -> "🥇";
+                    case 1 -> "🥈";
+                    case 2 -> "🥉";
+                    default -> (i + 1) + ".";
+                };
+
+                // ✅ Spielername aus currentPlayers holen
+                String playerName = "Spieler " + (i + 1);
+                if (entry.getPlayerId() != null && currentPlayers != null) {
+                    for (Player p : currentPlayers) {
+                        if (p != null && entry.getPlayerId().equals(p.getId())) {
+                            playerName = p.getName();
+                            break;
+                        }
+                    }
+                }
+
+                // Score
+                int score = entry.getScore() != null ? entry.getScore() : 0;
+
+                // Stats
+                int treasures = 0;
+                int steps = 0;
+                int pushes = 0;
+
+                if (entry.getStats() != null) {
+                    treasures = entry.getStats().getTreasuresCollected() != null
+                            ? entry.getStats().getTreasuresCollected()
+                            : 0;
+                    steps = entry.getStats().getStepsTaken() != null
+                            ? entry.getStats().getStepsTaken()
+                            : 0;
+                    pushes = entry.getStats().getTilesPushed() != null
+                            ? entry.getStats().getTilesPushed()
+                            : 0;
+                }
+
+                // Formatierung: Kompakte Anzeige
+                message.append(String.format("%s %s\n", medal, playerName));
+                message.append(String.format("   💎 %d Schätze  |  ⭐ %d Punkte\n",
+                        treasures, score));
+                message.append(String.format("   👣 %d Schritte  |  ↔️ %d Einschübe\n\n",
+                        steps, pushes));
+            }
+        }
+
+        // Zeige Dialog mit Custom-Styling
+        JTextArea textArea = new JTextArea(message.toString());
+        textArea.setEditable(false);
+        textArea.setFont(new Font("Monospaced", Font.PLAIN, 13));
+        textArea.setBackground(new Color(250, 250, 250));
+        textArea.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(100, 130, 180), 2),
+                BorderFactory.createEmptyBorder(15, 15, 15, 15)
+        ));
+
+        int choice = JOptionPane.showOptionDialog(
+                frame,
+                textArea,
+                "🎮 Spiel beendet",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.INFORMATION_MESSAGE,
+                null,
+                new String[]{"Zur Lobby", "Beenden"},
+                "Zur Lobby"
+        );
+
+        if (choice == JOptionPane.YES_OPTION) {
+            // Zurück zur Lobby
+            SwingUtilities.invokeLater(() -> {
+                CardLayout cl = (CardLayout) mainPanel.getLayout();
+                cl.show(mainPanel, "lobby");
+                gameViewShown = false;
+
+
+
+            });
+        } else {
+            // Beenden
+            shutdownAndExit();
+        }
+    }
+
+
+    private String formatAchievementName(String achievementName) {
+        if (achievementName == null) return "Unbekannter Erfolg";
+
+        // Ersetze Underscores mit Leerzeichen
+        String formatted = achievementName.replace("_", " ").toLowerCase();
+
+        // Capitalize first letter of each word
+        StringBuilder result = new StringBuilder();
+        boolean capitalizeNext = true;
+
+        for (char c : formatted.toCharArray()) {
+            if (Character.isWhitespace(c)) {
+                capitalizeNext = true;
+                result.append(c);
+            } else if (capitalizeNext) {
+                result.append(Character.toUpperCase(c));
+                capitalizeNext = false;
+            } else {
+                result.append(c);
+            }
+        }
+
+        return result.toString();
+    }
+
+    private void showGame(Board board,
                           java.time.OffsetDateTime gameEndTime,
                           labyrinth.contracts.models.CurrentTurnInfo turnInfo) {
-        if (board == null || players == null) return;
+        if (board == null || board.getPlayers() == null) return;
 
-        Player currentPlayer = resolveLocalPlayer(players);
+        Player currentPlayer = resolveLocalPlayer(board.getPlayers());
 
         SwingUtilities.invokeLater(() -> {
             if (!gameViewShown) {
@@ -463,7 +680,7 @@ public class LabyrinthApplication {
             frame.setTitle("Labyrinth Online (" + PROFILE + ") - Board " +
                     board.getHeight() + "x" + board.getWidth());
 
-            ensureBoardPanel(board, currentPlayer, players, gameEndTime, turnInfo);
+            ensureBoardPanel(board, currentPlayer, board.getPlayers(), gameEndTime, turnInfo);
         });
     }
 

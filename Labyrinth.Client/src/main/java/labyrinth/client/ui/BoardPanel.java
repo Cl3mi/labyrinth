@@ -85,6 +85,8 @@ public class BoardPanel extends JPanel {
     private java.time.OffsetDateTime gameEndTime;
     private java.time.OffsetDateTime turnEndTime;
     private labyrinth.contracts.models.TurnState currentTurnState;
+    private final Map<String, BufferedImage> treasureImages = new HashMap<>();
+    private final Map<String, BufferedImage> tileImages = new HashMap<>();
 
     /**
      * Reachable Tiles kommen vom Server (optional).
@@ -104,32 +106,7 @@ public class BoardPanel extends JPanel {
 
     private AudioPlayer backgroundMusic;
 
-    /**
-     * Optionaler Lock: verhindert Command-Spam bis ein Server-Update eintrifft.
-     */
     private boolean inputLocked = false;
-
-    // ================================================================================
-    // TILE IMAGE RANDOMIZATION (stable per cell)
-    // ================================================================================
-    /**
-     * Alle Varianten pro Typ (I/L/T).
-     */
-    private final Map<String, List<BufferedImage>> tileVariants = new HashMap<>();
-
-    /**
-     * “Ziehbeutel” pro Typ (zufällige Reihenfolge).
-     * - I/L: wenn leer -> neu befüllen & shufflen (Reuse erlaubt)
-     * - T: wenn leer -> NICHT neu befüllen (Unique-Only)
-     */
-    private final Map<String, Deque<BufferedImage>> tileBags = new HashMap<>();
-
-    /**
-     * Pro Feld (row:col) merken wir, welche Variante (und welcher Typ) gewählt wurde,
-     * damit bei repaint() nicht ständig neue Random-Images entstehen.
-     */
-    private final Map<String, String> cellAssignedType = new HashMap<>();
-    private final Map<String, BufferedImage> cellAssignedImage = new HashMap<>();
 
     private static final String EXTRA_KEY = "EXTRA";
 
@@ -141,10 +118,11 @@ public class BoardPanel extends JPanel {
 
         loadBackgroundImage();
         loadTileImages();
+        loadTreasureImages();
         loadPlayerIcons();
 
         setBackground(BACKGROUND_COLOR);
-        setPreferredSize(new Dimension(1400, 800));
+        setPreferredSize(new Dimension(1920, 1080));
 
         setLayout(null); // Overlay-Button
 
@@ -202,108 +180,74 @@ public class BoardPanel extends JPanel {
         }
     }
 
+    private void loadTreasureImages() {
+        // ✅ MAPPING: Deutsche Server-Namen -> Englische Dateinamen
+        Map<String, String> treasureFileMapping = new HashMap<>();
+
+        // Server sendet deutsche Namen, Dateien haben englische Namen
+        treasureFileMapping.put("Geist", "Ghost");           // id: 1
+        treasureFileMapping.put("Drache", "Dragon");         // id: 2
+        treasureFileMapping.put("Hexe", "Witch");            // id: 3
+        treasureFileMapping.put("Eule", "Owl");              // id: 4
+        treasureFileMapping.put("Ratte", "Rat");             // id: 5
+        treasureFileMapping.put("Käfer", "Bug");             // id: 6
+        treasureFileMapping.put("Spinne", "Spider");         // id: 7
+        treasureFileMapping.put("Schlange", "Snake");        // id: 8
+        treasureFileMapping.put("Fledermaus", "Bat");        // id: 9
+        treasureFileMapping.put("Krone", "Crown");           // id: 10
+        treasureFileMapping.put("Schlüssel", "Key");         // id: 11
+        treasureFileMapping.put("Schatztruhe", "Treasure"); // id: 12
+        treasureFileMapping.put("Helm", "Helmet");           // id: 13
+        treasureFileMapping.put("Buch", "Book");              // id: 14
+        treasureFileMapping.put("Kerze", "Candle");          // id: 15
+        treasureFileMapping.put("Ring", "Ring");             // id: 16
+        treasureFileMapping.put("Beutel", "Bag");            // id: 17
+        treasureFileMapping.put("Totenkopf", "Skull");       // id: 18
+        treasureFileMapping.put("Karte", "Map");             // id: 19
+        treasureFileMapping.put("Schwert", "Sword");         // id: 20
+        treasureFileMapping.put("Kelch", "chalice");         // id: 21 - lowercase!
+        treasureFileMapping.put("Edelstein", "Diamond");     // id: 22
+        treasureFileMapping.put("Krug", "Jug");              // id: 23
+        treasureFileMapping.put("Maus", "Mouse");            // id: 24
+
+        // Load each treasure image
+        for (Map.Entry<String, String> entry : treasureFileMapping.entrySet()) {
+            String serverName = entry.getKey();
+            String fileName = entry.getValue();
+
+            BufferedImage img = null;
+
+            img = loadImage("/images/tiles/" + fileName + ".png");
+
+            if (img != null) {
+                treasureImages.put(serverName, img);
+                System.out.println("✅ Loaded treasure: " + serverName + " -> " + fileName);
+            } else {
+                System.err.println("❌ Failed to load treasure: " + serverName + " (file: " + fileName + ")");
+            }
+        }
+
+        System.out.println("📦 Loaded " + treasureImages.size() + "/24 treasure images");
+    }
+
+
     /**
      * Lädt ALLE Varianten in tileVariants und initialisiert die tileBags.
      */
     private void loadTileImages() {
+        // Nur noch je 1 Bild pro Typ
+        tileImages.put("I", loadImage("/images/tiles/I_tile.png"));
+        tileImages.put("L", loadImage("/images/tiles/L_tile.png"));
+        tileImages.put("T", loadImage("/images/tiles/T_tile.png"));
 
-        tileVariants.put("I", nonNullList(List.of(
-                loadImage("/images/tiles/I_tile.png")
-        )));
-
-        tileVariants.put("L", nonNullList(List.of(
-                loadImage("/images/tiles/L_tile.png"),
-                loadImage("/images/tiles/L_bug.png"),
-                loadImage("/images/tiles/L_insect.png"),
-                loadImage("/images/tiles/L_owl.png"),
-                loadImage("/images/tiles/L_rat.png"),
-                loadImage("/images/tiles/L_spider.png")
-        )));
-
-        tileVariants.put("T", nonNullList(List.of(
-                loadImage("/images/tiles/T_bat.png"),
-                loadImage("/images/tiles/T_dragon.png"),
-                loadImage("/images/tiles/T_genie.png"),
-                loadImage("/images/tiles/T_ghost.png"),
-                loadImage("/images/tiles/T_pig.png"),
-                loadImage("/images/tiles/T_princess.png")
-        )));
-
-        // Bags initial füllen
-        refillAndShuffleBag("I");
-        refillAndShuffleBag("L");
-        refillAndShuffleBag("T");
-    }
-
-    private static List<BufferedImage> nonNullList(List<BufferedImage> in) {
-        List<BufferedImage> out = new ArrayList<>();
-        for (BufferedImage bi : in) {
-            if (bi != null) out.add(bi);
-        }
-        return out;
-    }
-
-    private void refillAndShuffleBag(String type) {
-        List<BufferedImage> all = tileVariants.get(type);
-        if (all == null || all.isEmpty()) {
-            tileBags.put(type, new ArrayDeque<>());
-            System.err.println("No tile variants loaded for type " + type);
-            return;
-        }
-        List<BufferedImage> copy = new ArrayList<>(all);
-        Collections.shuffle(copy, random);
-        tileBags.put(type, new ArrayDeque<>(copy));
-    }
-
-    /**
-     * Ziehe eine Variante aus dem Beutel:
-     * - I/L: wenn leer -> refill + shuffle
-     * - T: wenn leer -> KEIN refill (Unique), fallback auf erste Variante
-     */
-    private BufferedImage drawVariant(String type) {
-        Deque<BufferedImage> bag = tileBags.get(type);
-        if (bag == null) {
-            refillAndShuffleBag(type);
-            bag = tileBags.get(type);
-        }
-
-        if (bag == null || bag.isEmpty()) {
-            if ("T".equals(type)) {
-                List<BufferedImage> allT = tileVariants.get("T");
-                if (allT != null && !allT.isEmpty()) {
-                    System.err.println("T bag empty (unique variants exhausted). Falling back to first T variant.");
-                    return allT.getFirst();
-                }
-                return null;
+        System.out.println("📦 Loaded tile images:");
+        tileImages.forEach((type, img) -> {
+            if (img != null) {
+                System.out.println("  ✅ " + type + " tile");
+            } else {
+                System.err.println("  ❌ " + type + " tile FEHLT!");
             }
-
-            // I/L: refill erlaubt
-            refillAndShuffleBag(type);
-            bag = tileBags.get(type);
-            if (bag == null || bag.isEmpty()) return null;
-        }
-
-        return bag.pollFirst();
-    }
-
-    /**
-     * Liefert für ein Board-Feld eine STABILE Tile-Variante pro Typ.
-     * Wenn sich der Typ (I/L/T) an einer Position ändert, wird neu gezogen.
-     */
-    private BufferedImage getStableTileImage(String type, int row, int col, boolean isExtra) {
-        String key = isExtra ? EXTRA_KEY : (row + ":" + col);
-
-        String assignedType = cellAssignedType.get(key);
-        BufferedImage assignedImg = cellAssignedImage.get(key);
-
-        if (assignedImg != null && Objects.equals(assignedType, type)) {
-            return assignedImg;
-        }
-
-        BufferedImage img = drawVariant(type);
-        cellAssignedType.put(key, type);
-        cellAssignedImage.put(key, img);
-        return img;
+        });
     }
 
     private void loadPlayerIcons() {
@@ -326,6 +270,11 @@ public class BoardPanel extends JPanel {
             this.rotation = rotation;
         }
     }
+
+    private BufferedImage getTileImage(String type) {
+        return tileImages.get(type);
+    }
+
 
     private TileImageInfo getTileImageInfo(Tile tile) {
         Direction[] entrancesArray = tile.getEntrances();
@@ -815,7 +764,8 @@ public class BoardPanel extends JPanel {
         boolean drewImage = false;
 
         if (info != null) {
-            BufferedImage img = getStableTileImage(info.type, row, col, false);
+            // ✅ Einfach: Hole Bild direkt aus Map
+            BufferedImage img = getTileImage(info.type);
             if (img != null) {
                 drawRotatedImage(g2, img, x, y, info.rotation);
                 drewImage = true;
@@ -827,69 +777,149 @@ public class BoardPanel extends JPanel {
         }
 
         if (drawDetails) {
+            // Treasure zeichnen
             if (tile.getTreasure() != null) {
                 int cx = x + size / 2;
                 int cy = y + size / 2;
                 drawTreasureOnTile(g2, tile.getTreasure(), cx, cy);
             }
-            drawCoordinates(g2, x, y, row, col);
+
+            // Koordinaten nur bei gültigen row/col
+            if (row >= 0 && col >= 0) {
+                drawCoordinates(g2, x, y, row, col);
+            }
         }
     }
 
     private void drawTreasureOnTile(Graphics2D g2, Treasure treasure, int centerX, int centerY) {
+        if (treasure == null || treasure.getName() == null) return;
+
         // Check if this is the current player's target treasure
         boolean isCurrentTarget = false;
         if (currentPlayer != null && currentPlayer.getAssignedTreasureCards() != null
-            && !currentPlayer.getAssignedTreasureCards().isEmpty()) {
+                && !currentPlayer.getAssignedTreasureCards().isEmpty()) {
             Treasure currentTarget = currentPlayer.getAssignedTreasureCards().get(0);
             isCurrentTarget = currentTarget != null && currentTarget.getName() != null
-                && currentTarget.getName().equals(treasure.getName());
+                    && currentTarget.getName().equals(treasure.getName());
         }
 
+        // ✅ Pulsing glow effect for target treasure
         if (isCurrentTarget) {
-            // Draw pulsing glow effect for target treasure
             long time = System.currentTimeMillis();
-            int glowRadius = 25 + (int) (10 * Math.sin(time / 300.0));
-            int glowAlpha = 100 + (int) (50 * Math.sin(time / 300.0));
+            int glowRadius = 28 + (int) (8 * Math.sin(time / 300.0));
+            int glowAlpha = 120 + (int) (60 * Math.sin(time / 300.0));
 
             // Outer glow
-            g2.setColor(new Color(255, 215, 0, glowAlpha / 2));
-            g2.fillOval(centerX - glowRadius, centerY - glowRadius - 25, glowRadius * 2, glowRadius * 2);
+            g2.setColor(new Color(255, 215, 0, Math.min(glowAlpha / 2, 100)));
+            g2.fillOval(centerX - glowRadius, centerY - glowRadius - 8, glowRadius * 2, glowRadius * 2);
 
             // Inner glow
-            g2.setColor(new Color(255, 255, 0, glowAlpha));
-            g2.fillOval(centerX - glowRadius / 2, centerY - glowRadius / 2 - 25, glowRadius, glowRadius);
+            g2.setColor(new Color(255, 255, 0, Math.min(glowAlpha, 150)));
+            g2.fillOval(centerX - glowRadius / 2, centerY - glowRadius / 2 - 8, glowRadius, glowRadius);
         }
 
-        // Draw treasure icon/symbol
-        g2.setFont(new Font("Arial", Font.BOLD, 24));
-        g2.setColor(isCurrentTarget ? new Color(255, 215, 0) : new Color(180, 140, 0));
-        g2.drawString("💎", centerX - 12, centerY - 15);
+        // ✅ Draw treasure IMAGE
+        BufferedImage treasureImg = treasureImages.get(treasure.getName());
+        if (treasureImg != null) {
+            // Calculate image size (scaled based on tile size, but not too large)
+            int imgSize = Math.min((int)(size * 0.45), 48); // Max 48px, ~45% of tile
 
-        // Draw treasure name with background for better readability
-        g2.setFont(new Font("Arial", Font.BOLD, isCurrentTarget ? 12 : 10));
+            // Draw subtle shadow for depth
+            g2.setColor(new Color(0, 0, 0, 80));
+            g2.fillOval(centerX - imgSize / 2 + 2, centerY - imgSize / 2 + 2 - 8, imgSize, imgSize);
+
+            // Draw actual treasure image
+            g2.drawImage(treasureImg,
+                    centerX - imgSize / 2,
+                    centerY - imgSize / 2 - 12,
+                    imgSize,
+                    imgSize,
+                    null);
+
+            // Add extra border highlight for current target
+            if (isCurrentTarget) {
+                g2.setColor(new Color(255, 215, 0, 200));
+                g2.setStroke(new BasicStroke(3));
+                g2.drawOval(centerX - imgSize / 2 - 2, centerY - imgSize / 2 - 14, imgSize + 4, imgSize + 4);
+            }
+        } else {
+            // ⚠️ Fallback if image missing: Simple colored circle with first letter
+            int fallbackSize = Math.min((int)(size * 0.4), 40);
+
+            // Circle background
+            g2.setColor(isCurrentTarget ? new Color(255, 215, 0, 200) : new Color(180, 140, 70, 200));
+            g2.fillOval(centerX - fallbackSize / 2, centerY - fallbackSize / 2 - 12, fallbackSize, fallbackSize);
+
+            // Border
+            g2.setColor(new Color(100, 70, 30));
+            g2.setStroke(new BasicStroke(2));
+            g2.drawOval(centerX - fallbackSize / 2, centerY - fallbackSize / 2 - 12, fallbackSize, fallbackSize);
+
+            // First letter
+            g2.setFont(new Font("Arial", Font.BOLD, fallbackSize / 2));
+            g2.setColor(Color.WHITE);
+            String letter = treasure.getName().substring(0, 1);
+            FontMetrics fm = g2.getFontMetrics();
+            int letterWidth = fm.stringWidth(letter);
+            g2.drawString(letter, centerX - letterWidth / 2, centerY + fm.getAscent() / 2 - 12);
+
+            System.err.println("⚠️ Using fallback for treasure: " + treasure.getName());
+        }
+
+        // ✅ Draw treasure name UNDER the image with background
+        g2.setFont(new Font("Arial", Font.BOLD, isCurrentTarget ? 11 : 9));
         FontMetrics fm = g2.getFontMetrics();
-        int textWidth = fm.stringWidth(treasure.getName());
-        int textHeight = fm.getHeight();
+        String displayName = treasure.getName();
 
-        // Background box
+        // Shorten long names
+        if (displayName.length() > 10) {
+            displayName = displayName.substring(0, 9) + "…";
+        }
+
+        int textWidth = fm.stringWidth(displayName);
+        int textHeight = fm.getHeight();
+        int boxY = centerY + 12;
+
+        // Background box for better readability
         if (isCurrentTarget) {
-            g2.setColor(new Color(255, 215, 0, 200));
-            g2.fillRoundRect(centerX - textWidth / 2 - 4, centerY - 5, textWidth + 8, textHeight - 2, 6, 6);
+            // Gold background for target
+            g2.setColor(new Color(255, 215, 0, 240));
+            g2.fillRoundRect(centerX - textWidth / 2 - 5, boxY - 2, textWidth + 10, textHeight, 6, 6);
+
+            // Border
+            g2.setColor(new Color(200, 160, 0));
+            g2.setStroke(new BasicStroke(2));
+            g2.drawRoundRect(centerX - textWidth / 2 - 5, boxY - 2, textWidth + 10, textHeight, 6, 6);
+
+            // Text
             g2.setColor(new Color(0, 0, 0));
         } else {
-            g2.setColor(new Color(255, 255, 255, 180));
-            g2.fillRoundRect(centerX - textWidth / 2 - 3, centerY - 4, textWidth + 6, textHeight - 4, 4, 4);
-            g2.setColor(new Color(60, 40, 0));
+            // White/transparent background for non-target
+            g2.setColor(new Color(255, 255, 255, 220));
+            g2.fillRoundRect(centerX - textWidth / 2 - 4, boxY - 1, textWidth + 8, textHeight - 2, 5, 5);
+
+            // Subtle border
+            g2.setColor(new Color(150, 120, 80, 180));
+            g2.setStroke(new BasicStroke(1));
+            g2.drawRoundRect(centerX - textWidth / 2 - 4, boxY - 1, textWidth + 8, textHeight - 2, 5, 5);
+
+            // Text
+            g2.setColor(new Color(60, 40, 10));
         }
 
-        g2.drawString(treasure.getName(), centerX - textWidth / 2, centerY + fm.getAscent() - 2);
+        g2.drawString(displayName, centerX - textWidth / 2, boxY + fm.getAscent() - 2);
 
-        // Draw target indicator for current treasure
+        // ⭐ Target indicator star above the treasure
         if (isCurrentTarget) {
-            g2.setFont(new Font("Arial", Font.BOLD, 14));
-            g2.setColor(new Color(255, 255, 255));
-            g2.drawString("⭐", centerX - 7, centerY - 30);
+            g2.setFont(new Font("Arial", Font.BOLD, 18));
+            g2.setColor(new Color(255, 255, 255, 230));
+
+            // Draw star with slight shadow
+            g2.setColor(new Color(0, 0, 0, 100));
+            g2.drawString("⭐", centerX - 8, centerY - 35);
+
+            g2.setColor(new Color(255, 255, 0, 255));
+            g2.drawString("⭐", centerX - 9, centerY - 36);
         }
     }
 
@@ -1030,30 +1060,30 @@ public class BoardPanel extends JPanel {
         int x = getWidth() - size - margin;
         int y = getHeight() - size - margin;
 
-        // Debug-Rahmen: zeigt dir immer, WO die Extra-Tile sein sollte
-        g2.setColor(new Color(255, 0, 0, 140));
-        g2.drawRect(x, y, size, size);
-        g2.drawString("EXTRA", x + 5, y + 15);
+        // Label über dem Tile
+        g2.setFont(new Font("Arial", Font.BOLD, 14));
+        g2.setColor(Color.BLACK);
+        g2.drawString("Schiebekarte", x, y - 8);
 
         Tile extraTile = board.getExtraTile();
         if (extraTile == null) {
-            // Debug: du siehst den roten Rahmen, aber keine Tile -> extraTile ist null
+            // Debug: Fallback wenn null
+            g2.setColor(new Color(255, 0, 0, 140));
+            g2.drawRect(x, y, size, size);
+            g2.setFont(new Font("Arial", Font.PLAIN, 12));
+            g2.drawString("NULL", x + 5, y + 15);
             return;
         }
 
-        TileImageInfo info = getTileImageInfo(extraTile);
-        boolean drewImage = false;
+        // ✅ Zeichne Tile MIT allen Details (inkl. Treasure!)
+        // Verwende drawTileAt() mit drawDetails = true
+        drawTileAt(g2, extraTile, x, y, -1, -1, true);
 
-        if (info != null) {
-            BufferedImage img = getStableTileImage(info.type, -1, -1, true);
-            if (img != null) {
-                drawRotatedImage(g2, img, x, y, info.rotation);
-                drewImage = true;
-            }
-        }
-
-        if (!drewImage) {
-            drawCorridorsFallback(g2, extraTile, x, y);
+        // Optional: Hinweistext dass es gedreht werden kann
+        if (currentTurnState == labyrinth.contracts.models.TurnState.WAITING_FOR_PUSH) {
+            g2.setFont(new Font("Arial", Font.ITALIC, 10));
+            g2.setColor(new Color(255, 255, 255, 200));
+            g2.drawString("Drücke R/Q/E zum Drehen", x, y + size + 15);
         }
     }
 
