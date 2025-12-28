@@ -35,18 +35,17 @@ public class GameService {
     private final EventPublisher eventPublisher;
 
     public GameService(TreasureCardFactory treasureCardFactory,
-                       BoardFactory boardFactory,
-                       EventPublisher eventPublisher,
-                       TaskScheduler scheduler) {
+            BoardFactory boardFactory,
+            EventPublisher eventPublisher,
+            TaskScheduler scheduler) {
 
         this.treasureCardFactory = treasureCardFactory;
         this.boardFactory = boardFactory;
         this.eventPublisher = eventPublisher;
 
         var gameTimer = new GameTimer(scheduler);
-        game = new Game(gameTimer);
+        game = new Game(gameTimer, new labyrinth.server.game.ai.SimpleAiStrategy());
     }
-
 
     public Player join(String username) {
         rwLock.writeLock().lock();
@@ -111,7 +110,8 @@ public class GameService {
         try {
             int playersCount = game.getPlayers().size();
 
-            var board = boardFactory.createBoard(gameConfig.boardWidth(), gameConfig.boardHeight(), gameConfig.totalBonusCount());
+            var board = boardFactory.createBoard(gameConfig.boardWidth(), gameConfig.boardHeight(),
+                    gameConfig.totalBonusCount());
             var treasureCards = treasureCardFactory.createTreasureCards(gameConfig.treasureCardCount(), playersCount);
 
             game.startGame(gameConfig, treasureCards, board);
@@ -140,12 +140,12 @@ public class GameService {
                 eventPublisher.publishAsync(achievementEvent);
             }
 
-            if(result.treasureCollected()){
+            if (result.treasureCollected()) {
                 var treasureCardEvent = new NextTreasureCardEvent(player, player.getCurrentTreasureCard());
                 eventPublisher.publishAsync(treasureCardEvent);
             }
 
-            if(result.gameOver()){
+            if (result.gameOver()) {
                 var gameOverEvent = new GameOverEvent(game.getPlayers());
                 eventPublisher.publishAsync(gameOverEvent);
             }
@@ -195,7 +195,7 @@ public class GameService {
         try {
             var useSuccessfull = game.useBeamBonus(row, col, player);
 
-            if(useSuccessfull){
+            if (useSuccessfull) {
                 player.getStatistics().increaseScore(PointRewards.REWARD_SHIFT_TILE);
             }
 
@@ -203,7 +203,6 @@ public class GameService {
             rwLock.writeLock().unlock();
         }
     }
-
 
     public void useSwapBonus(Player currentPlayer, Player targetPlayer) {
         rwLock.writeLock().lock();
@@ -213,7 +212,6 @@ public class GameService {
             rwLock.writeLock().unlock();
         }
     }
-
 
     public void usePushTwiceBonus(Player player) {
         rwLock.writeLock().lock();
@@ -233,7 +231,8 @@ public class GameService {
         }
     }
 
-    // Generic helper: run a function under the Game read-lock. Keeps locking centralized
+    // Generic helper: run a function under the Game read-lock. Keeps locking
+    // centralized
     // while avoiding coupling the Game layer to messaging/contract DTO types.
     public <T> T withGameReadLock(Function<Game, T> action) {
         rwLock.readLock().lock();

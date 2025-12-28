@@ -49,13 +49,119 @@ public class Game {
     @Getter(AccessLevel.NONE)
     private OffsetDateTime gameStartTime;
 
-    public Game(IGameTimer nextTurnTimer) {
+    private final labyrinth.server.game.ai.AiStrategy aiStrategy;
+
+    private static final java.util.logging.Logger LOGGER = java.util.logging.Logger.getLogger(Game.class.getName());
+
+    private final java.util.List<labyrinth.server.game.models.records.GameLogEntry> executionLogs = new ArrayList<>();
+
+    private void logGameAction(GameLogType type, String message, Player player,
+            java.util.Map<String, String> metadata) {
+        var entry = new labyrinth.server.game.models.records.GameLogEntry(
+                OffsetDateTime.now(),
+                type,
+                player != null ? player.getId().toString() : null,
+                message,
+                metadata);
+        executionLogs.add(entry);
+        LOGGER.info(message);
+    }
+
+    public java.util.List<labyrinth.server.game.models.records.GameLogEntry> getExecutionLogs() {
+        return java.util.Collections.unmodifiableList(executionLogs);
+    }
+
+    private String serializeTile(Tile tile) {
+        if (tile == null)
+            return "null";
+        StringBuilder sb = new StringBuilder();
+        sb.append("entrances=").append(tile.getEntrances());
+        if (tile.getTreasureCard() != null) {
+            sb.append(",treasure=").append(tile.getTreasureCard().getTreasureName());
+        }
+        if (tile.getBonus() != null) {
+            sb.append(",bonus=").append(tile.getBonus());
+        }
+        if (tile.isFixed()) {
+            sb.append(",fixed=true");
+        }
+        return sb.toString();
+    }
+
+    private String serializeBoard(Board board) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("width=").append(board.getWidth()).append(";");
+        sb.append("height=").append(board.getHeight()).append(";");
+        sb.append("extraTile=").append(serializeTile(board.getExtraTile())).append(";");
+
+        for (int r = 0; r < board.getHeight(); r++) {
+            for (int c = 0; c < board.getWidth(); c++) {
+                Tile t = board.getTileAt(r, c);
+                sb.append("tile_").append(r).append("_").append(c).append("=").append(serializeTile(t)).append(";");
+            }
+        }
+        return sb.toString();
+    }
+
+    private final java.util.Map<BonusTypes, labyrinth.server.game.bonuses.IBonusEffect> bonusEffects = new java.util.EnumMap<>(
+            BonusTypes.class);
+
+    public Game(IGameTimer nextTurnTimer, labyrinth.server.game.ai.AiStrategy aiStrategy) {
         this.nextTurnTimer = nextTurnTimer;
+        this.aiStrategy = aiStrategy;
         this.players = new ArrayList<>();
         this.roomState = RoomState.LOBBY;
         this.board = null;
         this.gameConfig = GameConfig.getDefault();
         this.currentPlayerIndex = 0;
+
+        // Initialize Bonus Strategies
+        bonusEffects.put(BonusTypes.BEAM, new labyrinth.server.game.bonuses.BeamBonusEffect());
+        bonusEffects.put(BonusTypes.SWAP, new labyrinth.server.game.bonuses.SwapBonusEffect());
+        bonusEffects.put(BonusTypes.PUSH_TWICE, new labyrinth.server.game.bonuses.PushTwiceBonusEffect());
+        bonusEffects.put(BonusTypes.PUSH_FIXED, new labyrinth.server.game.bonuses.PushFixedBonusEffect());
+    }
+
+    public boolean useBonus(BonusTypes type, Object... args) {
+        if (!bonusEffects.containsKey(type)) {
+            throw new IllegalArgumentException("No strategy found for bonus type: " + type);
+        }
+        boolean result = bonusEffects.get(type).apply(this, getCurrentPlayer(), args);
+        if (result) {
+            java.util.Map<String, String> meta = new java.util.HashMap<>();
+            meta.put("bonusType", type.toString());
+            // Could add args to metadata if needed
+            logGameAction(GameLogType.USE_BONUS, "Player used bonus " + type, getCurrentPlayer(), meta);
+        }
+        return result;
+    }
+
+    // Kept for backward compatibility / API contract compliance, but delegates to
+    // strategy
+    public boolean useBeamBonus(int row, int col, Player player) {
+        guardFor(RoomState.IN_GAME);
+        guardFor(player);
+        guardFor(MoveState.PLACE_TILE);
+        return useBonus(BonusTypes.BEAM, row, col);
+    }
+
+    public boolean useSwapBonus(Player currentPlayer, Player targetPlayer) {
+        guardFor(RoomState.IN_GAME);
+        guardFor(currentPlayer);
+        guardFor(MoveState.PLACE_TILE);
+        return useBonus(BonusTypes.SWAP, targetPlayer);
+    }
+
+    public boolean usePushTwiceBonus(Player player) {
+        guardFor(RoomState.IN_GAME);
+        guardFor(player);
+        return useBonus(BonusTypes.PUSH_TWICE);
+    }
+
+    public boolean usePushFixedBonus(Player player) {
+        guardFor(player);
+        guardFor(RoomState.IN_GAME);
+        return useBonus(BonusTypes.PUSH_FIXED);
     }
 
     /**
@@ -128,7 +234,7 @@ public class Game {
         }
 
         this.gameConfig = Objects.requireNonNullElseGet(gameConfig, GameConfig::getDefault);
-        System.out.println(treasureCards.size() + " treasureCards have been created");
+        LOGGER.info(treasureCards.size() + " treasureCards have been created");
 
         var playerToAssignCardsToIndex = 0;
         do {
@@ -145,7 +251,6 @@ public class Game {
             treasureCards.removeFirst();
         } while (!treasureCards.isEmpty());
 
-
         labyrinth.server.game.factories.BonusFactory bonusFactory = new labyrinth.server.game.factories.BonusFactory();
         var bonuses = bonusFactory.createBonuses(gameConfig.totalBonusCount());
         board.placeRandomBonuses(bonuses);
@@ -155,17 +260,28 @@ public class Game {
             var position = gameConfig.getStartPosition(i);
 
             Tile startingTile = board.getTileAt(position);
-            System.out.println(player.getUsername() + " starts on tile: " + position.row() + "/" + position.column());
+            LOGGER.info(player.getUsername() + " starts on tile: " + position.row() + "/" + position.column());
             player.setHomeTile(startingTile);
             player.setCurrentTile(startingTile);
         }
 
         this.board = board;
         this.board.setPlayers(players);
-        System.out.println("Game started in GameLobby" + " with " + players.size() + " players.");
+
+        java.util.Map<String, String> startMeta = new java.util.HashMap<>();
+        startMeta.put("boardState", serializeBoard(board));
+        // Also log initial player positions maybe? They are effectively on home tiles
+        // which are in board, but explicit is nice.
+        for (Player p : players) {
+            startMeta.put("player_" + p.getId(),
+                    p.getUsername() + "@" + gameConfig.getStartPosition(players.indexOf(p)));
+        }
+
+        logGameAction(GameLogType.START_GAME, "Game started in GameLobby with " + players.size() + " players.", null,
+                startMeta);
 
         if (getCurrentPlayer().isAiActive()) {
-            new labyrinth.server.game.ai.SimpleAiStrategy().performTurn(this, getCurrentPlayer());
+            this.aiStrategy.performTurn(this, getCurrentPlayer());
         }
 
         gameStartTime = OffsetDateTime.now();
@@ -198,7 +314,8 @@ public class Game {
         var fixedBonusActive = activeBonus == BonusTypes.PUSH_FIXED;
 
         if (fixedBonusActive) {
-            //TODO: do not allow to shift border rows/columns because it would move home tiles
+            // TODO: do not allow to shift border rows/columns because it would move home
+            // tiles
         }
 
         boolean res = switch (direction) {
@@ -228,90 +345,58 @@ public class Game {
 
         var statistics = player.getStatistics();
         var pusherAchieved = false;
-        if(!statistics.getCollectedAchievements().contains(Achievement.PUSHER) && statistics.getTilesPushed() >= 20){
+        if (!statistics.getCollectedAchievements().contains(Achievement.PUSHER) && statistics.getTilesPushed() >= 20) {
             pusherAchieved = true;
             statistics.collectAchievement(Achievement.PUSHER);
         }
+
+        java.util.Map<String, String> meta = new java.util.HashMap<>();
+        meta.put("index", String.valueOf(index));
+        meta.put("direction", direction.toString());
+        // Capture extra tile BEFORE shift (which effectively becomes the one pushed in)
+        // Wait, logic says: shift methods use 'extraTile' to put into board.
+        // So we should log the CURRENT extraTile before the shift happens?
+        // The shift method swaps extraTile with the one pushed out.
+        // BUT the tool call logic here happens AFTER the shift method returns!
+        // See: boolean res = switch... then if(!res) return... then log.
+        // So at this point 'extraTile' is the one that got pushed OUT.
+        // The one that got pushed IN was the 'extraTile' before this function call.
+        // However, we want to know what tile WAS pushed in.
+        // Since we can't easily go back in time, we should probably log the board state
+        // or just trust
+        // that if we have initial state + all operations, we can reconstruct.
+        // USER REQUEST said: "Also how the tile that gets pushed in is shaped"
+        // Since we are logging AFTER the action, we missed the state of the tile that
+        // was pushed in (it is now on the board).
+        // Actually, we can just find it on the board?
+        // If we shift column down, the new tile is at (0, col).
+        // If we shift column up, the new tile is at (height-1, col).
+        // If we shift row right, new is at (row, 0).
+        // If we shift row left, new is at (row, width-1).
+
+        // Let's grab the tile that was just inserted.
+        Tile insertedTile = null;
+        if (direction == Direction.DOWN)
+            insertedTile = board.getTileAt(0, index);
+        else if (direction == Direction.UP)
+            insertedTile = board.getTileAt(board.getHeight() - 1, index);
+        else if (direction == Direction.RIGHT)
+            insertedTile = board.getTileAt(index, 0);
+        else if (direction == Direction.LEFT)
+            insertedTile = board.getTileAt(index, board.getWidth() - 1);
+
+        if (insertedTile != null) {
+            meta.put("insertedTile", serializeTile(insertedTile));
+        }
+
+        logGameAction(GameLogType.SHIFT_BOARD, "Player shifted board " + direction + " at index " + index, player,
+                meta);
 
         return new shiftResult(true, pusherAchieved);
     }
 
     public void toggleAiForPlayer(Player player) {
         player.setAiActive(!player.isAiActive());
-    }
-
-    public boolean useBeamBonus(int row, int col, Player player) {
-        guardFor(RoomState.IN_GAME);
-        guardFor(player);
-        guardFor(MoveState.PLACE_TILE);
-
-        Tile targetTile = board.getTileMap().getForward(new Position(row, col));
-
-        for (Player other : players) {
-            if (other != player && other.getCurrentTile() == targetTile) {
-                System.out.println("Cant move a player is already on the target tile!");
-                return false;
-            }
-        }
-
-        var allowedToUse = player.useBonus(BonusTypes.SWAP);
-
-        if(!allowedToUse) {
-            return false;
-        }
-
-        player.getStatistics().increaseScore(PointRewards.REWARD_BONUS_USED);
-
-        player.setCurrentTile(targetTile);
-        return true;
-    }
-
-    public boolean useSwapBonus(Player currentPlayer, Player targetPlayer) {
-        guardFor(RoomState.IN_GAME);
-        guardFor(currentPlayer);
-        guardFor(MoveState.PLACE_TILE);
-        var allowedToUse = currentPlayer.useBonus(BonusTypes.SWAP);
-
-        if (!allowedToUse) {
-             return false;
-        }
-
-        var currentPlayerTile = currentPlayer.getCurrentTile();
-        var targetPlayerTile = targetPlayer.getCurrentTile();
-
-        currentPlayer.setCurrentTile(targetPlayerTile);
-        targetPlayer.setCurrentTile(currentPlayerTile);
-        currentPlayer.getStatistics().increaseScore(PointRewards.REWARD_BONUS_USED);
-
-        return true;
-    }
-
-    public boolean usePushTwiceBonus(Player player) {
-        guardFor(RoomState.IN_GAME);
-        guardFor(player);
-        var allowedToUse = player.useBonus(BonusTypes.PUSH_TWICE);
-
-        if (!allowedToUse) {
-            return false;
-        }
-
-        activeBonus = BonusTypes.PUSH_TWICE;
-        return true;
-    }
-
-    public boolean usePushFixedBonus(Player player) {
-        guardFor(player);
-        guardFor(RoomState.IN_GAME);
-        var allowedToUse = player.useBonus(BonusTypes.PUSH_FIXED);
-
-        if (!allowedToUse) {
-            return false;
-        }
-
-        activeBonus = BonusTypes.PUSH_FIXED;
-        player.getStatistics().increaseScore(PointRewards.REWARD_BONUS_USED);
-
-        return true;
     }
 
     public movePlayerToTileResult movePlayerToTile(int row, int col, Player player) {
@@ -322,31 +407,44 @@ public class Game {
         var currentTreasureCardBeforeMove = player.getCurrentTreasureCard();
         var distanceMoved = board.movePlayerToTile(player, row, col);
 
-        System.out.println("Moved " + distanceMoved + " steps");
+        // removed LOGGER.info
         if (distanceMoved == -1) {
+            LOGGER.info("Moved -1 steps (failed)");
             return new movePlayerToTileResult(false, distanceMoved, false, false, false);
         }
+
+        java.util.Map<String, String> meta = new java.util.HashMap<>();
+        meta.put("toRow", String.valueOf(row));
+        meta.put("toCol", String.valueOf(col));
+        meta.put("distance", String.valueOf(distanceMoved));
+        logGameAction(GameLogType.MOVE_PLAYER, "Player moved to " + row + "/" + col + " (" + distanceMoved + " steps)",
+                player, meta);
 
         player.getStatistics().increaseScore(PointRewards.REWARD_MOVE * distanceMoved);
         player.getStatistics().increaseStepsTaken(distanceMoved);
 
         var currentTreasureCardAfterMove = player.getCurrentTreasureCard();
 
-        if(currentTreasureCardAfterMove == null) {
+        if (currentTreasureCardAfterMove == null) {
             player.getStatistics().increaseScore(PointRewards.REWARD_ALL_TREASURES_COLLECTED);
         }
 
         var gameOver = false;
-        if(currentTreasureCardAfterMove == null) {
+        if (currentTreasureCardAfterMove == null) {
             gameOver();
             gameOver = true;
+            logGameAction(GameLogType.GAME_OVER, "Game Over. Winner: " + player.getUsername(), player, null);
         }
 
         var treasureCollected = currentTreasureCardAfterMove != currentTreasureCardBeforeMove;
 
+        if (treasureCollected) {
+            logGameAction(GameLogType.COLLECT_TREASURE, "Player collected treasure", player, null);
+        }
+
         var statistics = player.getStatistics();
         var runnerAchieved = false;
-        if(!statistics.getCollectedAchievements().contains(Achievement.RUNNER) && statistics.getStepsTaken() >= 200){
+        if (!statistics.getCollectedAchievements().contains(Achievement.RUNNER) && statistics.getStepsTaken() >= 200) {
             runnerAchieved = true;
             statistics.collectAchievement(Achievement.RUNNER);
         }
@@ -355,7 +453,7 @@ public class Game {
         return new movePlayerToTileResult(true, distanceMoved, treasureCollected, gameOver, runnerAchieved);
     }
 
-    private void gameOver(){
+    private void gameOver() {
         this.roomState = RoomState.FINISHED;
     }
 
@@ -367,16 +465,17 @@ public class Game {
         if (currentPlayerIndex >= players.size()) {
             currentPlayerIndex = 0;
         }
-        System.out.println("New Player to move: " + getCurrentPlayer().getUsername());
+        // LOGGER handled by logGameAction
+        logGameAction(GameLogType.NEXT_TURN, "New Player to move: " + getCurrentPlayer().getUsername(),
+                getCurrentPlayer(), null);
         currentMoveState = MoveState.PLACE_TILE;
 
         if (getCurrentPlayer().isAiActive()) {
-            new labyrinth.server.game.ai.SimpleAiStrategy().performTurn(this, getCurrentPlayer());
+            this.aiStrategy.performTurn(this, getCurrentPlayer());
         } else {
             nextTurnTimer.start(gameConfig.turnTimeInSeconds(), this::nextPlayer);
         }
     }
-
 
     private void guardFor(MoveState moveState) {
         if (board.isFreeRoam()) {
