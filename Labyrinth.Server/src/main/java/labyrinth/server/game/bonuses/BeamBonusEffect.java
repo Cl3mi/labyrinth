@@ -25,7 +25,6 @@ public class BeamBonusEffect implements IBonusEffect {
             }
         }
 
-        // Fix: Use correct BonusType BEAM
         if (!player.useBonus(BonusTypes.BEAM)) {
             return false;
         }

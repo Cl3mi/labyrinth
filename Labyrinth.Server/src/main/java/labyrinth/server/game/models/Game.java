@@ -53,6 +53,24 @@ public class Game {
 
     private static final java.util.logging.Logger LOGGER = java.util.logging.Logger.getLogger(Game.class.getName());
 
+    private final java.util.List<labyrinth.server.game.models.records.GameLogEntry> executionLogs = new ArrayList<>();
+
+    private void logGameAction(GameLogType type, String message, Player player,
+            java.util.Map<String, String> metadata) {
+        var entry = new labyrinth.server.game.models.records.GameLogEntry(
+                OffsetDateTime.now(),
+                type,
+                player != null ? player.getId().toString() : null,
+                message,
+                metadata);
+        executionLogs.add(entry);
+        LOGGER.info(message);
+    }
+
+    public java.util.List<labyrinth.server.game.models.records.GameLogEntry> getExecutionLogs() {
+        return java.util.Collections.unmodifiableList(executionLogs);
+    }
+
     private final java.util.Map<BonusTypes, labyrinth.server.game.bonuses.IBonusEffect> bonusEffects = new java.util.EnumMap<>(
             BonusTypes.class);
 
@@ -72,13 +90,18 @@ public class Game {
         bonusEffects.put(BonusTypes.PUSH_FIXED, new labyrinth.server.game.bonuses.PushFixedBonusEffect());
     }
 
-    // ... (existing join/start methods) ...
-
     public boolean useBonus(BonusTypes type, Object... args) {
         if (!bonusEffects.containsKey(type)) {
             throw new IllegalArgumentException("No strategy found for bonus type: " + type);
         }
-        return bonusEffects.get(type).apply(this, getCurrentPlayer(), args);
+        boolean result = bonusEffects.get(type).apply(this, getCurrentPlayer(), args);
+        if (result) {
+            java.util.Map<String, String> meta = new java.util.HashMap<>();
+            meta.put("bonusType", type.toString());
+            // Could add args to metadata if needed
+            logGameAction(GameLogType.USE_BONUS, "Player used bonus " + type, getCurrentPlayer(), meta);
+        }
+        return result;
     }
 
     // Kept for backward compatibility / API contract compliance, but delegates to
@@ -212,7 +235,10 @@ public class Game {
 
         this.board = board;
         this.board.setPlayers(players);
-        LOGGER.info("Game started in GameLobby" + " with " + players.size() + " players.");
+        // Removed LOGGER.info here as logGameAction handles it
+
+        logGameAction(GameLogType.START_GAME, "Game started in GameLobby with " + players.size() + " players.", null,
+                null);
 
         if (getCurrentPlayer().isAiActive()) {
             this.aiStrategy.performTurn(this, getCurrentPlayer());
@@ -284,6 +310,12 @@ public class Game {
             statistics.collectAchievement(Achievement.PUSHER);
         }
 
+        java.util.Map<String, String> meta = new java.util.HashMap<>();
+        meta.put("index", String.valueOf(index));
+        meta.put("direction", direction.toString());
+        logGameAction(GameLogType.SHIFT_BOARD, "Player shifted board " + direction + " at index " + index, player,
+                meta);
+
         return new shiftResult(true, pusherAchieved);
     }
 
@@ -299,10 +331,18 @@ public class Game {
         var currentTreasureCardBeforeMove = player.getCurrentTreasureCard();
         var distanceMoved = board.movePlayerToTile(player, row, col);
 
-        LOGGER.info("Moved " + distanceMoved + " steps");
+        // removed LOGGER.info
         if (distanceMoved == -1) {
+            LOGGER.info("Moved -1 steps (failed)");
             return new movePlayerToTileResult(false, distanceMoved, false, false, false);
         }
+
+        java.util.Map<String, String> meta = new java.util.HashMap<>();
+        meta.put("toRow", String.valueOf(row));
+        meta.put("toCol", String.valueOf(col));
+        meta.put("distance", String.valueOf(distanceMoved));
+        logGameAction(GameLogType.MOVE_PLAYER, "Player moved to " + row + "/" + col + " (" + distanceMoved + " steps)",
+                player, meta);
 
         player.getStatistics().increaseScore(PointRewards.REWARD_MOVE * distanceMoved);
         player.getStatistics().increaseStepsTaken(distanceMoved);
@@ -317,9 +357,14 @@ public class Game {
         if (currentTreasureCardAfterMove == null) {
             gameOver();
             gameOver = true;
+            logGameAction(GameLogType.GAME_OVER, "Game Over. Winner: " + player.getUsername(), player, null);
         }
 
         var treasureCollected = currentTreasureCardAfterMove != currentTreasureCardBeforeMove;
+
+        if (treasureCollected) {
+            logGameAction(GameLogType.COLLECT_TREASURE, "Player collected treasure", player, null);
+        }
 
         var statistics = player.getStatistics();
         var runnerAchieved = false;
@@ -344,7 +389,9 @@ public class Game {
         if (currentPlayerIndex >= players.size()) {
             currentPlayerIndex = 0;
         }
-        LOGGER.info("New Player to move: " + getCurrentPlayer().getUsername());
+        // LOGGER handled by logGameAction
+        logGameAction(GameLogType.NEXT_TURN, "New Player to move: " + getCurrentPlayer().getUsername(),
+                getCurrentPlayer(), null);
         currentMoveState = MoveState.PLACE_TILE;
 
         if (getCurrentPlayer().isAiActive()) {
