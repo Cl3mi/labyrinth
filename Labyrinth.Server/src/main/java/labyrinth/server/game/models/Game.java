@@ -301,42 +301,14 @@ public class Game {
             return new ShiftResult(false, false);
         }
 
-        if (fixedBonusActive) {
-            activeBonus = null;
-        }
-
-        turnController.setMoveState(MoveState.MOVE);
-
-        if (activeBonus == BonusTypes.PUSH_TWICE) {
-            turnController.setMoveState(MoveState.PLACE_TILE);
-            activeBonus = null;
-        }
+        handleBonusAfterShift(fixedBonusActive);
 
         player.getStatistics().increaseScore(PointRewards.REWARD_SHIFT_TILE);
         player.getStatistics().increaseTilesPushed(1);
 
         var pusherAchieved = achievementService.checkPusherAchievement(player).isPresent();
 
-        java.util.Map<String, String> meta = new java.util.HashMap<>();
-        meta.put("index", String.valueOf(index));
-        meta.put("direction", direction.toString());
-
-        Tile insertedTile = null;
-        if (direction == Direction.DOWN)
-            insertedTile = board.getTileAt(0, index);
-        else if (direction == Direction.UP)
-            insertedTile = board.getTileAt(board.getHeight() - 1, index);
-        else if (direction == Direction.RIGHT)
-            insertedTile = board.getTileAt(index, 0);
-        else if (direction == Direction.LEFT)
-            insertedTile = board.getTileAt(index, board.getWidth() - 1);
-
-        if (insertedTile != null) {
-            meta.put("insertedTile", gameLogger.serializeTile(insertedTile));
-        }
-
-        gameLogger.log(GameLogType.SHIFT_BOARD, "Player shifted board " + direction + " at index " + index, player,
-                meta);
+        logShiftAction(index, direction, player);
 
         return new ShiftResult(true, pusherAchieved);
     }
@@ -431,6 +403,64 @@ public class Game {
         return "Room{" +
                 ", players=" + players +
                 '}';
+    }
+
+    /**
+     * Handles bonus state transitions after a successful board shift.
+     * Consumes the PUSH_FIXED bonus if it was active, or allows another push
+     * if PUSH_TWICE bonus is active.
+     *
+     * @param fixedBonusWasActive whether the PUSH_FIXED bonus was active for this shift
+     */
+    private void handleBonusAfterShift(boolean fixedBonusWasActive) {
+        if (fixedBonusWasActive) {
+            activeBonus = null;
+        }
+
+        turnController.setMoveState(MoveState.MOVE);
+
+        if (activeBonus == BonusTypes.PUSH_TWICE) {
+            turnController.setMoveState(MoveState.PLACE_TILE);
+            activeBonus = null;
+        }
+    }
+
+    /**
+     * Logs the board shift action with metadata including the inserted tile.
+     * Determines which tile was inserted based on the shift direction.
+     *
+     * @param index     the row or column index that was shifted
+     * @param direction the direction of the shift
+     * @param player    the player who performed the shift
+     */
+    private void logShiftAction(int index, Direction direction, Player player) {
+        java.util.Map<String, String> meta = new java.util.HashMap<>();
+        meta.put("index", String.valueOf(index));
+        meta.put("direction", direction.toString());
+
+        Tile insertedTile = getInsertedTile(index, direction);
+        if (insertedTile != null) {
+            meta.put("insertedTile", gameLogger.serializeTile(insertedTile));
+        }
+
+        gameLogger.log(GameLogType.SHIFT_BOARD, "Player shifted board " + direction + " at index " + index, player,
+                meta);
+    }
+
+    /**
+     * Determines which tile was inserted into the board after a shift operation.
+     *
+     * @param index     the row or column index that was shifted
+     * @param direction the direction of the shift
+     * @return the tile that was inserted, or null if direction is invalid
+     */
+    private Tile getInsertedTile(int index, Direction direction) {
+        return switch (direction) {
+            case DOWN -> board.getTileAt(0, index);
+            case UP -> board.getTileAt(board.getHeight() - 1, index);
+            case RIGHT -> board.getTileAt(index, 0);
+            case LEFT -> board.getTileAt(index, board.getWidth() - 1);
+        };
     }
 
     private PlayerColor getNextColor() {
