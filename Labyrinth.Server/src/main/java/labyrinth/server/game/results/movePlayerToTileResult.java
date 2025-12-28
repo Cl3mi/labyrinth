@@ -4,7 +4,9 @@ public record movePlayerToTileResult(
         boolean moveSuccess,
         int distanceMoved,
         boolean treasureCollected,
-        boolean gameOver
+        boolean gameOver,
+        boolean runnerAchieved
 ) {
 
 }
+

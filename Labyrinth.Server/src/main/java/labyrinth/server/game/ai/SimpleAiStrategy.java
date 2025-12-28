@@ -26,13 +26,13 @@ public class SimpleAiStrategy implements AiStrategy {
                     if (bestResult != null) {
                         System.out.println(
                                 "AI executing shift: " + bestResult.shiftType + " index " + bestResult.shiftIndex);
-                        boolean shiftSuccess = switch (bestResult.shiftType) {
+                        var shiftResult = switch (bestResult.shiftType) {
                             case UP -> game.shift(bestResult.shiftIndex, Direction.UP, realPlayer);
                             case DOWN -> game.shift(bestResult.shiftIndex, Direction.DOWN, realPlayer);
                             case LEFT -> game.shift(bestResult.shiftIndex, Direction.LEFT, realPlayer);
                             case RIGHT -> game.shift(bestResult.shiftIndex, Direction.RIGHT, realPlayer);
                         };
-                        if (!shiftSuccess)
+                        if (!shiftResult.shiftSuccess())
                             forceRandomShift(game, realPlayer);
                     } else {
                         forceRandomShift(game, realPlayer);
@@ -67,7 +67,7 @@ public class SimpleAiStrategy implements AiStrategy {
 
     private void forceRandomShift(Game game, Player player) {
         try {
-            if (!game.shift(1, Direction.RIGHT, player)) {
+            if (!game.shift(1, Direction.RIGHT, player).shiftSuccess()) {
                 game.shift(0, Direction.DOWN, player);
             }
         } catch (Exception e) {
