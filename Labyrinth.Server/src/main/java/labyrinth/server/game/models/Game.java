@@ -41,7 +41,7 @@ public class Game {
     private final List<Player> players;
     private RoomState roomState;
 
-    private BonusTypes activeBonus;
+    private BonusState activeBonusState;
 
     @Setter(AccessLevel.NONE)
     @Getter(AccessLevel.NONE)
@@ -77,6 +77,7 @@ public class Game {
         this.roomState = RoomState.LOBBY;
         this.board = null;
         this.gameConfig = GameConfig.getDefault();
+        this.activeBonusState = NoBonusActive.getInstance();
         this.turnController = new labyrinth.server.game.services.TurnController(nextTurnTimer, gameLogger);
         this.movementManager = new labyrinth.server.game.services.MovementManager();
         this.achievementService = new labyrinth.server.game.services.AchievementService();
@@ -182,8 +183,8 @@ public class Game {
     }
 
     /**
-     * Starts the game. This method could be extended to initialize
-     * player positions, shuffle treasure treasureCards, and set up the board.
+     * Starts the game. This method initializes players, distributes treasure cards,
+     * sets up the board, and transitions the game to IN_GAME state.
      */
     public void startGame(GameConfig gameConfig, List<TreasureCard> treasureCards, Board board) {
         if (roomState != RoomState.LOBBY) {
@@ -199,50 +200,19 @@ public class Game {
         }
 
         this.gameConfig = Objects.requireNonNullElseGet(gameConfig, GameConfig::getDefault);
-        // Treasure cards created - logged via gameLogger if needed
 
-        var playerToAssignCardsToIndex = 0;
-        do {
-            TreasureCard card = treasureCards.getFirst();
-            board.placeRandomTreasure(card);
-
-            Player player = players.get(playerToAssignCardsToIndex);
-            player.getAssignedTreasureCards().add(card);
-            playerToAssignCardsToIndex++;
-            if (playerToAssignCardsToIndex >= players.size()) {
-                playerToAssignCardsToIndex = 0;
-            }
-
-            treasureCards.removeFirst();
-        } while (!treasureCards.isEmpty());
+        distributeTreasureCards(treasureCards, board);
 
         labyrinth.server.game.factories.BonusFactory bonusFactory = new labyrinth.server.game.factories.BonusFactory();
-        var bonuses = bonusFactory.createBonuses(gameConfig.totalBonusCount());
+        var bonuses = bonusFactory.createBonuses(this.gameConfig.totalBonusCount());
         board.placeRandomBonuses(bonuses);
 
-        for (int i = 0; i < players.size(); i++) {
-            Player player = players.get(i);
-            var position = gameConfig.getStartPosition(i);
-
-            Tile startingTile = board.getTileAt(position);
-            // Player start positions logged in the startMeta below
-            player.setHomeTile(startingTile);
-            player.setCurrentTile(startingTile);
-        }
+        initializePlayerPositions(board, this.gameConfig);
 
         this.board = board;
         this.board.setPlayers(players);
 
-        java.util.Map<String, String> startMeta = new java.util.HashMap<>();
-        startMeta.put("boardState", gameLogger.serializeBoard(board));
-
-        for (Player p : players) {
-            startMeta.put("player_" + p.getId(),
-                    p.getUsername() + "@" + gameConfig.getStartPosition(players.indexOf(p)));
-        }
-
-        gameLogger.log(GameLogType.START_GAME, "Game started in GameLobby with " + players.size() + " players.", null,
-                startMeta);
+        logGameStart(board, this.gameConfig);
 
         if (getCurrentPlayer().isAiActive()) {
             this.aiStrategy.performTurn(this, getCurrentPlayer());
@@ -283,7 +253,7 @@ public class Game {
         guardFor(player);
         guardFor(RoomState.IN_GAME);
 
-        var fixedBonusActive = activeBonus == BonusTypes.PUSH_FIXED;
+        var fixedBonusActive = activeBonusState.isOfType(BonusTypes.PUSH_FIXED);
 
         if (fixedBonusActive) {
             // TODO: do not allow to shift border rows/columns because it would move home
@@ -301,7 +271,7 @@ public class Game {
             return new ShiftResult(false, false);
         }
 
-        handleBonusAfterShift(fixedBonusActive);
+        handleBonusAfterShift();
 
         player.getStatistics().increaseScore(PointRewards.REWARD_SHIFT_TILE);
         player.getStatistics().increaseTilesPushed(1);
@@ -409,19 +379,16 @@ public class Game {
      * Handles bonus state transitions after a successful board shift.
      * Consumes the PUSH_FIXED bonus if it was active, or allows another push
      * if PUSH_TWICE bonus is active.
-     *
-     * @param fixedBonusWasActive whether the PUSH_FIXED bonus was active for this shift
      */
-    private void handleBonusAfterShift(boolean fixedBonusWasActive) {
-        if (fixedBonusWasActive) {
-            activeBonus = null;
-        }
+    private void handleBonusAfterShift() {
+        boolean isPushTwice = activeBonusState.isOfType(BonusTypes.PUSH_TWICE);
 
-        turnController.setMoveState(MoveState.MOVE);
+        activeBonusState = activeBonusState.consume();
 
-        if (activeBonus == BonusTypes.PUSH_TWICE) {
+        if (isPushTwice) {
             turnController.setMoveState(MoveState.PLACE_TILE);
-            activeBonus = null;
+        } else {
+            turnController.setMoveState(MoveState.MOVE);
         }
     }
 
@@ -463,6 +430,67 @@ public class Game {
         };
     }
 
+    /**
+     * Distributes treasure cards to players in round-robin fashion and places them on the board.
+     *
+     * @param treasureCards the list of treasure cards to distribute
+     * @param board         the board to place treasures on
+     */
+    private void distributeTreasureCards(List<TreasureCard> treasureCards, Board board) {
+        var playerToAssignCardsToIndex = 0;
+        while (!treasureCards.isEmpty()) {
+            TreasureCard card = treasureCards.getFirst();
+            board.placeRandomTreasure(card);
+
+            Player player = players.get(playerToAssignCardsToIndex);
+            player.getAssignedTreasureCards().add(card);
+
+            playerToAssignCardsToIndex++;
+            if (playerToAssignCardsToIndex >= players.size()) {
+                playerToAssignCardsToIndex = 0;
+            }
+
+            treasureCards.removeFirst();
+        }
+    }
+
+    /**
+     * Initializes player positions on the board based on the game configuration.
+     * Sets both the home tile and current tile for each player.
+     *
+     * @param board      the board to place players on
+     * @param gameConfig the game configuration containing start positions
+     */
+    private void initializePlayerPositions(Board board, GameConfig gameConfig) {
+        for (int i = 0; i < players.size(); i++) {
+            Player player = players.get(i);
+            var position = gameConfig.getStartPosition(i);
+
+            Tile startingTile = board.getTileAt(position);
+            player.setHomeTile(startingTile);
+            player.setCurrentTile(startingTile);
+        }
+    }
+
+    /**
+     * Logs the game start event with board state and player positions.
+     *
+     * @param board      the initialized board
+     * @param gameConfig the game configuration
+     */
+    private void logGameStart(Board board, GameConfig gameConfig) {
+        java.util.Map<String, String> startMeta = new java.util.HashMap<>();
+        startMeta.put("boardState", gameLogger.serializeBoard(board));
+
+        for (Player p : players) {
+            startMeta.put("player_" + p.getId(),
+                    p.getUsername() + "@" + gameConfig.getStartPosition(players.indexOf(p)));
+        }
+
+        gameLogger.log(GameLogType.START_GAME, "Game started in GameLobby with " + players.size() + " players.", null,
+                startMeta);
+    }
+
     private PlayerColor getNextColor() {
         for (PlayerColor color : PlayerColor.values()) {
             boolean used = players.stream()
@@ -472,6 +500,26 @@ public class Game {
             }
         }
         throw new IllegalStateException("No available colors left");
+    }
+
+    /**
+     * Sets the active bonus state. Used by bonus effect implementations.
+     * Provided for backward compatibility with existing bonus effects.
+     *
+     * @param bonusType the type of bonus to activate
+     */
+    public void setActiveBonus(BonusTypes bonusType) {
+        this.activeBonusState = new ActiveBonus(bonusType);
+    }
+
+    /**
+     * Gets the currently active bonus type, if any.
+     * Provided for backward compatibility with tests.
+     *
+     * @return the active bonus type, or null if no bonus is active
+     */
+    public BonusTypes getActiveBonus() {
+        return activeBonusState.getBonusType().orElse(null);
     }
 
     public OffsetDateTime getGameEndTime() {
