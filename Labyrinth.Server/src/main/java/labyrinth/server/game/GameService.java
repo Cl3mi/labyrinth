@@ -135,8 +135,7 @@ public class GameService {
             var result = game.movePlayerToTile(row, col, player);
             boolean moveSuccess = result.moveSuccess();
 
-            // TODO: this is just an example, replace with actual achievement unlocking logic
-            if (moveSuccess) {
+            if (result.runnerAchieved()) {
                 var achievementEvent = new AchievementUnlockedEvent(player, Achievement.RUNNER);
                 eventPublisher.publishAsync(achievementEvent);
             }
@@ -169,7 +168,14 @@ public class GameService {
     public boolean shift(int index, Direction direction, Player player) {
         rwLock.writeLock().lock();
         try {
-            return game.shift(index, direction, player);
+            var pushResult = game.shift(index, direction, player);
+
+            if (pushResult.pusherAchieved()) {
+                var achievementEvent = new AchievementUnlockedEvent(player, Achievement.PUSHER);
+                eventPublisher.publishAsync(achievementEvent);
+            }
+
+            return pushResult.shiftSuccess();
         } finally {
             rwLock.writeLock().unlock();
         }

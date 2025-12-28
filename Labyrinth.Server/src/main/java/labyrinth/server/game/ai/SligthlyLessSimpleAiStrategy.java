@@ -49,14 +49,14 @@ public class SligthlyLessSimpleAiStrategy implements AiStrategy {
 
         System.out.println("AI executing shift: " + result.shiftType + " index " + result.shiftIndex);
 
-        boolean success = switch (result.shiftType) {
+        var shiftResult = switch (result.shiftType) {
             case UP    -> game.shift(result.shiftIndex, Direction.UP, player);
             case DOWN  -> game.shift(result.shiftIndex, Direction.DOWN, player);
             case LEFT  -> game.shift(result.shiftIndex, Direction.LEFT, player);
             case RIGHT -> game.shift(result.shiftIndex, Direction.RIGHT, player);
         };
 
-        if (!success) {
+        if (!shiftResult.shiftSuccess()) {
             forceRandomShift(game, player);
         }
 
@@ -102,7 +102,7 @@ public class SligthlyLessSimpleAiStrategy implements AiStrategy {
 
     private void forceRandomShift(Game game, Player player) {
         try {
-            if (!game.shift(1, Direction.RIGHT, player)) {
+            if (!game.shift(1, Direction.RIGHT, player).shiftSuccess()) {
                 game.shift(0, Direction.DOWN, player);
             }
         } catch (Exception e) {

@@ -3,13 +3,11 @@ package labyrinth.server.game.models;
 import labyrinth.contracts.models.PlayerColor;
 import labyrinth.server.game.abstractions.IGameTimer;
 import labyrinth.server.game.constants.PointRewards;
-import labyrinth.server.game.enums.BonusTypes;
-import labyrinth.server.game.enums.Direction;
-import labyrinth.server.game.enums.MoveState;
-import labyrinth.server.game.enums.RoomState;
+import labyrinth.server.game.enums.*;
 import labyrinth.server.game.models.records.GameConfig;
 import labyrinth.server.game.models.records.Position;
 import labyrinth.server.game.results.movePlayerToTileResult;
+import labyrinth.server.game.results.shiftResult;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.Setter;
@@ -192,7 +190,7 @@ public class Game {
         board.getExtraTile().rotate();
     }
 
-    public boolean shift(int index, Direction direction, Player player) {
+    public shiftResult shift(int index, Direction direction, Player player) {
         guardFor(MoveState.PLACE_TILE);
         guardFor(player);
         guardFor(RoomState.IN_GAME);
@@ -211,7 +209,7 @@ public class Game {
         };
 
         if (!res) {
-            return false;
+            return new shiftResult(false, false);
         }
 
         if (fixedBonusActive) {
@@ -228,7 +226,14 @@ public class Game {
         player.getStatistics().increaseScore(PointRewards.REWARD_SHIFT_TILE);
         player.getStatistics().increaseTilesPushed(1);
 
-        return true;
+        var statistics = player.getStatistics();
+        var pusherAchieved = false;
+        if(!statistics.getCollectedAchievements().contains(Achievement.PUSHER) && statistics.getTilesPushed() >= 20){
+            pusherAchieved = true;
+            statistics.collectAchievement(Achievement.PUSHER);
+        }
+
+        return new shiftResult(true, pusherAchieved);
     }
 
     public void toggleAiForPlayer(Player player) {
@@ -319,7 +324,7 @@ public class Game {
 
         System.out.println("Moved " + distanceMoved + " steps");
         if (distanceMoved == -1) {
-            return new movePlayerToTileResult(false, distanceMoved, false, false);
+            return new movePlayerToTileResult(false, distanceMoved, false, false, false);
         }
 
         player.getStatistics().increaseScore(PointRewards.REWARD_MOVE * distanceMoved);
@@ -339,8 +344,15 @@ public class Game {
 
         var treasureCollected = currentTreasureCardAfterMove != currentTreasureCardBeforeMove;
 
+        var statistics = player.getStatistics();
+        var runnerAchieved = false;
+        if(!statistics.getCollectedAchievements().contains(Achievement.RUNNER) && statistics.getStepsTaken() >= 200){
+            runnerAchieved = true;
+            statistics.collectAchievement(Achievement.RUNNER);
+        }
+
         nextPlayer();
-        return new movePlayerToTileResult(true, distanceMoved, treasureCollected, gameOver);
+        return new movePlayerToTileResult(true, distanceMoved, treasureCollected, gameOver, runnerAchieved);
     }
 
     private void gameOver(){
