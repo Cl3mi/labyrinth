@@ -57,6 +57,8 @@ public class Game {
 
     private final labyrinth.server.game.services.MovementManager movementManager;
 
+    private final labyrinth.server.game.services.AchievementService achievementService;
+
     public java.util.List<labyrinth.server.game.models.records.GameLogEntry> getExecutionLogs() {
         return gameLogger.getExecutionLogs();
     }
@@ -77,6 +79,7 @@ public class Game {
         this.gameConfig = GameConfig.getDefault();
         this.turnController = new labyrinth.server.game.services.TurnController(nextTurnTimer, gameLogger);
         this.movementManager = new labyrinth.server.game.services.MovementManager();
+        this.achievementService = new labyrinth.server.game.services.AchievementService();
 
         // Initialize Bonus Strategies
         bonusEffects.put(BonusTypes.BEAM, new labyrinth.server.game.bonuses.BeamBonusEffect());
@@ -312,12 +315,7 @@ public class Game {
         player.getStatistics().increaseScore(PointRewards.REWARD_SHIFT_TILE);
         player.getStatistics().increaseTilesPushed(1);
 
-        var statistics = player.getStatistics();
-        var pusherAchieved = false;
-        if (!statistics.getCollectedAchievements().contains(Achievement.PUSHER) && statistics.getTilesPushed() >= 20) {
-            pusherAchieved = true;
-            statistics.collectAchievement(Achievement.PUSHER);
-        }
+        var pusherAchieved = achievementService.checkPusherAchievement(player).isPresent();
 
         java.util.Map<String, String> meta = new java.util.HashMap<>();
         meta.put("index", String.valueOf(index));
@@ -389,12 +387,7 @@ public class Game {
             gameLogger.log(GameLogType.COLLECT_TREASURE, "Player collected treasure", player, null);
         }
 
-        var statistics = player.getStatistics();
-        var runnerAchieved = false;
-        if (!statistics.getCollectedAchievements().contains(Achievement.RUNNER) && statistics.getStepsTaken() >= 200) {
-            runnerAchieved = true;
-            statistics.collectAchievement(Achievement.RUNNER);
-        }
+        var runnerAchieved = achievementService.checkRunnerAchievement(player).isPresent();
 
         nextPlayer();
         return new MovePlayerToTileResult(true, distanceMoved, treasureCollected, gameOver, runnerAchieved);

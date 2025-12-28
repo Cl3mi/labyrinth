@@ -1,12 +1,10 @@
 package labyrinth.server.game.models;
 
-import labyrinth.server.game.constants.PointRewards;
 import labyrinth.server.game.enums.BonusTypes;
 import labyrinth.server.game.enums.Direction;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.awt.*;
 import java.util.EnumSet;
 import java.util.Set;
 
@@ -85,31 +83,6 @@ public class Tile {
      */
     public boolean isConnectedTo(Tile neighbor, Direction direction) {
         return entrances.contains(direction) && neighbor.getEntrances().contains(direction.opposite());
-    }
-
-    /**
-     * @deprecated Use MovementManager#processPlayerStepOnTile instead.
-     */
-    @Deprecated(forRemoval = true)
-    public void getSteppedOnBy(Player player) {
-        if (treasureCard != null) {
-            if (player.getCurrentTreasureCard() == treasureCard) {
-                System.out.println("Card: " + treasureCard.getTreasureName());
-                treasureCard.collect();
-                player.getStatistics().increaseScore(PointRewards.REWARD_TREASURE);
-                player.getStatistics().increaseTreasuresCollected(1);
-
-                this.treasureCard = null;
-            }
-        }
-
-        if (bonus != null) {
-            System.out.println("Bonus collected: " + bonus);
-            player.getBonuses().add(bonus);
-            this.bonus = null;
-        }
-
-        player.setCurrentTile(this);
     }
 
     @Override
