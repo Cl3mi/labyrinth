@@ -2,12 +2,15 @@ package labyrinth.server.game.models;
 
 import labyrinth.contracts.models.PlayerColor;
 import labyrinth.server.game.abstractions.IGameTimer;
+import labyrinth.server.game.ai.AiStrategy;
+import labyrinth.server.game.bonuses.IBonusEffect;
 import labyrinth.server.game.constants.PointRewards;
 import labyrinth.server.game.enums.*;
 import labyrinth.server.game.models.records.GameConfig;
 import labyrinth.server.game.models.records.Position;
-import labyrinth.server.game.results.movePlayerToTileResult;
-import labyrinth.server.game.results.shiftResult;
+import labyrinth.server.game.results.MovePlayerToTileResult;
+import labyrinth.server.game.results.ShiftResult;
+import labyrinth.server.game.services.GameLogger;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.Setter;
@@ -28,10 +31,9 @@ public class Game {
 
     private final int MAX_PLAYERS = 4;
 
-    private int currentPlayerIndex;
-    private MoveState currentMoveState = MoveState.PLACE_TILE;
-
     private IGameTimer nextTurnTimer;
+
+    private final labyrinth.server.game.services.TurnController turnController;
 
     @Setter(lombok.AccessLevel.NONE)
     private Board board;
@@ -53,15 +55,19 @@ public class Game {
 
     private final labyrinth.server.game.services.GameLogger gameLogger;
 
+    private final labyrinth.server.game.services.MovementManager movementManager;
+
     public java.util.List<labyrinth.server.game.models.records.GameLogEntry> getExecutionLogs() {
         return gameLogger.getExecutionLogs();
     }
 
-    private final java.util.Map<BonusTypes, labyrinth.server.game.bonuses.IBonusEffect> bonusEffects = new java.util.EnumMap<>(
-            BonusTypes.class);
+    private final java.util.Map<BonusTypes, IBonusEffect> bonusEffects = new java.util.EnumMap<>(BonusTypes.class);
 
-    public Game(IGameTimer nextTurnTimer, labyrinth.server.game.ai.AiStrategy aiStrategy,
-            labyrinth.server.game.services.GameLogger gameLogger) {
+    public Game(
+            IGameTimer nextTurnTimer,
+            AiStrategy aiStrategy,
+            GameLogger gameLogger
+    ) {
         this.nextTurnTimer = nextTurnTimer;
         this.aiStrategy = aiStrategy;
         this.gameLogger = gameLogger;
@@ -69,7 +75,8 @@ public class Game {
         this.roomState = RoomState.LOBBY;
         this.board = null;
         this.gameConfig = GameConfig.getDefault();
-        this.currentPlayerIndex = 0;
+        this.turnController = new labyrinth.server.game.services.TurnController(nextTurnTimer, gameLogger);
+        this.movementManager = new labyrinth.server.game.services.MovementManager();
 
         // Initialize Bonus Strategies
         bonusEffects.put(BonusTypes.BEAM, new labyrinth.server.game.bonuses.BeamBonusEffect());
@@ -86,14 +93,13 @@ public class Game {
         if (result) {
             java.util.Map<String, String> meta = new java.util.HashMap<>();
             meta.put("bonusType", type.toString());
-            // Could add args to metadata if needed
             gameLogger.log(GameLogType.USE_BONUS, "Player used bonus " + type, getCurrentPlayer(), meta);
         }
         return result;
     }
 
-    // Kept for backward compatibility / API contract compliance, but delegates to
-    // strategy
+    // Kept for backward compatibility / API contract compliance, but delegates to strategy
+    // Should be cleaned up I guess?
     public boolean useBeamBonus(int row, int col, Player player) {
         guardFor(RoomState.IN_GAME);
         guardFor(player);
@@ -226,8 +232,7 @@ public class Game {
 
         java.util.Map<String, String> startMeta = new java.util.HashMap<>();
         startMeta.put("boardState", gameLogger.serializeBoard(board));
-        // Also log initial player positions maybe? They are effectively on home tiles
-        // which are in board, but explicit is nice.
+
         for (Player p : players) {
             startMeta.put("player_" + p.getId(),
                     p.getUsername() + "@" + gameConfig.getStartPosition(players.indexOf(p)));
@@ -245,7 +250,15 @@ public class Game {
     }
 
     public Player getCurrentPlayer() {
-        return players.get(currentPlayerIndex);
+        return turnController.getCurrentPlayer(players);
+    }
+
+    public int getCurrentPlayerIndex() {
+        return turnController.getCurrentPlayerIndex();
+    }
+
+    public MoveState getCurrentMoveState() {
+        return turnController.getCurrentMoveState();
     }
 
     public Position getCurrentPositionOfPlayer(Player player) {
@@ -262,7 +275,7 @@ public class Game {
         board.getExtraTile().rotate();
     }
 
-    public shiftResult shift(int index, Direction direction, Player player) {
+    public ShiftResult shift(int index, Direction direction, Player player) {
         guardFor(MoveState.PLACE_TILE);
         guardFor(player);
         guardFor(RoomState.IN_GAME);
@@ -282,17 +295,17 @@ public class Game {
         };
 
         if (!res) {
-            return new shiftResult(false, false);
+            return new ShiftResult(false, false);
         }
 
         if (fixedBonusActive) {
             activeBonus = null;
         }
 
-        currentMoveState = MoveState.MOVE;
+        turnController.setMoveState(MoveState.MOVE);
 
         if (activeBonus == BonusTypes.PUSH_TWICE) {
-            currentMoveState = MoveState.PLACE_TILE;
+            turnController.setMoveState(MoveState.PLACE_TILE);
             activeBonus = null;
         }
 
@@ -309,28 +322,7 @@ public class Game {
         java.util.Map<String, String> meta = new java.util.HashMap<>();
         meta.put("index", String.valueOf(index));
         meta.put("direction", direction.toString());
-        // Capture extra tile BEFORE shift (which effectively becomes the one pushed in)
-        // Wait, logic says: shift methods use 'extraTile' to put into board.
-        // So we should log the CURRENT extraTile before the shift happens?
-        // The shift method swaps extraTile with the one pushed out.
-        // BUT the tool call logic here happens AFTER the shift method returns!
-        // See: boolean res = switch... then if(!res) return... then log.
-        // So at this point 'extraTile' is the one that got pushed OUT.
-        // The one that got pushed IN was the 'extraTile' before this function call.
-        // However, we want to know what tile WAS pushed in.
-        // Since we can't easily go back in time, we should probably log the board state
-        // or just trust
-        // that if we have initial state + all operations, we can reconstruct.
-        // USER REQUEST said: "Also how the tile that gets pushed in is shaped"
-        // Since we are logging AFTER the action, we missed the state of the tile that
-        // was pushed in (it is now on the board).
-        // Actually, we can just find it on the board?
-        // If we shift column down, the new tile is at (0, col).
-        // If we shift column up, the new tile is at (height-1, col).
-        // If we shift row right, new is at (row, 0).
-        // If we shift row left, new is at (row, width-1).
 
-        // Let's grab the tile that was just inserted.
         Tile insertedTile = null;
         if (direction == Direction.DOWN)
             insertedTile = board.getTileAt(0, index);
@@ -348,25 +340,24 @@ public class Game {
         gameLogger.log(GameLogType.SHIFT_BOARD, "Player shifted board " + direction + " at index " + index, player,
                 meta);
 
-        return new shiftResult(true, pusherAchieved);
+        return new ShiftResult(true, pusherAchieved);
     }
 
     public void toggleAiForPlayer(Player player) {
         player.setAiActive(!player.isAiActive());
     }
 
-    public movePlayerToTileResult movePlayerToTile(int row, int col, Player player) {
+    public MovePlayerToTileResult movePlayerToTile(int row, int col, Player player) {
         guardFor(RoomState.IN_GAME);
         guardFor(MoveState.MOVE);
         guardFor(player);
 
         var currentTreasureCardBeforeMove = player.getCurrentTreasureCard();
-        var distanceMoved = board.movePlayerToTile(player, row, col);
+        var distanceMoved = board.movePlayerToTile(player, row, col, movementManager);
 
-        // removed LOGGER.info
         if (distanceMoved == -1) {
             // Move failed - no logging needed for failed attempt
-            return new movePlayerToTileResult(false, distanceMoved, false, false, false);
+            return new MovePlayerToTileResult(false, distanceMoved, false, false, false);
         }
 
         java.util.Map<String, String> meta = new java.util.HashMap<>();
@@ -406,7 +397,7 @@ public class Game {
         }
 
         nextPlayer();
-        return new movePlayerToTileResult(true, distanceMoved, treasureCollected, gameOver, runnerAchieved);
+        return new MovePlayerToTileResult(true, distanceMoved, treasureCollected, gameOver, runnerAchieved);
     }
 
     private void gameOver() {
@@ -414,49 +405,23 @@ public class Game {
     }
 
     private synchronized void nextPlayer() {
-        guardFor(RoomState.IN_GAME);
-        nextTurnTimer.stop();
-
-        currentPlayerIndex++;
-        if (currentPlayerIndex >= players.size()) {
-            currentPlayerIndex = 0;
-        }
-        // LOGGER handled by logGameAction
-        gameLogger.log(GameLogType.NEXT_TURN, "New Player to move: " + getCurrentPlayer().getUsername(),
-                getCurrentPlayer(), null);
-        currentMoveState = MoveState.PLACE_TILE;
-
-        if (getCurrentPlayer().isAiActive()) {
-            this.aiStrategy.performTurn(this, getCurrentPlayer());
-        } else {
-            nextTurnTimer.start(gameConfig.turnTimeInSeconds(), this::nextPlayer);
-        }
+        turnController.advanceToNextPlayer(
+                            players,
+                            roomState,
+                            gameConfig,
+                      player -> aiStrategy.performTurn(this, player));
     }
 
     private void guardFor(MoveState moveState) {
-        if (board.isFreeRoam()) {
-            return;
-        }
-
-        if (this.currentMoveState != moveState) {
-            throw new IllegalStateException("Illegal move state");
-        }
+        turnController.guardForMoveState(board, moveState);
     }
 
     private void guardFor(RoomState roomState) {
-        if (this.roomState != roomState) {
-            throw new IllegalStateException("Illegal room state");
-        }
+        turnController.guardForRoomState(this.roomState, roomState);
     }
 
     private void guardFor(Player playerToMove) {
-        if (board.isFreeRoam()) {
-            return;
-        }
-        if (!players.get(currentPlayerIndex).equals(playerToMove)) {
-            throw new IllegalStateException("Illegal player. Expected " + players.get(currentPlayerIndex).getId()
-                    + " but got " + playerToMove.getId());
-        }
+        turnController.guardForPlayer(board, players, playerToMove);
     }
 
     private boolean isUsernameAvailable(String username) {

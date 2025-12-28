@@ -55,10 +55,10 @@ public class Testing {
 
         var p4 = game.getPlayers().get(3);
 
-        // game.toggleAiForPlayer(p1);
-        // game.toggleAiForPlayer(p2);
-        // game.toggleAiForPlayer(p3);
-        // game.toggleAiForPlayer(p4);
+         game.toggleAiForPlayer(p1);
+         game.toggleAiForPlayer(p2);
+         game.toggleAiForPlayer(p3);
+         game.toggleAiForPlayer(p4);
 
         game.startGame(gameConfig, cards, board);
 

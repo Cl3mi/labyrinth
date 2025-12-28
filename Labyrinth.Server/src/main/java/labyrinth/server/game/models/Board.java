@@ -4,6 +4,7 @@ import labyrinth.server.game.abstractions.IBoardEventListener;
 import labyrinth.server.game.enums.*;
 import labyrinth.server.game.events.BoardEvent;
 import labyrinth.server.game.models.records.Position;
+import labyrinth.server.game.services.MovementManager;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -276,18 +277,22 @@ public class Board {
         return isTopLeft || isTopRight || isBottomLeft || isBottomRight;
     }
 
-    int movePlayerToTile(Player player, int targetRow, int targetCol) {
+    int movePlayerToTile(
+            Player player,
+            int targetRow,
+            int targetCol,
+            MovementManager movementManager
+    ) {
         Tile currentTile = player.getCurrentTile();
         Tile targetTile = tileMap.getForward(new Position(targetRow, targetCol));
 
         Position currPos = (currentTile != null) ? getPositionOfTile(currentTile) : null;
         LOGGER.info("Current position: " + (currPos != null ? currPos.row() + "/" + currPos.column() : "none"));
         LOGGER.info("Moving " + player.getUsername() + " to " + targetRow + "/" + targetCol);
-        for (Player other : players) {
-            if (other != player && other.getCurrentTile() == targetTile) {
-                LOGGER.info("Cant move a player is already on the target tile!");
-                return -1;
-            }
+
+        if (movementManager.isTileBlockedByPlayer(targetTile, players, player)) {
+            LOGGER.info("Cant move - a player is already on the target tile!");
+            return -1;
         }
 
         Set<Tile> reachable = getReachableTiles(player);
@@ -296,7 +301,7 @@ public class Board {
             return -1;
         }
 
-        targetTile.getSteppedOnBy(player);
+        movementManager.processPlayerStepOnTile(player, targetTile);
         var distance = graph.getDistance(currentTile, targetTile);
 
         Position newPos = getPositionOfTile(targetTile);

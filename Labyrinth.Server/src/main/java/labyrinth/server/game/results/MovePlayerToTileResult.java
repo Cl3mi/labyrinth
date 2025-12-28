@@ -1,6 +1,6 @@
 package labyrinth.server.game.results;
 
-public record movePlayerToTileResult(
+public record MovePlayerToTileResult(
         boolean moveSuccess,
         int distanceMoved,
         boolean treasureCollected,

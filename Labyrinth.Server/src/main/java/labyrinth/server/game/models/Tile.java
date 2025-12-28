@@ -87,6 +87,10 @@ public class Tile {
         return entrances.contains(direction) && neighbor.getEntrances().contains(direction.opposite());
     }
 
+    /**
+     * @deprecated Use MovementManager#processPlayerStepOnTile instead.
+     */
+    @Deprecated(forRemoval = true)
     public void getSteppedOnBy(Player player) {
         if (treasureCard != null) {
             if (player.getCurrentTreasureCard() == treasureCard) {
@@ -98,7 +102,7 @@ public class Tile {
                 this.treasureCard = null;
             }
         }
-        
+
         if (bonus != null) {
             System.out.println("Bonus collected: " + bonus);
             player.getBonuses().add(bonus);
