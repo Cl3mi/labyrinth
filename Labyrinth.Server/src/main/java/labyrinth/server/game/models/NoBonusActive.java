@@ -13,7 +13,6 @@ public final class NoBonusActive implements BonusState {
     private static final NoBonusActive INSTANCE = new NoBonusActive();
 
     private NoBonusActive() {
-        // Private constructor for singleton
     }
 
     /**
