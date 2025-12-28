@@ -19,6 +19,7 @@ import java.util.*;
 @Getter
 public class Board {
 
+    private static final java.util.logging.Logger LOGGER = java.util.logging.Logger.getLogger(Board.class.getName());
     private final int width;
     private final int height;
     private final BiMap<Position, Tile> tileMap;
@@ -117,7 +118,6 @@ public class Board {
         return tileMap.getBackward(tile);
     }
 
-
     public boolean shiftColumnDown(int columnIndex, boolean fixedBonusActive) {
         if (colContainsFixedTile(columnIndex) && !fixedBonusActive) {
             return false;
@@ -200,7 +200,7 @@ public class Board {
         for (int row = 0; row < height; row++) {
             Tile tile = tileMap.getForward(new Position(row, columnIndex));
             if (tile.isFixed() && !freeRoam) {
-                System.out.println("Column " + columnIndex + " contains fixed tiles. Cannot shift.");
+                LOGGER.info("Column " + columnIndex + " contains fixed tiles. Cannot shift.");
                 return true;
             }
         }
@@ -211,7 +211,7 @@ public class Board {
         for (int col = 0; col < width; col++) {
             Tile tile = tileMap.getForward(new Position(rowIndex, col));
             if (tile.isFixed() && !freeRoam) {
-                System.out.println("Row " + rowIndex + " contains fixed tiles. Cannot shift.");
+                LOGGER.info("Row " + rowIndex + " contains fixed tiles. Cannot shift.");
                 return true;
             }
         }
@@ -244,7 +244,7 @@ public class Board {
             tile = tileMap.getForward(new Position(row, col));
             tileHasTreasure = tile != null && tile.getTreasureCard() != null;
         } while (isCornerCoordinate(row, col) || tileHasTreasure);
-        System.out.println("Placing " + treasureCard.getTreasureName() + " at " + row + "/" + col);
+        LOGGER.info("Placing " + treasureCard.getTreasureName() + " at " + row + "/" + col);
 
         tile.setTreasureCard(treasureCard);
     }
@@ -263,8 +263,8 @@ public class Board {
                 // Check if tile has treasure OR bonus
                 tileIsOccupied = tile != null && (tile.getTreasureCard() != null || tile.getBonus() != null);
             } while (isCornerCoordinate(row, col) || tileIsOccupied);
-            
-            System.out.println("Placing bonus " + bonus + " at " + row + "/" + col);
+
+            LOGGER.info("Placing bonus " + bonus + " at " + row + "/" + col);
             tile.setBonus(bonus);
         }
     }
@@ -283,18 +283,18 @@ public class Board {
         Tile targetTile = tileMap.getForward(new Position(targetRow, targetCol));
 
         Position currPos = (currentTile != null) ? getPositionOfTile(currentTile) : null;
-        System.out.println("Current position: " + (currPos != null ? currPos.row() + "/" + currPos.column() : "none"));
-        System.out.println("Moving " + player.getUsername() + " to " + targetRow + "/" + targetCol);
+        LOGGER.info("Current position: " + (currPos != null ? currPos.row() + "/" + currPos.column() : "none"));
+        LOGGER.info("Moving " + player.getUsername() + " to " + targetRow + "/" + targetCol);
         for (Player other : players) {
             if (other != player && other.getCurrentTile() == targetTile) {
-                System.out.println("Cant move a player is already on the target tile!");
+                LOGGER.info("Cant move a player is already on the target tile!");
                 return -1;
             }
         }
 
         Set<Tile> reachable = getReachableTiles(player);
         if (!reachable.contains(targetTile)) {
-            System.out.println("Tile is not reachable!");
+            LOGGER.info("Tile is not reachable!");
             return -1;
         }
 
@@ -302,7 +302,7 @@ public class Board {
         var distance = graph.getDistance(currentTile, targetTile);
 
         Position newPos = getPositionOfTile(targetTile);
-        System.out.println("Player moved to " + (newPos != null ? newPos : "unknown"));
+        LOGGER.info("Player moved to " + (newPos != null ? newPos : "unknown"));
         currentPlayerIndex++;
         if (currentPlayerIndex >= players.size()) {
             currentPlayerIndex = 0;

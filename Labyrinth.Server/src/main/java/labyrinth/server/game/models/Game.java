@@ -49,13 +49,64 @@ public class Game {
     @Getter(AccessLevel.NONE)
     private OffsetDateTime gameStartTime;
 
-    public Game(IGameTimer nextTurnTimer) {
+    private final labyrinth.server.game.ai.AiStrategy aiStrategy;
+
+    private static final java.util.logging.Logger LOGGER = java.util.logging.Logger.getLogger(Game.class.getName());
+
+    private final java.util.Map<BonusTypes, labyrinth.server.game.bonuses.IBonusEffect> bonusEffects = new java.util.EnumMap<>(
+            BonusTypes.class);
+
+    public Game(IGameTimer nextTurnTimer, labyrinth.server.game.ai.AiStrategy aiStrategy) {
         this.nextTurnTimer = nextTurnTimer;
+        this.aiStrategy = aiStrategy;
         this.players = new ArrayList<>();
         this.roomState = RoomState.LOBBY;
         this.board = null;
         this.gameConfig = GameConfig.getDefault();
         this.currentPlayerIndex = 0;
+
+        // Initialize Bonus Strategies
+        bonusEffects.put(BonusTypes.BEAM, new labyrinth.server.game.bonuses.BeamBonusEffect());
+        bonusEffects.put(BonusTypes.SWAP, new labyrinth.server.game.bonuses.SwapBonusEffect());
+        bonusEffects.put(BonusTypes.PUSH_TWICE, new labyrinth.server.game.bonuses.PushTwiceBonusEffect());
+        bonusEffects.put(BonusTypes.PUSH_FIXED, new labyrinth.server.game.bonuses.PushFixedBonusEffect());
+    }
+
+    // ... (existing join/start methods) ...
+
+    public boolean useBonus(BonusTypes type, Object... args) {
+        if (!bonusEffects.containsKey(type)) {
+            throw new IllegalArgumentException("No strategy found for bonus type: " + type);
+        }
+        return bonusEffects.get(type).apply(this, getCurrentPlayer(), args);
+    }
+
+    // Kept for backward compatibility / API contract compliance, but delegates to
+    // strategy
+    public boolean useBeamBonus(int row, int col, Player player) {
+        guardFor(RoomState.IN_GAME);
+        guardFor(player);
+        guardFor(MoveState.PLACE_TILE);
+        return useBonus(BonusTypes.BEAM, row, col);
+    }
+
+    public boolean useSwapBonus(Player currentPlayer, Player targetPlayer) {
+        guardFor(RoomState.IN_GAME);
+        guardFor(currentPlayer);
+        guardFor(MoveState.PLACE_TILE);
+        return useBonus(BonusTypes.SWAP, targetPlayer);
+    }
+
+    public boolean usePushTwiceBonus(Player player) {
+        guardFor(RoomState.IN_GAME);
+        guardFor(player);
+        return useBonus(BonusTypes.PUSH_TWICE);
+    }
+
+    public boolean usePushFixedBonus(Player player) {
+        guardFor(player);
+        guardFor(RoomState.IN_GAME);
+        return useBonus(BonusTypes.PUSH_FIXED);
     }
 
     /**
@@ -128,7 +179,7 @@ public class Game {
         }
 
         this.gameConfig = Objects.requireNonNullElseGet(gameConfig, GameConfig::getDefault);
-        System.out.println(treasureCards.size() + " treasureCards have been created");
+        LOGGER.info(treasureCards.size() + " treasureCards have been created");
 
         var playerToAssignCardsToIndex = 0;
         do {
@@ -145,7 +196,6 @@ public class Game {
             treasureCards.removeFirst();
         } while (!treasureCards.isEmpty());
 
-
         labyrinth.server.game.factories.BonusFactory bonusFactory = new labyrinth.server.game.factories.BonusFactory();
         var bonuses = bonusFactory.createBonuses(gameConfig.totalBonusCount());
         board.placeRandomBonuses(bonuses);
@@ -155,17 +205,17 @@ public class Game {
             var position = gameConfig.getStartPosition(i);
 
             Tile startingTile = board.getTileAt(position);
-            System.out.println(player.getUsername() + " starts on tile: " + position.row() + "/" + position.column());
+            LOGGER.info(player.getUsername() + " starts on tile: " + position.row() + "/" + position.column());
             player.setHomeTile(startingTile);
             player.setCurrentTile(startingTile);
         }
 
         this.board = board;
         this.board.setPlayers(players);
-        System.out.println("Game started in GameLobby" + " with " + players.size() + " players.");
+        LOGGER.info("Game started in GameLobby" + " with " + players.size() + " players.");
 
         if (getCurrentPlayer().isAiActive()) {
-            new labyrinth.server.game.ai.SimpleAiStrategy().performTurn(this, getCurrentPlayer());
+            this.aiStrategy.performTurn(this, getCurrentPlayer());
         }
 
         gameStartTime = OffsetDateTime.now();
@@ -198,7 +248,8 @@ public class Game {
         var fixedBonusActive = activeBonus == BonusTypes.PUSH_FIXED;
 
         if (fixedBonusActive) {
-            //TODO: do not allow to shift border rows/columns because it would move home tiles
+            // TODO: do not allow to shift border rows/columns because it would move home
+            // tiles
         }
 
         boolean res = switch (direction) {
@@ -228,7 +279,7 @@ public class Game {
 
         var statistics = player.getStatistics();
         var pusherAchieved = false;
-        if(!statistics.getCollectedAchievements().contains(Achievement.PUSHER) && statistics.getTilesPushed() >= 20){
+        if (!statistics.getCollectedAchievements().contains(Achievement.PUSHER) && statistics.getTilesPushed() >= 20) {
             pusherAchieved = true;
             statistics.collectAchievement(Achievement.PUSHER);
         }
@@ -240,80 +291,6 @@ public class Game {
         player.setAiActive(!player.isAiActive());
     }
 
-    public boolean useBeamBonus(int row, int col, Player player) {
-        guardFor(RoomState.IN_GAME);
-        guardFor(player);
-        guardFor(MoveState.PLACE_TILE);
-
-        Tile targetTile = board.getTileMap().getForward(new Position(row, col));
-
-        for (Player other : players) {
-            if (other != player && other.getCurrentTile() == targetTile) {
-                System.out.println("Cant move a player is already on the target tile!");
-                return false;
-            }
-        }
-
-        var allowedToUse = player.useBonus(BonusTypes.SWAP);
-
-        if(!allowedToUse) {
-            return false;
-        }
-
-        player.getStatistics().increaseScore(PointRewards.REWARD_BONUS_USED);
-
-        player.setCurrentTile(targetTile);
-        return true;
-    }
-
-    public boolean useSwapBonus(Player currentPlayer, Player targetPlayer) {
-        guardFor(RoomState.IN_GAME);
-        guardFor(currentPlayer);
-        guardFor(MoveState.PLACE_TILE);
-        var allowedToUse = currentPlayer.useBonus(BonusTypes.SWAP);
-
-        if (!allowedToUse) {
-             return false;
-        }
-
-        var currentPlayerTile = currentPlayer.getCurrentTile();
-        var targetPlayerTile = targetPlayer.getCurrentTile();
-
-        currentPlayer.setCurrentTile(targetPlayerTile);
-        targetPlayer.setCurrentTile(currentPlayerTile);
-        currentPlayer.getStatistics().increaseScore(PointRewards.REWARD_BONUS_USED);
-
-        return true;
-    }
-
-    public boolean usePushTwiceBonus(Player player) {
-        guardFor(RoomState.IN_GAME);
-        guardFor(player);
-        var allowedToUse = player.useBonus(BonusTypes.PUSH_TWICE);
-
-        if (!allowedToUse) {
-            return false;
-        }
-
-        activeBonus = BonusTypes.PUSH_TWICE;
-        return true;
-    }
-
-    public boolean usePushFixedBonus(Player player) {
-        guardFor(player);
-        guardFor(RoomState.IN_GAME);
-        var allowedToUse = player.useBonus(BonusTypes.PUSH_FIXED);
-
-        if (!allowedToUse) {
-            return false;
-        }
-
-        activeBonus = BonusTypes.PUSH_FIXED;
-        player.getStatistics().increaseScore(PointRewards.REWARD_BONUS_USED);
-
-        return true;
-    }
-
     public movePlayerToTileResult movePlayerToTile(int row, int col, Player player) {
         guardFor(RoomState.IN_GAME);
         guardFor(MoveState.MOVE);
@@ -322,7 +299,7 @@ public class Game {
         var currentTreasureCardBeforeMove = player.getCurrentTreasureCard();
         var distanceMoved = board.movePlayerToTile(player, row, col);
 
-        System.out.println("Moved " + distanceMoved + " steps");
+        LOGGER.info("Moved " + distanceMoved + " steps");
         if (distanceMoved == -1) {
             return new movePlayerToTileResult(false, distanceMoved, false, false, false);
         }
@@ -332,12 +309,12 @@ public class Game {
 
         var currentTreasureCardAfterMove = player.getCurrentTreasureCard();
 
-        if(currentTreasureCardAfterMove == null) {
+        if (currentTreasureCardAfterMove == null) {
             player.getStatistics().increaseScore(PointRewards.REWARD_ALL_TREASURES_COLLECTED);
         }
 
         var gameOver = false;
-        if(currentTreasureCardAfterMove == null) {
+        if (currentTreasureCardAfterMove == null) {
             gameOver();
             gameOver = true;
         }
@@ -346,7 +323,7 @@ public class Game {
 
         var statistics = player.getStatistics();
         var runnerAchieved = false;
-        if(!statistics.getCollectedAchievements().contains(Achievement.RUNNER) && statistics.getStepsTaken() >= 200){
+        if (!statistics.getCollectedAchievements().contains(Achievement.RUNNER) && statistics.getStepsTaken() >= 200) {
             runnerAchieved = true;
             statistics.collectAchievement(Achievement.RUNNER);
         }
@@ -355,7 +332,7 @@ public class Game {
         return new movePlayerToTileResult(true, distanceMoved, treasureCollected, gameOver, runnerAchieved);
     }
 
-    private void gameOver(){
+    private void gameOver() {
         this.roomState = RoomState.FINISHED;
     }
 
@@ -367,16 +344,15 @@ public class Game {
         if (currentPlayerIndex >= players.size()) {
             currentPlayerIndex = 0;
         }
-        System.out.println("New Player to move: " + getCurrentPlayer().getUsername());
+        LOGGER.info("New Player to move: " + getCurrentPlayer().getUsername());
         currentMoveState = MoveState.PLACE_TILE;
 
         if (getCurrentPlayer().isAiActive()) {
-            new labyrinth.server.game.ai.SimpleAiStrategy().performTurn(this, getCurrentPlayer());
+            this.aiStrategy.performTurn(this, getCurrentPlayer());
         } else {
             nextTurnTimer.start(gameConfig.turnTimeInSeconds(), this::nextPlayer);
         }
     }
-
 
     private void guardFor(MoveState moveState) {
         if (board.isFreeRoam()) {

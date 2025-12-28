@@ -65,11 +65,11 @@ public class Player {
         return newPlayer;
     }
 
-    boolean useBonus(BonusTypes bonusType){
+    public boolean useBonus(BonusTypes bonusType) {
         return bonuses.remove(bonusType);
     }
 
-    public TreasureCard getCurrentTreasureCard(){
+    public TreasureCard getCurrentTreasureCard() {
         for (TreasureCard card : assignedTreasureCards) {
             if (!card.isCollected()) {
                 return card;

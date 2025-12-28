@@ -8,13 +8,16 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.*;
+import static org.mockito.Mockito.mock;
+import labyrinth.server.game.abstractions.IGameTimer;
+import labyrinth.server.game.ai.SimpleAiStrategy;
 
 class AiLogicTest {
 
     @Test
     void testAiTriggersOnNextPlayer() {
         // Setup simple game
-        Game game = new Game();
+        Game game = new Game(mock(IGameTimer.class), new SimpleAiStrategy());
 
         Player p1 = game.join("P1");
         Player p2 = game.join("P2");
@@ -40,7 +43,7 @@ class AiLogicTest {
         // P1 does a move (dummy move)
         // We need to simulate P1 turn.
         // Shift a fake row/col that is safe
-        game.shift(1, Direction.RIGHT, null, p1);
+        game.shift(1, Direction.RIGHT, p1);
         game.movePlayerToTile(game.getCurrentPositionOfPlayer(p1).row(), game.getCurrentPositionOfPlayer(p1).column(),
                 p1);
         // This triggers nextPlayer -> P2 (Async AI) start
