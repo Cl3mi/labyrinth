@@ -71,6 +71,38 @@ public class Game {
         return java.util.Collections.unmodifiableList(executionLogs);
     }
 
+    private String serializeTile(Tile tile) {
+        if (tile == null)
+            return "null";
+        StringBuilder sb = new StringBuilder();
+        sb.append("entrances=").append(tile.getEntrances());
+        if (tile.getTreasureCard() != null) {
+            sb.append(",treasure=").append(tile.getTreasureCard().getTreasureName());
+        }
+        if (tile.getBonus() != null) {
+            sb.append(",bonus=").append(tile.getBonus());
+        }
+        if (tile.isFixed()) {
+            sb.append(",fixed=true");
+        }
+        return sb.toString();
+    }
+
+    private String serializeBoard(Board board) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("width=").append(board.getWidth()).append(";");
+        sb.append("height=").append(board.getHeight()).append(";");
+        sb.append("extraTile=").append(serializeTile(board.getExtraTile())).append(";");
+
+        for (int r = 0; r < board.getHeight(); r++) {
+            for (int c = 0; c < board.getWidth(); c++) {
+                Tile t = board.getTileAt(r, c);
+                sb.append("tile_").append(r).append("_").append(c).append("=").append(serializeTile(t)).append(";");
+            }
+        }
+        return sb.toString();
+    }
+
     private final java.util.Map<BonusTypes, labyrinth.server.game.bonuses.IBonusEffect> bonusEffects = new java.util.EnumMap<>(
             BonusTypes.class);
 
@@ -235,10 +267,18 @@ public class Game {
 
         this.board = board;
         this.board.setPlayers(players);
-        // Removed LOGGER.info here as logGameAction handles it
+
+        java.util.Map<String, String> startMeta = new java.util.HashMap<>();
+        startMeta.put("boardState", serializeBoard(board));
+        // Also log initial player positions maybe? They are effectively on home tiles
+        // which are in board, but explicit is nice.
+        for (Player p : players) {
+            startMeta.put("player_" + p.getId(),
+                    p.getUsername() + "@" + gameConfig.getStartPosition(players.indexOf(p)));
+        }
 
         logGameAction(GameLogType.START_GAME, "Game started in GameLobby with " + players.size() + " players.", null,
-                null);
+                startMeta);
 
         if (getCurrentPlayer().isAiActive()) {
             this.aiStrategy.performTurn(this, getCurrentPlayer());
@@ -313,6 +353,42 @@ public class Game {
         java.util.Map<String, String> meta = new java.util.HashMap<>();
         meta.put("index", String.valueOf(index));
         meta.put("direction", direction.toString());
+        // Capture extra tile BEFORE shift (which effectively becomes the one pushed in)
+        // Wait, logic says: shift methods use 'extraTile' to put into board.
+        // So we should log the CURRENT extraTile before the shift happens?
+        // The shift method swaps extraTile with the one pushed out.
+        // BUT the tool call logic here happens AFTER the shift method returns!
+        // See: boolean res = switch... then if(!res) return... then log.
+        // So at this point 'extraTile' is the one that got pushed OUT.
+        // The one that got pushed IN was the 'extraTile' before this function call.
+        // However, we want to know what tile WAS pushed in.
+        // Since we can't easily go back in time, we should probably log the board state
+        // or just trust
+        // that if we have initial state + all operations, we can reconstruct.
+        // USER REQUEST said: "Also how the tile that gets pushed in is shaped"
+        // Since we are logging AFTER the action, we missed the state of the tile that
+        // was pushed in (it is now on the board).
+        // Actually, we can just find it on the board?
+        // If we shift column down, the new tile is at (0, col).
+        // If we shift column up, the new tile is at (height-1, col).
+        // If we shift row right, new is at (row, 0).
+        // If we shift row left, new is at (row, width-1).
+
+        // Let's grab the tile that was just inserted.
+        Tile insertedTile = null;
+        if (direction == Direction.DOWN)
+            insertedTile = board.getTileAt(0, index);
+        else if (direction == Direction.UP)
+            insertedTile = board.getTileAt(board.getHeight() - 1, index);
+        else if (direction == Direction.RIGHT)
+            insertedTile = board.getTileAt(index, 0);
+        else if (direction == Direction.LEFT)
+            insertedTile = board.getTileAt(index, board.getWidth() - 1);
+
+        if (insertedTile != null) {
+            meta.put("insertedTile", serializeTile(insertedTile));
+        }
+
         logGameAction(GameLogType.SHIFT_BOARD, "Player shifted board " + direction + " at index " + index, player,
                 meta);
 

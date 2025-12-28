@@ -45,8 +45,10 @@ class GameLoggingTest {
         var logs = game.getExecutionLogs();
         Assertions.assertFalse(logs.isEmpty(), "Logs should not be empty");
 
-        boolean hasStartLog = logs.stream().anyMatch(l -> l.type() == GameLogType.START_GAME);
-        Assertions.assertTrue(hasStartLog, "Should have START_GAME log");
+        var startLog = logs.stream().filter(l -> l.type() == GameLogType.START_GAME).findFirst().orElseThrow();
+        Assertions.assertTrue(startLog.metadata().containsKey("boardState"), "Should have boardState in metadata");
+        Assertions.assertTrue(startLog.metadata().get("boardState").contains("width=7"),
+                "Board state should contain width");
     }
 
     @Test
@@ -66,9 +68,15 @@ class GameLoggingTest {
 
         // Assert
         var logs = game.getExecutionLogs();
-        boolean hasShiftLog = logs.stream().anyMatch(l -> l.type() == GameLogType.SHIFT_BOARD
-                && l.metadata().get("index").equals("1")
-                && l.metadata().get("direction").equals("RIGHT"));
-        Assertions.assertTrue(hasShiftLog, "Should have SHIFT_BOARD log with correct metadata");
+        var shiftLog = logs.stream()
+                .filter(l -> l.type() == GameLogType.SHIFT_BOARD)
+                .findFirst()
+                .orElseThrow();
+
+        Assertions.assertEquals("1", shiftLog.metadata().get("index"));
+        Assertions.assertEquals("RIGHT", shiftLog.metadata().get("direction"));
+        Assertions.assertTrue(shiftLog.metadata().containsKey("insertedTile"), "Should contain insertedTile info");
+        Assertions.assertTrue(shiftLog.metadata().get("insertedTile").contains("entrances="),
+                "Inserted tile should have entrances");
     }
 }
