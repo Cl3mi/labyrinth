@@ -41,8 +41,9 @@ public class GameService {
         this.boardFactory = boardFactory;
         this.eventPublisher = eventPublisher;
 
-        var gameTimer = new GameTimer(scheduler);
-        game = new Game(gameTimer, applicationEventPublisher);
+        var turnTimer = new GameTimer(scheduler);
+        var durationTimer = new GameTimer(scheduler);
+        game = new Game(turnTimer, durationTimer, applicationEventPublisher);
     }
 
 
@@ -112,12 +113,10 @@ public class GameService {
     public void startGame(GameConfig gameConfig) {
         rwLock.writeLock().lock();
         try {
-            int playersCount = game.getPlayers().size();
-
             var board = boardFactory.createBoard(gameConfig.boardWidth(), gameConfig.boardHeight(), gameConfig.totalBonusCount());
-            var treasureCards = treasureCardFactory.createTreasureCards(gameConfig.treasureCardCount(), playersCount);
 
-            game.startGame(gameConfig, treasureCards, board);
+            // Treasures will be created in game.startGame() after players are finalized
+            game.startGame(gameConfig, treasureCardFactory, board);
         } finally {
             rwLock.writeLock().unlock();
         }
@@ -138,7 +137,8 @@ public class GameService {
             boolean result = game.movePlayerToTile(row, col, player);
 
             // TODO: this is just an example, replace with actual achievement unlocking logic
-            if (result) {
+            // Only publish achievement if game is still in progress (prevent race condition with game ending)
+            if (result && game.getRoomState() == RoomState.IN_GAME) {
                 var achievementEvent = new AchievementUnlockedEvent(player, Achievement.RUNNER);
                 eventPublisher.publishAsync(achievementEvent);
             }

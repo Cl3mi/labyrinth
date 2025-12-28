@@ -36,6 +36,8 @@ public class StartGameCommandHandler extends AbstractCommandHandler<StartGameCom
         var player = requireExistingPlayer(session);
         requireAdmin(player);
 
+        validateConfig(payload);
+
         var gameConfig = createGameConfig(payload);
         gameService.startGame(gameConfig);
 
@@ -56,7 +58,40 @@ public class StartGameCommandHandler extends AbstractCommandHandler<StartGameCom
 
         var treasureCardCount = payload.getTreasureCardCount();
         var totalBonusCount = payload.getTotalBonusCount();
+        var turnTimeInSeconds = payload.getTurnTimeInSeconds() != null ? payload.getTurnTimeInSeconds() : 30;
 
-        return new GameConfig(boardWidth, boardHeight,  treasureCardCount, gameDurationInSeconds, totalBonusCount, 30);
+        System.out.println("=== GAME CONFIG ===");
+        System.out.println("Board: " + boardWidth + "x" + boardHeight);
+        System.out.println("Treasures to win: " + treasureCardCount);
+        System.out.println("Game duration: " + gameDurationInSeconds + "s");
+        System.out.println("Turn time: " + turnTimeInSeconds + "s");
+        System.out.println("==================");
+
+        return new GameConfig(boardWidth, boardHeight,  treasureCardCount, gameDurationInSeconds, totalBonusCount, turnTimeInSeconds);
+    }
+
+    private void validateConfig(StartGameCommandPayload payload) {
+        var boardSize = payload.getBoardSize();
+        if (boardSize.getRows() != boardSize.getCols()) {
+            throw new IllegalArgumentException("Board must be square");
+        }
+        if (boardSize.getRows() < 5 || boardSize.getRows() > 15) {
+            throw new IllegalArgumentException("Board size must be between 5x5 and 15x15");
+        }
+
+        var turnTime = payload.getTurnTimeInSeconds();
+        if (turnTime != null && (turnTime < 15 || turnTime > 120)) {
+            throw new IllegalArgumentException("Turn time must be between 15 and 120 seconds");
+        }
+
+        var gameDuration = payload.getGameDurationInSeconds();
+        if (gameDuration != null && (gameDuration < 600 || gameDuration > 7200)) {
+            throw new IllegalArgumentException("Game duration must be between 10 and 120 minutes");
+        }
+
+        var treasures = payload.getTreasureCardCount();
+        if (treasures < 1 || treasures > 24) {
+            throw new IllegalArgumentException("Treasures to win must be between 1 and 24");
+        }
     }
 }

@@ -25,4 +25,11 @@ public class PlayerStatistics {
     public void increaseTreasuresCollected(int amount) {
         this.treasuresCollected += amount;
     }
+
+    public void reset() {
+        this.score = 0;
+        this.stepsTaken = 0;
+        this.tilesPushed = 0;
+        this.treasuresCollected = 0;
+    }
 }

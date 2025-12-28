@@ -22,8 +22,9 @@ public class Testing {
         scheduler.setPoolSize(1);
         scheduler.initialize();
 
-        IGameTimer gameTimer = new GameTimer(scheduler);
-        game = new Game(gameTimer, null);
+        IGameTimer turnTimer = new GameTimer(scheduler);
+        IGameTimer durationTimer = new GameTimer(scheduler);
+        game = new Game(turnTimer, durationTimer, null);
         simulateGameStart();
         //simulateGameMoves(1000);
     }
@@ -42,7 +43,6 @@ public class Testing {
 
         var gameConfig = new GameConfig(7, 7, 24, 1800, 4, 30);
         var board = boardFactory.createBoard(gameConfig.boardWidth(), gameConfig.boardHeight(), gameConfig.totalBonusCount());
-        var cards = treasureCardFactory.createTreasureCards(gameConfig.treasureCardCount(), game.getPlayers().size());
 
 
         var p2 = game.getPlayers().get(1);
@@ -57,7 +57,7 @@ public class Testing {
         var p4 = game.getPlayers().get(3);
         game.toggleAiForPlayer(p4);
 
-        game.startGame(gameConfig, cards, board);
+        game.startGame(gameConfig, treasureCardFactory, board);
 
 
         // Open Debug Viewer

@@ -13,6 +13,7 @@ public class RankingMapper {
         var sourceStats = player.getStatistics();
 
         entry.setPlayerId(player.getId().toString());
+        entry.setPlayerName(player.getUsername());
         entry.setScore(sourceStats.getScore());
         entry.setRank(rank);
 

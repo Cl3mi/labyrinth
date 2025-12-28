@@ -4,6 +4,7 @@ import labyrinth.client.ui.BoardPanel;
 import labyrinth.client.factories.BoardFactory;
 import labyrinth.client.messaging.GameClient;
 import labyrinth.client.messaging.ReconnectionManager;
+import labyrinth.client.ui.GameOverPanel;
 import labyrinth.client.ui.LobbyPanel;
 
 import javax.swing.*;
@@ -36,9 +37,10 @@ public class LabyrinthApplication {
     private GameClient client;
     private JFrame frame;
 
-    private JPanel mainPanel;    // CardLayout: "lobby" / "game"
+    private JPanel mainPanel;    // CardLayout: "lobby" / "game" / "gameover"
     private LobbyPanel lobbyPanel;
     private BoardPanel boardPanel;
+    private GameOverPanel gameOverPanel;
 
     private String username;
 
@@ -69,6 +71,9 @@ public class LabyrinthApplication {
 
         lobbyPanel = new LobbyPanel(client, null);
         mainPanel.add(lobbyPanel, "lobby");
+
+        gameOverPanel = new GameOverPanel(this::switchToLobbyView);
+        mainPanel.add(gameOverPanel, "gameover");
 
         frame.setContentPane(mainPanel);
         frame.setVisible(true);
@@ -214,9 +219,26 @@ public class LabyrinthApplication {
 
     private void switchToGameView() {
         if (lobbyPanel != null) lobbyPanel.stopMusic();
+        if (gameOverPanel != null) gameOverPanel.cleanup();
 
         CardLayout cl = (CardLayout) mainPanel.getLayout();
         cl.show(mainPanel, "game");
+    }
+
+    private void switchToGameOverView() {
+        if (lobbyPanel != null) lobbyPanel.stopMusic();
+
+        CardLayout cl = (CardLayout) mainPanel.getLayout();
+        cl.show(mainPanel, "gameover");
+    }
+
+    private void switchToLobbyView() {
+        if (gameOverPanel != null) gameOverPanel.cleanup();
+
+        gameViewShown = false;
+
+        CardLayout cl = (CardLayout) mainPanel.getLayout();
+        cl.show(mainPanel, "lobby");
     }
 
     private void ensureBoardPanel(Board board, Player currentPlayer, List<Player> allPlayers,
@@ -343,6 +365,21 @@ public class LabyrinthApplication {
             System.out.println("SERVER spareTile = " + (state.getBoard().getSpareTile() == null ? "null" : "present"));
 
             showGame(board, players, state.getGameEndTime(), state.getCurrentTurnInfo());
+        });
+
+        // ============================================================
+        // GAME_OVER - Show game over screen with winner and leaderboard
+        // ============================================================
+        client.setOnGameOver(gameOver -> {
+            System.out.println("[" + PROFILE + "] Received GAME_OVER");
+
+            SwingUtilities.invokeLater(() -> {
+                // Update game over panel with results
+                gameOverPanel.updateGameOver(gameOver);
+
+                // Switch to game over view
+                switchToGameOverView();
+            });
         });
 
         // ============================================================

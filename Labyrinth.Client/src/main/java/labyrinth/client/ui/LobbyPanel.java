@@ -46,6 +46,7 @@ public class LobbyPanel extends JPanel {
     private final JList<String> playerList;
     private final JButton startButton;
     private final JButton cancelReconnectButton;
+    private JPanel settingsConfigPanel;
 
     // Hintergrund & Musik
     private Image backgroundImage;
@@ -53,6 +54,12 @@ public class LobbyPanel extends JPanel {
 
     // Letzter Lobby-State (für Retry/Restore)
     private volatile LobbyStateEventPayload lastLobbyState;
+
+    // Game configuration state
+    private int configBoardSize = 7;
+    private int configTreasuresToWin = 12;
+    private int configTurnTimeSeconds = 30;
+    private int configGameDurationMinutes = 60;
 
     public LobbyPanel(GameClient client, String localPlayerId) {
         this.client = Objects.requireNonNull(client, "client must not be null");
@@ -106,9 +113,9 @@ public class LobbyPanel extends JPanel {
         JPanel centerPanel = new JPanel(new BorderLayout());
         centerPanel.setOpaque(false);
 
-        // Add game settings preview panel
-        JPanel settingsPreview = createSettingsPreviewPanel();
-        centerPanel.add(settingsPreview, BorderLayout.NORTH);
+        // Add interactive game settings config panel
+        settingsConfigPanel = createSettingsConfigPanel();
+        centerPanel.add(settingsConfigPanel, BorderLayout.NORTH);
         centerPanel.add(scrollPane, BorderLayout.CENTER);
 
         add(centerPanel, BorderLayout.CENTER);
@@ -287,8 +294,20 @@ public class LobbyPanel extends JPanel {
                 playerListModel.addElement(sb.toString());
             }
 
+            // Enable/disable settings based on admin status
+            if (settingsConfigPanel != null) {
+                enableSettingsPanel(localFound && localIsAdmin);
+            }
+
             startButton.setEnabled(localFound && localIsAdmin);
         });
+    }
+
+    private void enableSettingsPanel(boolean enabled) {
+        Component[] components = settingsConfigPanel.getComponents();
+        for (Component comp : components) {
+            comp.setEnabled(enabled);
+        }
     }
 
     // --------------------------------------------------------------------------------
@@ -300,21 +319,23 @@ public class LobbyPanel extends JPanel {
         startButton.setEnabled(false);
 
         BoardSize bs = new BoardSize();
-        bs.setRows(7);
-        bs.setCols(7);
+        bs.setRows(configBoardSize);
+        bs.setCols(configBoardSize);
 
-        int treasuresPerPlayer = 12;
+        int treasuresToWin = configTreasuresToWin;
         int totalBonusCount = 0;
-        Integer gameDurationSeconds = 3600;
+        int gameDurationSeconds = configGameDurationMinutes * 60;
+        int turnTimeSeconds = configTurnTimeSeconds;
 
         try {
             System.out.println("START clicked -> sending START_GAME");
             System.out.println("rows=" + bs.getRows() + " cols=" + bs.getCols()
-                    + " treasureCardCount=" + treasuresPerPlayer
+                    + " treasureCardCount=" + treasuresToWin
                     + " totalBonusCount=" + totalBonusCount
-                    + " gameDurationSeconds=" + gameDurationSeconds);
+                    + " gameDurationSeconds=" + gameDurationSeconds
+                    + " turnTimeSeconds=" + turnTimeSeconds);
 
-            client.sendStartGame(bs, treasuresPerPlayer, totalBonusCount, gameDurationSeconds);
+            client.sendStartGame(bs, treasuresToWin, totalBonusCount, gameDurationSeconds, turnTimeSeconds);
         } catch (Exception ex) {
             ex.printStackTrace();
 
@@ -344,49 +365,103 @@ public class LobbyPanel extends JPanel {
     }
 
     // --------------------------------------------------------------------------------
-    // Settings Preview Panel
+    // Interactive Settings Configuration Panel
     // --------------------------------------------------------------------------------
 
-    private JPanel createSettingsPreviewPanel() {
+    private JPanel createSettingsConfigPanel() {
         JPanel panel = new JPanel();
         panel.setOpaque(false);
-        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
-        panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        panel.setLayout(new GridBagLayout());
+        panel.setBorder(BorderFactory.createTitledBorder(
+                BorderFactory.createLineBorder(new Color(100, 120, 150), 2),
+                "Spiel-Einstellungen (nur Admin)",
+                javax.swing.border.TitledBorder.LEFT,
+                javax.swing.border.TitledBorder.TOP,
+                new Font("Arial", Font.BOLD, 13),
+                new Color(220, 220, 255)
+        ));
 
-        JLabel titleLabel = new JLabel("Spiel-Einstellungen");
-        titleLabel.setFont(new Font("Arial", Font.BOLD, 14));
-        titleLabel.setForeground(new Color(220, 220, 255));
-        titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(5, 10, 5, 10);
+        gbc.fill = GridBagConstraints.HORIZONTAL;
 
-        JPanel settingsGrid = new JPanel(new GridLayout(2, 2, 10, 5));
-        settingsGrid.setOpaque(false);
-        settingsGrid.setMaximumSize(new Dimension(400, 60));
-        settingsGrid.setAlignmentX(Component.LEFT_ALIGNMENT);
+        // Row 0: Board Size
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        panel.add(createLabel("Spielfeldgröße:"), gbc);
 
-        addSettingLabel(settingsGrid, "Spielfeld:", "7x7");
-        addSettingLabel(settingsGrid, "Schätze:", "12 pro Spieler");
-        addSettingLabel(settingsGrid, "Spielzeit:", "60 Minuten");
-        addSettingLabel(settingsGrid, "Bonus:", "Keine");
+        gbc.gridx = 1;
+        JComboBox<String> boardSizeCombo = new JComboBox<>();
+        for (int i = 5; i <= 15; i++) {
+            boardSizeCombo.addItem(i + "x" + i);
+        }
+        boardSizeCombo.setSelectedItem("7x7");
+        boardSizeCombo.addActionListener(e -> {
+            String selected = (String) boardSizeCombo.getSelectedItem();
+            if (selected != null) {
+                configBoardSize = Integer.parseInt(selected.split("x")[0]);
+            }
+        });
+        panel.add(boardSizeCombo, gbc);
 
-        panel.add(titleLabel);
-        panel.add(Box.createVerticalStrut(8));
-        panel.add(settingsGrid);
-        panel.add(Box.createVerticalStrut(10));
+        // Row 1: Treasures to Win (per player)
+        gbc.gridx = 0;
+        gbc.gridy = 1;
+        panel.add(createLabel("Schätze pro Spieler:"), gbc);
+
+        gbc.gridx = 1;
+        SpinnerModel treasureModel = new SpinnerNumberModel(12, 1, 24, 1);
+        JSpinner treasureSpinner = new JSpinner(treasureModel);
+        treasureSpinner.addChangeListener(e ->
+                configTreasuresToWin = (Integer) treasureSpinner.getValue());
+        panel.add(treasureSpinner, gbc);
+
+        // Row 2: Turn Time
+        gbc.gridx = 0;
+        gbc.gridy = 2;
+        panel.add(createLabel("Runden-Zeit:"), gbc);
+
+        gbc.gridx = 1;
+        JComboBox<String> turnTimeCombo = new JComboBox<>(new String[]{
+                "15 Sekunden", "30 Sekunden", "45 Sekunden",
+                "60 Sekunden", "90 Sekunden", "120 Sekunden"
+        });
+        turnTimeCombo.setSelectedItem("30 Sekunden");
+        turnTimeCombo.addActionListener(e -> {
+            String selected = (String) turnTimeCombo.getSelectedItem();
+            if (selected != null) {
+                configTurnTimeSeconds = Integer.parseInt(selected.split(" ")[0]);
+            }
+        });
+        panel.add(turnTimeCombo, gbc);
+
+        // Row 3: Game Duration
+        gbc.gridx = 0;
+        gbc.gridy = 3;
+        panel.add(createLabel("Spiel-Dauer:"), gbc);
+
+        gbc.gridx = 1;
+        JComboBox<String> durationCombo = new JComboBox<>(new String[]{
+                "10 Minuten", "15 Minuten", "30 Minuten",
+                "45 Minuten", "60 Minuten", "90 Minuten", "120 Minuten"
+        });
+        durationCombo.setSelectedItem("60 Minuten");
+        durationCombo.addActionListener(e -> {
+            String selected = (String) durationCombo.getSelectedItem();
+            if (selected != null) {
+                configGameDurationMinutes = Integer.parseInt(selected.split(" ")[0]);
+            }
+        });
+        panel.add(durationCombo, gbc);
 
         return panel;
     }
 
-    private void addSettingLabel(JPanel panel, String label, String value) {
-        JLabel labelComp = new JLabel(label);
-        labelComp.setFont(new Font("Arial", Font.PLAIN, 12));
-        labelComp.setForeground(new Color(180, 180, 200));
-
-        JLabel valueComp = new JLabel(value);
-        valueComp.setFont(new Font("Arial", Font.BOLD, 12));
-        valueComp.setForeground(new Color(220, 220, 255));
-
-        panel.add(labelComp);
-        panel.add(valueComp);
+    private JLabel createLabel(String text) {
+        JLabel label = new JLabel(text);
+        label.setFont(new Font("Arial", Font.PLAIN, 12));
+        label.setForeground(new Color(220, 220, 255));
+        return label;
     }
 
     // --------------------------------------------------------------------------------

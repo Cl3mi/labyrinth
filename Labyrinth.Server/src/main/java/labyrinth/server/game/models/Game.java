@@ -32,6 +32,7 @@ public class Game {
     private MoveState currentMoveState = MoveState.PLACE_TILE;
 
     private IGameTimer nextTurnTimer;
+    private IGameTimer gameDurationTimer;
 
     private final org.springframework.context.ApplicationEventPublisher eventPublisher;
 
@@ -51,8 +52,9 @@ public class Game {
     @Getter(AccessLevel.NONE)
     private OffsetDateTime gameStartTime;
 
-    public Game(IGameTimer nextTurnTimer, org.springframework.context.ApplicationEventPublisher eventPublisher) {
+    public Game(IGameTimer nextTurnTimer, IGameTimer gameDurationTimer, org.springframework.context.ApplicationEventPublisher eventPublisher) {
         this.nextTurnTimer = nextTurnTimer;
+        this.gameDurationTimer = gameDurationTimer;
         this.eventPublisher = eventPublisher;
         this.players = new ArrayList<>();
         this.roomState = RoomState.LOBBY;
@@ -153,8 +155,13 @@ public class Game {
         // Reset room state to lobby
         roomState = RoomState.LOBBY;
 
-        // Reset all players' admin status
-        players.forEach(p -> p.setAdmin(false));
+        // Reset all players' admin status and statistics
+        players.forEach(p -> {
+            p.setAdmin(false);
+            p.getStatistics().reset();
+            p.getAssignedTreasureCards().clear();
+            p.getBonuses().clear();
+        });
 
         // Assign admin to first player if any remain
         if (!players.isEmpty()) {
@@ -188,7 +195,7 @@ public class Game {
      * player positions, shuffle treasure treasureCards, and set up the board.
      */
 
-    public void startGame(GameConfig gameConfig, List<TreasureCard> treasureCards, Board board) {
+    public void startGame(GameConfig gameConfig, labyrinth.server.game.factories.TreasureCardFactory treasureCardFactory, Board board) {
         if (roomState != RoomState.LOBBY) {
             throw new IllegalStateException("Cannot start a game that is in progress or finished!");
         }
@@ -202,11 +209,17 @@ public class Game {
         }
 
         this.gameConfig = Objects.requireNonNullElseGet(gameConfig, GameConfig::getDefault);
-        System.out.println(treasureCards.size() + " treasureCards have been created");
 
+        // Create treasures: treasureCardCount per player
+        int totalTreasures = gameConfig.treasureCardCount() * players.size();
+        var treasureCards = treasureCardFactory.createTreasureCards(totalTreasures);
+        System.out.println(treasureCards.size() + " treasureCards have been created (" +
+                          gameConfig.treasureCardCount() + " per player, " + players.size() + " players)");
+
+        // Assign treasures to players for UI display (round-robin)
+        // But allow ANY player to collect ANY treasure (competitive mode)
         var playerToAssignCardsToIndex = 0;
-        do {
-            TreasureCard card = treasureCards.getFirst();
+        for (TreasureCard card : treasureCards) {
             board.placeRandomTreasure(card);
 
             Player player = players.get(playerToAssignCardsToIndex);
@@ -215,9 +228,7 @@ public class Game {
             if (playerToAssignCardsToIndex >= players.size()) {
                 playerToAssignCardsToIndex = 0;
             }
-
-            treasureCards.removeFirst();
-        } while (!treasureCards.isEmpty());
+        }
 
         // Assign starting positions to each player by placing them on the four corners
         // of the board.
@@ -244,6 +255,11 @@ public class Game {
         }
 
         gameStartTime = OffsetDateTime.now();
+
+        // Start game duration timer
+        if (this.gameConfig.gameDurationInSeconds() > 0) {
+            gameDurationTimer.start(this.gameConfig.gameDurationInSeconds(), this::onGameDurationExpired);
+        }
     }
 
     public Player getCurrentPlayer() {
@@ -373,7 +389,14 @@ public class Game {
             return false;
         }
 
-        nextPlayer();
+        // Check if player won by collecting enough treasures
+        checkWinCondition(player);
+
+        // Only continue to next player if game is still in progress
+        // (checkWinCondition may have ended the game)
+        if (roomState == RoomState.IN_GAME) {
+            nextPlayer();
+        }
         return true;
     }
 
@@ -391,6 +414,11 @@ public class Game {
             // Using AdvancedAiStrategy for smarter gameplay
             new labyrinth.server.game.ai.SimpleAiStrategy().performTurn(this, getCurrentPlayer());
         } else {
+            // Broadcast game state update when advancing to next human player
+            // (so clients know whose turn it is)
+            if (eventPublisher != null) {
+                eventPublisher.publishEvent(new labyrinth.server.game.events.TurnCompletedEvent(this, getCurrentPlayer()));
+            }
             nextTurnTimer.start(gameConfig.turnTimeInSeconds(), this::nextPlayer);
         }
     }
@@ -467,6 +495,52 @@ public class Game {
     public void publishTurnCompleted(Player player) {
         if (eventPublisher != null) {
             eventPublisher.publishEvent(new labyrinth.server.game.events.TurnCompletedEvent(this, player));
+        }
+    }
+
+    /**
+     * Checks if a player has met the win condition (collected enough treasures).
+     * If so, ends the game immediately.
+     */
+    private void checkWinCondition(Player player) {
+        int treasuresCollected = player.getStatistics().getTreasuresCollected();
+        int treasuresNeeded = gameConfig.treasureCardCount();
+
+        if (treasuresCollected >= treasuresNeeded) {
+            System.out.println("GAME OVER: " + player.getUsername() +
+                    " collected " + treasuresCollected + " treasures!");
+            endGame("Player " + player.getUsername() + " collected all treasures!");
+        }
+    }
+
+    /**
+     * Called when the game duration timer expires.
+     * Ends the game and determines winner by score.
+     */
+    private synchronized void onGameDurationExpired() {
+        System.out.println("Game duration expired! Ending game based on current scores.");
+        endGame("Time's up!");
+    }
+
+    /**
+     * Ends the game by stopping all timers, setting room state to FINISHED,
+     * and publishing a GameOverEvent.
+     *
+     * @param reason The reason the game ended
+     */
+    private void endGame(String reason) {
+        System.out.println("Ending game: " + reason);
+
+        // Stop all timers
+        nextTurnTimer.stop();
+        gameDurationTimer.stop();
+
+        // Set room state
+        roomState = RoomState.FINISHED;
+
+        // Publish game over event
+        if (eventPublisher != null) {
+            eventPublisher.publishEvent(new labyrinth.server.game.events.GameOverEvent(List.copyOf(players)));
         }
     }
 }
