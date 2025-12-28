@@ -28,11 +28,6 @@ public class Player {
     private PlayerColor color;
     private PlayerStatistics statistics;
 
-    // AI State Memory
-    private labyrinth.server.game.models.records.Position lastTurnPosition;
-    private int turnsStuck = 0;
-    private String lastShiftDescription;
-
     private final List<TreasureCard> assignedTreasureCards;
     private final List<BonusTypes> bonuses;
 
@@ -66,10 +61,7 @@ public class Player {
         newPlayer.setAdmin(this.isAdmin);
         newPlayer.setColor(this.color);
 
-        // Shallow copy list, contents are assumed immutable during simulation
         newPlayer.getAssignedTreasureCards().addAll(this.assignedTreasureCards);
-        // currentTile is NOT set here, must be set by caller to point to the new
-        // board's tiles
         return newPlayer;
     }
 

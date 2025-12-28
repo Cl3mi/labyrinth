@@ -88,9 +88,6 @@ public class Tile {
     }
 
     public void getSteppedOnBy(Player player) {
-        // When a player steps on this tile, collect treasure if appropriate.
-        // Tiles no longer store the occupant; the calling code updates
-        // the player's current tile instead.
         if (treasureCard != null) {
             if (player.getCurrentTreasureCard() == treasureCard) {
                 System.out.println("Card: " + treasureCard.getTreasureName());
@@ -107,6 +104,8 @@ public class Tile {
             player.getBonuses().add(bonus);
             this.bonus = null;
         }
+
+        player.setCurrentTile(this);
     }
 
     @Override

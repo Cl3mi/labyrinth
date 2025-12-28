@@ -299,7 +299,6 @@ public class Board {
         }
 
         targetTile.getSteppedOnBy(player);
-        // Update player's logical tile
         var distance = graph.getDistance(currentTile, targetTile);
 
         Position newPos = getPositionOfTile(targetTile);
