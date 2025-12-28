@@ -24,8 +24,6 @@ public class Board {
     private final int height;
     private final BiMap<Position, Tile> tileMap;
     private final Graph graph;
-    private int currentPlayerIndex;
-    private MoveState currentMoveState = MoveState.PLACE_TILE;
     private Tile extraTile;
 
     @Setter
@@ -303,11 +301,6 @@ public class Board {
 
         Position newPos = getPositionOfTile(targetTile);
         LOGGER.info("Player moved to " + (newPos != null ? newPos : "unknown"));
-        currentPlayerIndex++;
-        if (currentPlayerIndex >= players.size()) {
-            currentPlayerIndex = 0;
-        }
-        currentMoveState = MoveState.PLACE_TILE;
 
         return distance;
     }

@@ -23,7 +23,8 @@ public class Testing {
         scheduler.initialize();
 
         IGameTimer gameTimer = new GameTimer(scheduler);
-        game = new Game(gameTimer, new labyrinth.server.game.ai.SimpleAiStrategy());
+        var gameLogger = new labyrinth.server.game.services.GameLogger();
+        game = new Game(gameTimer, new labyrinth.server.game.ai.SimpleAiStrategy(), gameLogger);
         simulateGameStart();
         // simulateGameMoves(1000);
     }

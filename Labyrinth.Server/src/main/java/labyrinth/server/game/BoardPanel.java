@@ -16,7 +16,8 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Panel that draws a Labyrinth {@link Board} with optional reachable tile highlighting
+ * Panel that draws a Labyrinth {@link Board} with optional reachable tile
+ * highlighting
  * and clickable arrows to shift rows and columns.
  */
 public class BoardPanel extends JPanel {
@@ -68,7 +69,6 @@ public class BoardPanel extends JPanel {
         setupMouseListener();
     }
 
-
     // =================================================================================
     // MOUSE EVENT HANDLING
     // =================================================================================
@@ -114,8 +114,7 @@ public class BoardPanel extends JPanel {
         System.out.println("---------");
         System.out.println("Current player: " + currentPlayer);
 
-        outer:
-        for (int row = 0; row < game.getBoard().getHeight(); row++) {
+        outer: for (int row = 0; row < game.getBoard().getHeight(); row++) {
             for (int col = 0; col < game.getBoard().getWidth(); col++) {
                 Rectangle tileRect = new Rectangle(xOffset + col * size, yOffset + row * size, size, size);
                 if (tileRect.contains(p)) {
@@ -134,7 +133,8 @@ public class BoardPanel extends JPanel {
     }
 
     /**
-     * Recalculates the set of reachable tiles for the current player and repaints the component.
+     * Recalculates the set of reachable tiles for the current player and repaints
+     * the component.
      */
     private void updateReachableTilesAndRepaint() {
         reachableTiles.clear();
@@ -162,7 +162,8 @@ public class BoardPanel extends JPanel {
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
-        if (game.getBoard() == null) return;
+        if (game.getBoard() == null)
+            return;
 
         Graphics2D g2 = (Graphics2D) g.create();
         try {
@@ -183,7 +184,8 @@ public class BoardPanel extends JPanel {
     }
 
     /**
-     * Calculates the primary layout metrics (tile size, board offset) based on the panel's current size.
+     * Calculates the primary layout metrics (tile size, board offset) based on the
+     * panel's current size.
      */
     private void calculateLayoutMetrics() {
         int w = getWidth() - 2 * arrowSize - PANEL_PADDING - CARD_PANEL_WIDTH;
@@ -215,7 +217,8 @@ public class BoardPanel extends JPanel {
     /**
      * Draws a single, complete tile at a specified location.
      *
-     * @param drawDetails Toggles drawing of player-specific details like treasures and coordinates.
+     * @param drawDetails Toggles drawing of player-specific details like treasures
+     *                    and coordinates.
      */
     private void drawTileAt(Graphics2D g2, Tile tile, int x, int y, int row, int col, boolean drawDetails) {
         int cx = x + size / 2;
@@ -228,7 +231,8 @@ public class BoardPanel extends JPanel {
 
         // Corridors
         g2.setColor(CORRIDOR_COLOR);
-        if (tile.getEntrances().contains(Direction.UP)) g2.fillRect(cx - corridorWidth / 2, y, corridorWidth, size / 2);
+        if (tile.getEntrances().contains(Direction.UP))
+            g2.fillRect(cx - corridorWidth / 2, y, corridorWidth, size / 2);
         if (tile.getEntrances().contains(Direction.DOWN))
             g2.fillRect(cx - corridorWidth / 2, cy, corridorWidth, size / 2);
         if (tile.getEntrances().contains(Direction.LEFT))
@@ -262,14 +266,14 @@ public class BoardPanel extends JPanel {
      * A helper to draw the treasure name on a tile.
      */
     private void drawTreasureOnTile(Graphics2D g2, TreasureCard card, int centerX, int centerY) {
-        if (currentPlayer != null && currentPlayer.getCurrentTreasureCard() == card){
-             g2.setColor(Color.GREEN.darker());
-        } else if (currentPlayer != null && currentPlayer.getAssignedTreasureCards().contains(card)){
-             g2.setColor(Color.RED);
+        if (currentPlayer != null && currentPlayer.getCurrentTreasureCard() == card) {
+            g2.setColor(Color.GREEN.darker());
+        } else if (currentPlayer != null && currentPlayer.getAssignedTreasureCards().contains(card)) {
+            g2.setColor(Color.RED);
         } else {
-             g2.setColor(Color.BLACK);
+            g2.setColor(Color.BLACK);
         }
-        
+
         FontMetrics fm = g2.getFontMetrics();
         int textWidth = fm.stringWidth(card.getTreasureName());
         g2.drawString(card.getTreasureName(), centerX - textWidth / 2, (centerY + fm.getAscent() / 2) - 20);
@@ -396,14 +400,14 @@ public class BoardPanel extends JPanel {
         var players = game.getPlayers();
 
         if (players != null && !players.isEmpty()) {
-            var current = players.get(board.getCurrentPlayerIndex());
+            var current = players.get(game.getCurrentPlayerIndex());
             infoLines.add("Player to move: " + current.getUsername());
         } else {
             infoLines.add("Player to move: None");
         }
 
         infoLines.add("Free roam: " + board.isFreeRoam());
-        infoLines.add("Current move state: " + board.getCurrentMoveState());
+        infoLines.add("Current move state: " + game.getCurrentMoveState());
         infoLines.add(""); // blank line
         infoLines.add("=== Players ===");
 
@@ -418,10 +422,11 @@ public class BoardPanel extends JPanel {
                 if (p.getStatistics() != null) {
                     var s = p.getStatistics();
                     infoLines.add(String.format(" - Score: %d, Steps: %d", s.getScore(), s.getStepsTaken()));
-                    infoLines.add(String.format(" - Pushed: %d, Treasures: %d", s.getTilesPushed(), s.getTreasuresCollected()));
+                    infoLines.add(String.format(" - Pushed: %d, Treasures: %d", s.getTilesPushed(),
+                            s.getTreasuresCollected()));
                 }
                 if (!p.getBonuses().isEmpty()) {
-                     infoLines.add(" - Bonuses: " + p.getBonuses());
+                    infoLines.add(" - Bonuses: " + p.getBonuses());
                 }
             }
         }
@@ -452,7 +457,7 @@ public class BoardPanel extends JPanel {
 
             // Text Color Logic: Green for current target, Red for others
             if (cards.get(i) == player.getCurrentTreasureCard()) {
-                g2.setColor(Color.GREEN.darker()); 
+                g2.setColor(Color.GREEN.darker());
             } else {
                 g2.setColor(Color.RED);
             }

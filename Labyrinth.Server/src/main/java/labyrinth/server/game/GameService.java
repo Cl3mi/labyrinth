@@ -44,7 +44,8 @@ public class GameService {
         this.eventPublisher = eventPublisher;
 
         var gameTimer = new GameTimer(scheduler);
-        game = new Game(gameTimer, new labyrinth.server.game.ai.SimpleAiStrategy());
+        var gameLogger = new labyrinth.server.game.services.GameLogger();
+        game = new Game(gameTimer, new labyrinth.server.game.ai.SimpleAiStrategy(), gameLogger);
     }
 
     public Player join(String username) {

@@ -17,7 +17,8 @@ class AiLogicTest {
     @Test
     void testAiTriggersOnNextPlayer() {
         // Setup simple game
-        Game game = new Game(mock(IGameTimer.class), new SimpleAiStrategy());
+        Game game = new Game(mock(IGameTimer.class), new SimpleAiStrategy(),
+                new labyrinth.server.game.services.GameLogger());
 
         Player p1 = game.join("P1");
         Player p2 = game.join("P2");

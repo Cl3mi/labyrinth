@@ -51,64 +51,20 @@ public class Game {
 
     private final labyrinth.server.game.ai.AiStrategy aiStrategy;
 
-    private static final java.util.logging.Logger LOGGER = java.util.logging.Logger.getLogger(Game.class.getName());
-
-    private final java.util.List<labyrinth.server.game.models.records.GameLogEntry> executionLogs = new ArrayList<>();
-
-    private void logGameAction(GameLogType type, String message, Player player,
-            java.util.Map<String, String> metadata) {
-        var entry = new labyrinth.server.game.models.records.GameLogEntry(
-                OffsetDateTime.now(),
-                type,
-                player != null ? player.getId().toString() : null,
-                message,
-                metadata);
-        executionLogs.add(entry);
-        LOGGER.info(message);
-    }
+    private final labyrinth.server.game.services.GameLogger gameLogger;
 
     public java.util.List<labyrinth.server.game.models.records.GameLogEntry> getExecutionLogs() {
-        return java.util.Collections.unmodifiableList(executionLogs);
-    }
-
-    private String serializeTile(Tile tile) {
-        if (tile == null)
-            return "null";
-        StringBuilder sb = new StringBuilder();
-        sb.append("entrances=").append(tile.getEntrances());
-        if (tile.getTreasureCard() != null) {
-            sb.append(",treasure=").append(tile.getTreasureCard().getTreasureName());
-        }
-        if (tile.getBonus() != null) {
-            sb.append(",bonus=").append(tile.getBonus());
-        }
-        if (tile.isFixed()) {
-            sb.append(",fixed=true");
-        }
-        return sb.toString();
-    }
-
-    private String serializeBoard(Board board) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("width=").append(board.getWidth()).append(";");
-        sb.append("height=").append(board.getHeight()).append(";");
-        sb.append("extraTile=").append(serializeTile(board.getExtraTile())).append(";");
-
-        for (int r = 0; r < board.getHeight(); r++) {
-            for (int c = 0; c < board.getWidth(); c++) {
-                Tile t = board.getTileAt(r, c);
-                sb.append("tile_").append(r).append("_").append(c).append("=").append(serializeTile(t)).append(";");
-            }
-        }
-        return sb.toString();
+        return gameLogger.getExecutionLogs();
     }
 
     private final java.util.Map<BonusTypes, labyrinth.server.game.bonuses.IBonusEffect> bonusEffects = new java.util.EnumMap<>(
             BonusTypes.class);
 
-    public Game(IGameTimer nextTurnTimer, labyrinth.server.game.ai.AiStrategy aiStrategy) {
+    public Game(IGameTimer nextTurnTimer, labyrinth.server.game.ai.AiStrategy aiStrategy,
+            labyrinth.server.game.services.GameLogger gameLogger) {
         this.nextTurnTimer = nextTurnTimer;
         this.aiStrategy = aiStrategy;
+        this.gameLogger = gameLogger;
         this.players = new ArrayList<>();
         this.roomState = RoomState.LOBBY;
         this.board = null;
@@ -131,7 +87,7 @@ public class Game {
             java.util.Map<String, String> meta = new java.util.HashMap<>();
             meta.put("bonusType", type.toString());
             // Could add args to metadata if needed
-            logGameAction(GameLogType.USE_BONUS, "Player used bonus " + type, getCurrentPlayer(), meta);
+            gameLogger.log(GameLogType.USE_BONUS, "Player used bonus " + type, getCurrentPlayer(), meta);
         }
         return result;
     }
@@ -234,7 +190,7 @@ public class Game {
         }
 
         this.gameConfig = Objects.requireNonNullElseGet(gameConfig, GameConfig::getDefault);
-        LOGGER.info(treasureCards.size() + " treasureCards have been created");
+        // Treasure cards created - logged via gameLogger if needed
 
         var playerToAssignCardsToIndex = 0;
         do {
@@ -260,7 +216,7 @@ public class Game {
             var position = gameConfig.getStartPosition(i);
 
             Tile startingTile = board.getTileAt(position);
-            LOGGER.info(player.getUsername() + " starts on tile: " + position.row() + "/" + position.column());
+            // Player start positions logged in the startMeta below
             player.setHomeTile(startingTile);
             player.setCurrentTile(startingTile);
         }
@@ -269,7 +225,7 @@ public class Game {
         this.board.setPlayers(players);
 
         java.util.Map<String, String> startMeta = new java.util.HashMap<>();
-        startMeta.put("boardState", serializeBoard(board));
+        startMeta.put("boardState", gameLogger.serializeBoard(board));
         // Also log initial player positions maybe? They are effectively on home tiles
         // which are in board, but explicit is nice.
         for (Player p : players) {
@@ -277,7 +233,7 @@ public class Game {
                     p.getUsername() + "@" + gameConfig.getStartPosition(players.indexOf(p)));
         }
 
-        logGameAction(GameLogType.START_GAME, "Game started in GameLobby with " + players.size() + " players.", null,
+        gameLogger.log(GameLogType.START_GAME, "Game started in GameLobby with " + players.size() + " players.", null,
                 startMeta);
 
         if (getCurrentPlayer().isAiActive()) {
@@ -386,10 +342,10 @@ public class Game {
             insertedTile = board.getTileAt(index, board.getWidth() - 1);
 
         if (insertedTile != null) {
-            meta.put("insertedTile", serializeTile(insertedTile));
+            meta.put("insertedTile", gameLogger.serializeTile(insertedTile));
         }
 
-        logGameAction(GameLogType.SHIFT_BOARD, "Player shifted board " + direction + " at index " + index, player,
+        gameLogger.log(GameLogType.SHIFT_BOARD, "Player shifted board " + direction + " at index " + index, player,
                 meta);
 
         return new shiftResult(true, pusherAchieved);
@@ -409,7 +365,7 @@ public class Game {
 
         // removed LOGGER.info
         if (distanceMoved == -1) {
-            LOGGER.info("Moved -1 steps (failed)");
+            // Move failed - no logging needed for failed attempt
             return new movePlayerToTileResult(false, distanceMoved, false, false, false);
         }
 
@@ -417,7 +373,7 @@ public class Game {
         meta.put("toRow", String.valueOf(row));
         meta.put("toCol", String.valueOf(col));
         meta.put("distance", String.valueOf(distanceMoved));
-        logGameAction(GameLogType.MOVE_PLAYER, "Player moved to " + row + "/" + col + " (" + distanceMoved + " steps)",
+        gameLogger.log(GameLogType.MOVE_PLAYER, "Player moved to " + row + "/" + col + " (" + distanceMoved + " steps)",
                 player, meta);
 
         player.getStatistics().increaseScore(PointRewards.REWARD_MOVE * distanceMoved);
@@ -433,13 +389,13 @@ public class Game {
         if (currentTreasureCardAfterMove == null) {
             gameOver();
             gameOver = true;
-            logGameAction(GameLogType.GAME_OVER, "Game Over. Winner: " + player.getUsername(), player, null);
+            gameLogger.log(GameLogType.GAME_OVER, "Game Over. Winner: " + player.getUsername(), player, null);
         }
 
         var treasureCollected = currentTreasureCardAfterMove != currentTreasureCardBeforeMove;
 
         if (treasureCollected) {
-            logGameAction(GameLogType.COLLECT_TREASURE, "Player collected treasure", player, null);
+            gameLogger.log(GameLogType.COLLECT_TREASURE, "Player collected treasure", player, null);
         }
 
         var statistics = player.getStatistics();
@@ -466,7 +422,7 @@ public class Game {
             currentPlayerIndex = 0;
         }
         // LOGGER handled by logGameAction
-        logGameAction(GameLogType.NEXT_TURN, "New Player to move: " + getCurrentPlayer().getUsername(),
+        gameLogger.log(GameLogType.NEXT_TURN, "New Player to move: " + getCurrentPlayer().getUsername(),
                 getCurrentPlayer(), null);
         currentMoveState = MoveState.PLACE_TILE;
 

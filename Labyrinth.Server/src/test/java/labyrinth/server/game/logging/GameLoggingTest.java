@@ -25,7 +25,8 @@ class GameLoggingTest {
 
     @BeforeEach
     void setUp() {
-        game = new Game(mock(IGameTimer.class), new SimpleAiStrategy());
+        game = new Game(mock(IGameTimer.class), new SimpleAiStrategy(),
+                new labyrinth.server.game.services.GameLogger());
     }
 
     @Test
