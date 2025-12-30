@@ -107,11 +107,13 @@ public class GameClient extends WebSocketClient {
                     if (onGameStarted != null) runOnUiThread(() -> onGameStarted.accept(payload));
                 }
                 case GAME_STATE_UPDATE -> {
+                    // korrektes Payload
                     GameStateEventPayload payload = mapper.treeToValue(payloadNode, GameStateEventPayload.class);
                     if (onGameStateUpdate != null) runOnUiThread(() -> onGameStateUpdate.accept(payload));
                 }
                 case ACTION_ERROR -> {
                     ActionErrorEventPayload payload = mapper.treeToValue(payloadNode, ActionErrorEventPayload.class);
+                    // Include error code in the message so handlers can detect specific error types
                     String errorCode = payload.getErrorCode() != null ? payload.getErrorCode().toString() : "UNKNOWN";
                     String msg = errorCode + ": " + (payload.getMessage() != null ? payload.getMessage() : "No details");
                     if (onErrorMessage != null) runOnUiThread(() -> onErrorMessage.accept(msg));
@@ -257,14 +259,16 @@ public class GameClient extends WebSocketClient {
     public void sendStartGame(BoardSize boardSize,
                               int treasureCardCount,
                               int totalBonusCount,
-                              Integer gameDurationInSeconds) {
+                              Integer gameDurationInSeconds,
+                              Integer turnTimeInSeconds) {
         try {
             StartGameCommandPayload payload = new StartGameCommandPayload();
             payload.setType(CommandType.START_GAME);
             payload.setBoardSize(boardSize);
             payload.setTreasureCardCount(treasureCardCount);
             payload.setTotalBonusCount(totalBonusCount);
-            payload.setGameDurationInSeconds(gameDurationInSeconds != null ? gameDurationInSeconds : 0);
+            payload.setGameDurationInSeconds(gameDurationInSeconds != null ? gameDurationInSeconds : 3600);
+            payload.setTurnTimeInSeconds(turnTimeInSeconds != null ? turnTimeInSeconds : 30);
 
             String json = mapper.writeValueAsString(payload);
             System.out.println("sendStartGame isOpen=" + isOpen() + " isClosing=" + isClosing() + " isClosed=" + isClosed());

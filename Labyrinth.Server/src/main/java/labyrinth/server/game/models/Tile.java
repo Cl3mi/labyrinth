@@ -86,15 +86,17 @@ public class Tile {
     }
 
     public void getSteppedOnBy(Player player) {
-        // When a player steps on this tile, collect treasure if appropriate.
-        // Tiles no longer store the occupant; the calling code updates
-        // the player's current tile instead.
-        if (treasureCard != null) {
-            if (player.getCurrentTreasureCard() == treasureCard) {
-                System.out.println("Card: " + treasureCard.getTreasureName());
-                treasureCard.collect();
-                this.treasureCard = null;
-            }
+        // When a player steps on this tile, collect any uncollected treasure.
+        // All players can collect any treasure (competitive mode).
+        if (treasureCard != null && !treasureCard.isCollected()) {
+            System.out.println("Player " + player.getUsername() +
+                    " collected: " + treasureCard.getTreasureName());
+            treasureCard.collect();
+            this.treasureCard = null;
+
+            // Track collection in statistics
+            player.getStatistics().increaseTreasuresCollected(1);
+            player.getStatistics().increaseScore(100);  // Award points
         }
     }
 

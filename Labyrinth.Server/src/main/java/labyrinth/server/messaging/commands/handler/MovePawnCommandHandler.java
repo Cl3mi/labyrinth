@@ -46,7 +46,14 @@ public class MovePawnCommandHandler extends AbstractCommandHandler<MovePawnComma
             throw new ActionErrorException("Cannot move pawn to the specified coordinates.", ErrorCode.INVALID_MOVE);
         }
 
-        var gameState = gameService.withGameReadLock(gameMapper::toGameStateDto);
-        messageService.broadcastToPlayers(gameState);
+        // Only broadcast game state if game is still in progress
+        // (if player won, GameOverEvent listener handles the broadcast)
+        gameService.withGameReadLock(game -> {
+            if (game.getRoomState() == labyrinth.server.game.enums.RoomState.IN_GAME) {
+                var gameState = gameMapper.toGameStateDto(game);
+                messageService.broadcastToPlayers(gameState);
+            }
+            return null;
+        });
     }
 }
