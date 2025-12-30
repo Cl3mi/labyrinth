@@ -1,6 +1,5 @@
 package labyrinth.server.game.ai;
 
-import labyrinth.server.game.abstractions.IGameTimer;
 import labyrinth.server.game.enums.Direction;
 import labyrinth.server.game.models.*;
 import labyrinth.server.game.models.records.GameConfig;
@@ -9,17 +8,17 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.*;
-
 import static org.mockito.Mockito.mock;
+import labyrinth.server.game.abstractions.IGameTimer;
+import labyrinth.server.game.ai.SimpleAiStrategy;
 
 class AiLogicTest {
 
     @Test
     void testAiTriggersOnNextPlayer() {
         // Setup simple game
-        IGameTimer mockTimer = mock(IGameTimer.class);
-        org.springframework.context.ApplicationEventPublisher mockEventPublisher = mock(org.springframework.context.ApplicationEventPublisher.class);
-        Game game = new Game(mockTimer, mockEventPublisher);
+        Game game = new Game(mock(IGameTimer.class), new SimpleAiStrategy(),
+                new labyrinth.server.game.services.GameLogger());
 
         Player p1 = game.join("P1");
         Player p2 = game.join("P2");

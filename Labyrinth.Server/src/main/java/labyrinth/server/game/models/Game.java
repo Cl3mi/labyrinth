@@ -2,12 +2,15 @@ package labyrinth.server.game.models;
 
 import labyrinth.contracts.models.PlayerColor;
 import labyrinth.server.game.abstractions.IGameTimer;
-import labyrinth.server.game.enums.BonusTypes;
-import labyrinth.server.game.enums.Direction;
-import labyrinth.server.game.enums.MoveState;
-import labyrinth.server.game.enums.RoomState;
+import labyrinth.server.game.ai.AiStrategy;
+import labyrinth.server.game.bonuses.IBonusEffect;
+import labyrinth.server.game.constants.PointRewards;
+import labyrinth.server.game.enums.*;
 import labyrinth.server.game.models.records.GameConfig;
 import labyrinth.server.game.models.records.Position;
+import labyrinth.server.game.results.MovePlayerToTileResult;
+import labyrinth.server.game.results.ShiftResult;
+import labyrinth.server.game.services.GameLogger;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.Setter;
@@ -28,13 +31,9 @@ public class Game {
 
     private final int MAX_PLAYERS = 4;
 
-    private int currentPlayerIndex;
-    private MoveState currentMoveState = MoveState.PLACE_TILE;
-
     private IGameTimer nextTurnTimer;
-    private IGameTimer gameDurationTimer;
 
-    private final org.springframework.context.ApplicationEventPublisher eventPublisher;
+    private final labyrinth.server.game.services.TurnController turnController;
 
     @Setter(lombok.AccessLevel.NONE)
     private Board board;
@@ -42,7 +41,7 @@ public class Game {
     private final List<Player> players;
     private RoomState roomState;
 
-    private BonusTypes activeBonus;
+    private BonusState activeBonusState;
 
     @Setter(AccessLevel.NONE)
     @Getter(AccessLevel.NONE)
@@ -52,37 +51,92 @@ public class Game {
     @Getter(AccessLevel.NONE)
     private OffsetDateTime gameStartTime;
 
-    public Game(IGameTimer nextTurnTimer, IGameTimer gameDurationTimer, org.springframework.context.ApplicationEventPublisher eventPublisher) {
+    private final labyrinth.server.game.ai.AiStrategy aiStrategy;
+
+    private final labyrinth.server.game.services.GameLogger gameLogger;
+
+    private final labyrinth.server.game.services.MovementManager movementManager;
+
+    private final labyrinth.server.game.services.AchievementService achievementService;
+
+    public java.util.List<labyrinth.server.game.models.records.GameLogEntry> getExecutionLogs() {
+        return gameLogger.getExecutionLogs();
+    }
+
+    private final java.util.Map<BonusTypes, IBonusEffect> bonusEffects = new java.util.EnumMap<>(BonusTypes.class);
+
+    public Game(
+            IGameTimer nextTurnTimer,
+            AiStrategy aiStrategy,
+            GameLogger gameLogger
+    ) {
         this.nextTurnTimer = nextTurnTimer;
-        this.gameDurationTimer = gameDurationTimer;
-        this.eventPublisher = eventPublisher;
+        this.aiStrategy = aiStrategy;
+        this.gameLogger = gameLogger;
         this.players = new ArrayList<>();
         this.roomState = RoomState.LOBBY;
         this.board = null;
         this.gameConfig = GameConfig.getDefault();
-        this.currentPlayerIndex = 0;
+        this.activeBonusState = NoBonusActive.getInstance();
+        this.turnController = new labyrinth.server.game.services.TurnController(nextTurnTimer, gameLogger);
+        this.movementManager = new labyrinth.server.game.services.MovementManager();
+        this.achievementService = new labyrinth.server.game.services.AchievementService();
+
+        // Initialize Bonus Strategies
+        bonusEffects.put(BonusTypes.BEAM, new labyrinth.server.game.bonuses.BeamBonusEffect());
+        bonusEffects.put(BonusTypes.SWAP, new labyrinth.server.game.bonuses.SwapBonusEffect());
+        bonusEffects.put(BonusTypes.PUSH_TWICE, new labyrinth.server.game.bonuses.PushTwiceBonusEffect());
+        bonusEffects.put(BonusTypes.PUSH_FIXED, new labyrinth.server.game.bonuses.PushFixedBonusEffect());
+    }
+
+    public boolean useBonus(BonusTypes type, Object... args) {
+        if (!bonusEffects.containsKey(type)) {
+            throw new IllegalArgumentException("No strategy found for bonus type: " + type);
+        }
+        boolean result = bonusEffects.get(type).apply(this, getCurrentPlayer(), args);
+        if (result) {
+            java.util.Map<String, String> meta = new java.util.HashMap<>();
+            meta.put("bonusType", type.toString());
+            gameLogger.log(GameLogType.USE_BONUS, "Player used bonus " + type, getCurrentPlayer(), meta);
+        }
+        return result;
+    }
+
+    // Kept for backward compatibility / API contract compliance, but delegates to strategy
+    // Should be cleaned up I guess?
+    public boolean useBeamBonus(int row, int col, Player player) {
+        guardFor(RoomState.IN_GAME);
+        guardFor(player);
+        guardFor(MoveState.PLACE_TILE);
+        return useBonus(BonusTypes.BEAM, row, col);
+    }
+
+    public boolean useSwapBonus(Player currentPlayer, Player targetPlayer) {
+        guardFor(RoomState.IN_GAME);
+        guardFor(currentPlayer);
+        guardFor(MoveState.PLACE_TILE);
+        return useBonus(BonusTypes.SWAP, targetPlayer);
+    }
+
+    public boolean usePushTwiceBonus(Player player) {
+        guardFor(RoomState.IN_GAME);
+        guardFor(player);
+        return useBonus(BonusTypes.PUSH_TWICE);
+    }
+
+    public boolean usePushFixedBonus(Player player) {
+        guardFor(player);
+        guardFor(RoomState.IN_GAME);
+        return useBonus(BonusTypes.PUSH_FIXED);
     }
 
     /**
-     * Adds a player to the room, or rejoins if player with same username exists.
+     * Adds a player to the room. The first player that joins will become the admin.
      *
      * @param username the username of the player joining the room
-     * @throws IllegalStateException if the room is full (when adding new player)
+     * @throws IllegalStateException if the room is full
      */
     public Player join(String username) {
-        // Allow rejoining by username if player already exists (for reconnection fallback)
-        Player existingPlayer = players.stream()
-                .filter(p -> p.getUsername().equals(username))
-                .findFirst()
-                .orElse(null);
-
-        if (existingPlayer != null) {
-            // Player with this username exists - allow rejoining
-            System.out.println("Player '" + username + "' rejoining by username (reconnection fallback)");
-            return existingPlayer;
-        }
-
-        // New player joining
         if (roomState != RoomState.LOBBY) {
             throw new IllegalStateException("Cannot join a game that is in progress!");
         }
@@ -99,7 +153,6 @@ public class Game {
         player.setColor(getNextColor());
 
         if (players.isEmpty()) {
-            // first player becomes admin
             player.setAdmin(true);
         }
 
@@ -118,61 +171,8 @@ public class Game {
     }
 
     public void leave(Player player) {
-        boolean wasAdmin = player.isAdmin();
-
-        // Remove player from game
+        // TODO: handle leaving during game
         players.removeIf(p -> p.getId().equals(player.getId()));
-
-        // If admin left and players remain, reassign admin to first remaining player
-        if (wasAdmin && !players.isEmpty()) {
-            // Clear all admin flags first (defensive programming)
-            players.forEach(p -> p.setAdmin(false));
-
-            // Assign admin to first non-AI player if possible, otherwise first player
-            Player newAdmin = players.stream()
-                .filter(p -> !p.isAiActive())
-                .findFirst()
-                .orElse(players.get(0));
-
-            newAdmin.setAdmin(true);
-            System.out.println("Admin reassigned from " + player.getUsername() +
-                              " to " + newAdmin.getUsername());
-        }
-
-        // TODO: handle leaving during active game (future enhancement)
-        // - If game is IN_GAME state, may need different behavior
-        // - Consider making AI take over, or ending game if too few players
-    }
-
-    /**
-     * Resets the game to lobby state after game ends.
-     * Removes all AI players and reassigns admin to the first remaining player.
-     */
-    public void resetToLobby() {
-        // Remove all AI players
-        players.removeIf(Player::isAiActive);
-
-        // Reset room state to lobby
-        roomState = RoomState.LOBBY;
-
-        // Reset all players' admin status and statistics
-        players.forEach(p -> {
-            p.setAdmin(false);
-            p.getStatistics().reset();
-            p.getAssignedTreasureCards().clear();
-            p.getBonuses().clear();
-        });
-
-        // Assign admin to first player if any remain
-        if (!players.isEmpty()) {
-            players.get(0).setAdmin(true);
-        }
-
-        // Clear board and game state
-        board = null;
-        currentPlayerIndex = 0;
-        currentMoveState = MoveState.PLACE_TILE;
-        activeBonus = null;
     }
 
     public Player getPlayer(UUID playerId) {
@@ -182,20 +182,11 @@ public class Game {
                 .orElse(null);
     }
 
-    public List<Player> getPlayers() {
-        return players;
-    }
-
-    public RoomState getRoomState() {
-        return roomState;
-    }
-
     /**
-     * Starts the game. This method could be extended to initialize
-     * player positions, shuffle treasure treasureCards, and set up the board.
+     * Starts the game. This method initializes players, distributes treasure cards,
+     * sets up the board, and transitions the game to IN_GAME state.
      */
-
-    public void startGame(GameConfig gameConfig, labyrinth.server.game.factories.TreasureCardFactory treasureCardFactory, Board board) {
+    public void startGame(GameConfig gameConfig, List<TreasureCard> treasureCards, Board board) {
         if (roomState != RoomState.LOBBY) {
             throw new IllegalStateException("Cannot start a game that is in progress or finished!");
         }
@@ -210,60 +201,37 @@ public class Game {
 
         this.gameConfig = Objects.requireNonNullElseGet(gameConfig, GameConfig::getDefault);
 
-        // Create treasures: treasureCardCount per player
-        int totalTreasures = gameConfig.treasureCardCount() * players.size();
-        var treasureCards = treasureCardFactory.createTreasureCards(totalTreasures);
-        System.out.println(treasureCards.size() + " treasureCards have been created (" +
-                          gameConfig.treasureCardCount() + " per player, " + players.size() + " players)");
+        distributeTreasureCards(treasureCards, board);
 
-        // Assign treasures to players for UI display (round-robin)
-        // But allow ANY player to collect ANY treasure (competitive mode)
-        var playerToAssignCardsToIndex = 0;
-        for (TreasureCard card : treasureCards) {
-            board.placeRandomTreasure(card);
+        labyrinth.server.game.factories.BonusFactory bonusFactory = new labyrinth.server.game.factories.BonusFactory();
+        var bonuses = bonusFactory.createBonuses(this.gameConfig.totalBonusCount());
+        board.placeRandomBonuses(bonuses);
 
-            Player player = players.get(playerToAssignCardsToIndex);
-            player.getAssignedTreasureCards().add(card);
-            playerToAssignCardsToIndex++;
-            if (playerToAssignCardsToIndex >= players.size()) {
-                playerToAssignCardsToIndex = 0;
-            }
-        }
-
-        // Assign starting positions to each player by placing them on the four corners
-        // of the board.
-        for (int i = 0; i < players.size(); i++) {
-            Player player = players.get(i);
-            var position = gameConfig.getStartPosition(i);
-
-            Tile startingTile = board.getTileAt(position);
-            System.out.println(player.getUsername() + " starts on tile: " + position.row() + "/" + position.column());
-            player.setHomeTile(startingTile);
-            player.setCurrentTile(startingTile);
-        }
+        initializePlayerPositions(board, this.gameConfig);
 
         this.board = board;
         this.board.setPlayers(players);
 
-        // Set room state to IN_GAME
-        roomState = RoomState.IN_GAME;
-
-        System.out.println("Game started in GameLobby" + " with " + players.size() + " players.");
+        logGameStart(board, this.gameConfig);
 
         if (getCurrentPlayer().isAiActive()) {
-            new labyrinth.server.game.ai.SimpleAiStrategy().performTurn(this, getCurrentPlayer());
+            this.aiStrategy.performTurn(this, getCurrentPlayer());
         }
 
         gameStartTime = OffsetDateTime.now();
-
-        // Start game duration timer
-        if (this.gameConfig.gameDurationInSeconds() > 0) {
-            gameDurationTimer.start(this.gameConfig.gameDurationInSeconds(), this::onGameDurationExpired);
-        }
+        this.roomState = RoomState.IN_GAME;
     }
 
     public Player getCurrentPlayer() {
-        return players.get(currentPlayerIndex);
+        return turnController.getCurrentPlayer(players);
+    }
+
+    public int getCurrentPlayerIndex() {
+        return turnController.getCurrentPlayerIndex();
+    }
+
+    public MoveState getCurrentMoveState() {
+        return turnController.getCurrentMoveState();
     }
 
     public Position getCurrentPositionOfPlayer(Player player) {
@@ -272,22 +240,24 @@ public class Game {
     }
 
     public void rotateExtraTileClockwise(Player player) {
-        //TODO: check if correct
         guardFor(MoveState.PLACE_TILE);
+        guardFor(RoomState.IN_GAME);
         guardFor(player);
 
         var board = getBoard();
         board.getExtraTile().rotate();
     }
 
-    public boolean shift(int index, Direction direction, Player player) {
+    public ShiftResult shift(int index, Direction direction, Player player) {
         guardFor(MoveState.PLACE_TILE);
         guardFor(player);
+        guardFor(RoomState.IN_GAME);
 
-        var fixedBonusActive = activeBonus == BonusTypes.PUSH_FIXED;
+        var fixedBonusActive = activeBonusState.isOfType(BonusTypes.PUSH_FIXED);
 
         if (fixedBonusActive) {
-            //TODO: do not allow to shift border rows/columns because it would move home tiles
+            // TODO: do not allow to shift border rows/columns because it would move home
+            // tiles
         }
 
         boolean res = switch (direction) {
@@ -298,156 +268,95 @@ public class Game {
         };
 
         if (!res) {
-            return false;
+            return new ShiftResult(false, false);
         }
 
-        if (fixedBonusActive) {
-            activeBonus = null;
-        }
+        handleBonusAfterShift();
 
-        currentMoveState = MoveState.MOVE;
+        player.getStatistics().increaseScore(PointRewards.REWARD_SHIFT_TILE);
+        player.getStatistics().increaseTilesPushed(1);
 
-        if (activeBonus == BonusTypes.PUSH_TWICE) {
-            currentMoveState = MoveState.PLACE_TILE;
-            activeBonus = null;
-        }
+        var pusherAchieved = achievementService.checkPusherAchievement(player).isPresent();
 
-        return true;
+        logShiftAction(index, direction, player);
+
+        return new ShiftResult(true, pusherAchieved);
     }
 
     public void toggleAiForPlayer(Player player) {
         player.setAiActive(!player.isAiActive());
     }
 
-    public void useBeamBonus(int row, int col, Player player) {
-        guardFor(player);
-        guardFor(MoveState.PLACE_TILE);
-
-        Tile targetTile = board.getTileMap().getForward(new Position(row, col));
-
-        for (Player other : players) {
-            if (other != player && other.getCurrentTile() == targetTile) {
-                System.out.println("Cant move a player is already on the target tile!");
-                return;
-            }
-        }
-
-        var allowedToUse = player.useBonus(BonusTypes.SWAP);
-
-        player.setCurrentTile(targetTile);
-    }
-
-
-    public void useSwapBonus(Player currentPlayer, Player targetPlayer) {
-        guardFor(currentPlayer);
-        guardFor(MoveState.PLACE_TILE);
-        var allowedToUse = currentPlayer.useBonus(BonusTypes.SWAP);
-
-        if (!allowedToUse) {
-            // return false?
-            return;
-        }
-
-        var currentPlayerTile = currentPlayer.getCurrentTile();
-        var targetPlayerTile = targetPlayer.getCurrentTile();
-
-        currentPlayer.setCurrentTile(targetPlayerTile);
-        targetPlayer.setCurrentTile(currentPlayerTile);
-
-        // return true;
-    }
-
-    public void usePushTwiceBonus(Player player) {
-        guardFor(player);
-        var allowedToUse = player.useBonus(BonusTypes.PUSH_TWICE);
-
-        if (!allowedToUse) {
-            return;
-        }
-
-        activeBonus = BonusTypes.PUSH_TWICE;
-    }
-
-    public void usePushFixedBonus(Player player) {
-        guardFor(player);
-        var allowedToUse = player.useBonus(BonusTypes.PUSH_FIXED);
-
-        if (!allowedToUse) {
-            return;
-        }
-
-        activeBonus = BonusTypes.PUSH_FIXED;
-    }
-
-    public boolean movePlayerToTile(int row, int col, Player player) {
+    public MovePlayerToTileResult movePlayerToTile(int row, int col, Player player) {
+        guardFor(RoomState.IN_GAME);
         guardFor(MoveState.MOVE);
         guardFor(player);
 
-        var moved = board.movePlayerToTile(player, row, col);
+        var currentTreasureCardBeforeMove = player.getCurrentTreasureCard();
+        var distanceMoved = board.movePlayerToTile(player, row, col, movementManager);
 
-        if (!moved) {
-            return false;
+        if (distanceMoved == -1) {
+            // Move failed - no logging needed for failed attempt
+            return new MovePlayerToTileResult(false, distanceMoved, false, false, false);
         }
 
-        // Check if player won by collecting enough treasures
-        checkWinCondition(player);
+        java.util.Map<String, String> meta = new java.util.HashMap<>();
+        meta.put("toRow", String.valueOf(row));
+        meta.put("toCol", String.valueOf(col));
+        meta.put("distance", String.valueOf(distanceMoved));
+        gameLogger.log(GameLogType.MOVE_PLAYER, "Player moved to " + row + "/" + col + " (" + distanceMoved + " steps)",
+                player, meta);
 
-        // Only continue to next player if game is still in progress
-        // (checkWinCondition may have ended the game)
-        if (roomState == RoomState.IN_GAME) {
-            nextPlayer();
+        player.getStatistics().increaseScore(PointRewards.REWARD_MOVE * distanceMoved);
+        player.getStatistics().increaseStepsTaken(distanceMoved);
+
+        var currentTreasureCardAfterMove = player.getCurrentTreasureCard();
+
+        if (currentTreasureCardAfterMove == null) {
+            player.getStatistics().increaseScore(PointRewards.REWARD_ALL_TREASURES_COLLECTED);
         }
-        return true;
+
+        var gameOver = false;
+        if (currentTreasureCardAfterMove == null) {
+            gameOver();
+            gameOver = true;
+            gameLogger.log(GameLogType.GAME_OVER, "Game Over. Winner: " + player.getUsername(), player, null);
+        }
+
+        var treasureCollected = currentTreasureCardAfterMove != currentTreasureCardBeforeMove;
+
+        if (treasureCollected) {
+            gameLogger.log(GameLogType.COLLECT_TREASURE, "Player collected treasure", player, null);
+        }
+
+        var runnerAchieved = achievementService.checkRunnerAchievement(player).isPresent();
+
+        nextPlayer();
+        return new MovePlayerToTileResult(true, distanceMoved, treasureCollected, gameOver, runnerAchieved);
+    }
+
+    private void gameOver() {
+        this.roomState = RoomState.FINISHED;
     }
 
     private synchronized void nextPlayer() {
-        nextTurnTimer.stop();
-
-        currentPlayerIndex++;
-        if (currentPlayerIndex >= players.size()) {
-            currentPlayerIndex = 0;
-        }
-        System.out.println("New Player to move: " + getCurrentPlayer().getUsername());
-        currentMoveState = MoveState.PLACE_TILE;
-
-        if (getCurrentPlayer().isAiActive()) {
-            // Using AdvancedAiStrategy for smarter gameplay
-            new labyrinth.server.game.ai.SimpleAiStrategy().performTurn(this, getCurrentPlayer());
-        } else {
-            // Broadcast game state update when advancing to next human player
-            // (so clients know whose turn it is)
-            if (eventPublisher != null) {
-                eventPublisher.publishEvent(new labyrinth.server.game.events.TurnCompletedEvent(this, getCurrentPlayer()));
-            }
-            nextTurnTimer.start(gameConfig.turnTimeInSeconds(), this::nextPlayer);
-        }
+        turnController.advanceToNextPlayer(
+                            players,
+                            roomState,
+                            gameConfig,
+                      player -> aiStrategy.performTurn(this, player));
     }
 
-
     private void guardFor(MoveState moveState) {
-        if (board.isFreeRoam()) {
-            return;
-        }
-
-        if (this.currentMoveState != moveState) {
-            throw new IllegalStateException("Illegal move state");
-        }
+        turnController.guardForMoveState(board, moveState);
     }
 
     private void guardFor(RoomState roomState) {
-        if (this.roomState != roomState) {
-            throw new IllegalStateException("Illegal room state");
-        }
+        turnController.guardForRoomState(this.roomState, roomState);
     }
 
     private void guardFor(Player playerToMove) {
-        if (board.isFreeRoam()) {
-            return;
-        }
-        if (!players.get(currentPlayerIndex).equals(playerToMove)) {
-            throw new IllegalStateException("Illegal player. Expected " + players.get(currentPlayerIndex).getId()
-                    + " but got " + playerToMove.getId());
-        }
+        turnController.guardForPlayer(board, players, playerToMove);
     }
 
     private boolean isUsernameAvailable(String username) {
@@ -466,6 +375,122 @@ public class Game {
                 '}';
     }
 
+    /**
+     * Handles bonus state transitions after a successful board shift.
+     * Consumes the PUSH_FIXED bonus if it was active, or allows another push
+     * if PUSH_TWICE bonus is active.
+     */
+    private void handleBonusAfterShift() {
+        boolean isPushTwice = activeBonusState.isOfType(BonusTypes.PUSH_TWICE);
+
+        activeBonusState = activeBonusState.consume();
+
+        if (isPushTwice) {
+            turnController.setMoveState(MoveState.PLACE_TILE);
+        } else {
+            turnController.setMoveState(MoveState.MOVE);
+        }
+    }
+
+    /**
+     * Logs the board shift action with metadata including the inserted tile.
+     * Determines which tile was inserted based on the shift direction.
+     *
+     * @param index     the row or column index that was shifted
+     * @param direction the direction of the shift
+     * @param player    the player who performed the shift
+     */
+    private void logShiftAction(int index, Direction direction, Player player) {
+        java.util.Map<String, String> meta = new java.util.HashMap<>();
+        meta.put("index", String.valueOf(index));
+        meta.put("direction", direction.toString());
+
+        Tile insertedTile = getInsertedTile(index, direction);
+        if (insertedTile != null) {
+            meta.put("insertedTile", gameLogger.serializeTile(insertedTile));
+        }
+
+        gameLogger.log(GameLogType.SHIFT_BOARD, "Player shifted board " + direction + " at index " + index, player,
+                meta);
+    }
+
+    /**
+     * Determines which tile was inserted into the board after a shift operation.
+     *
+     * @param index     the row or column index that was shifted
+     * @param direction the direction of the shift
+     * @return the tile that was inserted, or null if direction is invalid
+     */
+    private Tile getInsertedTile(int index, Direction direction) {
+        return switch (direction) {
+            case DOWN -> board.getTileAt(0, index);
+            case UP -> board.getTileAt(board.getHeight() - 1, index);
+            case RIGHT -> board.getTileAt(index, 0);
+            case LEFT -> board.getTileAt(index, board.getWidth() - 1);
+        };
+    }
+
+    /**
+     * Distributes treasure cards to players in round-robin fashion and places them on the board.
+     *
+     * @param treasureCards the list of treasure cards to distribute
+     * @param board         the board to place treasures on
+     */
+    private void distributeTreasureCards(List<TreasureCard> treasureCards, Board board) {
+        var playerToAssignCardsToIndex = 0;
+        while (!treasureCards.isEmpty()) {
+            TreasureCard card = treasureCards.getFirst();
+            board.placeRandomTreasure(card);
+
+            Player player = players.get(playerToAssignCardsToIndex);
+            player.getAssignedTreasureCards().add(card);
+
+            playerToAssignCardsToIndex++;
+            if (playerToAssignCardsToIndex >= players.size()) {
+                playerToAssignCardsToIndex = 0;
+            }
+
+            treasureCards.removeFirst();
+        }
+    }
+
+    /**
+     * Initializes player positions on the board based on the game configuration.
+     * Sets both the home tile and current tile for each player.
+     *
+     * @param board      the board to place players on
+     * @param gameConfig the game configuration containing start positions
+     */
+    private void initializePlayerPositions(Board board, GameConfig gameConfig) {
+        for (int i = 0; i < players.size(); i++) {
+            Player player = players.get(i);
+            var position = gameConfig.getStartPosition(i);
+
+            Tile startingTile = board.getTileAt(position);
+            player.setHomeTile(startingTile);
+            player.setCurrentTile(startingTile);
+        }
+    }
+
+    /**
+     * Logs the game start event with board state and player positions.
+     *
+     * @param board      the initialized board
+     * @param gameConfig the game configuration
+     */
+    private void logGameStart(Board board, GameConfig gameConfig) {
+        java.util.Map<String, String> startMeta = new java.util.HashMap<>();
+        startMeta.put("boardState", gameLogger.serializeBoard(board));
+
+        for (Player p : players) {
+            startMeta.put("player_" + p.getId(),
+                    p.getUsername() + "@" + gameConfig.getStartPosition(players.indexOf(p)));
+        }
+
+        gameLogger.log(GameLogType.START_GAME, "Game started in GameLobby with " + players.size() + " players.", null,
+                startMeta);
+    }
+
     private PlayerColor getNextColor() {
         for (PlayerColor color : PlayerColor.values()) {
             boolean used = players.stream()
@@ -477,6 +502,26 @@ public class Game {
         throw new IllegalStateException("No available colors left");
     }
 
+    /**
+     * Sets the active bonus state. Used by bonus effect implementations.
+     * Provided for backward compatibility with existing bonus effects.
+     *
+     * @param bonusType the type of bonus to activate
+     */
+    public void setActiveBonus(BonusTypes bonusType) {
+        this.activeBonusState = new ActiveBonus(bonusType);
+    }
+
+    /**
+     * Gets the currently active bonus type, if any.
+     * Provided for backward compatibility with tests.
+     *
+     * @return the active bonus type, or null if no bonus is active
+     */
+    public BonusTypes getActiveBonus() {
+        return activeBonusState.getBonusType().orElse(null);
+    }
+
     public OffsetDateTime getGameEndTime() {
         if (gameStartTime == null) {
             return null;
@@ -486,61 +531,5 @@ public class Game {
 
     public OffsetDateTime getTurnEndTime() {
         return nextTurnTimer.getExpirationTime();
-    }
-
-    /**
-     * Publishes a TurnCompletedEvent to notify listeners (e.g., to broadcast game state).
-     * This should be called after AI turns complete.
-     */
-    public void publishTurnCompleted(Player player) {
-        if (eventPublisher != null) {
-            eventPublisher.publishEvent(new labyrinth.server.game.events.TurnCompletedEvent(this, player));
-        }
-    }
-
-    /**
-     * Checks if a player has met the win condition (collected enough treasures).
-     * If so, ends the game immediately.
-     */
-    private void checkWinCondition(Player player) {
-        int treasuresCollected = player.getStatistics().getTreasuresCollected();
-        int treasuresNeeded = gameConfig.treasureCardCount();
-
-        if (treasuresCollected >= treasuresNeeded) {
-            System.out.println("GAME OVER: " + player.getUsername() +
-                    " collected " + treasuresCollected + " treasures!");
-            endGame("Player " + player.getUsername() + " collected all treasures!");
-        }
-    }
-
-    /**
-     * Called when the game duration timer expires.
-     * Ends the game and determines winner by score.
-     */
-    private synchronized void onGameDurationExpired() {
-        System.out.println("Game duration expired! Ending game based on current scores.");
-        endGame("Time's up!");
-    }
-
-    /**
-     * Ends the game by stopping all timers, setting room state to FINISHED,
-     * and publishing a GameOverEvent.
-     *
-     * @param reason The reason the game ended
-     */
-    private void endGame(String reason) {
-        System.out.println("Ending game: " + reason);
-
-        // Stop all timers
-        nextTurnTimer.stop();
-        gameDurationTimer.stop();
-
-        // Set room state
-        roomState = RoomState.FINISHED;
-
-        // Publish game over event
-        if (eventPublisher != null) {
-            eventPublisher.publishEvent(new labyrinth.server.game.events.GameOverEvent(List.copyOf(players)));
-        }
     }
 }

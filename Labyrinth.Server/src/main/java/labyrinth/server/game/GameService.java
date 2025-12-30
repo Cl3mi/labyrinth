@@ -1,9 +1,12 @@
 package labyrinth.server.game;
 
+import labyrinth.server.game.constants.PointRewards;
 import labyrinth.server.game.enums.Achievement;
 import labyrinth.server.game.enums.Direction;
 import labyrinth.server.game.enums.RoomState;
 import labyrinth.server.game.events.AchievementUnlockedEvent;
+import labyrinth.server.game.events.GameOverEvent;
+import labyrinth.server.game.events.NextTreasureCardEvent;
 import labyrinth.server.game.factories.BoardFactory;
 import labyrinth.server.game.factories.TreasureCardFactory;
 import labyrinth.server.game.models.Board;
@@ -32,20 +35,18 @@ public class GameService {
     private final EventPublisher eventPublisher;
 
     public GameService(TreasureCardFactory treasureCardFactory,
-                       BoardFactory boardFactory,
-                       EventPublisher eventPublisher,
-                       TaskScheduler scheduler,
-                       org.springframework.context.ApplicationEventPublisher applicationEventPublisher) {
+            BoardFactory boardFactory,
+            EventPublisher eventPublisher,
+            TaskScheduler scheduler) {
 
         this.treasureCardFactory = treasureCardFactory;
         this.boardFactory = boardFactory;
         this.eventPublisher = eventPublisher;
 
-        var turnTimer = new GameTimer(scheduler);
-        var durationTimer = new GameTimer(scheduler);
-        game = new Game(turnTimer, durationTimer, applicationEventPublisher);
+        var gameTimer = new GameTimer(scheduler);
+        var gameLogger = new labyrinth.server.game.services.GameLogger();
+        game = new Game(gameTimer, new labyrinth.server.game.ai.SimpleAiStrategy(), gameLogger);
     }
-
 
     public Player join(String username) {
         rwLock.writeLock().lock();
@@ -65,13 +66,8 @@ public class GameService {
         }
     }
 
-    public void resetToLobby() {
-        rwLock.writeLock().lock();
-        try {
-            game.resetToLobby();
-        } finally {
-            rwLock.writeLock().unlock();
-        }
+    public int getMaxPlayers() {
+        return game.getMAX_PLAYERS();
     }
 
     public List<Player> getPlayers() {
@@ -83,7 +79,7 @@ public class GameService {
         }
     }
 
-    public RoomState getRoomState() {
+    public RoomState getGameState() {
         rwLock.readLock().lock();
         try {
             return game.getRoomState();
@@ -113,10 +109,13 @@ public class GameService {
     public void startGame(GameConfig gameConfig) {
         rwLock.writeLock().lock();
         try {
-            var board = boardFactory.createBoard(gameConfig.boardWidth(), gameConfig.boardHeight(), gameConfig.totalBonusCount());
+            int playersCount = game.getPlayers().size();
 
-            // Treasures will be created in game.startGame() after players are finalized
-            game.startGame(gameConfig, treasureCardFactory, board);
+            var board = boardFactory.createBoard(gameConfig.boardWidth(), gameConfig.boardHeight(),
+                    gameConfig.totalBonusCount());
+            var treasureCards = treasureCardFactory.createTreasureCards(gameConfig.treasureCardCount(), playersCount);
+
+            game.startGame(gameConfig, treasureCards, board);
         } finally {
             rwLock.writeLock().unlock();
         }
@@ -134,16 +133,25 @@ public class GameService {
     public boolean movePlayerToTile(int row, int col, Player player) {
         rwLock.writeLock().lock();
         try {
-            boolean result = game.movePlayerToTile(row, col, player);
+            var result = game.movePlayerToTile(row, col, player);
+            boolean moveSuccess = result.moveSuccess();
 
-            // TODO: this is just an example, replace with actual achievement unlocking logic
-            // Only publish achievement if game is still in progress (prevent race condition with game ending)
-            if (result && game.getRoomState() == RoomState.IN_GAME) {
+            if (result.runnerAchieved()) {
                 var achievementEvent = new AchievementUnlockedEvent(player, Achievement.RUNNER);
                 eventPublisher.publishAsync(achievementEvent);
             }
 
-            return result;
+            if (result.treasureCollected()) {
+                var treasureCardEvent = new NextTreasureCardEvent(player, player.getCurrentTreasureCard());
+                eventPublisher.publishAsync(treasureCardEvent);
+            }
+
+            if (result.gameOver()) {
+                var gameOverEvent = new GameOverEvent(game.getPlayers());
+                eventPublisher.publishAsync(gameOverEvent);
+            }
+
+            return moveSuccess;
         } finally {
             rwLock.writeLock().unlock();
         }
@@ -161,7 +169,14 @@ public class GameService {
     public boolean shift(int index, Direction direction, Player player) {
         rwLock.writeLock().lock();
         try {
-            return game.shift(index, direction, player);
+            var pushResult = game.shift(index, direction, player);
+
+            if (pushResult.pusherAchieved()) {
+                var achievementEvent = new AchievementUnlockedEvent(player, Achievement.PUSHER);
+                eventPublisher.publishAsync(achievementEvent);
+            }
+
+            return pushResult.shiftSuccess();
         } finally {
             rwLock.writeLock().unlock();
         }
@@ -179,12 +194,16 @@ public class GameService {
     public void useBeamBonus(int row, int col, Player player) {
         rwLock.writeLock().lock();
         try {
-            game.useBeamBonus(row, col, player);
+            var useSuccessfull = game.useBeamBonus(row, col, player);
+
+            if (useSuccessfull) {
+                player.getStatistics().increaseScore(PointRewards.REWARD_SHIFT_TILE);
+            }
+
         } finally {
             rwLock.writeLock().unlock();
         }
     }
-
 
     public void useSwapBonus(Player currentPlayer, Player targetPlayer) {
         rwLock.writeLock().lock();
@@ -194,7 +213,6 @@ public class GameService {
             rwLock.writeLock().unlock();
         }
     }
-
 
     public void usePushTwiceBonus(Player player) {
         rwLock.writeLock().lock();
@@ -214,7 +232,8 @@ public class GameService {
         }
     }
 
-    // Generic helper: run a function under the Game read-lock. Keeps locking centralized
+    // Generic helper: run a function under the Game read-lock. Keeps locking
+    // centralized
     // while avoiding coupling the Game layer to messaging/contract DTO types.
     public <T> T withGameReadLock(Function<Game, T> action) {
         rwLock.readLock().lock();
