@@ -90,6 +90,46 @@ public class Graph implements IBoardEventListener {
     }
 
     /**
+     * Calculates the shortest distance between two tiles.
+     *
+     * @param start  starting tile
+     * @param target target tile
+     * @return the number of edges in the shortest path, or -1 if no path exists
+     */
+    public int getDistance(Tile start, Tile target) {
+        if (start.equals(target)) {
+            return 0;
+        }
+
+        Map<Tile, Integer> distances = new HashMap<>();
+        Queue<Tile> queue = new ArrayDeque<>();
+        Set<Tile> visited = new HashSet<>();
+
+        queue.add(start);
+        visited.add(start);
+        distances.put(start, 0);
+
+        while (!queue.isEmpty()) {
+            Tile current = queue.poll();
+            int currentDistance = distances.get(current);
+
+            if (current.equals(target)) {
+                return currentDistance;
+            }
+
+            for (Tile neighbor : getNeighbors(current)) {
+                if (!visited.contains(neighbor)) {
+                    visited.add(neighbor);
+                    distances.put(neighbor, currentDistance + 1);
+                    queue.add(neighbor);
+                }
+            }
+        }
+
+        return -1;
+    }
+
+    /**
      * Finds the shortest path from start to target using BFS.
      *
      * @param start  starting tile

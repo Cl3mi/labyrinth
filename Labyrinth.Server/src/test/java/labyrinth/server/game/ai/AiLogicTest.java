@@ -9,6 +9,9 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.*;
+import static org.mockito.Mockito.mock;
+import labyrinth.server.game.abstractions.IGameTimer;
+import labyrinth.server.game.ai.SimpleAiStrategy;
 
 import static org.mockito.Mockito.mock;
 
@@ -17,9 +20,11 @@ class AiLogicTest {
     @Test
     void testAiTriggersOnNextPlayer() {
         // Setup simple game
-        IGameTimer mockTimer = mock(IGameTimer.class);
+        IGameTimer mockTurnTimer = mock(IGameTimer.class);
+        IGameTimer mockDurationTimer = mock(IGameTimer.class);
         org.springframework.context.ApplicationEventPublisher mockEventPublisher = mock(org.springframework.context.ApplicationEventPublisher.class);
-        Game game = new Game(mockTimer, mockEventPublisher);
+        Game game = new Game(mockTurnTimer, mockDurationTimer, mockEventPublisher, new SimpleAiStrategy(),
+                new labyrinth.server.game.services.GameLogger());
 
         Player p1 = game.join("P1");
         Player p2 = game.join("P2");

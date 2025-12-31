@@ -24,13 +24,16 @@ public class Testing {
 
         IGameTimer turnTimer = new GameTimer(scheduler);
         IGameTimer durationTimer = new GameTimer(scheduler);
-        game = new Game(turnTimer, durationTimer, null);
+        var gameLogger = new labyrinth.server.game.services.GameLogger();
+        var aiStrategy = new labyrinth.server.game.ai.SimpleAiStrategy();
+        game = new Game(turnTimer, durationTimer, null, aiStrategy, gameLogger);
         simulateGameStart();
-        //simulateGameMoves(1000);
+        // simulateGameMoves(1000);
     }
 
     public static void simulateGameStart() {
-        // Lets Simulate creating a room here. Player presses something like "create lobby"
+        // Lets Simulate creating a room here. Player presses something like "create
+        // lobby"
         game.join("Alice");
         // More Players join the lobby
         game.join("Bob");
@@ -43,22 +46,22 @@ public class Testing {
 
         var gameConfig = new GameConfig(7, 7, 24, 1800, 4, 30);
         var board = boardFactory.createBoard(gameConfig.boardWidth(), gameConfig.boardHeight(), gameConfig.totalBonusCount());
-
+        var cards = treasureCardFactory.createTreasureCards(gameConfig.treasureCardCount(), game.getPlayers().size());
 
         var p2 = game.getPlayers().get(1);
-        game.toggleAiForPlayer(p2);
 
         var p1 = game.getPlayers().get(0);
-        game.toggleAiForPlayer(p1);
 
         var p3 = game.getPlayers().get(2);
-        game.toggleAiForPlayer(p3);
 
         var p4 = game.getPlayers().get(3);
-        game.toggleAiForPlayer(p4);
 
-        game.startGame(gameConfig, treasureCardFactory, board);
+         game.toggleAiForPlayer(p1);
+         game.toggleAiForPlayer(p2);
+         game.toggleAiForPlayer(p3);
+         game.toggleAiForPlayer(p4);
 
+        game.startGame(gameConfig, cards, board);
 
         // Open Debug Viewer
         LabyrinthViewer.viewSwing(game);
@@ -144,8 +147,7 @@ public class Testing {
                     shiftIndex,
                     direction,
                     positionOpt.row(),
-                    positionOpt.column()
-            );
+                    positionOpt.column());
 
             LabyrinthViewer.repaintView();
             // Wait between moves

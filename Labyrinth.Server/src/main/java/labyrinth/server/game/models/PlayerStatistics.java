@@ -1,6 +1,10 @@
 package labyrinth.server.game.models;
 
+import labyrinth.server.game.enums.Achievement;
 import lombok.Getter;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @Getter
 //TODO: use this class to track player statistics such as score, steps taken, tiles pushed, and treasures collected
@@ -9,6 +13,8 @@ public class PlayerStatistics {
     private int stepsTaken;
     private int tilesPushed;
     private int treasuresCollected;
+
+    private List<Achievement> collectedAchievements = new ArrayList<>();
 
     public void increaseScore(int amount) {
         this.score += amount;
@@ -32,4 +38,9 @@ public class PlayerStatistics {
         this.tilesPushed = 0;
         this.treasuresCollected = 0;
     }
+
+    public void collectAchievement(Achievement achievement){
+        collectedAchievements.add(achievement);
+    }
+
 }

@@ -28,14 +28,20 @@
         <url/>
     </scm>
     <properties>
-        <java.version>24</java.version>
-        <maven.compiler.source>24</maven.compiler.source>
-        <maven.compiler.target>24</maven.compiler.target>
+        <java.version>25</java.version>
+        <maven.compiler.source>25</maven.compiler.source>
+        <maven.compiler.target>25</maven.compiler.target>
     </properties>
     <dependencies>
         <dependency>
             <groupId>labyrinth.contracts</groupId>
             <artifactId>labyrinth-contracts</artifactId>
+            <version>1.0.0</version>
+        </dependency>
+
+        <dependency>
+            <groupId>labyrinth.managementclient</groupId>
+            <artifactId>labyrinth-managementclient</artifactId>
             <version>1.0.0</version>
         </dependency>
 
@@ -76,6 +82,7 @@
                         <path>
                             <groupId>org.projectlombok</groupId>
                             <artifactId>lombok</artifactId>
+                            <version>1.18.42</version>
                         </path>
                     </annotationProcessorPaths>
                 </configuration>

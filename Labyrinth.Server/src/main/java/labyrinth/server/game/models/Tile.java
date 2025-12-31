@@ -85,21 +85,6 @@ public class Tile {
         return entrances.contains(direction) && neighbor.getEntrances().contains(direction.opposite());
     }
 
-    public void getSteppedOnBy(Player player) {
-        // When a player steps on this tile, collect any uncollected treasure.
-        // All players can collect any treasure (competitive mode).
-        if (treasureCard != null && !treasureCard.isCollected()) {
-            System.out.println("Player " + player.getUsername() +
-                    " collected: " + treasureCard.getTreasureName());
-            treasureCard.collect();
-            this.treasureCard = null;
-
-            // Track collection in statistics
-            player.getStatistics().increaseTreasuresCollected(1);
-            player.getStatistics().increaseScore(100);  // Award points
-        }
-    }
-
     @Override
     public String toString() {
         return "Tile{" +

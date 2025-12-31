@@ -18,7 +18,7 @@ public class SimpleAiStrategy implements AiStrategy {
 
         java.util.concurrent.CompletableFuture.supplyAsync(() -> {
                     TreasureCard targetCard = realPlayer.getAssignedTreasureCards().isEmpty() ? null
-                            : realPlayer.getAssignedTreasureCards().getFirst();
+                            : realPlayer.getCurrentTreasureCard();
                     return findBestMove(game, realPlayer, targetCard);
                 }).thenCompose(result -> delay(randomDelay()).thenApply(v -> result))
                 .thenCompose(bestResult -> {
@@ -26,13 +26,13 @@ public class SimpleAiStrategy implements AiStrategy {
                     if (bestResult != null) {
                         System.out.println(
                                 "AI executing shift: " + bestResult.shiftType + " index " + bestResult.shiftIndex);
-                        boolean shiftSuccess = switch (bestResult.shiftType) {
+                        var shiftResult = switch (bestResult.shiftType) {
                             case UP -> game.shift(bestResult.shiftIndex, Direction.UP, realPlayer);
                             case DOWN -> game.shift(bestResult.shiftIndex, Direction.DOWN, realPlayer);
                             case LEFT -> game.shift(bestResult.shiftIndex, Direction.LEFT, realPlayer);
                             case RIGHT -> game.shift(bestResult.shiftIndex, Direction.RIGHT, realPlayer);
                         };
-                        if (!shiftSuccess)
+                        if (!shiftResult.shiftSuccess())
                             forceRandomShift(game, realPlayer);
                     } else {
                         forceRandomShift(game, realPlayer);
@@ -47,7 +47,7 @@ public class SimpleAiStrategy implements AiStrategy {
                         System.out.println("AI moving to: " + bestResult.targetPosition.row() + "/"
                                 + bestResult.targetPosition.column());
                         var moveSuccess = game.movePlayerToTile(bestResult.targetPosition.row(), bestResult.targetPosition.column(),
-                                realPlayer);
+                                realPlayer).moveSuccess();
 
                         if (!moveSuccess) {
                             Position current = game.getCurrentPositionOfPlayer(realPlayer);
@@ -70,7 +70,7 @@ public class SimpleAiStrategy implements AiStrategy {
 
     private void forceRandomShift(Game game, Player player) {
         try {
-            if (!game.shift(1, Direction.RIGHT, player)) {
+            if (!game.shift(1, Direction.RIGHT, player).shiftSuccess()) {
                 game.shift(0, Direction.DOWN, player);
             }
         } catch (Exception e) {
@@ -181,7 +181,6 @@ public class SimpleAiStrategy implements AiStrategy {
             }
         }
 
-        // Score logic
         int score = 0;
         int minDist = Integer.MAX_VALUE;
         Position bestPosForOp = null;
@@ -207,10 +206,9 @@ public class SimpleAiStrategy implements AiStrategy {
                 }
             }
         } else {
-            // No target, random move
             score = 0;
             minDist = 0;
-            // Just move to current
+            // No target, just move to current
             Position cur = clonedBoard.getPositionOfTile(clonedMe.getCurrentTile());
             bestPosForOp = cur;
         }
