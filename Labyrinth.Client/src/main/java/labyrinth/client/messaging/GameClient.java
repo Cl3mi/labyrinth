@@ -107,7 +107,6 @@ public class GameClient extends WebSocketClient {
                     if (onGameStarted != null) runOnUiThread(() -> onGameStarted.accept(payload));
                 }
                 case GAME_STATE_UPDATE -> {
-                    // korrektes Payload
                     GameStateEventPayload payload = mapper.treeToValue(payloadNode, GameStateEventPayload.class);
                     if (onGameStateUpdate != null) runOnUiThread(() -> onGameStateUpdate.accept(payload));
                 }
@@ -274,6 +273,16 @@ public class GameClient extends WebSocketClient {
             System.out.println("sendStartGame isOpen=" + isOpen() + " isClosing=" + isClosing() + " isClosed=" + isClosed());
             System.out.println("sendStartGame -> " + json);
             send(json);
+            System.out.println(">>> START_GAME sent, waiting for response...");
+
+            // Debug: Teste ob der Socket noch funktioniert
+            new Thread(() -> {
+                try {
+                    Thread.sleep(3000);
+                    System.out.println(">>> 3 seconds passed - no GAME_STARTED received");
+                    System.out.println(">>> Connection still open: " + isOpen());
+                } catch (InterruptedException ignored) {}
+            }).start();
         } catch (Exception e) {
             e.printStackTrace();
             runOnUiThread(() -> {

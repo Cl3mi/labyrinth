@@ -89,8 +89,6 @@ public class GameOverEventListener {
             payload.setRanking(ranking.toArray(RankingEntry[]::new));
             messageService.broadcastToPlayers(payload);
 
-            // Reset game to lobby: remove bots, reassign admin
-            gameService.resetToLobby();
 
             // Broadcast updated lobby state (without bots, with correct admin)
             var lobbyStateUpdated = new LobbyStateEventPayload();

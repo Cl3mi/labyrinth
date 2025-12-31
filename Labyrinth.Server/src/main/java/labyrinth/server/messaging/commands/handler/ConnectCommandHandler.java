@@ -69,7 +69,7 @@ public class ConnectCommandHandler extends AbstractCommandHandler<ConnectCommand
             messageService.sendToPlayer(player.getId(), ackPayload);
 
             // Check if game is in progress - send game state instead of lobby state
-            RoomState roomState = gameService.getRoomState();
+            RoomState roomState = gameService.getGameState();
             if (roomState == RoomState.IN_GAME) {
                 // Player is reconnecting to ongoing game - send game state
                 var gameStateDto = gameService.withGameReadLock(gameMapper::toGameStateDto);
@@ -92,7 +92,7 @@ public class ConnectCommandHandler extends AbstractCommandHandler<ConnectCommand
         messageService.sendToPlayer(player.getId(), ackPayload);
 
         // Check if game is in progress - send appropriate state
-        RoomState roomState = gameService.getRoomState();
+        RoomState roomState = gameService.getGameState();
         if (roomState == RoomState.IN_GAME) {
             // Rejoining ongoing game by username - send game state
             var gameStateDto = gameService.withGameReadLock(gameMapper::toGameStateDto);

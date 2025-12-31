@@ -3,125 +3,213 @@ package labyrinth.server.game.ai;
 import labyrinth.server.game.enums.Direction;
 import labyrinth.server.game.models.*;
 import labyrinth.server.game.models.records.Position;
+import labyrinth.server.game.results.MovePlayerToTileResult;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 
 public class SligthlyLessSimpleAiStrategy implements AiStrategy {
 
     private final java.util.Random random = new java.util.Random();
 
-    @Override
-    public void performTurn(Game game, Player realPlayer) {
-        System.out.println("AI performing turn for " + realPlayer.getUsername());
+    // Callback to broadcast game state after AI moves
+    private Runnable broadcastCallback = null;
 
-        // The "Async/Await" Pipeline
-        calculateBestMoveAsync(game, realPlayer)
-                .thenCompose(result -> delay(randomDelay(), result))    // await delay
-                .thenApply(result   -> executeShift(game, realPlayer, result)) // synchronous logic
-                .thenCompose(result -> delay(randomDelay(), result))    // await delay
-                .thenAccept(result  -> executeMove(game, realPlayer, result))  // synchronous logic
-                .exceptionally(ex -> {
-                    ex.printStackTrace();
-                    return null;
-                });
+    // Callback to handle move results (game over, treasure collected, etc.)
+    private Consumer<MovePlayerToTileResult> moveResultCallback = null;
+
+    @Override
+    public void setBroadcastCallback(Runnable callback) {
+        this.broadcastCallback = callback;
     }
 
-    // --- Step 1: Calculation (Async) ---
-    private CompletableFuture<SimulationResult> calculateBestMoveAsync(Game game, Player player) {
-        return CompletableFuture.supplyAsync(() -> {
-            TreasureCard targetCard = player.getAssignedTreasureCards().isEmpty()
-                    ? null
-                    : player.getCurrentTreasureCard();
-            return findBestMove(game, player, targetCard);
+    @Override
+    public void setMoveResultCallback(Consumer<MovePlayerToTileResult> callback) {
+        this.moveResultCallback = callback;
+    }
+
+    @Override
+    public void performTurn(Game game, Player realPlayer) {
+        System.out.println("=== AI START: " + realPlayer.getUsername() + " ===");
+
+        // Führe den gesamten Zug in einem einzigen async Thread aus
+        CompletableFuture.runAsync(() -> {
+            try {
+                executeTurnSynchronously(game, realPlayer);
+            } catch (Exception e) {
+                System.err.println("AI ERROR for " + realPlayer.getUsername() + ": " + e.getMessage());
+                e.printStackTrace();
+            }
         });
     }
 
-    // --- Step 2: Shift Logic (Synchronous) ---
-    private SimulationResult executeShift(Game game, Player player, SimulationResult result) {
-        if (result == null) {
-            forceRandomShift(game, player);
-            return null;
-        }
+    /**
+     * Führt den gesamten Zug synchron aus (in einem separaten Thread)
+     */
+    private void executeTurnSynchronously(Game game, Player player) {
+        System.out.println("AI " + player.getUsername() + " - Starting turn execution");
 
-        System.out.println("AI executing shift: " + result.shiftType + " index " + result.shiftIndex);
+        // 1. Berechne den besten Zug
+        TreasureCard targetCard = player.getCurrentTreasureCard();
+        System.out.println("AI " + player.getUsername() + " - Target treasure: " + (targetCard != null ? targetCard.getTreasureName() : "NONE"));
 
-        var shiftResult = switch (result.shiftType) {
-            case UP    -> game.shift(result.shiftIndex, Direction.UP, player);
-            case DOWN  -> game.shift(result.shiftIndex, Direction.DOWN, player);
-            case LEFT  -> game.shift(result.shiftIndex, Direction.LEFT, player);
-            case RIGHT -> game.shift(result.shiftIndex, Direction.RIGHT, player);
-        };
+        SimulationResult result = findBestMove(game, player, targetCard);
+        System.out.println("AI " + player.getUsername() + " - Simulation result: " + (result != null ? "FOUND" : "NULL"));
 
-        if (!shiftResult.shiftSuccess()) {
-            forceRandomShift(game, player);
-        }
+        // 2. Kurze Pause (damit es natürlicher aussieht)
+        sleep(150);
 
-        return result; // Pass result to next step
+        // 3. Führe Shift aus
+        boolean shiftSuccess = executeShift(game, player, result);
+        System.out.println("AI " + player.getUsername() + " - Shift success: " + shiftSuccess);
+
+        // 4. Broadcast nach Shift
+        broadcast();
+
+        // 5. Kurze Pause
+        sleep(150);
+
+        // 6. Führe Move aus
+        executeMove(game, player, result);
+        System.out.println("AI " + player.getUsername() + " - Move completed");
+
+        // 7. Broadcast nach Move
+        broadcast();
+
+        System.out.println("=== AI END: " + player.getUsername() + " ===");
     }
 
-    // --- Step 3: Move Logic (Synchronous) ---
+    private boolean executeShift(Game game, Player player, SimulationResult result) {
+        if (result == null) {
+            System.out.println("AI " + player.getUsername() + " - No result, forcing random shift");
+            return forceRandomShift(game, player);
+        }
+
+        System.out.println("AI " + player.getUsername() + " - Executing shift: " + result.shiftType + " at index " + result.shiftIndex);
+
+        try {
+            var shiftResult = switch (result.shiftType) {
+                case UP    -> game.shift(result.shiftIndex, Direction.UP, player);
+                case DOWN  -> game.shift(result.shiftIndex, Direction.DOWN, player);
+                case LEFT  -> game.shift(result.shiftIndex, Direction.LEFT, player);
+                case RIGHT -> game.shift(result.shiftIndex, Direction.RIGHT, player);
+            };
+
+            if (!shiftResult.shiftSuccess()) {
+                System.out.println("AI " + player.getUsername() + " - Planned shift failed, forcing random");
+                return forceRandomShift(game, player);
+            }
+
+            return true;
+        } catch (Exception e) {
+            System.err.println("AI " + player.getUsername() + " - Shift exception: " + e.getMessage());
+            return forceRandomShift(game, player);
+        }
+    }
+
     private void executeMove(Game game, Player player, SimulationResult result) {
         Position current = game.getCurrentPositionOfPlayer(player);
+        System.out.println("AI " + player.getUsername() + " - Current position: " + current.row() + "/" + current.column());
 
-        if (result != null && result.targetPosition != null) {
-            System.out.println("AI moving to: " + result.targetPosition.row() + "/" + result.targetPosition.column());
+        Position targetPosition = (result != null && result.targetPosition != null)
+                ? result.targetPosition
+                : current;
 
-            boolean success = game.movePlayerToTile(
-                    result.targetPosition.row(),
-                    result.targetPosition.column(),
-                    player
-            ).moveSuccess();
+        System.out.println("AI " + player.getUsername() + " - Target position: " + targetPosition.row() + "/" + targetPosition.column());
 
-            if (!success) {
-                // Fallback: stay put (explicitly move to current pos to trigger turn end if required by engine)
-                game.movePlayerToTile(current.row(), current.column(), player);
-            }
-        } else {
-            // No valid move found, stay put
-            game.movePlayerToTile(current.row(), current.column(), player);
-        }
-    }
-
-    // --- Helpers ---
-
-    /** * Simulates 'await Task.Delay(ms)' but passes the data through.
-     */
-    private <T> CompletableFuture<T> delay(int millis, T dataToPass) {
-        return CompletableFuture.runAsync(() -> {},
-                CompletableFuture.delayedExecutor(millis, TimeUnit.MILLISECONDS)
-        ).thenApply(v -> dataToPass);
-    }
-
-    private int randomDelay() {
-        return 100 + random.nextInt(100);
-    }
-
-    private void forceRandomShift(Game game, Player player) {
         try {
-            if (!game.shift(1, Direction.RIGHT, player).shiftSuccess()) {
-                game.shift(0, Direction.DOWN, player);
+            MovePlayerToTileResult moveResult = game.movePlayerToTile(
+                    targetPosition.row(),
+                    targetPosition.column(),
+                    player
+            );
+
+            if (!moveResult.moveSuccess()) {
+                System.out.println("AI " + player.getUsername() + " - Move failed, staying at current");
+                game.movePlayerToTile(current.row(), current.column(), player);
+            } else {
+                // Notify about the move result (treasure collected, game over, etc.)
+                if (moveResultCallback != null) {
+                    System.out.println("AI " + player.getUsername() + " - Notifying move result: gameOver=" + moveResult.gameOver() + ", treasureCollected=" + moveResult.treasureCollected());
+                    moveResultCallback.accept(moveResult);
+                }
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            // Wenn das Spiel beendet ist (z.B. weil wir gerade gewonnen haben), ist das OK
+            if (e.getMessage() != null && e.getMessage().contains("FINISHED")) {
+                System.out.println("AI " + player.getUsername() + " - Game has ended (player may have won!)");
+                // Wichtig: Trotzdem das GameOver-Event triggern!
+                if (moveResultCallback != null) {
+                    System.out.println("AI " + player.getUsername() + " - Triggering GameOver event manually");
+                    // Erstelle ein "Dummy" MoveResult das gameOver=true signalisiert
+                    moveResultCallback.accept(new MovePlayerToTileResult(true, 0, true, true, false));
+                }
+            } else {
+                System.err.println("AI " + player.getUsername() + " - Move exception: " + e.getMessage());
+                try {
+                    game.movePlayerToTile(current.row(), current.column(), player);
+                } catch (Exception e2) {
+                    // Ignorieren - Spiel ist wahrscheinlich beendet
+                    System.out.println("AI " + player.getUsername() + " - Cannot make fallback move (game likely ended)");
+                }
+            }
         }
     }
 
-    // --- Simulation Logic (Unchanged, just cleaner formatting) ---
-
-    private SimulationResult findBestMove(Game game, Player realPlayer, TreasureCard targetCard) {
-        return runAllSimulations(game, realPlayer, targetCard);
+    private void broadcast() {
+        if (broadcastCallback != null) {
+            try {
+                System.out.println("AI - Broadcasting game state...");
+                broadcastCallback.run();
+                System.out.println("AI - Broadcast completed");
+            } catch (Exception e) {
+                System.err.println("AI - Broadcast failed: " + e.getMessage());
+                e.printStackTrace();
+            }
+        } else {
+            System.out.println("AI - No broadcast callback set!");
+        }
     }
 
-    private SimulationResult runAllSimulations(Game game, Player realPlayer, TreasureCard targetCard) {
+    private void sleep(int millis) {
+        try {
+            Thread.sleep(millis);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+    }
+
+    private boolean forceRandomShift(Game game, Player player) {
+        int[] indices = {1, 3, 5};
+        Direction[] directions = {Direction.RIGHT, Direction.DOWN, Direction.LEFT, Direction.UP};
+
+        for (int index : indices) {
+            for (Direction dir : directions) {
+                try {
+                    var result = game.shift(index, dir, player);
+                    if (result.shiftSuccess()) {
+                        System.out.println("AI " + player.getUsername() + " - Random shift succeeded: " + dir + " at " + index);
+                        return true;
+                    }
+                } catch (Exception ignored) {}
+            }
+        }
+        System.err.println("AI " + player.getUsername() + " - Could not find any valid shift!");
+        return false;
+    }
+
+    // === SIMULATION LOGIC ===
+
+    private SimulationResult findBestMove(Game game, Player realPlayer, TreasureCard targetCard) {
         Board realBoard = game.getBoard();
         SimulationResult bestResult = null;
         List<ShiftOp> ops = new ArrayList<>();
 
-        // Generate Candidates
+        // Generate shift candidates
         for (int c = 0; c < realBoard.getWidth(); c++) {
             if (!realBoard.colContainsFixedTile(c)) {
                 ops.add(new ShiftOp(ShiftType.UP, c));
@@ -135,32 +223,41 @@ public class SligthlyLessSimpleAiStrategy implements AiStrategy {
             }
         }
 
-        // Evaluate Candidates
+        System.out.println("AI - Evaluating " + ops.size() + " shift candidates");
+
+        // Evaluate each candidate
         for (ShiftOp op : ops) {
             SimulationResult res = simulate(game, realPlayer, targetCard, op);
             if (res != null && (bestResult == null || compareResults(res, bestResult) > 0)) {
                 bestResult = res;
             }
         }
+
+        // Fallback if no result found
+        if (bestResult == null && !ops.isEmpty()) {
+            ShiftOp fallbackOp = ops.get(random.nextInt(ops.size()));
+            Position currentPos = game.getCurrentPositionOfPlayer(realPlayer);
+            bestResult = new SimulationResult(fallbackOp.type, fallbackOp.index, 0, 0, currentPos);
+            System.out.println("AI - Using fallback shift");
+        }
+
         return bestResult;
     }
 
     private int compareResults(SimulationResult a, SimulationResult b) {
         if (a.score != b.score) return Integer.compare(a.score, b.score);
-        return Integer.compare(b.distanceToTarget, a.distanceToTarget); // Lower distance is better
+        return Integer.compare(b.distanceToTarget, a.distanceToTarget);
     }
 
     private SimulationResult simulate(Game game, Player realPlayer, TreasureCard targetCard, ShiftOp op) {
         Board clonedBoard = game.getBoard().copy();
 
-        // Find player on clone
         Player clonedMe = clonedBoard.getPlayers().stream()
                 .filter(p -> p.getId().equals(realPlayer.getId()))
                 .findFirst().orElse(null);
 
         if (clonedMe == null) return null;
 
-        // Apply Shift
         boolean shifted = switch (op.type) {
             case UP    -> clonedBoard.shiftColumnUp(op.index, false);
             case DOWN  -> clonedBoard.shiftColumnDown(op.index, false);
@@ -169,23 +266,19 @@ public class SligthlyLessSimpleAiStrategy implements AiStrategy {
         };
         if (!shifted) return null;
 
-        // Calculate Reachability
         Set<Tile> reachable = clonedBoard.getReachableTiles(clonedMe);
 
-        // Find Target
         Position targetPos = null;
         if (targetCard != null) {
             targetPos = findTreasurePosition(clonedBoard, targetCard);
         }
 
-        // Score Move
         if (targetPos != null) {
             Tile targetTile = clonedBoard.getTileAt(targetPos);
             if (reachable.contains(targetTile)) {
                 return new SimulationResult(op.type, op.index, 100, 0, targetPos);
             }
 
-            // Find closest tile
             int minDist = Integer.MAX_VALUE;
             Position bestPos = null;
             for (Tile rTile : reachable) {
@@ -199,8 +292,15 @@ public class SligthlyLessSimpleAiStrategy implements AiStrategy {
             return new SimulationResult(op.type, op.index, 10, minDist, bestPos);
         }
 
-        // No target, current position
+        // No target - move to random reachable position
         Position cur = clonedBoard.getPositionOfTile(clonedMe.getCurrentTile());
+        if (!reachable.isEmpty()) {
+            List<Tile> reachableList = new ArrayList<>(reachable);
+            Tile randomTile = reachableList.get(random.nextInt(reachableList.size()));
+            Position randomPos = clonedBoard.getPositionOfTile(randomTile);
+            return new SimulationResult(op.type, op.index, 1, 0, randomPos);
+        }
+
         return new SimulationResult(op.type, op.index, 0, 0, cur);
     }
 
@@ -224,7 +324,7 @@ public class SligthlyLessSimpleAiStrategy implements AiStrategy {
         int distanceToTarget;
         Position targetPosition;
 
-        public SimulationResult(ShiftType t, int i, int s, int d, Position p) {
+        SimulationResult(ShiftType t, int i, int s, int d, Position p) {
             this.shiftType = t;
             this.shiftIndex = i;
             this.score = s;

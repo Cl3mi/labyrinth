@@ -33,6 +33,8 @@ public class StartGameCommandHandler extends AbstractCommandHandler<StartGameCom
 
     @Override
     public void handle(WebSocketSession session, StartGameCommandPayload payload) throws Exception {
+        System.out.println(">>> START_GAME received from session: " + session.getId());
+        System.out.println(">>> Payload: " + payload);
         var player = requireExistingPlayer(session);
         requireAdmin(player);
 
@@ -45,6 +47,13 @@ public class StartGameCommandHandler extends AbstractCommandHandler<StartGameCom
         gameStateDto.setType(EventType.GAME_STARTED);
 
         messageService.broadcastToPlayers(gameStateDto);
+
+        System.out.println(">>> About to broadcast GAME_STARTED");
+        System.out.println(">>> GameStateDto type: " + gameStateDto.getType());
+
+        messageService.broadcastToPlayers(gameStateDto);
+
+        System.out.println(">>> GAME_STARTED broadcast completed");
     }
 
     private GameConfig createGameConfig(StartGameCommandPayload payload) {

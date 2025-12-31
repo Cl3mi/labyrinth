@@ -34,7 +34,7 @@ public class ConnectionCleanupService {
                     gameService.leave(player);
 
                     // Broadcast updated lobby state to remaining players
-                    if (gameService.getRoomState() == RoomState.LOBBY) {
+                    if (gameService.getGameState() == RoomState.LOBBY) {
                         broadcastLobbyState();
                     }
                 }

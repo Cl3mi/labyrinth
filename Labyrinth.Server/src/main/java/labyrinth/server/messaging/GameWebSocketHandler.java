@@ -48,7 +48,7 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
 
         // Broadcast updated lobby state showing player as disconnected
         UUID playerId = IPlayerSessionRegistry.getPlayerId(session);
-        if (playerId != null && gameService.getRoomState() == RoomState.LOBBY) {
+        if (playerId != null && gameService.getGameState() == RoomState.LOBBY) {
             broadcastLobbyState();
         }
     }

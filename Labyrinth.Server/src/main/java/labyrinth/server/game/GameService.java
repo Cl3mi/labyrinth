@@ -15,6 +15,8 @@ import labyrinth.server.game.models.Player;
 import labyrinth.server.game.models.records.GameConfig;
 import labyrinth.server.game.util.GameTimer;
 import labyrinth.server.messaging.events.EventPublisher;
+import labyrinth.server.messaging.MessageService;
+import labyrinth.server.messaging.mapper.GameMapper;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.stereotype.Service;
 
@@ -34,18 +36,95 @@ public class GameService {
     private final BoardFactory boardFactory;
     private final EventPublisher eventPublisher;
 
+    // Neu: Für AI-Broadcast
+    private final MessageService messageService;
+    private final GameMapper gameMapper;
+
+    // AI Strategy (nicht final, damit wir den Callback setzen können)
+    private final labyrinth.server.game.ai.SligthlyLessSimpleAiStrategy aiStrategy;
+
     public GameService(TreasureCardFactory treasureCardFactory,
-            BoardFactory boardFactory,
-            EventPublisher eventPublisher,
-            TaskScheduler scheduler) {
+                       BoardFactory boardFactory,
+                       EventPublisher eventPublisher,
+                       TaskScheduler scheduler,
+                       MessageService messageService,
+                       GameMapper gameMapper) {
 
         this.treasureCardFactory = treasureCardFactory;
         this.boardFactory = boardFactory;
         this.eventPublisher = eventPublisher;
+        this.messageService = messageService;
+        this.gameMapper = gameMapper;
 
         var gameTimer = new GameTimer(scheduler);
         var gameLogger = new labyrinth.server.game.services.GameLogger();
-        game = new Game(gameTimer, new labyrinth.server.game.ai.SimpleAiStrategy(), gameLogger);
+
+        // AI-Strategie erstellen
+        this.aiStrategy = new labyrinth.server.game.ai.SligthlyLessSimpleAiStrategy();
+
+        game = new Game(gameTimer, aiStrategy, gameLogger);
+
+        // Broadcast-Callback NACH der Game-Initialisierung setzen
+        // Wir verwenden ein Lambda das auf die Instanz-Methode verweist
+        aiStrategy.setBroadcastCallback(new Runnable() {
+            @Override
+            public void run() {
+                broadcastGameStateInternal();
+            }
+        });
+
+        // MoveResult-Callback setzen um Events wie GameOver, TreasureCollected etc. zu publishen
+        aiStrategy.setMoveResultCallback(moveResult -> {
+            handleAiMoveResult(moveResult);
+        });
+    }
+
+    /**
+     * Handles the result of an AI move, publishing appropriate events.
+     */
+    private void handleAiMoveResult(labyrinth.server.game.results.MovePlayerToTileResult result) {
+        try {
+            if (result.treasureCollected()) {
+                System.out.println("[GameService] AI collected a treasure!");
+            }
+
+            if (result.gameOver()) {
+                System.out.println("[GameService] AI triggered game over! Publishing GameOverEvent...");
+                rwLock.readLock().lock();
+                try {
+                    var gameOverEvent = new GameOverEvent(game.getPlayers());
+                    eventPublisher.publishAsync(gameOverEvent);
+                } finally {
+                    rwLock.readLock().unlock();
+                }
+            }
+
+            if (result.runnerAchieved()) {
+                System.out.println("[GameService] AI achieved RUNNER achievement!");
+            }
+        } catch (Exception e) {
+            System.err.println("[GameService] Error handling AI move result: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Broadcasts the current game state to all connected players.
+     * Used internally by AI after making moves.
+     */
+    private void broadcastGameStateInternal() {
+        try {
+            rwLock.readLock().lock();
+            try {
+                var gameState = gameMapper.toGameStateDto(game);
+                messageService.broadcastToPlayers(gameState);
+            } finally {
+                rwLock.readLock().unlock();
+            }
+        } catch (Exception e) {
+            System.err.println("Failed to broadcast game state: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 
     public Player join(String username) {

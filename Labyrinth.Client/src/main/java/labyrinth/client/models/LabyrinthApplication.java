@@ -20,7 +20,7 @@ import java.util.prefs.Preferences;
 
 public class LabyrinthApplication {
 
-    private static final URI SERVER_URI = URI.create("ws://localhost:8081/game");
+    private static final URI SERVER_URI = URI.create("ws://localhost:8080/game");
     private volatile boolean loginSent = false;
     private volatile boolean connectAckReceived = false;
 
