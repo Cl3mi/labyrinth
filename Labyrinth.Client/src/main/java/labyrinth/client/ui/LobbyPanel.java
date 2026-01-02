@@ -410,7 +410,7 @@ public class LobbyPanel extends JPanel {
         panel.add(createLabel("Schätze pro Spieler:"), gbc);
 
         gbc.gridx = 1;
-        SpinnerModel treasureModel = new SpinnerNumberModel(12, 1, 24, 1);
+        SpinnerModel treasureModel = new SpinnerNumberModel(configTreasuresToWin, 1, 24, 1);
         JSpinner treasureSpinner = new JSpinner(treasureModel);
         treasureSpinner.addChangeListener(e ->
                 configTreasuresToWin = (Integer) treasureSpinner.getValue());
@@ -445,7 +445,7 @@ public class LobbyPanel extends JPanel {
                 "10 Minuten", "15 Minuten", "30 Minuten",
                 "45 Minuten", "60 Minuten", "90 Minuten", "120 Minuten"
         });
-        durationCombo.setSelectedItem("60 Minuten");
+        durationCombo.setSelectedItem(configGameDurationMinutes + " Minuten");
         durationCombo.addActionListener(e -> {
             String selected = (String) durationCombo.getSelectedItem();
             if (selected != null) {
