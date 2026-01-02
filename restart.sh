@@ -4,6 +4,7 @@
 # Usage:
 #   ./restart.sh           - Full clean restart (rebuild + restart)
 #   ./restart.sh --quick   - Quick restart (no rebuild)
+#   ./restart.sh --hard    - Hard reset (delete target folders, clean install)
 #   ./restart.sh --server  - Only restart server
 #   ./restart.sh --client  - Only restart client
 
@@ -23,6 +24,7 @@ NC='\033[0m' # No Color
 
 # Parse arguments
 REBUILD=true
+HARD_RESET=false
 START_SERVER=true
 START_CLIENT=true
 
@@ -30,6 +32,10 @@ for arg in "$@"; do
     case $arg in
         --quick)
             REBUILD=false
+            ;;
+        --hard)
+            REBUILD=true
+            HARD_RESET=true
             ;;
         --server)
             START_CLIENT=false
@@ -81,11 +87,28 @@ echo ""
 
 # Step 3: Rebuild (if not quick mode)
 if [ "$REBUILD" = true ]; then
-    echo -e "${YELLOW}[3/6] Rebuilding modules (Contracts → Server → Client)...${NC}"
+    if [ "$HARD_RESET" = true ]; then
+        echo -e "${YELLOW}[3/6] Hard reset: Deleting target folders and rebuilding...${NC}"
+        echo -e "${RED}  → Deleting Contracts target folder${NC}"
+        cd "$CONTRACTS_DIR"
+        rm -rf target/
+        echo -e "${RED}  → Deleting Server target folder${NC}"
+        cd "$SERVER_DIR"
+        rm -rf target/
+        if [ "$START_CLIENT" = true ]; then
+            echo -e "${RED}  → Deleting Client target folder${NC}"
+            cd "$CLIENT_DIR"
+            rm -rf target/
+        fi
+    else
+        echo -e "${YELLOW}[3/6] Rebuilding modules (Contracts → Server → Client)...${NC}"
+    fi
 
     echo "  → Building Contracts..."
     cd "$CONTRACTS_DIR"
-    rm -rf target/
+    if [ "$HARD_RESET" = false ]; then
+        rm -rf target/
+    fi
     mvn clean install -q -Dmaven.test.skip=true
 
     if [ "$START_SERVER" = true ]; then
