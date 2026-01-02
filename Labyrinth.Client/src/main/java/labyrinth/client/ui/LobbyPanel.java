@@ -57,9 +57,9 @@ public class LobbyPanel extends JPanel {
 
     // Game configuration state
     private int configBoardSize = 7;
-    private int configTreasuresToWin = 12;
+    private int configTreasuresToWin = 3;
     private int configTurnTimeSeconds = 30;
-    private int configGameDurationMinutes = 60;
+    private int configGameDurationMinutes = 30;
 
     public LobbyPanel(GameClient client, String localPlayerId) {
         this.client = Objects.requireNonNull(client, "client must not be null");
