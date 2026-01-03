@@ -3,28 +3,56 @@ package labyrinth.client.audio;
 import javax.sound.sampled.*;
 import java.io.BufferedInputStream;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * Zentraler Audio-Manager (Singleton) für Musik & Soundeffekte.
+ * Zentraler Audio-Manager (Singleton) fuer Musik & Soundeffekte.
  *
  * Anforderungen:
- * - Globale Lautstärken (Music/SFX)
- * - Hintergrundmusik im MainMenu (06-Kokiri-Forest)
- * - Beim GameOver: Applaus einmal abspielen, danach wieder Kokiri Forest
+ * - Globale Lautstaerken (Music/SFX)
+ * - Hintergrundmusik im MainMenu (Playlist: RiddleSound1, RiddleSound2, ...)
+ * - Beim GameOver: Applaus einmal abspielen, danach wieder MainMenu-Playlist
  * - Alle Audio-Logik ist in dieser Klasse gekapselt
  */
 public final class AudioPlayer {
 
-    public static final String MENU_MUSIC_PATH = "/sounds/06-Kokiri-Forest.wav";
+    /** First track of the menu playlist (used as fallback). */
+    public static final String MENU_MUSIC_PATH = "/sounds/BackgroundSound1.wav";
     public static final String GAMEOVER_APPLAUSE_PATH = "/sounds/Applause.wav";
+
+    /**
+     * Automatically built playlist: /sounds/BackgroundSound1.wav, /sounds/BackgroundSound2.wav, ...
+     * Stops at the first missing resource. (Max 99 tracks to avoid endless loops.)
+     */
+    private static final String[] MENU_PLAYLIST =
+            buildSequentialPlaylist("/sounds/BackgroundSound", 1, ".wav", 99);
 
     private static AudioPlayer instance;
 
     // Background music
     private Clip musicClip;
+
+    // Music state
+    private enum MusicMode { NONE, SINGLE, PLAYLIST }
+    private MusicMode musicMode = MusicMode.NONE;
+
+    // Single-track state
     private String currentMusicPath;
     private boolean currentMusicLoop;
+
+    // Playlist state
+    private String[] currentPlaylist;
+    private int playlistIndex;
+    private boolean playlistLoop;
+
+    /**
+     * Music token used to invalidate LineListener callbacks when music is stopped/overridden.
+     * Every stop/replace increments the token; listeners only act if their token is still current.
+     */
+    private final AtomicLong musicToken = new AtomicLong(0);
 
     // Global volumes (0..1)
     private float musicVolume = 1.0f;
@@ -42,16 +70,21 @@ public final class AudioPlayer {
 
     // ========================= HIGH LEVEL =========================
 
-    /** Starts the menu background music (Kokiri Forest) in a loop. */
+    /** Starts the menu background music playlist (RiddleSound1, RiddleSound2, ...) in a loop. */
     public void playMenuMusic() {
-        playMusic(MENU_MUSIC_PATH, true);
+        if (MENU_PLAYLIST.length > 0) {
+            playMusicPlaylist(MENU_PLAYLIST, true);
+        } else {
+            // Fallback if no sequential resources were found at runtime.
+            playMusic(MENU_MUSIC_PATH, true);
+        }
     }
 
     /**
      * GameOver behaviour:
      * - stop current music (if any)
      * - play applause once
-     * - after applause finishes, start menu music (Kokiri Forest) looping
+     * - after applause finishes, start menu music playlist looping
      */
     public void playGameOverSequence() {
         final long token = resumeToken.incrementAndGet();
@@ -68,13 +101,18 @@ public final class AudioPlayer {
 
     // ========================= MUSIC =========================
 
+    /**
+     * Plays a single music track. If {@code loop} is true, it loops continuously.
+     */
     public synchronized void playMusic(String path, boolean loop) {
         System.out.println("[AudioPlayer] playMusic called: " + path + ", loop=" + loop);
 
         // No-op if already playing the same track with same loop mode.
-        if (musicClip != null && musicClip.isOpen()
+        if (musicMode == MusicMode.SINGLE
+                && musicClip != null && musicClip.isOpen()
                 && path != null && path.equals(currentMusicPath)
                 && loop == currentMusicLoop) {
+
             // Ensure it is actually running (could have been stopped externally)
             if (!musicClip.isRunning()) {
                 System.out.println("[AudioPlayer] Resuming existing clip");
@@ -86,54 +124,76 @@ public final class AudioPlayer {
             return;
         }
 
-        stopMusic();
+        // Stop any current music + invalidate old listeners.
+        invalidateAndStopMusicLocked();
 
+        // Establish state for single-track mode.
+        musicMode = MusicMode.SINGLE;
         currentMusicPath = path;
         currentMusicLoop = loop;
 
         try {
-            URL url = getClass().getResource(path);
-            if (url == null) {
-                System.err.println("[AudioPlayer] Music not found: " + path);
-                return;
-            }
-            System.out.println("[AudioPlayer] Loading music from: " + url);
-
-            AudioInputStream in = AudioSystem.getAudioInputStream(new BufferedInputStream(url.openStream()));
-            AudioInputStream pcm = toPlayablePcm(in);
-
-            musicClip = AudioSystem.getClip();
-            musicClip.open(pcm);
-
-            System.out.println("[AudioPlayer] Setting volume to: " + musicVolume);
-            applyVolume(musicClip, musicVolume);
-            unmute(musicClip);
-
-            if (loop) {
-                System.out.println("[AudioPlayer] Starting loop playback");
-                musicClip.loop(Clip.LOOP_CONTINUOUSLY);
-            } else {
-                System.out.println("[AudioPlayer] Starting single playback");
-                musicClip.start();
-            }
-
+            openAndStartMusicClipLocked(path, loop, null, -1);
             System.out.println("[AudioPlayer] Music started successfully!");
-
         } catch (Exception e) {
             System.err.println("[AudioPlayer] Error playing music: " + e.getMessage());
             e.printStackTrace();
+            // Make sure state is clean after failure.
+            invalidateAndStopMusicLocked();
+        }
+    }
+
+    /**
+     * Plays a playlist sequentially (track 0, then 1, ...).
+     * When {@code loopPlaylist} is true, it continues from the beginning after the last track.
+     */
+    public synchronized void playMusicPlaylist(String[] paths, boolean loopPlaylist) {
+        System.out.println("[AudioPlayer] playMusicPlaylist called: "
+                + (paths == null ? "null" : Arrays.toString(paths))
+                + ", loopPlaylist=" + loopPlaylist);
+
+        if (paths == null || paths.length == 0) {
+            System.err.println("[AudioPlayer] Playlist is empty; nothing to play.");
+            return;
+        }
+
+        // No-op if already playing the same playlist with same loop mode.
+        if (musicMode == MusicMode.PLAYLIST
+                && currentPlaylist != null
+                && Arrays.equals(currentPlaylist, paths)
+                && playlistLoop == loopPlaylist
+                && musicClip != null && musicClip.isOpen()) {
+
+            if (!musicClip.isRunning()) {
+                System.out.println("[AudioPlayer] Resuming playlist at index " + playlistIndex);
+                musicClip.start();
+            } else {
+                System.out.println("[AudioPlayer] Playlist already playing, skipping");
+            }
+            return;
+        }
+
+        // Stop any current music + invalidate old listeners.
+        invalidateAndStopMusicLocked();
+
+        // Establish playlist state.
+        musicMode = MusicMode.PLAYLIST;
+        currentPlaylist = Arrays.copyOf(paths, paths.length);
+        playlistLoop = loopPlaylist;
+        playlistIndex = 0;
+
+        try {
+            openAndStartMusicClipLocked(currentPlaylist[playlistIndex], false, musicToken.get(), playlistIndex);
+            System.out.println("[AudioPlayer] Playlist started successfully!");
+        } catch (Exception e) {
+            System.err.println("[AudioPlayer] Error starting playlist: " + e.getMessage());
+            e.printStackTrace();
+            invalidateAndStopMusicLocked();
         }
     }
 
     public synchronized void stopMusic() {
-        if (musicClip != null) {
-            try { musicClip.stop(); } catch (Exception ignored) {}
-            try { musicClip.close(); } catch (Exception ignored) {}
-            musicClip = null;
-        }
-        // Reset path so playMusic will reload even the same track
-        currentMusicPath = null;
-        currentMusicLoop = false;
+        invalidateAndStopMusicLocked();
         System.out.println("[AudioPlayer] Music stopped");
     }
 
@@ -209,6 +269,103 @@ public final class AudioPlayer {
 
     // ========================= INTERNAL =========================
 
+    private synchronized void invalidateAndStopMusicLocked() {
+        // Invalidate all existing music listeners immediately.
+        musicToken.incrementAndGet();
+
+        if (musicClip != null) {
+            try { musicClip.stop(); } catch (Exception ignored) {}
+            try { musicClip.close(); } catch (Exception ignored) {}
+            musicClip = null;
+        }
+
+        musicMode = MusicMode.NONE;
+        currentMusicPath = null;
+        currentMusicLoop = false;
+
+        currentPlaylist = null;
+        playlistIndex = 0;
+        playlistLoop = false;
+    }
+
+    private void openAndStartMusicClipLocked(String path, boolean loop, Long playlistToken, int playlistTrackIndex) throws Exception {
+        if (path == null) throw new IllegalArgumentException("Music path is null.");
+
+        URL url = getClass().getResource(path);
+        if (url == null) {
+            throw new IllegalArgumentException("Music not found: " + path);
+        }
+
+        AudioInputStream in = AudioSystem.getAudioInputStream(new BufferedInputStream(url.openStream()));
+        AudioInputStream pcm = toPlayablePcm(in);
+
+        musicClip = AudioSystem.getClip();
+        musicClip.open(pcm);
+
+        applyVolume(musicClip, musicVolume);
+        unmute(musicClip);
+
+        // For playlist mode, attach a listener to advance to the next track after natural end.
+        if (playlistToken != null) {
+            final long token = playlistToken;
+            final int finishedIndex = playlistTrackIndex;
+            final Clip clipRef = musicClip;
+
+            clipRef.addLineListener(ev -> {
+                if (ev.getType() != LineEvent.Type.STOP) return;
+
+                // Only act if this callback still belongs to the active music session.
+                if (musicToken.get() != token) return;
+
+                // Ignore STOP events that are not the natural end (e.g., manual stop or interruptions).
+                if (clipRef.getFramePosition() < clipRef.getFrameLength()) return;
+
+                // Advance in a separate thread to avoid doing heavy work on the audio event thread.
+                new Thread(() -> advancePlaylistAfterTrackEnd(token, finishedIndex), "MusicPlaylistThread").start();
+            });
+        }
+
+        if (loop) {
+            musicClip.loop(Clip.LOOP_CONTINUOUSLY);
+        } else {
+            musicClip.start();
+        }
+    }
+
+    private void advancePlaylistAfterTrackEnd(long token, int finishedIndex) {
+        synchronized (this) {
+            if (musicToken.get() != token) return;
+            if (musicMode != MusicMode.PLAYLIST) return;
+            if (currentPlaylist == null || currentPlaylist.length == 0) return;
+
+            int nextIndex = finishedIndex + 1;
+            if (nextIndex >= currentPlaylist.length) {
+                if (playlistLoop) nextIndex = 0;
+                else {
+                    // Playlist finished; stop cleanly.
+                    invalidateAndStopMusicLocked();
+                    return;
+                }
+            }
+
+            playlistIndex = nextIndex;
+
+            // Close the finished clip without invalidating the token (same session).
+            if (musicClip != null) {
+                try { musicClip.close(); } catch (Exception ignored) {}
+                musicClip = null;
+            }
+
+            try {
+                openAndStartMusicClipLocked(currentPlaylist[playlistIndex], false, token, playlistIndex);
+            } catch (Exception e) {
+                System.err.println("[AudioPlayer] Error advancing playlist: " + e.getMessage());
+                e.printStackTrace();
+                invalidateAndStopMusicLocked();
+            }
+        }
+    }
+
     private AudioInputStream toPlayablePcm(AudioInputStream in) {
         AudioFormat base = in.getFormat();
         AudioFormat target = new AudioFormat(
@@ -256,5 +413,16 @@ public final class AudioPlayer {
 
     private float clamp(float v) {
         return Math.max(0f, Math.min(1f, v));
+    }
+
+    private static String[] buildSequentialPlaylist(String prefix, int startIndex, String ext, int maxCount) {
+        List<String> list = new ArrayList<>();
+        for (int i = startIndex; i < startIndex + maxCount; i++) {
+            String candidate = prefix + i + ext;
+            URL url = AudioPlayer.class.getResource(candidate);
+            if (url == null) break;
+            list.add(candidate);
+        }
+        return list.toArray(new String[0]);
     }
 }

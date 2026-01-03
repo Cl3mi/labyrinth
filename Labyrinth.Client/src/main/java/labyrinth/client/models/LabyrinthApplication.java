@@ -186,7 +186,6 @@ public class LabyrinthApplication {
     private void showMultiplayerLobby() {
         CardLayout cl = (CardLayout) mainPanel.getLayout();
         cl.show(mainPanel, "lobby");
-        mainMenuPanel.stopMusic();
         connectToServer();
     }
 

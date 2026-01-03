@@ -189,7 +189,7 @@ public class GameOverPanel extends JPanel {
 
     private void loadBackgroundImage() {
         try {
-            var url = getClass().getClassLoader().getResource("images/background.jpg");
+            var url = getClass().getClassLoader().getResource("images/background.png");
             if (url != null) {
                 backgroundImage = new ImageIcon(url).getImage();
             }

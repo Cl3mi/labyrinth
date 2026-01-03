@@ -224,11 +224,11 @@ public class BoardPanel extends JPanel {
 
     private void loadBackgroundImage() {
         try {
-            var url = getClass().getResource("/images/ui/background.jpg");
+            var url = getClass().getResource("/images/ui/background.png");
             if (url != null) {
                 backgroundImage = new ImageIcon(url).getImage();
             } else {
-                System.err.println("Background image not found: /images/ui/background.jpg");
+                System.err.println("Background image not found: /images/ui/background.png");
             }
         } catch (Exception e) {
             System.err.println("Error loading background image: " + e.getMessage());
