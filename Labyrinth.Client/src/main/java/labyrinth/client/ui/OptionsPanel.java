@@ -44,7 +44,7 @@ public class OptionsPanel extends JPanel {
     // Current Settings
     private int musicVolume = 10;
     private int sfxVolume = 70;
-    private String serverUrl = "ws://localhost:8081/game";
+    private String serverUrl = DEFAULT_SERVER_URL;
     private boolean darkTheme = true;
     private int windowSizeIndex = 1; // 0=1280x720, 1=1400x900, 2=1600x900, 3=1920x1080, 4=Maximiert
 
@@ -71,6 +71,9 @@ public class OptionsPanel extends JPanel {
     private static final String PREF_SERVER_URL = "serverUrl";
     private static final String PREF_DARK_THEME = "darkTheme";
     private static final String PREF_WINDOW_SIZE = "windowSize";
+
+    // Default Server URL - zentrale Konfiguration
+    public static final String DEFAULT_SERVER_URL = "ws://localhost:8082/game";
 
     // Farben - Mystische Labyrinth-Palette
     private static final Color PRIMARY_GOLD = new Color(218, 165, 32);
@@ -135,7 +138,7 @@ public class OptionsPanel extends JPanel {
     private void loadSettings() {
         musicVolume = PREFS.getInt(PREF_MUSIC_VOLUME, 50);
         sfxVolume = PREFS.getInt(PREF_SFX_VOLUME, 70);
-        serverUrl = PREFS.get(PREF_SERVER_URL, "ws://localhost:8081/game");
+        serverUrl = PREFS.get(PREF_SERVER_URL, "ws://localhost:8082/game");
         darkTheme = PREFS.getBoolean(PREF_DARK_THEME, true);
         windowSizeIndex = PREFS.getInt(PREF_WINDOW_SIZE, 1); // Default: 1400x900
     }
@@ -610,7 +613,7 @@ public class OptionsPanel extends JPanel {
         if (choice == JOptionPane.YES_OPTION) {
             musicVolume = 50;
             sfxVolume = 70;
-            serverUrl = "ws://localhost:8081/game";
+            serverUrl = DEFAULT_SERVER_URL;
             darkTheme = true;
 
             musicVolumeSlider.setValue(musicVolume);
@@ -721,6 +724,15 @@ public class OptionsPanel extends JPanel {
             return WINDOW_SIZES[index];
         }
         return WINDOW_SIZES[1]; // Default 1400x900
+    }
+
+    /**
+     * Statische Methode zum Laden der Server-URL beim App-Start.
+     * Gibt die gespeicherte URL oder die Default-URL zurück.
+     */
+    public static String loadServerUrlFromPreferences() {
+        Preferences prefs = Preferences.userNodeForPackage(OptionsPanel.class);
+        return prefs.get(PREF_SERVER_URL, DEFAULT_SERVER_URL);
     }
 
     // --------------------------------------------------------------------------------

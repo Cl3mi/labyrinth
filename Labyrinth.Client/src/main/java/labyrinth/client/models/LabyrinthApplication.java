@@ -19,7 +19,6 @@ import java.util.prefs.Preferences;
 
 public class LabyrinthApplication {
 
-    private static final URI SERVER_URI = URI.create("ws://localhost:8081/game");
     private volatile boolean loginSent = false;
     private volatile boolean connectAckReceived = false;
 
@@ -65,7 +64,9 @@ public class LabyrinthApplication {
 
         mainPanel = new JPanel(new CardLayout());
 
-        client = new GameClient(SERVER_URI);
+        // Lade Server-URL aus Einstellungen
+        URI serverUri = URI.create(OptionsPanel.loadServerUrlFromPreferences());
+        client = new GameClient(serverUri);
         reconnectionManager = new ReconnectionManager(client, this);
 
         registerCallbacks();
