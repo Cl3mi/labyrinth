@@ -4,7 +4,6 @@ import java.util.Map;
 import java.util.Objects;
 public class RankingEntry {
   private String playerId;
-  private String playerName;
   private Integer rank;
   private Integer score;
   private PlayerGameStats stats;
@@ -12,9 +11,6 @@ public class RankingEntry {
 
   public String getPlayerId() { return this.playerId; }
   public void setPlayerId(String playerId) { this.playerId = playerId; }
-
-  public String getPlayerName() { return this.playerName; }
-  public void setPlayerName(String playerName) { this.playerName = playerName; }
 
   public Integer getRank() { return this.rank; }
   public void setRank(Integer rank) { this.rank = rank; }
@@ -39,7 +35,6 @@ public class RankingEntry {
     RankingEntry self = (RankingEntry) o;
       return
         Objects.equals(this.playerId, self.playerId) &&
-        Objects.equals(this.playerName, self.playerName) &&
         Objects.equals(this.rank, self.rank) &&
         Objects.equals(this.score, self.score) &&
         Objects.equals(this.stats, self.stats) &&
@@ -48,14 +43,13 @@ public class RankingEntry {
 
   @Override
   public int hashCode() {
-    return Objects.hash((Object)playerId, (Object)playerName, (Object)rank, (Object)score, (Object)stats, (Object)additionalProperties);
+    return Objects.hash((Object)playerId, (Object)rank, (Object)score, (Object)stats, (Object)additionalProperties);
   }
 
   @Override
   public String toString() {
     return "class RankingEntry {\n" +
       "    playerId: " + toIndentedString(playerId) + "\n" +
-      "    playerName: " + toIndentedString(playerName) + "\n" +
       "    rank: " + toIndentedString(rank) + "\n" +
       "    score: " + toIndentedString(score) + "\n" +
       "    stats: " + toIndentedString(stats) + "\n" +

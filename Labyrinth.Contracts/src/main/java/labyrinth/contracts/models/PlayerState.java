@@ -12,7 +12,6 @@ public class PlayerState {
   private Coordinates homePosition;
   private Treasure[] treasuresFound;
   private Integer remainingTreasureCount;
-  private Treasure currentTreasureCard;  // The current treasure the player needs to find
   private AchievementType[] achievements;
   private BonusType[] availableBonuses;
   private Map<String, Object> additionalProperties;
@@ -31,9 +30,6 @@ public class PlayerState {
 
   public Integer getRemainingTreasureCount() { return this.remainingTreasureCount; }
   public void setRemainingTreasureCount(Integer remainingTreasureCount) { this.remainingTreasureCount = remainingTreasureCount; }
-
-  public Treasure getCurrentTreasureCard() { return this.currentTreasureCard; }
-  public void setCurrentTreasureCard(Treasure currentTreasureCard) { this.currentTreasureCard = currentTreasureCard; }
 
   public AchievementType[] getAchievements() { return this.achievements; }
   public void setAchievements(AchievementType[] achievements) { this.achievements = achievements; }
