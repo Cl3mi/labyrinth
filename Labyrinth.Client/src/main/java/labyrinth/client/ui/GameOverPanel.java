@@ -136,7 +136,8 @@ public class GameOverPanel extends JPanel {
         if (payload.getRanking() != null && payload.getRanking().length > 0) {
             for (RankingEntry entry : payload.getRanking()) {
                 if (entry.getPlayerId().equals(payload.getWinnerId())) {
-                    winnerName = entry.getPlayerName();
+                    // Get playerName from additionalProperties (not in standard Contracts)
+                    winnerName = getPlayerName(entry);
                     break;
                 }
             }
@@ -178,13 +179,26 @@ public class GameOverPanel extends JPanel {
 
                 tableModel.addRow(new Object[]{
                         rankIcon,
-                        entry.getPlayerName(),
+                        getPlayerName(entry),
                         treasuresCollected,
                         entry.getScore()
                 });
             }
         }
 
+    }
+
+    /**
+     * Extract playerName from additionalProperties (not in standard Contracts)
+     */
+    private String getPlayerName(RankingEntry entry) {
+        if (entry.getAdditionalProperties() != null && entry.getAdditionalProperties().containsKey("playerName")) {
+            Object value = entry.getAdditionalProperties().get("playerName");
+            if (value instanceof String) {
+                return (String) value;
+            }
+        }
+        return entry.getPlayerId(); // Fallback to player ID if name not available
     }
 
     private void loadBackgroundImage() {

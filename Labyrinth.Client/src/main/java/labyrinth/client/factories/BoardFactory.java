@@ -128,10 +128,24 @@ public class BoardFactory implements IBoardFactory {
                 p.setRemainingTreasureCount(s.getRemainingTreasureCount());
             }
 
-            // Current treasure card (the one they need to find)
-            if (s.getCurrentTreasureCard() != null) {
-                p.getAssignedTreasureCards().clear();
-                p.getAssignedTreasureCards().add(s.getCurrentTreasureCard());
+            // Current treasure card (the one they need to find) from additionalProperties
+            // (not in standard Contracts)
+            if (s.getAdditionalProperties() != null && s.getAdditionalProperties().containsKey("currentTreasureCard")) {
+                Object value = s.getAdditionalProperties().get("currentTreasureCard");
+                // Jackson deserializes nested objects as LinkedHashMap, need to convert
+                if (value instanceof java.util.Map) {
+                    try {
+                        com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                        labyrinth.contracts.models.Treasure treasure = mapper.convertValue(value, labyrinth.contracts.models.Treasure.class);
+                        p.getAssignedTreasureCards().clear();
+                        p.getAssignedTreasureCards().add(treasure);
+                    } catch (Exception e) {
+                        System.err.println("Failed to convert currentTreasureCard from additionalProperties: " + e.getMessage());
+                    }
+                } else if (value instanceof labyrinth.contracts.models.Treasure) {
+                    p.getAssignedTreasureCards().clear();
+                    p.getAssignedTreasureCards().add((labyrinth.contracts.models.Treasure) value);
+                }
             }
 
             list.add(p);

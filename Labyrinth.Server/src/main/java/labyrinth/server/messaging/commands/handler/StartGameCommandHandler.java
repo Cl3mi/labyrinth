@@ -67,7 +67,17 @@ public class StartGameCommandHandler extends AbstractCommandHandler<StartGameCom
 
         var treasureCardCount = payload.getTreasureCardCount();
         var totalBonusCount = payload.getTotalBonusCount();
-        var turnTimeInSeconds = payload.getTurnTimeInSeconds() != null ? payload.getTurnTimeInSeconds() : 30;
+
+        // Extract turnTimeInSeconds from additionalProperties (not in standard Contracts)
+        Integer turnTimeInSeconds = 30; // default
+        if (payload.getAdditionalProperties() != null && payload.getAdditionalProperties().containsKey("turnTimeInSeconds")) {
+            Object value = payload.getAdditionalProperties().get("turnTimeInSeconds");
+            if (value instanceof Integer) {
+                turnTimeInSeconds = (Integer) value;
+            } else if (value instanceof Number) {
+                turnTimeInSeconds = ((Number) value).intValue();
+            }
+        }
 
         System.out.println("=== GAME CONFIG ===");
         System.out.println("Board: " + boardWidth + "x" + boardHeight);
@@ -88,7 +98,16 @@ public class StartGameCommandHandler extends AbstractCommandHandler<StartGameCom
             throw new IllegalArgumentException("Board size must be between 5x5 and 15x15");
         }
 
-        var turnTime = payload.getTurnTimeInSeconds();
+        // Extract turnTimeInSeconds from additionalProperties for validation
+        Integer turnTime = null;
+        if (payload.getAdditionalProperties() != null && payload.getAdditionalProperties().containsKey("turnTimeInSeconds")) {
+            Object value = payload.getAdditionalProperties().get("turnTimeInSeconds");
+            if (value instanceof Integer) {
+                turnTime = (Integer) value;
+            } else if (value instanceof Number) {
+                turnTime = ((Number) value).intValue();
+            }
+        }
         if (turnTime != null && (turnTime < 15 || turnTime > 120)) {
             throw new IllegalArgumentException("Turn time must be between 15 and 120 seconds");
         }

@@ -267,7 +267,11 @@ public class GameClient extends WebSocketClient {
             payload.setTreasureCardCount(treasureCardCount);
             payload.setTotalBonusCount(totalBonusCount);
             payload.setGameDurationInSeconds(gameDurationInSeconds != null ? gameDurationInSeconds : 3600);
-            payload.setTurnTimeInSeconds(turnTimeInSeconds != null ? turnTimeInSeconds : 30);
+
+            // Set turnTimeInSeconds in additionalProperties (not in standard Contracts)
+            var additionalProps = new java.util.HashMap<String, Object>();
+            additionalProps.put("turnTimeInSeconds", turnTimeInSeconds != null ? turnTimeInSeconds : 30);
+            payload.setAdditionalProperties(additionalProps);
 
             String json = mapper.writeValueAsString(payload);
             System.out.println("sendStartGame isOpen=" + isOpen() + " isClosing=" + isClosing() + " isClosed=" + isClosed());

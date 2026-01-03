@@ -13,7 +13,10 @@ public class RankingMapper {
         var sourceStats = player.getStatistics();
 
         entry.setPlayerId(player.getId().toString());
-        entry.setPlayerName(player.getUsername());
+        // playerName is not in standard Contracts - use additionalProperties
+        var additionalProps = new java.util.HashMap<String, Object>();
+        additionalProps.put("playerName", player.getUsername());
+        entry.setAdditionalProperties(additionalProps);
         entry.setScore(sourceStats.getScore());
         entry.setRank(rank);
 
