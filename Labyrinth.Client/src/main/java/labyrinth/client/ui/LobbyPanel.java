@@ -2,6 +2,9 @@ package labyrinth.client.ui;
 
 import labyrinth.client.audio.AudioPlayer;
 import labyrinth.client.messaging.GameClient;
+import labyrinth.client.ui.theme.FontManager;
+import labyrinth.client.ui.theme.GameTheme;
+import labyrinth.client.ui.theme.ThemeEffects;
 import labyrinth.contracts.models.BoardSize;
 import labyrinth.contracts.models.LobbyStateEventPayload;
 import labyrinth.contracts.models.PlayerInfo;
@@ -77,8 +80,8 @@ public class LobbyPanel extends JPanel {
         header.setOpaque(false);
 
         connectionLabel = new JLabel("Verbindung wird aufgebaut …");
-        connectionLabel.setFont(new Font("Arial", Font.BOLD, 16));
-        connectionLabel.setForeground(new Color(170, 120, 0));
+        connectionLabel.setFont(FontManager.getMediumUIBold());
+        connectionLabel.setForeground(GameTheme.Colors.WARNING);
 
         header.add(connectionLabel, BorderLayout.WEST);
         add(header, BorderLayout.NORTH);
@@ -86,11 +89,11 @@ public class LobbyPanel extends JPanel {
         // ===== Center: Spieler-Liste mit erweiterten Cards =====
         playerListModel = new DefaultListModel<>();
         playerList = new JList<>(playerListModel);
-        playerList.setFont(new Font("Arial", Font.BOLD, 14));
+        playerList.setFont(FontManager.getMediumUIBold());
         playerList.setOpaque(false);
-        playerList.setForeground(Color.BLACK);
-        playerList.setSelectionBackground(new Color(255, 255, 255, 80));
-        playerList.setSelectionForeground(Color.BLACK);
+        playerList.setForeground(GameTheme.Colors.TEXT_PRIMARY);
+        playerList.setSelectionBackground(ThemeEffects.withAlpha(GameTheme.Colors.ACCENT_GOLD, 80));
+        playerList.setSelectionForeground(GameTheme.Colors.TEXT_PRIMARY);
         playerList.setFixedCellHeight(80); // Taller cells for enhanced cards
 
         // Enhanced custom cell renderer with player cards
@@ -100,7 +103,8 @@ public class LobbyPanel extends JPanel {
             @Override
             protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g.create();
-                g2.setColor(new Color(255, 255, 255, 180));
+                // Parchment-style background
+                g2.setColor(ThemeEffects.withAlpha(GameTheme.Colors.SURFACE_PRIMARY, 180));
                 g2.fillRect(0, 0, getWidth(), getHeight());
                 g2.dispose();
                 super.paintComponent(g);
@@ -124,13 +128,13 @@ public class LobbyPanel extends JPanel {
         JPanel footer = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         footer.setOpaque(false);
 
-        startButton = new JButton("Spiel starten");
-        startButton.setFont(new Font("Arial", Font.BOLD, 14));
+        startButton = new JButton("Begin Quest");
+        startButton.setFont(FontManager.getLargeUI());
         startButton.setEnabled(false); // initial deaktiviert
         startButton.addActionListener(e -> onStartGameClicked());
 
-        cancelReconnectButton = new JButton("Wiederverbindung abbrechen");
-        cancelReconnectButton.setFont(new Font("Arial", Font.BOLD, 12));
+        cancelReconnectButton = new JButton("Abandon Reconnection");
+        cancelReconnectButton.setFont(FontManager.getMediumUIBold());
         cancelReconnectButton.setVisible(false); // Hidden by default
         cancelReconnectButton.addActionListener(e -> onCancelReconnect());
 
@@ -183,11 +187,11 @@ public class LobbyPanel extends JPanel {
     public void setConnected(boolean connected) {
         SwingUtilities.invokeLater(() -> {
             if (connected) {
-                connectionLabel.setText("Verbunden mit Server");
-                connectionLabel.setForeground(new Color(0, 150, 0));
+                connectionLabel.setText("⚔ Connected - Welcome to the Tavern");
+                connectionLabel.setForeground(GameTheme.Colors.SUCCESS);
             } else {
-                connectionLabel.setText("Nicht verbunden");
-                connectionLabel.setForeground(new Color(170, 0, 0));
+                connectionLabel.setText("⚠ Disconnected");
+                connectionLabel.setForeground(GameTheme.Colors.ERROR);
                 startButton.setEnabled(false);
             }
         });
@@ -322,7 +326,9 @@ public class LobbyPanel extends JPanel {
         bs.setRows(configBoardSize);
         bs.setCols(configBoardSize);
 
-        int treasuresToWin = configTreasuresToWin;
+        // Send treasures per player - server will multiply by actual player count after filling with AI
+        int treasuresPerPlayer = configTreasuresToWin;
+
         int totalBonusCount = 0;
         int gameDurationSeconds = configGameDurationMinutes * 60;
         int turnTimeSeconds = configTurnTimeSeconds;
@@ -330,12 +336,12 @@ public class LobbyPanel extends JPanel {
         try {
             System.out.println("START clicked -> sending START_GAME");
             System.out.println("rows=" + bs.getRows() + " cols=" + bs.getCols()
-                    + " treasureCardCount=" + treasuresToWin
+                    + " treasuresPerPlayer=" + treasuresPerPlayer
                     + " totalBonusCount=" + totalBonusCount
                     + " gameDurationSeconds=" + gameDurationSeconds
                     + " turnTimeSeconds=" + turnTimeSeconds);
 
-            client.sendStartGame(bs, treasuresToWin, totalBonusCount, gameDurationSeconds, turnTimeSeconds);
+            client.sendStartGame(bs, treasuresPerPlayer, totalBonusCount, gameDurationSeconds, turnTimeSeconds);
         } catch (Exception ex) {
             ex.printStackTrace();
 

@@ -497,6 +497,7 @@ public class LabyrinthApplication {
 
             // Map error codes to structured codes and titles
             switch (errorCode) {
+                // Game action errors (100-199)
                 case "NOT_YOUR_TURN" -> {
                     errorCode = "101";
                     errorTitle = "Nicht an der Reihe";
@@ -509,17 +510,51 @@ public class LabyrinthApplication {
                     errorCode = "103";
                     errorTitle = "Ungültige Bewegung";
                 }
-                case "GAME_NOT_STARTED" -> {
-                    errorCode = "104";
-                    errorTitle = "Spiel nicht gestartet";
+
+                // Permission errors (200-299)
+                case "NOT_ADMIN" -> {
+                    errorCode = "201";
+                    errorTitle = "Keine Berechtigung";
                 }
-                case "TIMEOUT" -> {
-                    errorCode = "204";
-                    errorTitle = "Zeitüberschreitung";
+
+                // Bonus errors (300-399)
+                case "BONUS_NOT_AVAILABLE" -> {
+                    errorCode = "301";
+                    errorTitle = "Bonus nicht verfügbar";
+                }
+
+                // Lobby/Connection errors (400-499)
+                case "LOBBY_FULL" -> {
+                    errorCode = "401";
+                    errorTitle = "Lobby voll";
+                }
+                case "GAME_ALREADY_STARTED" -> {
+                    errorCode = "402";
+                    errorTitle = "Spiel bereits gestartet";
+                }
+                case "USERNAME_TAKEN" -> {
+                    errorCode = "403";
+                    errorTitle = "Username bereits vergeben";
+                }
+                case "PLAYER_NOT_CONNECTED" -> {
+                    errorCode = "404";
+                    errorTitle = "Spieler nicht verbunden";
+                }
+
+                // Command errors (500-599)
+                case "INVALID_COMMAND" -> {
+                    errorCode = "501";
+                    errorTitle = "Ungültiger Befehl";
+                }
+
+                // General errors (999)
+                case "GENERAL" -> {
+                    errorCode = "999";
+                    errorTitle = "Allgemeiner Fehler";
                 }
                 default -> {
                     errorCode = "999";
-                    errorTitle = "Fehler";
+                    errorTitle = "Unbekannter Fehler";
                 }
             }
         } else {

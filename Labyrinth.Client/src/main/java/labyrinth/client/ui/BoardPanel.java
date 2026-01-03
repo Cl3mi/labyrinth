@@ -4,6 +4,9 @@ import labyrinth.client.audio.AudioPlayer;
 import labyrinth.client.messaging.GameClient;
 import labyrinth.client.models.Board;
 import labyrinth.client.models.Player;
+import labyrinth.client.ui.theme.FontManager;
+import labyrinth.client.ui.theme.GameTheme;
+import labyrinth.client.ui.theme.ThemeEffects;
 import labyrinth.contracts.models.Direction;
 import labyrinth.contracts.models.Tile;
 import labyrinth.contracts.models.Treasure;
@@ -34,21 +37,8 @@ public class BoardPanel extends JPanel {
     private static final int PANEL_PADDING = 20;
     private static final int ARROW_MARGIN = 5;
 
-    private static final Font DEBUG_INFO_FONT = new Font("Arial", Font.BOLD, 16);
-    private static final Font PLAYER_MARKER_FONT = new Font("Arial", Font.BOLD, 30);
-    private static final Font COORDINATE_FONT = new Font("Arial", Font.PLAIN, 10);
-
-    private static final Color BACKGROUND_COLOR = Color.DARK_GRAY;
-    private static final Color CORRIDOR_COLOR = new Color(235, 235, 220);
-    private static final Color WALL_COLOR = new Color(50, 50, 50);
-    private static final Color FIXED_TILE_BACKGROUND_COLOR = new Color(160, 160, 0);
-    private static final Color ARROW_COLOR = new Color(70, 130, 180);
-    private static final Color ARROW_COLOR_HOVER = new Color(120, 180, 230);
-
-    private static final Color[] PLAYER_COLORS = {
-            new Color(200, 80, 80), new Color(80, 180, 80),
-            new Color(80, 120, 200), new Color(230, 200, 80)
-    };
+    // Fonts are now managed by FontManager
+    // Colors are now managed by GameTheme
 
     private final GameClient client;
     private final ToastManager toastManager;
@@ -121,7 +111,7 @@ public class BoardPanel extends JPanel {
         loadTreasureImages();
         loadPlayerIcons();
 
-        setBackground(BACKGROUND_COLOR);
+        setBackground(GameTheme.Colors.BACKGROUND_PRIMARY);
         setPreferredSize(new Dimension(1920, 1080));
 
         setLayout(null); // Overlay-Button
@@ -352,7 +342,7 @@ public class BoardPanel extends JPanel {
         Direction[] entrances = tile.getEntrances();
         if (entrances == null || entrances.length == 0) return;
 
-        g2.setColor(CORRIDOR_COLOR);
+        g2.setColor(GameTheme.Colors.CORRIDOR);
 
         if (hasEntrance(entrances, Direction.UP)) {
             g2.fillRect(cx - corridorWidth / 2, y, corridorWidth, size / 2);
@@ -368,13 +358,13 @@ public class BoardPanel extends JPanel {
         }
 
         int dotSize = Math.max(4, corridorWidth);
-        g2.setColor(Boolean.TRUE.equals(tile.getIsFixed()) ? FIXED_TILE_BACKGROUND_COLOR : WALL_COLOR);
+        g2.setColor(Boolean.TRUE.equals(tile.getIsFixed()) ? GameTheme.Colors.FIXED_TILE : GameTheme.Colors.WALL);
         g2.fillOval(cx - dotSize / 2, cy - dotSize / 2, dotSize, dotSize);
     }
 
     private void drawTileHighlight(Graphics2D g2, int x, int y) {
-        g2.setColor(new Color(255, 255, 0, 120));
-        g2.fillRoundRect(x - 4, y - 4, size + 8, size + 8, 15, 15);
+        g2.setColor(GameTheme.Colors.REACHABLE_HIGHLIGHT);
+        g2.fillRoundRect(x - 4, y - 4, size + 8, size + 8, GameTheme.Spacing.RADIUS_LARGE, GameTheme.Spacing.RADIUS_LARGE);
     }
 
     // =================================================================================
@@ -643,12 +633,19 @@ public class BoardPanel extends JPanel {
         long time = System.currentTimeMillis();
         int pulseAlpha = 150 + (int) (50 * Math.sin(time / 200.0));
 
-        g2.setColor(new Color(255, 255, 100, pulseAlpha));
+        // Ornate golden selection border
+        g2.setColor(new Color(
+                GameTheme.Colors.ACCENT_GOLD.getRed(),
+                GameTheme.Colors.ACCENT_GOLD.getGreen(),
+                GameTheme.Colors.ACCENT_GOLD.getBlue(),
+                pulseAlpha
+        ));
         g2.setStroke(new BasicStroke(4));
-        g2.drawRoundRect(x - 2, y - 2, size + 4, size + 4, 10, 10);
+        g2.drawRoundRect(x - 2, y - 2, size + 4, size + 4,
+                GameTheme.Spacing.RADIUS_MEDIUM, GameTheme.Spacing.RADIUS_MEDIUM);
 
-        // Draw corner markers
-        g2.setColor(new Color(255, 255, 0, 200));
+        // Draw ornate corner markers
+        g2.setColor(ThemeEffects.withAlpha(GameTheme.Colors.ACCENT_GOLD, 200));
         int cornerSize = 10;
         // Top-left
         g2.fillRect(x - 2, y - 2, cornerSize, 3);
@@ -803,18 +800,19 @@ public class BoardPanel extends JPanel {
                     && currentTarget.getName().equals(treasure.getName());
         }
 
-        // ✅ Pulsing glow effect for target treasure
+        // ✅ Pulsing glow effect for target treasure (magical golden aura)
         if (isCurrentTarget) {
             long time = System.currentTimeMillis();
             int glowRadius = 28 + (int) (8 * Math.sin(time / 300.0));
             int glowAlpha = 120 + (int) (60 * Math.sin(time / 300.0));
 
-            // Outer glow
-            g2.setColor(new Color(255, 215, 0, Math.min(glowAlpha / 2, 100)));
+            // Outer glow (golden)
+            g2.setColor(ThemeEffects.withAlpha(GameTheme.Colors.ACCENT_GOLD, Math.min(glowAlpha / 2, 100)));
             g2.fillOval(centerX - glowRadius, centerY - glowRadius - 8, glowRadius * 2, glowRadius * 2);
 
-            // Inner glow
-            g2.setColor(new Color(255, 255, 0, Math.min(glowAlpha, 150)));
+            // Inner glow (brighter gold)
+            g2.setColor(ThemeEffects.withAlpha(ThemeEffects.brighten(GameTheme.Colors.ACCENT_GOLD, 0.3f),
+                    Math.min(glowAlpha, 150)));
             g2.fillOval(centerX - glowRadius / 2, centerY - glowRadius / 2 - 8, glowRadius, glowRadius);
         }
 
@@ -856,7 +854,7 @@ public class BoardPanel extends JPanel {
             g2.drawOval(centerX - fallbackSize / 2, centerY - fallbackSize / 2 - 12, fallbackSize, fallbackSize);
 
             // First letter
-            g2.setFont(new Font("Arial", Font.BOLD, fallbackSize / 2));
+            g2.setFont(FontManager.getDisplayFont(fallbackSize / 2f, Font.BOLD));
             g2.setColor(Color.WHITE);
             String letter = treasure.getName().substring(0, 1);
             FontMetrics fm = g2.getFontMetrics();
@@ -867,7 +865,7 @@ public class BoardPanel extends JPanel {
         }
 
         // ✅ Draw treasure name UNDER the image with background
-        g2.setFont(new Font("Arial", Font.BOLD, isCurrentTarget ? 11 : 9));
+        g2.setFont(isCurrentTarget ? FontManager.getSmallUIBold() : FontManager.getTinyUI());
         FontMetrics fm = g2.getFontMetrics();
         String displayName = treasure.getName();
 
@@ -911,7 +909,7 @@ public class BoardPanel extends JPanel {
 
         // ⭐ Target indicator star above the treasure
         if (isCurrentTarget) {
-            g2.setFont(new Font("Arial", Font.BOLD, 18));
+            g2.setFont(FontManager.getLargeUI());
             g2.setColor(new Color(255, 255, 255, 230));
 
             // Draw star with slight shadow
@@ -930,7 +928,7 @@ public class BoardPanel extends JPanel {
         g2.setColor(Color.WHITE);
 
         Font oldFont = g2.getFont();
-        g2.setFont(COORDINATE_FONT);
+        g2.setFont(FontManager.getSmallMono());
         g2.drawString(coords, x + 3, y + size - 3);
         g2.setFont(oldFont);
     }
@@ -980,9 +978,10 @@ public class BoardPanel extends JPanel {
                         iconSize,
                         null);
             } else {
-                g2.setColor(PLAYER_COLORS[i % PLAYER_COLORS.length]);
+                g2.setColor(GameTheme.Colors.getPlayerColor(i));
                 Font oldFont = g2.getFont();
-                Font scaledFont = count > 1 ? PLAYER_MARKER_FONT.deriveFont(20f) : PLAYER_MARKER_FONT;
+                Font baseFont = FontManager.getLargeDisplay();
+                Font scaledFont = count > 1 ? baseFont.deriveFont(20f) : baseFont;
                 g2.setFont(scaledFont);
 
                 FontMetrics fm = g2.getFontMetrics();
@@ -1038,20 +1037,25 @@ public class BoardPanel extends JPanel {
     }
 
     private void drawArrowButton(Graphics2D g2, ArrowButton arrow) {
-        if (arrow == hoveredArrow) {
-            g2.setColor(ARROW_COLOR_HOVER);
-        } else {
-            g2.setColor(ARROW_COLOR);
-        }
+        Color arrowColor = arrow == hoveredArrow ?
+                ThemeEffects.brighten(GameTheme.Colors.INFO, 0.3f) :
+                GameTheme.Colors.INFO;
 
-        g2.fillRoundRect(arrow.bounds.x + 2, arrow.bounds.y + 2, arrow.bounds.width, arrow.bounds.height, 8, 8);
-        g2.setColor(new Color(20, 20, 40, 180));
-        g2.drawRoundRect(arrow.bounds.x + 2, arrow.bounds.y + 2, arrow.bounds.width, arrow.bounds.height, 8, 8);
+        // Shadow
+        g2.setColor(arrowColor);
+        g2.fillRoundRect(arrow.bounds.x + 2, arrow.bounds.y + 2, arrow.bounds.width, arrow.bounds.height,
+                GameTheme.Spacing.RADIUS_MEDIUM, GameTheme.Spacing.RADIUS_MEDIUM);
+        g2.setColor(GameTheme.Colors.SHADOW);
+        g2.drawRoundRect(arrow.bounds.x + 2, arrow.bounds.y + 2, arrow.bounds.width, arrow.bounds.height,
+                GameTheme.Spacing.RADIUS_MEDIUM, GameTheme.Spacing.RADIUS_MEDIUM);
 
-        g2.setColor(arrow == hoveredArrow ? ARROW_COLOR_HOVER : ARROW_COLOR);
-        g2.fillRoundRect(arrow.bounds.x, arrow.bounds.y, arrow.bounds.width, arrow.bounds.height, 8, 8);
+        // Main button
+        g2.setColor(arrowColor);
+        g2.fillRoundRect(arrow.bounds.x, arrow.bounds.y, arrow.bounds.width, arrow.bounds.height,
+                GameTheme.Spacing.RADIUS_MEDIUM, GameTheme.Spacing.RADIUS_MEDIUM);
 
-        g2.setColor(Color.WHITE);
+        // Arrow icon
+        g2.setColor(GameTheme.Colors.TEXT_PRIMARY);
         g2.fill(arrow.arrowShape);
     }
 
@@ -1061,7 +1065,7 @@ public class BoardPanel extends JPanel {
         int y = getHeight() - size - margin;
 
         // Label über dem Tile
-        g2.setFont(new Font("Arial", Font.BOLD, 14));
+        g2.setFont(FontManager.getMediumUIBold());
         g2.setColor(Color.BLACK);
         g2.drawString("Schiebekarte", x, y - 8);
 
@@ -1070,7 +1074,7 @@ public class BoardPanel extends JPanel {
             // Debug: Fallback wenn null
             g2.setColor(new Color(255, 0, 0, 140));
             g2.drawRect(x, y, size, size);
-            g2.setFont(new Font("Arial", Font.PLAIN, 12));
+            g2.setFont(FontManager.getSmallUI());
             g2.drawString("NULL", x + 5, y + 15);
             return;
         }
@@ -1081,7 +1085,7 @@ public class BoardPanel extends JPanel {
 
         // Optional: Hinweistext dass es gedreht werden kann
         if (currentTurnState == labyrinth.contracts.models.TurnState.WAITING_FOR_PUSH) {
-            g2.setFont(new Font("Arial", Font.ITALIC, 10));
+            g2.setFont(FontManager.getTinyUI());
             g2.setColor(new Color(255, 255, 255, 200));
             g2.drawString("Drücke R/Q/E zum Drehen", x, y + size + 15);
         }
@@ -1115,26 +1119,24 @@ public class BoardPanel extends JPanel {
         int sidebarY = 60;
         int padding = 15;
 
-        // Background panel with gradient
-        GradientPaint gradient = new GradientPaint(
+        // Background panel with wood grain gradient
+        GradientPaint gradient = ThemeEffects.createWoodGradient(
             sidebarX, sidebarY,
-            new Color(40, 40, 50, 240),
-            sidebarX, getHeight(),
-            new Color(30, 30, 40, 240)
+            sidebarX, getHeight()
         );
         g2.setPaint(gradient);
-        g2.fillRoundRect(sidebarX, sidebarY, sidebarWidth, getHeight() - sidebarY - 20, 15, 15);
+        int sidebarHeight = getHeight() - sidebarY - 20;
+        g2.fillRoundRect(sidebarX, sidebarY, sidebarWidth, sidebarHeight,
+                GameTheme.Spacing.RADIUS_LARGE, GameTheme.Spacing.RADIUS_LARGE);
 
-        // Border with glow effect
-        g2.setColor(new Color(100, 130, 180, 150));
-        g2.setStroke(new BasicStroke(3));
-        g2.drawRoundRect(sidebarX, sidebarY, sidebarWidth, getHeight() - sidebarY - 20, 15, 15);
+        // Ornate medieval border
+        ThemeEffects.drawOrnateBorder(g2, sidebarX, sidebarY, sidebarWidth, sidebarHeight);
 
         int currentY = sidebarY + padding;
 
         // Header with icon
-        g2.setFont(new Font("Arial", Font.BOLD, 22));
-        g2.setColor(new Color(255, 215, 0)); // Gold color
+        g2.setFont(FontManager.getSmallDisplay());
+        g2.setColor(GameTheme.Colors.ACCENT_GOLD);
         g2.drawString("⚔ LABYRINTH", sidebarX + padding, currentY);
         currentY += 35;
 
@@ -1143,8 +1145,8 @@ public class BoardPanel extends JPanel {
             drawSectionHeader(g2, "⏱ SPIEL-TIMER", sidebarX + padding, currentY);
             currentY += 22;
 
-            g2.setFont(new Font("Arial", Font.BOLD, 16));
-            g2.setColor(new Color(255, 200, 100));
+            g2.setFont(FontManager.getMediumUIBold());
+            g2.setColor(GameTheme.Colors.WARNING);
             String timeRemaining = formatTimeRemaining(gameEndTime);
             g2.drawString(timeRemaining, sidebarX + padding + 10, currentY);
             currentY += 25;
@@ -1165,7 +1167,7 @@ public class BoardPanel extends JPanel {
             currentY += 25;
 
             // Player name with larger font
-            g2.setFont(new Font("Arial", Font.BOLD, 18));
+            g2.setFont(FontManager.getLargeUI());
             g2.setColor(new Color(255, 255, 150));
             String turnText = currentTurnPlayer.getName();
             if (currentTurnPlayer.isAiControlled()) {
@@ -1175,7 +1177,7 @@ public class BoardPanel extends JPanel {
             currentY += 28;
 
             // Turn state - use server TurnState if available, otherwise client MoveState
-            g2.setFont(new Font("Arial", Font.PLAIN, 11));
+            g2.setFont(FontManager.getSmallUI());
             g2.setColor(new Color(180, 180, 200));
             String stateText;
             if (currentTurnState != null) {
@@ -1193,7 +1195,7 @@ public class BoardPanel extends JPanel {
             // Turn timer
             if (turnEndTime != null) {
                 String turnTime = formatTimeRemaining(turnEndTime);
-                g2.setFont(new Font("Arial", Font.BOLD, 12));
+                g2.setFont(FontManager.getSmallUIBold());
                 g2.setColor(new Color(255, 150, 150));
                 g2.drawString("⏱ " + turnTime, sidebarX + padding + 10, currentY);
                 currentY += 20;
@@ -1203,7 +1205,7 @@ public class BoardPanel extends JPanel {
 
             // Hint for staying in place
             if (currentTurnState != null && currentTurnState == labyrinth.contracts.models.TurnState.WAITING_FOR_MOVE) {
-                g2.setFont(new Font("Arial", Font.ITALIC, 10));
+                g2.setFont(FontManager.getTinyUI());
                 g2.setColor(new Color(150, 150, 170));
                 g2.drawString("(Click your tile to stay in place)", sidebarX + padding + 10, currentY);
                 currentY += 15;
@@ -1255,12 +1257,12 @@ public class BoardPanel extends JPanel {
             g2.drawRoundRect(sidebarX + padding + 5, currentY - 15, sidebarWidth - 2 * padding - 10, 50, 10, 10);
 
             // "AKTUELLES ZIEL" label
-            g2.setFont(new Font("Arial", Font.BOLD, 10));
+            g2.setFont(FontManager.getTinyUI());
             g2.setColor(new Color(100, 70, 0));
             g2.drawString("AKTUELLES ZIEL:", sidebarX + padding + 15, currentY - 2);
 
             // Current target name with star
-            g2.setFont(new Font("Arial", Font.BOLD, 16));
+            g2.setFont(FontManager.getMediumUIBold());
             g2.setColor(new Color(0, 0, 0));
             g2.drawString("⭐ " + currentTarget.getName(), sidebarX + padding + 15, currentY + 20);
 
@@ -1269,14 +1271,14 @@ public class BoardPanel extends JPanel {
             // Draw remaining treasure cards (if any)
             if (currentPlayer.getAssignedTreasureCards().size() > 1) {
                 currentY += 10;
-                g2.setFont(new Font("Arial", Font.ITALIC, 11));
+                g2.setFont(FontManager.getSmallUI());
                 g2.setColor(new Color(180, 180, 200));
                 g2.drawString("Weitere Ziele:", sidebarX + padding + 10, currentY);
                 currentY += 18;
 
                 for (int i = 1; i < currentPlayer.getAssignedTreasureCards().size(); i++) {
                     Treasure card = currentPlayer.getAssignedTreasureCards().get(i);
-                    g2.setFont(new Font("Arial", Font.PLAIN, 11));
+                    g2.setFont(FontManager.getSmallUI());
                     g2.setColor(new Color(200, 200, 220));
                     g2.drawString("  • " + card.getName(), sidebarX + padding + 10, currentY);
                     currentY += 16;
@@ -1289,7 +1291,7 @@ public class BoardPanel extends JPanel {
         drawDivider(g2, sidebarX + padding, sidebarX + sidebarWidth - padding, currentY);
         currentY += 15;
 
-        g2.setFont(new Font("Arial", Font.ITALIC, 10));
+        g2.setFont(FontManager.getTinyUI());
         g2.setColor(new Color(150, 150, 170));
         g2.drawString("⌨ Pfeiltasten: Navigation", sidebarX + padding, currentY);
         currentY += 15;
@@ -1379,14 +1381,14 @@ public class BoardPanel extends JPanel {
         g2.drawRoundRect(bannerX, bannerY, bannerWidth, bannerHeight, 20, 20);
 
         // "FINDE" label
-        g2.setFont(new Font("Arial", Font.BOLD, 18));
+        g2.setFont(FontManager.getLargeUI());
         g2.setColor(new Color(100, 70, 0));
         FontMetrics fm = g2.getFontMetrics();
         String findLabel = "FINDE:";
         g2.drawString(findLabel, bannerX + 20, bannerY + 30);
 
         // Treasure name in large font
-        g2.setFont(new Font("Arial", Font.BOLD, 28));
+        g2.setFont(FontManager.getMediumDisplay());
         g2.setColor(new Color(0, 0, 0));
         fm = g2.getFontMetrics();
         String treasureName = "⭐ " + currentTarget.getName() + " 💎";
@@ -1437,7 +1439,7 @@ public class BoardPanel extends JPanel {
             }
 
             // Location hint text
-            g2.setFont(new Font("Arial", Font.BOLD, 14));
+            g2.setFont(FontManager.getMediumUIBold());
             g2.setColor(new Color(100, 70, 0));
             String locationText = "bei (" + targetRow + ", " + targetCol + ")";
             fm = g2.getFontMetrics();
@@ -1445,7 +1447,7 @@ public class BoardPanel extends JPanel {
             g2.drawString(locationText, bannerX + (bannerWidth - locationWidth) / 2, bannerY + bannerHeight - 8);
         } else {
             // Treasure not on board yet
-            g2.setFont(new Font("Arial", Font.ITALIC, 12));
+            g2.setFont(FontManager.getSmallUI());
             g2.setColor(new Color(100, 70, 0));
             fm = g2.getFontMetrics();
             String notFoundText = "(noch nicht auf dem Spielfeld)";
@@ -1455,45 +1457,49 @@ public class BoardPanel extends JPanel {
     }
 
     /**
-     * Draws a section header with consistent styling
+     * Draws a section header with consistent medieval styling
      */
     private void drawSectionHeader(Graphics2D g2, String text, int x, int y) {
-        g2.setFont(new Font("Arial", Font.BOLD, 13));
-        g2.setColor(new Color(180, 200, 255));
+        g2.setFont(FontManager.getSmallUIBold());
+        g2.setColor(GameTheme.Colors.ACCENT_COPPER);
         g2.drawString(text, x, y);
     }
 
     /**
-     * Draws a visual divider line
+     * Draws a decorative medieval scroll divider
      */
     private void drawDivider(Graphics2D g2, int x1, int x2, int y) {
-        // Draw gradient divider
-        GradientPaint dividerGradient = new GradientPaint(
-            x1, y,
-            new Color(100, 130, 180, 50),
-            (x1 + x2) / 2, y,
-            new Color(100, 130, 180, 180)
-        );
-        g2.setPaint(dividerGradient);
-        g2.setStroke(new BasicStroke(2));
-        g2.drawLine(x1, y, x2, y);
+        ThemeEffects.drawScrollDivider(g2, x1, x2, y);
     }
 
     private int drawPlayerCard(Graphics2D g2, Player player, int x, int y, int width, boolean isCurrentTurn, int playerIndex) {
         int cardHeight = 95;
         int padding = 10;
 
-        // Card background
-        Color bgColor = isCurrentTurn ? new Color(80, 100, 140, 200) : new Color(50, 50, 60, 180);
-        g2.setColor(bgColor);
-        g2.fillRoundRect(x, y, width, cardHeight, 10, 10);
+        // Card background with gradient
+        GradientPaint cardGradient = new GradientPaint(
+                x, y,
+                isCurrentTurn ? GameTheme.Colors.SURFACE_SECONDARY : GameTheme.Colors.SURFACE_PRIMARY,
+                x, y + cardHeight,
+                isCurrentTurn ? GameTheme.Colors.SURFACE_ELEVATED : GameTheme.Colors.SURFACE_SECONDARY
+        );
+        g2.setPaint(cardGradient);
+        g2.fillRoundRect(x, y, width, cardHeight,
+                GameTheme.Spacing.RADIUS_MEDIUM, GameTheme.Spacing.RADIUS_MEDIUM);
 
-        // Border for current turn
+        // Medieval card border
+        ThemeEffects.drawCardBorder(g2, x, y, width, cardHeight);
+
+        // Golden border for current turn
         if (isCurrentTurn) {
-            g2.setColor(new Color(255, 220, 100));
-            g2.setStroke(new BasicStroke(2));
-            g2.drawRoundRect(x, y, width, cardHeight, 10, 10);
+            g2.setColor(GameTheme.Colors.ACCENT_GOLD);
+            g2.setStroke(new BasicStroke(GameTheme.Spacing.BORDER_THICK));
+            g2.drawRoundRect(x, y, width, cardHeight,
+                    GameTheme.Spacing.RADIUS_MEDIUM, GameTheme.Spacing.RADIUS_MEDIUM);
         }
+
+        // Corner ornaments
+        ThemeEffects.drawCornerOrnaments(g2, x, y, width, cardHeight, 8);
 
         int currentY = y + padding + 15;
 
@@ -1515,8 +1521,8 @@ public class BoardPanel extends JPanel {
         }
 
         // Player name
-        g2.setFont(new Font("Arial", Font.BOLD, 14));
-        g2.setColor(Color.WHITE);
+        g2.setFont(FontManager.getMediumUIBold());
+        g2.setColor(GameTheme.Colors.TEXT_PRIMARY);
         String name = player.getName();
         if (name.length() > 15) {
             name = name.substring(0, 12) + "...";
@@ -1525,19 +1531,19 @@ public class BoardPanel extends JPanel {
 
         // Badges (admin, AI, disconnected)
         int badgeX = x + width - padding - 20;
-        g2.setFont(new Font("Arial", Font.PLAIN, 10));
+        g2.setFont(FontManager.getTinyUI());
 
         // Show AI badge or OFFLINE badge (but not both - AI bots don't need connections)
         if (player.isAiControlled()) {
-            g2.setColor(new Color(150, 150, 255));
+            g2.setColor(GameTheme.Colors.INFO);
             g2.drawString("AI", badgeX, currentY);
         } else if (!player.isConnected()) {
-            g2.setColor(new Color(200, 80, 80));
+            g2.setColor(GameTheme.Colors.ERROR);
             g2.drawString("OFFLINE", badgeX - 40, currentY);
         }
 
         if (player.isAdmin()) {
-            g2.setColor(new Color(255, 215, 0));
+            g2.setColor(GameTheme.Colors.ACCENT_GOLD);
             g2.drawString("★", x + width - padding - 5, currentY);
         }
 
@@ -1547,26 +1553,28 @@ public class BoardPanel extends JPanel {
         int treasuresFound = player.getTreasuresFound() != null ? player.getTreasuresFound().size() : 0;
         int totalTreasures = treasuresFound + player.getRemainingTreasureCount();
 
-        g2.setFont(new Font("Arial", Font.PLAIN, 12));
-        g2.setColor(new Color(200, 200, 220));
+        g2.setFont(FontManager.getSmallUI());
+        g2.setColor(GameTheme.Colors.TEXT_SECONDARY);
         g2.drawString("Treasures: " + treasuresFound + "/" + totalTreasures, x + padding + 24, currentY);
         currentY += 18;
 
-        // Progress bar
+        // Progress bar with ornate medieval styling
         if (totalTreasures > 0) {
             int barWidth = width - 2 * padding - 24;
             int barHeight = 8;
             int barX = x + padding + 24;
 
             // Background
-            g2.setColor(new Color(60, 60, 70));
-            g2.fillRoundRect(barX, currentY - 6, barWidth, barHeight, 4, 4);
+            g2.setColor(GameTheme.Colors.BACKGROUND_TERTIARY);
+            g2.fillRoundRect(barX, currentY - 6, barWidth, barHeight,
+                    GameTheme.Spacing.RADIUS_SMALL, GameTheme.Spacing.RADIUS_SMALL);
 
-            // Progress
+            // Progress (golden fill)
             int progressWidth = (int) ((double) treasuresFound / totalTreasures * barWidth);
             if (progressWidth > 0) {
-                g2.setColor(new Color(100, 200, 100));
-                g2.fillRoundRect(barX, currentY - 6, progressWidth, barHeight, 4, 4);
+                g2.setColor(GameTheme.Colors.ACCENT_GOLD);
+                g2.fillRoundRect(barX, currentY - 6, progressWidth, barHeight,
+                        GameTheme.Spacing.RADIUS_SMALL, GameTheme.Spacing.RADIUS_SMALL);
             }
         }
 
@@ -1575,10 +1583,10 @@ public class BoardPanel extends JPanel {
 
     private Color getAwtColor(labyrinth.contracts.models.PlayerColor playerColor) {
         return switch (playerColor) {
-            case RED -> new Color(220, 80, 80);
-            case BLUE -> new Color(80, 140, 220);
-            case GREEN -> new Color(80, 200, 120);
-            case YELLOW -> new Color(230, 200, 80);
+            case RED -> GameTheme.Colors.PLAYER_RED;
+            case BLUE -> GameTheme.Colors.PLAYER_BLUE;
+            case GREEN -> GameTheme.Colors.PLAYER_GREEN;
+            case YELLOW -> GameTheme.Colors.PLAYER_YELLOW;
         };
     }
 

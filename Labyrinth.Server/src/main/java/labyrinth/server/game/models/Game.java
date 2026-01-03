@@ -170,6 +170,16 @@ public class Game {
         players.add(player);
     }
 
+    /**
+     * Fills the game with AI players up to MAX_PLAYERS.
+     * Called before creating treasure cards to ensure correct player count.
+     */
+    public void fillWithAiPlayers() {
+        while (players.size() < MAX_PLAYERS) {
+            addAiPlayer();
+        }
+    }
+
     public void leave(Player player) {
         // TODO: handle leaving during game
         players.removeIf(p -> p.getId().equals(player.getId()));
@@ -195,9 +205,8 @@ public class Game {
             throw new IllegalStateException("At least 1 player is required to start the game");
         }
 
-        while (players.size() < MAX_PLAYERS) {
-            addAiPlayer();
-        }
+        // AI players are now filled before this method is called (in GameService)
+        // to ensure correct treasure count calculation
 
         this.gameConfig = Objects.requireNonNullElseGet(gameConfig, GameConfig::getDefault);
 
@@ -318,6 +327,12 @@ public class Game {
 
         var gameOver = false;
         if (currentTreasureCardAfterMove == null) {
+            System.out.println("[GAME OVER DEBUG] Player " + player.getUsername() + " triggered game over");
+            System.out.println("[GAME OVER DEBUG] Player has " + player.getAssignedTreasureCards().size() + " assigned treasures");
+            for (int i = 0; i < player.getAssignedTreasureCards().size(); i++) {
+                TreasureCard tc = player.getAssignedTreasureCards().get(i);
+                System.out.println("[GAME OVER DEBUG]   Treasure " + i + ": " + tc.getTreasureName() + " collected=" + tc.isCollected());
+            }
             gameOver();
             gameOver = true;
             gameLogger.log(GameLogType.GAME_OVER, "Game Over. Winner: " + player.getUsername(), player, null);
@@ -337,6 +352,32 @@ public class Game {
 
     private void gameOver() {
         this.roomState = RoomState.FINISHED;
+    }
+
+    /**
+     * Resets the game back to lobby state after game completion.
+     * Clears the board and prepares for a new game to be started.
+     */
+    public void returnToLobby() {
+        System.out.println("[RETURN TO LOBBY] Current state: " + this.roomState);
+
+        if (this.roomState != RoomState.FINISHED) {
+            System.err.println("[RETURN TO LOBBY ERROR] Cannot return to lobby from state: " + this.roomState);
+            throw new IllegalStateException("Cannot return to lobby from state: " + this.roomState);
+        }
+
+        System.out.println("[RETURN TO LOBBY] Resetting game to lobby state");
+        this.roomState = RoomState.LOBBY;
+        this.board = null;
+        this.gameStartTime = null;
+        turnController.reset();
+
+        // Reset player stats and treasures for new game
+        for (Player player : players) {
+            player.resetForNewGame();
+        }
+
+        System.out.println("[RETURN TO LOBBY] Reset complete. Players remaining: " + players.size());
     }
 
     private synchronized void nextPlayer() {
@@ -437,6 +478,8 @@ public class Game {
      * @param board         the board to place treasures on
      */
     private void distributeTreasureCards(List<TreasureCard> treasureCards, Board board) {
+        System.out.println("[TREASURE DEBUG] Distributing " + treasureCards.size() + " treasures to " + players.size() + " players");
+
         var playerToAssignCardsToIndex = 0;
         while (!treasureCards.isEmpty()) {
             TreasureCard card = treasureCards.getFirst();
@@ -444,6 +487,7 @@ public class Game {
 
             Player player = players.get(playerToAssignCardsToIndex);
             player.getAssignedTreasureCards().add(card);
+            System.out.println("[TREASURE DEBUG] Assigned '" + card.getTreasureName() + "' to " + player.getUsername());
 
             playerToAssignCardsToIndex++;
             if (playerToAssignCardsToIndex >= players.size()) {
@@ -451,6 +495,11 @@ public class Game {
             }
 
             treasureCards.removeFirst();
+        }
+
+        // Verify distribution
+        for (Player p : players) {
+            System.out.println("[TREASURE DEBUG] " + p.getUsername() + " has " + p.getAssignedTreasureCards().size() + " treasures");
         }
     }
 
