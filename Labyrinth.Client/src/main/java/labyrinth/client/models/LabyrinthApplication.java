@@ -482,6 +482,7 @@ public class LabyrinthApplication {
 
         if (boardPanel == null) {
             boardPanel = new BoardPanel(client, board, currentPlayer, allPlayers);
+            boardPanel.setOnExitGame(this::exitGameToMainMenu);
             mainPanel.add(boardPanel, "game");
         } else {
             boardPanel.setBoard(board);

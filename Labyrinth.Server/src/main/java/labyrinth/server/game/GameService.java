@@ -225,6 +225,9 @@ public class GameService {
     public void startGame(GameConfig gameConfig) {
         rwLock.writeLock().lock();
         try {
+            // Fill with AI players before calculating treasure count
+            game.fillWithAiPlayers();
+
             int playersCount = game.getPlayers().size();
 
             var board = boardFactory.createBoard(gameConfig.boardWidth(), gameConfig.boardHeight(),
