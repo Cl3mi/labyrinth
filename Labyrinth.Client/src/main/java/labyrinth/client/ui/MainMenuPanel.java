@@ -242,11 +242,11 @@ public class MainMenuPanel extends JPanel {
     private void loadResources() {
         // Hintergrundbild laden
         try {
-            var url = getClass().getResource("/images/ui/background.jpg");
+            var url = getClass().getResource("/images/ui/background.png");
             if (url != null) {
                 backgroundImage = new ImageIcon(url).getImage();
             } else {
-                System.err.println("Background not found: /images/ui/background.jpg");
+                System.err.println("Background not found: /images/ui/background.png");
             }
         } catch (Exception e) {
             System.err.println("Error loading background: " + e.getMessage());
@@ -271,7 +271,7 @@ public class MainMenuPanel extends JPanel {
 
         float volume = prefs.getInt("musicVolume", 50) / 100f;
 
-        AudioPlayer.getInstance().setMusicVolume(0.1f);
+        AudioPlayer.getInstance().setMusicVolume(volume);
         AudioPlayer.getInstance().playMenuMusic();
     }
 
@@ -308,9 +308,9 @@ public class MainMenuPanel extends JPanel {
         contentPanel.add(Box.createVerticalStrut(15));
 
         // Untertitel
-        JLabel subtitleLabel = new JLabel("Das mystische Abenteuer beginnt...");
-        subtitleLabel.setFont(subtitleFont.deriveFont(24f));
-        subtitleLabel.setForeground(new Color(0, 72, 255, 255));
+        JLabel subtitleLabel = new JLabel("Das mystische Abenteuer beginnt... DiBSE 2025");
+        subtitleLabel.setFont(new Font("SansSerif", Font.BOLD, 24));
+        subtitleLabel.setForeground(new Color(255, 153, 0, 255));
         subtitleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         contentPanel.add(subtitleLabel);
 
@@ -377,11 +377,7 @@ public class MainMenuPanel extends JPanel {
                         int x = centerX - scaledWidth / 2;
                         int y = centerY - scaledHeight / 2;
 
-                        // Schatten
-                        g2.setColor(new Color(0, 0, 0, 60));
-                        g2.drawImage(logoImage, x + 4, y + 4, scaledWidth, scaledHeight, null);
-
-                        // Logo
+                        // Logo zeichnen (nur einmal)
                         g2.drawImage(logoImage, x, y, scaledWidth, scaledHeight, null);
                     }
                 } else {
@@ -485,7 +481,7 @@ public class MainMenuPanel extends JPanel {
         JPanel panel = new JPanel(new FlowLayout(FlowLayout.CENTER));
         panel.setOpaque(false);
 
-        JLabel versionLabel = new JLabel("Version 1.0  |  © 2025 Labyrinth Studios");
+        JLabel versionLabel = new JLabel("Version 1.0  |  © 2025 Gruppe 1");
         versionLabel.setFont(new Font("SansSerif", Font.PLAIN, 11));
         versionLabel.setForeground(new Color(200, 190, 170, 150));
         panel.add(versionLabel);
@@ -739,14 +735,15 @@ public class MainMenuPanel extends JPanel {
 
         public ExitButton(String text) {
             super(text);
-            setFont(new Font("SansSerif", Font.PLAIN, 13));
-            setForeground(new Color(180, 170, 160));
+            setFont(new Font("SansSerif", Font.BOLD, 13));
+            setForeground(new Color(200, 100, 100));
             setFocusPainted(false);
             setBorderPainted(false);
             setContentAreaFilled(false);
             setCursor(new Cursor(Cursor.HAND_CURSOR));
-            setPreferredSize(new Dimension(110, 32));
-            setMaximumSize(new Dimension(110, 32));
+            setPreferredSize(new Dimension(130, 38));
+            setMaximumSize(new Dimension(150, 45));
+            setMinimumSize(new Dimension(100, 32));
 
             addMouseListener(new MouseAdapter() {
                 @Override
@@ -773,13 +770,24 @@ public class MainMenuPanel extends JPanel {
             int h = getHeight();
 
             if (isHovered) {
-                g2.setColor(new Color(100, 55, 55, 100));
-                g2.fillRoundRect(0, 0, w, h, 6, 6);
-                g2.setColor(new Color(180, 100, 100));
+                // Hover: Helleres Rot mit Hintergrund
+                g2.setColor(new Color(140, 50, 50, 180));
+                g2.fillRoundRect(0, 0, w, h, 8, 8);
+                g2.setColor(new Color(255, 17, 17));
+                g2.setStroke(new BasicStroke(2));
+                g2.drawRoundRect(1, 1, w - 2, h - 2, 8, 8);
+                g2.setColor(new Color(255, 200, 200));
             } else {
-                g2.setColor(new Color(160, 150, 140));
+                // Normal: Dunkelrot mit Rahmen
+                g2.setColor(new Color(80, 40, 40, 120));
+                g2.fillRoundRect(0, 0, w, h, 8, 8);
+                g2.setColor(new Color(150, 80, 80));
+                g2.setStroke(new BasicStroke(1.5f));
+                g2.drawRoundRect(1, 1, w - 2, h - 2, 8, 8);
+                g2.setColor(new Color(200, 130, 130));
             }
 
+            g2.setFont(getFont());
             FontMetrics fm = g2.getFontMetrics();
             String text = getText();
             int textX = (w - fm.stringWidth(text)) / 2;
@@ -787,6 +795,18 @@ public class MainMenuPanel extends JPanel {
             g2.drawString(text, textX, textY);
 
             g2.dispose();
+        }
+
+    }
+
+    private Font loadFont(String resourcePath, float size) {
+        try (var is = getClass().getResourceAsStream(resourcePath)) {
+            if (is == null) throw new IllegalArgumentException("Font nicht gefunden: " + resourcePath);
+            Font base = Font.createFont(Font.TRUETYPE_FONT, is);
+            return base.deriveFont(size);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return new Font("SansSerif", Font.PLAIN, Math.round(size)); // Fallback
         }
     }
 }
