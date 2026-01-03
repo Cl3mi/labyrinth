@@ -10,6 +10,21 @@ public class SoundEffects {
 
     private static final float SAMPLE_RATE = 8000f;
     private boolean enabled = true;
+    private float volume = 0.7f; // Default 70% volume
+
+    /**
+     * Set the volume for sound effects (0.0 to 1.0)
+     */
+    public void setVolume(float volume) {
+        this.volume = Math.max(0f, Math.min(1f, volume));
+    }
+
+    /**
+     * Get the current volume (0.0 to 1.0)
+     */
+    public float getVolume() {
+        return volume;
+    }
 
     /**
      * Play a sound effect for tile push action
@@ -95,10 +110,10 @@ public class SoundEffects {
         try {
             byte[] buffer = new byte[(int) (SAMPLE_RATE * durationMs / 1000)];
 
-            // Generate sine wave
+            // Generate sine wave with volume control
             for (int i = 0; i < buffer.length; i++) {
                 double angle = 2.0 * Math.PI * i * frequency / SAMPLE_RATE;
-                buffer[i] = (byte) (Math.sin(angle) * 127 * 0.5); // 50% volume
+                buffer[i] = (byte) (Math.sin(angle) * 127 * volume); // Apply volume
             }
 
             // Create audio format and clip

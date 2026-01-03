@@ -21,14 +21,11 @@ public class GameOverPanel extends JPanel {
     private final JButton backToLobbyButton;
 
     private Image backgroundImage;
-    private AudioPlayer victoryMusic;
-
     private int animationFrame = 0;
     private Timer animationTimer;
 
     public GameOverPanel(Runnable onBackToLobby) {
         loadBackgroundImage();
-        initMusic();
 
         setOpaque(false);
         setLayout(new BorderLayout(20, 20));
@@ -132,6 +129,8 @@ public class GameOverPanel extends JPanel {
             animationTimer.stop();
         }
 
+        AudioPlayer.getInstance().playGameOverSequence();
+
         // Find winner name
         String winnerName = "Unbekannt";
         if (payload.getRanking() != null && payload.getRanking().length > 0) {
@@ -149,10 +148,10 @@ public class GameOverPanel extends JPanel {
         animationTimer = new Timer(100, e -> {
             animationFrame++;
             if (animationFrame % 2 == 0) {
-                winnerLabel.setText("🏆 " + winnerNameFinal + " gewinnt! 🏆");
+                winnerLabel.setText(" " + winnerNameFinal + " gewinnt! ");
                 winnerLabel.setForeground(new Color(255, 215, 0));
             } else {
-                winnerLabel.setText("🏆 " + winnerNameFinal + " gewinnt! 🏆");
+                winnerLabel.setText(" " + winnerNameFinal + " gewinnt! ");
                 winnerLabel.setForeground(new Color(255, 255, 100));
             }
             if (animationFrame > 10) {
@@ -186,10 +185,6 @@ public class GameOverPanel extends JPanel {
             }
         }
 
-        // Play victory music
-        if (victoryMusic != null) {
-            victoryMusic.play();
-        }
     }
 
     private void loadBackgroundImage() {
@@ -202,18 +197,6 @@ public class GameOverPanel extends JPanel {
             System.err.println("Could not load background image: " + e.getMessage());
         }
     }
-
-    private void initMusic() {
-        try {
-            var url = getClass().getClassLoader().getResource("audio/victory.wav");
-            if (url != null) {
-                victoryMusic = new AudioPlayer(url.toString());
-            }
-        } catch (Exception e) {
-            System.err.println("Could not load victory music: " + e.getMessage());
-        }
-    }
-
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
@@ -234,9 +217,6 @@ public class GameOverPanel extends JPanel {
     public void cleanup() {
         if (animationTimer != null && animationTimer.isRunning()) {
             animationTimer.stop();
-        }
-        if (victoryMusic != null) {
-            victoryMusic.stop();
         }
     }
 }

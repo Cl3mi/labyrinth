@@ -126,12 +126,7 @@ public class BoardPanel extends JPanel {
 
         setLayout(null); // Overlay-Button
 
-        optionsButton = new JButton("⚙");
-        optionsButton.setToolTipText("Options");
-        optionsButton.setBounds(10, 10, 45, 30);
-
-        optionsButton.addActionListener(e -> showOptionsDialog());
-
+        optionsButton = createStyledOptionsButton();
         add(optionsButton);
 
         // Initialize toast manager and sound effects
@@ -141,12 +136,86 @@ public class BoardPanel extends JPanel {
         setupMouseListener();
         setupKeyboardListener();
 
-        backgroundMusic = new AudioPlayer("/sounds/06-Kokiri-Forest.wav");
-        backgroundMusic.loop();
+        // Lade gespeicherte Lautstärke
+        java.util.prefs.Preferences prefs = java.util.prefs.Preferences.userNodeForPackage(getClass());
+        int savedMusicVolume = prefs.getInt("musicVolume", 50);
+        int savedSfxVolume = prefs.getInt("sfxVolume", 70);
+
+        backgroundMusic = AudioPlayer.getInstance();
+
+        // Apply persisted global music volume and ensure background music is running
+        backgroundMusic.setMusicVolume(savedMusicVolume / 100.0f);
+        backgroundMusic.playMenuMusic();
+
+        soundEffects.setVolume(savedSfxVolume / 100.0f);
 
         // Start timer to update sidebar countdowns every second
         javax.swing.Timer sidebarTimer = new javax.swing.Timer(1000, e -> repaint());
         sidebarTimer.start();
+    }
+
+    // Callback für Beenden
+    private Runnable onExitGame;
+
+    public void setOnExitGame(Runnable callback) {
+        this.onExitGame = callback;
+    }
+
+    private JButton createStyledOptionsButton() {
+        JButton btn = new JButton("⚙") {
+            private boolean isHovered = false;
+
+            {
+                addMouseListener(new MouseAdapter() {
+                    @Override
+                    public void mouseEntered(MouseEvent e) { isHovered = true; repaint(); }
+                    @Override
+                    public void mouseExited(MouseEvent e) { isHovered = false; repaint(); }
+                });
+            }
+
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+                int w = getWidth();
+                int h = getHeight();
+
+                // Background
+                if (isHovered) {
+                    g2.setColor(new Color(80, 70, 55, 220));
+                } else {
+                    g2.setColor(new Color(50, 45, 40, 200));
+                }
+                g2.fillRoundRect(0, 0, w, h, 10, 10);
+
+                // Border
+                g2.setColor(new Color(180, 150, 100, isHovered ? 255 : 180));
+                g2.setStroke(new BasicStroke(2));
+                g2.drawRoundRect(1, 1, w - 2, h - 2, 10, 10);
+
+                // Icon
+                g2.setFont(new Font("SansSerif", Font.BOLD, 20));
+                g2.setColor(new Color(255, 215, 0));
+                FontMetrics fm = g2.getFontMetrics();
+                String text = "⚙";
+                int textX = (w - fm.stringWidth(text)) / 2;
+                int textY = (h + fm.getAscent() - fm.getDescent()) / 2;
+                g2.drawString(text, textX, textY);
+
+                g2.dispose();
+            }
+        };
+        btn.setToolTipText("Optionen (ESC)");
+        btn.setBounds(10, 10, 45, 40);
+        btn.setOpaque(false);
+        btn.setContentAreaFilled(false);
+        btn.setBorderPainted(false);
+        btn.setFocusPainted(false);
+        btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        btn.addActionListener(e -> showOptionsDialog());
+        return btn;
     }
 
     // =================================================================================
@@ -909,17 +978,25 @@ public class BoardPanel extends JPanel {
 
         g2.drawString(displayName, centerX - textWidth / 2, boxY + fm.getAscent() - 2);
 
-        // ⭐ Target indicator star above the treasure
+        // Target indicator above the treasure - use golden circle instead of emoji
         if (isCurrentTarget) {
-            g2.setFont(new Font("Arial", Font.BOLD, 18));
-            g2.setColor(new Color(255, 255, 255, 230));
+            // Draw golden star indicator
+            int starSize = 16;
+            int starX = centerX - starSize / 2;
+            int starY = centerY - 40;
 
-            // Draw star with slight shadow
-            g2.setColor(new Color(0, 0, 0, 100));
-            g2.drawString("⭐", centerX - 8, centerY - 35);
+            // Glow effect
+            g2.setColor(new Color(255, 215, 0, 150));
+            g2.fillOval(starX - 4, starY - 4, starSize + 8, starSize + 8);
 
-            g2.setColor(new Color(255, 255, 0, 255));
-            g2.drawString("⭐", centerX - 9, centerY - 36);
+            // Star center
+            g2.setColor(new Color(255, 255, 100));
+            g2.fillOval(starX, starY, starSize, starSize);
+
+            // Border
+            g2.setColor(new Color(200, 150, 0));
+            g2.setStroke(new BasicStroke(2));
+            g2.drawOval(starX, starY, starSize, starSize);
         }
     }
 
@@ -956,10 +1033,10 @@ public class BoardPanel extends JPanel {
 
         // Positions for 1-4 players
         int[][] offsets = {
-            {size / 2, size / 2},                    // 1 player: center
-            {size / 3, size / 2, 2 * size / 3, size / 2},  // 2 players: left, right
-            {size / 3, size / 3, 2 * size / 3, size / 3, size / 2, 2 * size / 3},  // 3 players: top-left, top-right, bottom-center
-            {size / 3, size / 3, 2 * size / 3, size / 3, size / 3, 2 * size / 3, 2 * size / 3, 2 * size / 3}  // 4 players: all corners
+                {size / 2, size / 2},                    // 1 player: center
+                {size / 3, size / 2, 2 * size / 3, size / 2},  // 2 players: left, right
+                {size / 3, size / 3, 2 * size / 3, size / 3, size / 2, 2 * size / 3},  // 3 players: top-left, top-right, bottom-center
+                {size / 3, size / 3, 2 * size / 3, size / 3, size / 3, 2 * size / 3, 2 * size / 3, 2 * size / 3}  // 4 players: all corners
         };
 
         int count = Math.min(playersOnTile.size(), 4);
@@ -1091,8 +1168,8 @@ public class BoardPanel extends JPanel {
         if (endTime == null) return "--:--";
 
         java.time.Duration remaining = java.time.Duration.between(
-            java.time.OffsetDateTime.now(),
-            endTime
+                java.time.OffsetDateTime.now(),
+                endTime
         );
 
         if (remaining.isNegative()) return "00:00";
@@ -1117,10 +1194,10 @@ public class BoardPanel extends JPanel {
 
         // Background panel with gradient
         GradientPaint gradient = new GradientPaint(
-            sidebarX, sidebarY,
-            new Color(40, 40, 50, 240),
-            sidebarX, getHeight(),
-            new Color(30, 30, 40, 240)
+                sidebarX, sidebarY,
+                new Color(40, 40, 50, 240),
+                sidebarX, getHeight(),
+                new Color(30, 30, 40, 240)
         );
         g2.setPaint(gradient);
         g2.fillRoundRect(sidebarX, sidebarY, sidebarWidth, getHeight() - sidebarY - 20, 15, 15);
@@ -1132,15 +1209,14 @@ public class BoardPanel extends JPanel {
 
         int currentY = sidebarY + padding;
 
-        // Header with icon
+        // Header
         g2.setFont(new Font("Arial", Font.BOLD, 22));
         g2.setColor(new Color(255, 215, 0)); // Gold color
-        g2.drawString("⚔ LABYRINTH", sidebarX + padding, currentY);
         currentY += 35;
 
-        // Game timer section with icon
+        // Game timer section
         if (gameEndTime != null) {
-            drawSectionHeader(g2, "⏱ SPIEL-TIMER", sidebarX + padding, currentY);
+            drawSectionHeader(g2, "SPIEL-TIMER", sidebarX + padding, currentY);
             currentY += 22;
 
             g2.setFont(new Font("Arial", Font.BOLD, 16));
@@ -1156,12 +1232,12 @@ public class BoardPanel extends JPanel {
 
         // Current turn info
         List<Player> allPlayers = (players != null && !players.isEmpty()) ? players :
-                                  (board != null && board.getPlayers() != null) ? board.getPlayers() : List.of();
+                (board != null && board.getPlayers() != null) ? board.getPlayers() : List.of();
 
         if (!allPlayers.isEmpty() && board != null) {
             Player currentTurnPlayer = allPlayers.get(board.getCurrentPlayerIndex());
 
-            drawSectionHeader(g2, "👤 AKTUELLER ZUG", sidebarX + padding, currentY);
+            drawSectionHeader(g2, "AKTUELLER ZUG", sidebarX + padding, currentY);
             currentY += 25;
 
             // Player name with larger font
@@ -1169,9 +1245,9 @@ public class BoardPanel extends JPanel {
             g2.setColor(new Color(255, 255, 150));
             String turnText = currentTurnPlayer.getName();
             if (currentTurnPlayer.isAiControlled()) {
-                turnText += " 🤖";
+                turnText += " [AI]";
             }
-            g2.drawString("▶ " + turnText, sidebarX + padding + 10, currentY);
+            g2.drawString( turnText, sidebarX + padding + 10, currentY);
             currentY += 28;
 
             // Turn state - use server TurnState if available, otherwise client MoveState
@@ -1185,7 +1261,7 @@ public class BoardPanel extends JPanel {
                 };
             } else {
                 stateText = board.getCurrentMoveState() == null ? "WAITING" :
-                           board.getCurrentMoveState().toString().replace("_", " ");
+                        board.getCurrentMoveState().toString().replace("_", " ");
             }
             g2.drawString(stateText, sidebarX + padding + 10, currentY);
             currentY += 18;
@@ -1195,7 +1271,7 @@ public class BoardPanel extends JPanel {
                 String turnTime = formatTimeRemaining(turnEndTime);
                 g2.setFont(new Font("Arial", Font.BOLD, 12));
                 g2.setColor(new Color(255, 150, 150));
-                g2.drawString("⏱ " + turnTime, sidebarX + padding + 10, currentY);
+                g2.drawString("Zeit: " + turnTime, sidebarX + padding + 10, currentY);
                 currentY += 20;
             } else {
                 currentY += 7;
@@ -1214,8 +1290,8 @@ public class BoardPanel extends JPanel {
         drawDivider(g2, sidebarX + padding, sidebarX + sidebarWidth - padding, currentY);
         currentY += 15;
 
-        // Players section with icon
-        drawSectionHeader(g2, "👥 SPIELER", sidebarX + padding, currentY);
+        // Players section
+        drawSectionHeader(g2, "SPIELER", sidebarX + padding, currentY);
         currentY += 25;
 
         // Draw each player
@@ -1229,13 +1305,13 @@ public class BoardPanel extends JPanel {
 
         // Current player's treasure cards at the bottom
         if (currentPlayer != null && currentPlayer.getAssignedTreasureCards() != null &&
-            !currentPlayer.getAssignedTreasureCards().isEmpty()) {
+                !currentPlayer.getAssignedTreasureCards().isEmpty()) {
 
             currentY += 10;
             drawDivider(g2, sidebarX + padding, sidebarX + sidebarWidth - padding, currentY);
             currentY += 15;
 
-            drawSectionHeader(g2, "🎯 DEINE ZIELE", sidebarX + padding, currentY);
+            drawSectionHeader(g2, "DEINE ZIELE", sidebarX + padding, currentY);
             currentY += 22;
 
             // Draw CURRENT TARGET treasure prominently
@@ -1245,26 +1321,41 @@ public class BoardPanel extends JPanel {
             long time = System.currentTimeMillis();
             int pulseAlpha = 200 + (int) (55 * Math.sin(time / 400.0));
 
-            // Background box for current target
+            // Background box for current target - make it taller for image
+            int boxHeight = 70;
             g2.setColor(new Color(255, 215, 0, pulseAlpha));
-            g2.fillRoundRect(sidebarX + padding + 5, currentY - 15, sidebarWidth - 2 * padding - 10, 50, 10, 10);
+            g2.fillRoundRect(sidebarX + padding + 5, currentY - 15, sidebarWidth - 2 * padding - 10, boxHeight, 10, 10);
 
             // Border
             g2.setColor(new Color(255, 255, 255, 200));
             g2.setStroke(new BasicStroke(2));
-            g2.drawRoundRect(sidebarX + padding + 5, currentY - 15, sidebarWidth - 2 * padding - 10, 50, 10, 10);
+            g2.drawRoundRect(sidebarX + padding + 5, currentY - 15, sidebarWidth - 2 * padding - 10, boxHeight, 10, 10);
 
             // "AKTUELLES ZIEL" label
             g2.setFont(new Font("Arial", Font.BOLD, 10));
             g2.setColor(new Color(100, 70, 0));
             g2.drawString("AKTUELLES ZIEL:", sidebarX + padding + 15, currentY - 2);
 
-            // Current target name with star
+            // Draw treasure image
+            BufferedImage treasureImg = treasureImages.get(currentTarget.getName());
+            int imgSize = 40;
+            int imgX = sidebarX + padding + 15;
+            int imgY = currentY + 5;
+
+            if (treasureImg != null) {
+                g2.drawImage(treasureImg, imgX, imgY, imgSize, imgSize, null);
+            } else {
+                // Fallback circle
+                g2.setColor(new Color(180, 140, 70));
+                g2.fillOval(imgX, imgY, imgSize, imgSize);
+            }
+
+            // Current target name next to image
             g2.setFont(new Font("Arial", Font.BOLD, 16));
             g2.setColor(new Color(0, 0, 0));
-            g2.drawString("⭐ " + currentTarget.getName(), sidebarX + padding + 15, currentY + 20);
+            g2.drawString(currentTarget.getName(), imgX + imgSize + 10, imgY + imgSize / 2 + 5);
 
-            currentY += 45;
+            currentY += boxHeight - 5;
 
             // Draw remaining treasure cards (if any)
             if (currentPlayer.getAssignedTreasureCards().size() > 1) {
@@ -1291,19 +1382,22 @@ public class BoardPanel extends JPanel {
 
         g2.setFont(new Font("Arial", Font.ITALIC, 10));
         g2.setColor(new Color(150, 150, 170));
-        g2.drawString("⌨ Pfeiltasten: Navigation", sidebarX + padding, currentY);
+        g2.drawString("Pfeiltasten: Navigation", sidebarX + padding, currentY);
         currentY += 15;
-        g2.drawString("⌨ R/Q/E: Tile drehen", sidebarX + padding, currentY);
+        g2.drawString("R/Q/E: Tile drehen", sidebarX + padding, currentY);
         currentY += 15;
-        g2.drawString("⌨ Tab: Tastaturhilfe", sidebarX + padding, currentY);
+        g2.drawString("Tab: Tastaturhilfe", sidebarX + padding, currentY);
     }
 
     /**
      * Draws a large overlay showing the current target treasure at the top of the screen
      */
+    /**
+     * Draws a golden highlight on the target treasure tile
+     */
     private void drawCurrentTargetOverlay(Graphics2D g2) {
         if (currentPlayer == null || currentPlayer.getAssignedTreasureCards() == null
-            || currentPlayer.getAssignedTreasureCards().isEmpty()) {
+                || currentPlayer.getAssignedTreasureCards().isEmpty()) {
             return;
         }
 
@@ -1317,8 +1411,8 @@ public class BoardPanel extends JPanel {
             for (int col = 0; col < board.getWidth(); col++) {
                 Tile tile = board.getTiles()[row][col];
                 if (tile != null && tile.getTreasure() != null
-                    && tile.getTreasure().getName() != null
-                    && tile.getTreasure().getName().equals(currentTarget.getName())) {
+                        && tile.getTreasure().getName() != null
+                        && tile.getTreasure().getName().equals(currentTarget.getName())) {
                     targetRow = row;
                     targetCol = col;
                     break;
@@ -1329,9 +1423,8 @@ public class BoardPanel extends JPanel {
 
         // Pulsing effect
         long time = System.currentTimeMillis();
-        int pulseAlpha = 220 + (int) (35 * Math.sin(time / 500.0));
 
-        // Always draw the golden border on the target tile (even after first action)
+        // Draw the golden border on the target tile
         if (targetRow >= 0 && targetCol >= 0) {
             int tileX = xOffset + targetCol * size;
             int tileY = yOffset + targetRow * size;
@@ -1348,110 +1441,7 @@ public class BoardPanel extends JPanel {
             g2.drawRoundRect(tileX - 6, tileY - 6, size + 12, size + 12, 15, 15);
         }
 
-        // Only draw banner and arrow if showTargetBanner is true
-        if (!showTargetBanner) {
-            return;
-        }
-
-        // Draw large banner at the top center
-        int bannerWidth = 400;
-        int bannerHeight = 80;
-        int bannerX = (getWidth() - bannerWidth) / 2;
-        int bannerY = 20;
-
-        // Background with shadow
-        g2.setColor(new Color(0, 0, 0, 100));
-        g2.fillRoundRect(bannerX + 4, bannerY + 4, bannerWidth, bannerHeight, 20, 20);
-
-        // Main background
-        GradientPaint gradient = new GradientPaint(
-            bannerX, bannerY,
-            new Color(255, 215, 0, pulseAlpha),
-            bannerX, bannerY + bannerHeight,
-            new Color(255, 180, 0, pulseAlpha)
-        );
-        g2.setPaint(gradient);
-        g2.fillRoundRect(bannerX, bannerY, bannerWidth, bannerHeight, 20, 20);
-
-        // Border
-        g2.setColor(new Color(255, 255, 255, 230));
-        g2.setStroke(new BasicStroke(3));
-        g2.drawRoundRect(bannerX, bannerY, bannerWidth, bannerHeight, 20, 20);
-
-        // "FINDE" label
-        g2.setFont(new Font("Arial", Font.BOLD, 18));
-        g2.setColor(new Color(100, 70, 0));
-        FontMetrics fm = g2.getFontMetrics();
-        String findLabel = "FINDE:";
-        g2.drawString(findLabel, bannerX + 20, bannerY + 30);
-
-        // Treasure name in large font
-        g2.setFont(new Font("Arial", Font.BOLD, 28));
-        g2.setColor(new Color(0, 0, 0));
-        fm = g2.getFontMetrics();
-        String treasureName = "⭐ " + currentTarget.getName() + " 💎";
-        int nameWidth = fm.stringWidth(treasureName);
-        g2.drawString(treasureName, bannerX + (bannerWidth - nameWidth) / 2, bannerY + 58);
-
-        // Draw arrow and location hint if treasure is on board
-        if (targetRow >= 0 && targetCol >= 0) {
-            int tileX = xOffset + targetCol * size;
-            int tileY = yOffset + targetRow * size;
-
-            // Draw arrow from banner to treasure location
-            int arrowStartX = bannerX + bannerWidth / 2;
-            int arrowStartY = bannerY + bannerHeight + 10;
-            int arrowEndX = tileX + size / 2;
-            int arrowEndY = tileY + size / 2;
-
-            // Only draw arrow if treasure is not directly below banner
-            if (Math.abs(arrowEndY - arrowStartY) > 100) {
-                g2.setColor(new Color(255, 215, 0, 200));
-                g2.setStroke(new BasicStroke(5, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-
-                // Draw curved arrow using quadratic curve
-                int controlX = arrowStartX;
-                int controlY = (arrowStartY + arrowEndY) / 2;
-
-                java.awt.geom.QuadCurve2D curve = new java.awt.geom.QuadCurve2D.Float(
-                    arrowStartX, arrowStartY,
-                    controlX, controlY,
-                    arrowEndX, arrowEndY
-                );
-                g2.draw(curve);
-
-                // Draw arrowhead at the end
-                double angle = Math.atan2(arrowEndY - controlY, arrowEndX - controlX);
-                int arrowSize = 15;
-                int[] xPoints = {
-                    arrowEndX,
-                    (int) (arrowEndX - arrowSize * Math.cos(angle - Math.PI / 6)),
-                    (int) (arrowEndX - arrowSize * Math.cos(angle + Math.PI / 6))
-                };
-                int[] yPoints = {
-                    arrowEndY,
-                    (int) (arrowEndY - arrowSize * Math.sin(angle - Math.PI / 6)),
-                    (int) (arrowEndY - arrowSize * Math.sin(angle + Math.PI / 6))
-                };
-                g2.fillPolygon(xPoints, yPoints, 3);
-            }
-
-            // Location hint text
-            g2.setFont(new Font("Arial", Font.BOLD, 14));
-            g2.setColor(new Color(100, 70, 0));
-            String locationText = "bei (" + targetRow + ", " + targetCol + ")";
-            fm = g2.getFontMetrics();
-            int locationWidth = fm.stringWidth(locationText);
-            g2.drawString(locationText, bannerX + (bannerWidth - locationWidth) / 2, bannerY + bannerHeight - 8);
-        } else {
-            // Treasure not on board yet
-            g2.setFont(new Font("Arial", Font.ITALIC, 12));
-            g2.setColor(new Color(100, 70, 0));
-            fm = g2.getFontMetrics();
-            String notFoundText = "(noch nicht auf dem Spielfeld)";
-            int notFoundWidth = fm.stringWidth(notFoundText);
-            g2.drawString(notFoundText, bannerX + (bannerWidth - notFoundWidth) / 2, bannerY + bannerHeight - 8);
-        }
+        // Banner removed - target info is shown in sidebar "DEINE ZIELE" section
     }
 
     /**
@@ -1469,10 +1459,10 @@ public class BoardPanel extends JPanel {
     private void drawDivider(Graphics2D g2, int x1, int x2, int y) {
         // Draw gradient divider
         GradientPaint dividerGradient = new GradientPaint(
-            x1, y,
-            new Color(100, 130, 180, 50),
-            (x1 + x2) / 2, y,
-            new Color(100, 130, 180, 180)
+                x1, y,
+                new Color(100, 130, 180, 50),
+                (x1 + x2) / 2, y,
+                new Color(100, 130, 180, 180)
         );
         g2.setPaint(dividerGradient);
         g2.setStroke(new BasicStroke(2));
@@ -1768,7 +1758,7 @@ public class BoardPanel extends JPanel {
 
         // Check if target treasure has changed and show toast
         if (currentPlayer != null && currentPlayer.getAssignedTreasureCards() != null
-            && !currentPlayer.getAssignedTreasureCards().isEmpty()) {
+                && !currentPlayer.getAssignedTreasureCards().isEmpty()) {
 
             Treasure currentTarget = currentPlayer.getAssignedTreasureCards().get(0);
             String currentTargetName = currentTarget.getName();
@@ -1824,34 +1814,297 @@ public class BoardPanel extends JPanel {
 
 
     private void showOptionsDialog() {
+        // Farben
+        Color CARD_BG = new Color(35, 32, 28, 240);
+        Color CARD_BORDER = new Color(100, 85, 60);
+        Color PRIMARY_GOLD = new Color(218, 165, 32);
+        Color PRIMARY_GOLD_LIGHT = new Color(255, 215, 0);
+        Color TEXT_LIGHT = new Color(255, 248, 230);
+        Color TEXT_MUTED = new Color(180, 170, 155);
+        Color STONE_DARK = new Color(45, 42, 38);
+
         JDialog dialog = new JDialog(
                 SwingUtilities.getWindowAncestor(this),
-                "Options",
+                "Optionen",
                 Dialog.ModalityType.APPLICATION_MODAL
         );
+        dialog.setUndecorated(true);
+        dialog.setBackground(new Color(0, 0, 0, 0));
 
-        int currentVolume = (int) (backgroundMusic.getVolume() * 100);
+        // Main panel with custom painting
+        JPanel mainPanel = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-        JSlider volumeSlider = new JSlider(0, 100, currentVolume);
-        volumeSlider.setMajorTickSpacing(20);
-        volumeSlider.setMinorTickSpacing(5);
-        volumeSlider.setPaintTicks(true);
-        volumeSlider.setPaintLabels(true);
+                // Background
+                g2.setColor(CARD_BG);
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 20, 20);
 
-        volumeSlider.addChangeListener(e -> {
-            float volume = volumeSlider.getValue() / 100f;
-            backgroundMusic.setVolume(volume);
+                // Border
+                g2.setColor(CARD_BORDER);
+                g2.setStroke(new BasicStroke(3));
+                g2.drawRoundRect(1, 1, getWidth() - 3, getHeight() - 3, 20, 20);
+
+                // Top highlight
+                g2.setColor(new Color(255, 255, 255, 15));
+                g2.fillRoundRect(2, 2, getWidth() - 4, 50, 18, 18);
+
+                g2.dispose();
+                super.paintComponent(g);
+            }
+        };
+        mainPanel.setOpaque(false);
+        mainPanel.setLayout(new BorderLayout(0, 15));
+        mainPanel.setBorder(BorderFactory.createEmptyBorder(25, 30, 25, 30));
+
+        // Title
+        JLabel titleLabel = new JLabel("⚙ Optionen");
+        titleLabel.setFont(new Font("Serif", Font.BOLD, 24));
+        titleLabel.setForeground(PRIMARY_GOLD_LIGHT);
+        titleLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        mainPanel.add(titleLabel, BorderLayout.NORTH);
+
+        // Content panel
+        JPanel contentPanel = new JPanel();
+        contentPanel.setOpaque(false);
+        contentPanel.setLayout(new BoxLayout(contentPanel, BoxLayout.Y_AXIS));
+
+        // Lade aktuelle Einstellungen
+        java.util.prefs.Preferences prefs = java.util.prefs.Preferences.userNodeForPackage(getClass());
+        int currentMusicVolume = prefs.getInt("musicVolume", 50);
+        int currentSfxVolume = prefs.getInt("sfxVolume", 70);
+        boolean darkTheme = prefs.getBoolean("darkTheme", true);
+
+        // === AUDIO SECTION ===
+        JPanel audioSection = createOptionsSection("🔊 Audio", CARD_BG, CARD_BORDER, PRIMARY_GOLD_LIGHT);
+        JPanel audioContent = new JPanel(new GridBagLayout());
+        audioContent.setOpaque(false);
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.insets = new Insets(8, 10, 8, 10);
+
+        // Music Volume
+        gbc.gridx = 0; gbc.gridy = 0; gbc.weightx = 0.3;
+        JLabel musicLabel = new JLabel("Musik:");
+        musicLabel.setFont(new Font("SansSerif", Font.BOLD, 14));
+        musicLabel.setForeground(TEXT_LIGHT);
+        audioContent.add(musicLabel, gbc);
+
+        gbc.gridx = 1; gbc.weightx = 0.5;
+        JSlider musicSlider = new JSlider(0, 100, currentMusicVolume);
+        musicSlider.setOpaque(false);
+        musicSlider.setPreferredSize(new Dimension(180, 30));
+        audioContent.add(musicSlider, gbc);
+
+        gbc.gridx = 2; gbc.weightx = 0.2;
+        JLabel musicValueLabel = new JLabel(currentMusicVolume + "%");
+        musicValueLabel.setFont(new Font("SansSerif", Font.BOLD, 14));
+        musicValueLabel.setForeground(PRIMARY_GOLD);
+        musicValueLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        audioContent.add(musicValueLabel, gbc);
+
+        musicSlider.addChangeListener(e -> {
+            int vol = musicSlider.getValue();
+            musicValueLabel.setText(vol + "%");
+            backgroundMusic.setMusicVolume(vol / 100.0f);
         });
 
-        JPanel panel = new JPanel(new BorderLayout(10, 10));
-        panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        // SFX Volume
+        gbc.gridx = 0; gbc.gridy = 1;
+        JLabel sfxLabel = new JLabel("Effekte:");
+        sfxLabel.setFont(new Font("SansSerif", Font.BOLD, 14));
+        sfxLabel.setForeground(TEXT_LIGHT);
+        audioContent.add(sfxLabel, gbc);
 
-        panel.add(new JLabel("Music Volume"), BorderLayout.NORTH);
-        panel.add(volumeSlider, BorderLayout.CENTER);
+        gbc.gridx = 1;
+        JSlider sfxSlider = new JSlider(0, 100, currentSfxVolume);
+        sfxSlider.setOpaque(false);
+        sfxSlider.setPreferredSize(new Dimension(180, 30));
+        audioContent.add(sfxSlider, gbc);
 
-        dialog.setContentPane(panel);
-        dialog.pack();
+        gbc.gridx = 2;
+        JLabel sfxValueLabel = new JLabel(currentSfxVolume + "%");
+        sfxValueLabel.setFont(new Font("SansSerif", Font.BOLD, 14));
+        sfxValueLabel.setForeground(PRIMARY_GOLD);
+        sfxValueLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        audioContent.add(sfxValueLabel, gbc);
+
+        sfxSlider.addChangeListener(e -> {
+            int vol = sfxSlider.getValue();
+            sfxValueLabel.setText(vol + "%");
+            soundEffects.setVolume(vol / 100.0f);
+        });
+
+        audioSection.add(audioContent, BorderLayout.CENTER);
+        contentPanel.add(audioSection);
+        contentPanel.add(Box.createVerticalStrut(15));
+
+        // === THEME SECTION ===
+        JPanel themeSection = createOptionsSection("🎨 Darstellung", CARD_BG, CARD_BORDER, PRIMARY_GOLD_LIGHT);
+        JPanel themeContent = new JPanel(new FlowLayout(FlowLayout.LEFT, 15, 10));
+        themeContent.setOpaque(false);
+
+        JLabel themeLabel = new JLabel("Theme:");
+        themeLabel.setFont(new Font("SansSerif", Font.BOLD, 14));
+        themeLabel.setForeground(TEXT_LIGHT);
+        themeContent.add(themeLabel);
+
+        JToggleButton themeToggle = new JToggleButton() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                int w = getWidth(), h = getHeight();
+                g2.setColor(isSelected() ? new Color(60, 60, 80) : new Color(200, 180, 140));
+                g2.fillRoundRect(0, 0, w, h, h, h);
+                g2.setColor(CARD_BORDER);
+                g2.setStroke(new BasicStroke(2));
+                g2.drawRoundRect(1, 1, w - 2, h - 2, h - 2, h - 2);
+                int knobSize = h - 6;
+                int knobX = isSelected() ? w - knobSize - 3 : 3;
+                g2.setColor(isSelected() ? new Color(100, 100, 140) : new Color(255, 220, 120));
+                g2.fillOval(knobX, 3, knobSize, knobSize);
+                g2.setFont(new Font("SansSerif", Font.PLAIN, 12));
+                g2.setColor(TEXT_LIGHT);
+                g2.drawString(isSelected() ? "🌙" : "☀", knobX + 4, h - 7);
+                g2.dispose();
+            }
+        };
+        themeToggle.setSelected(darkTheme);
+        themeToggle.setPreferredSize(new Dimension(60, 28));
+        themeToggle.setOpaque(false);
+        themeToggle.setBorderPainted(false);
+        themeToggle.setFocusPainted(false);
+        themeToggle.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        themeContent.add(themeToggle);
+
+        JLabel themeStatusLabel = new JLabel(darkTheme ? "Dunkel" : "Hell");
+        themeStatusLabel.setFont(new Font("SansSerif", Font.PLAIN, 14));
+        themeStatusLabel.setForeground(TEXT_LIGHT);
+        themeContent.add(themeStatusLabel);
+
+        themeToggle.addActionListener(e -> themeStatusLabel.setText(themeToggle.isSelected() ? "Dunkel" : "Hell"));
+
+        themeSection.add(themeContent, BorderLayout.CENTER);
+        contentPanel.add(themeSection);
+
+        mainPanel.add(contentPanel, BorderLayout.CENTER);
+
+        // === BUTTONS ===
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 0));
+        buttonPanel.setOpaque(false);
+
+        // Exit Button
+        JButton exitButton = createStyledDialogButton("🚪 Spiel beenden", new Color(120, 50, 50), new Color(180, 80, 80));
+        exitButton.addActionListener(e -> {
+            int choice = JOptionPane.showConfirmDialog(dialog,
+                    "Möchtest du das Spiel wirklich beenden?\nDein Fortschritt geht verloren.",
+                    "Spiel beenden?",
+                    JOptionPane.YES_NO_OPTION,
+                    JOptionPane.WARNING_MESSAGE);
+            if (choice == JOptionPane.YES_OPTION) {
+                dialog.dispose();
+                if (onExitGame != null) {
+                    onExitGame.run();
+                }
+            }
+        });
+        buttonPanel.add(exitButton);
+
+        // Save & Close Button
+        JButton saveButton = createStyledDialogButton("💾 Speichern & Schließen", new Color(60, 100, 60), new Color(100, 160, 100));
+        saveButton.addActionListener(e -> {
+            // Einstellungen speichern
+            prefs.putInt("musicVolume", musicSlider.getValue());
+            prefs.putInt("sfxVolume", sfxSlider.getValue());
+            prefs.putBoolean("darkTheme", themeToggle.isSelected());
+            dialog.dispose();
+            toastManager.showSuccess("SETTINGS", "Gespeichert", "Einstellungen wurden gespeichert");
+        });
+        buttonPanel.add(saveButton);
+
+        // Close Button
+        JButton closeButton = createStyledDialogButton("✕ Schließen", STONE_DARK, new Color(90, 80, 70));
+        closeButton.addActionListener(e -> dialog.dispose());
+        buttonPanel.add(closeButton);
+
+        mainPanel.add(buttonPanel, BorderLayout.SOUTH);
+
+        dialog.setContentPane(mainPanel);
+        dialog.setSize(420, 380);
         dialog.setLocationRelativeTo(this);
         dialog.setVisible(true);
+    }
+
+    private JPanel createOptionsSection(String title, Color bgColor, Color borderColor, Color titleColor) {
+        JPanel section = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(new Color(bgColor.getRed(), bgColor.getGreen(), bgColor.getBlue(), 150));
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 12, 12);
+                g2.setColor(borderColor);
+                g2.setStroke(new BasicStroke(1.5f));
+                g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 12, 12);
+                g2.dispose();
+                super.paintComponent(g);
+            }
+        };
+        section.setOpaque(false);
+        section.setLayout(new BorderLayout(0, 8));
+        section.setBorder(BorderFactory.createEmptyBorder(12, 15, 12, 15));
+
+        JLabel titleLabel = new JLabel(title);
+        titleLabel.setFont(new Font("Serif", Font.BOLD, 16));
+        titleLabel.setForeground(titleColor);
+        section.add(titleLabel, BorderLayout.NORTH);
+
+        return section;
+    }
+
+    private JButton createStyledDialogButton(String text, Color bgColor, Color borderColor) {
+        JButton btn = new JButton(text) {
+            private boolean isHovered = false;
+            {
+                addMouseListener(new MouseAdapter() {
+                    @Override
+                    public void mouseEntered(MouseEvent e) { isHovered = true; repaint(); }
+                    @Override
+                    public void mouseExited(MouseEvent e) { isHovered = false; repaint(); }
+                });
+            }
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                int w = getWidth(), h = getHeight();
+
+                Color bg = isHovered ? borderColor : bgColor;
+                g2.setColor(bg);
+                g2.fillRoundRect(0, 0, w, h, 8, 8);
+
+                g2.setColor(borderColor);
+                g2.setStroke(new BasicStroke(2));
+                g2.drawRoundRect(1, 1, w - 2, h - 2, 8, 8);
+
+                g2.setFont(new Font("SansSerif", Font.BOLD, 12));
+                g2.setColor(new Color(255, 248, 230));
+                FontMetrics fm = g2.getFontMetrics();
+                int textX = (w - fm.stringWidth(getText())) / 2;
+                int textY = (h + fm.getAscent() - fm.getDescent()) / 2;
+                g2.drawString(getText(), textX, textY);
+                g2.dispose();
+            }
+        };
+        btn.setPreferredSize(new Dimension(130, 35));
+        btn.setOpaque(false);
+        btn.setContentAreaFilled(false);
+        btn.setBorderPainted(false);
+        btn.setFocusPainted(false);
+        btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        return btn;
     }
 }
