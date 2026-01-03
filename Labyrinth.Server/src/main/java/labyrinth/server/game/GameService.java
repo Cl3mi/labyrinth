@@ -13,6 +13,7 @@ import labyrinth.server.game.models.Board;
 import labyrinth.server.game.models.Game;
 import labyrinth.server.game.models.Player;
 import labyrinth.server.game.models.records.GameConfig;
+import labyrinth.server.game.results.LeaveResult;
 import labyrinth.server.game.util.GameTimer;
 import labyrinth.server.messaging.events.EventPublisher;
 import labyrinth.server.messaging.MessageService;
@@ -145,6 +146,15 @@ public class GameService {
         rwLock.writeLock().lock();
         try {
             game.leave(player);
+        } finally {
+            rwLock.writeLock().unlock();
+        }
+    }
+
+    public LeaveResult leaveLobby(Player player) {
+        rwLock.writeLock().lock();
+        try {
+            return game.leave(player);
         } finally {
             rwLock.writeLock().unlock();
         }

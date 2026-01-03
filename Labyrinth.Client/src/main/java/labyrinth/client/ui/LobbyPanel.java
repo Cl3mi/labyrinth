@@ -49,6 +49,7 @@ public class LobbyPanel extends JPanel {
     private final JList<String> playerList;
     private final JButton startButton;
     private final JButton cancelReconnectButton;
+    private final JButton leaveLobbyButton;
     private JPanel settingsConfigPanel;
 
     // Hintergrund & Musik
@@ -138,7 +139,13 @@ public class LobbyPanel extends JPanel {
         cancelReconnectButton.setVisible(false); // Hidden by default
         cancelReconnectButton.addActionListener(e -> onCancelReconnect());
 
+        leaveLobbyButton = new JButton("Lobby verlassen");
+        leaveLobbyButton.setFont(FontManager.getMediumUIBold());
+        leaveLobbyButton.setVisible(false); // Initially hidden
+        leaveLobbyButton.addActionListener(e -> onLeaveLobbyClicked());
+
         footer.add(cancelReconnectButton);
+        footer.add(leaveLobbyButton);
         footer.add(startButton);
         add(footer, BorderLayout.SOUTH);
 
@@ -212,6 +219,7 @@ public class LobbyPanel extends JPanel {
     public void setReconnecting(boolean reconnecting) {
         SwingUtilities.invokeLater(() -> {
             cancelReconnectButton.setVisible(reconnecting);
+            leaveLobbyButton.setVisible(!reconnecting);
             startButton.setVisible(!reconnecting);
         });
     }
@@ -230,6 +238,34 @@ public class LobbyPanel extends JPanel {
         if (choice == JOptionPane.YES_OPTION) {
             // Signal to exit application
             System.exit(0);
+        }
+    }
+
+    /**
+     * Called when user clicks leave lobby button.
+     */
+    private void onLeaveLobbyClicked() {
+        int choice = JOptionPane.showConfirmDialog(
+            this,
+            "Möchten Sie die Lobby wirklich verlassen?",
+            "Lobby verlassen",
+            JOptionPane.YES_NO_OPTION
+        );
+
+        if (choice == JOptionPane.YES_OPTION) {
+            try {
+                // Use DISCONNECT command - server will permanently remove player if in LOBBY state
+                client.sendDisconnect();
+                // After sending, the server will close our connection
+                // The client will handle the disconnect in onClose handler
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(
+                    this,
+                    "Fehler beim Verlassen der Lobby: " + ex.getMessage(),
+                    "Fehler",
+                    JOptionPane.ERROR_MESSAGE
+                );
+            }
         }
     }
 
@@ -304,6 +340,9 @@ public class LobbyPanel extends JPanel {
             }
 
             startButton.setEnabled(localFound && localIsAdmin);
+
+            // Show leave lobby button when in active lobby (not reconnecting)
+            leaveLobbyButton.setVisible(localFound && !cancelReconnectButton.isVisible());
         });
     }
 

@@ -8,6 +8,7 @@ import labyrinth.server.game.constants.PointRewards;
 import labyrinth.server.game.enums.*;
 import labyrinth.server.game.models.records.GameConfig;
 import labyrinth.server.game.models.records.Position;
+import labyrinth.server.game.results.LeaveResult;
 import labyrinth.server.game.results.MovePlayerToTileResult;
 import labyrinth.server.game.results.ShiftResult;
 import labyrinth.server.game.services.GameLogger;
@@ -180,9 +181,32 @@ public class Game {
         }
     }
 
-    public void leave(Player player) {
-        // TODO: handle leaving during game
-        players.removeIf(p -> p.getId().equals(player.getId()));
+    public LeaveResult leave(Player player) {
+        // Check if player exists in the list
+        boolean wasRemoved = players.removeIf(p -> p.getId().equals(player.getId()));
+
+        if (!wasRemoved) {
+            return new LeaveResult(false, null, false);
+        }
+
+        // Check if we need to reassign admin
+        Player newAdmin = null;
+        if (player.isAdmin()) {
+            // Find first non-AI player to become new admin
+            var nextAdmin = players.stream()
+                    .filter(p -> !p.isAiActive())
+                    .findFirst();
+
+            if (nextAdmin.isPresent()) {
+                nextAdmin.get().setAdmin(true);
+                newAdmin = nextAdmin.get();
+            }
+        }
+
+        // Check if only AI players remain (or no players at all)
+        boolean shouldShutdown = players.stream().noneMatch(p -> !p.isAiActive());
+
+        return new LeaveResult(true, newAdmin, shouldShutdown);
     }
 
     public Player getPlayer(UUID playerId) {
