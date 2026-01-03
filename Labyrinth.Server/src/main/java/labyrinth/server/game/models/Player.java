@@ -78,6 +78,19 @@ public class Player {
         return null;
     }
 
+    /**
+     * Resets the player's state for a new game.
+     * Clears treasures, bonuses, tiles, and statistics while preserving
+     * identity (id, username, color, admin status, AI status).
+     */
+    public void resetForNewGame() {
+        this.assignedTreasureCards.clear();
+        this.bonuses.clear();
+        this.currentTile = null;
+        this.homeTile = null;
+        this.statistics = new PlayerStatistics();
+    }
+
     @Override
     public String toString() {
         return "Player{" +

@@ -368,7 +368,6 @@ public class LabyrinthApplication {
 
         if (boardPanel == null) {
             boardPanel = new BoardPanel(client, board, currentPlayer, allPlayers);
-            boardPanel.setOnExitGame(this::exitGameToMainMenu);
             mainPanel.add(boardPanel, "game");
         } else {
             boardPanel.setBoard(board);
@@ -499,12 +498,65 @@ public class LabyrinthApplication {
             errorCode = msg.substring(0, colonIndex).trim();
             errorMessage = msg.substring(colonIndex + 1).trim();
             switch (errorCode) {
-                case "NOT_YOUR_TURN" -> { errorCode = "101"; errorTitle = "Nicht an der Reihe"; }
-                case "INVALID_PUSH" -> { errorCode = "102"; errorTitle = "Ungültiger Einschub"; }
-                case "INVALID_MOVE" -> { errorCode = "103"; errorTitle = "Ungültige Bewegung"; }
-                case "GAME_NOT_STARTED" -> { errorCode = "104"; errorTitle = "Spiel nicht gestartet"; }
-                case "TIMEOUT" -> { errorCode = "204"; errorTitle = "Zeitüberschreitung"; }
-                default -> { errorCode = "999"; errorTitle = "Fehler"; }
+                // Game action errors (100-199)
+                case "NOT_YOUR_TURN" -> {
+                    errorCode = "101";
+                    errorTitle = "Nicht an der Reihe";
+                }
+                case "INVALID_PUSH" -> {
+                    errorCode = "102";
+                    errorTitle = "Ungültiger Einschub";
+                }
+                case "INVALID_MOVE" -> {
+                    errorCode = "103";
+                    errorTitle = "Ungültige Bewegung";
+                }
+
+                // Permission errors (200-299)
+                case "NOT_ADMIN" -> {
+                    errorCode = "201";
+                    errorTitle = "Keine Berechtigung";
+                }
+
+                // Bonus errors (300-399)
+                case "BONUS_NOT_AVAILABLE" -> {
+                    errorCode = "301";
+                    errorTitle = "Bonus nicht verfügbar";
+                }
+
+                // Lobby/Connection errors (400-499)
+                case "LOBBY_FULL" -> {
+                    errorCode = "401";
+                    errorTitle = "Lobby voll";
+                }
+                case "GAME_ALREADY_STARTED" -> {
+                    errorCode = "402";
+                    errorTitle = "Spiel bereits gestartet";
+                }
+                case "USERNAME_TAKEN" -> {
+                    errorCode = "403";
+                    errorTitle = "Username bereits vergeben";
+                }
+                case "PLAYER_NOT_CONNECTED" -> {
+                    errorCode = "404";
+                    errorTitle = "Spieler nicht verbunden";
+                }
+
+                // Command errors (500-599)
+                case "INVALID_COMMAND" -> {
+                    errorCode = "501";
+                    errorTitle = "Ungültiger Befehl";
+                }
+
+                // General errors (999)
+                case "GENERAL" -> {
+                    errorCode = "999";
+                    errorTitle = "Allgemeiner Fehler";
+                }
+                default -> {
+                    errorCode = "999";
+                    errorTitle = "Unbekannter Fehler";
+                }
             }
         } else {
             errorCode = "999"; errorTitle = "Fehler"; errorMessage = msg;

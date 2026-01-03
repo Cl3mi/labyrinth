@@ -13,6 +13,7 @@ import labyrinth.server.game.models.Board;
 import labyrinth.server.game.models.Game;
 import labyrinth.server.game.models.Player;
 import labyrinth.server.game.models.records.GameConfig;
+import labyrinth.server.game.results.LeaveResult;
 import labyrinth.server.game.util.GameTimer;
 import labyrinth.server.messaging.events.EventPublisher;
 import labyrinth.server.messaging.MessageService;
@@ -69,7 +70,12 @@ public class GameService {
         aiStrategy.setBroadcastCallback(new Runnable() {
             @Override
             public void run() {
-                broadcastGameStateInternal();
+                // Only broadcast if game is still in progress (not finished)
+                if (getGameState() == labyrinth.server.game.enums.RoomState.IN_GAME) {
+                    broadcastGameStateInternal();
+                } else {
+                    System.out.println("[AI Broadcast] Skipping broadcast - game state is " + getGameState());
+                }
             }
         });
 
@@ -145,6 +151,15 @@ public class GameService {
         }
     }
 
+    public LeaveResult leaveLobby(Player player) {
+        rwLock.writeLock().lock();
+        try {
+            return game.leave(player);
+        } finally {
+            rwLock.writeLock().unlock();
+        }
+    }
+
     public int getMaxPlayers() {
         return game.getMAX_PLAYERS();
     }
@@ -188,13 +203,32 @@ public class GameService {
     public void startGame(GameConfig gameConfig) {
         rwLock.writeLock().lock();
         try {
+            // Fill with AI players BEFORE creating treasures to get correct player count
+            game.fillWithAiPlayers();
+
             int playersCount = game.getPlayers().size();
+
+            // The treasureCardCount from config is "per player", so multiply by actual player count
+            int totalTreasureCards = gameConfig.treasureCardCount() * playersCount;
 
             var board = boardFactory.createBoard(gameConfig.boardWidth(), gameConfig.boardHeight(),
                     gameConfig.totalBonusCount());
-            var treasureCards = treasureCardFactory.createTreasureCards(gameConfig.treasureCardCount(), playersCount);
+            var treasureCards = treasureCardFactory.createTreasureCards(totalTreasureCards, playersCount);
 
             game.startGame(gameConfig, treasureCards, board);
+        } finally {
+            rwLock.writeLock().unlock();
+        }
+    }
+
+    /**
+     * Resets the game back to lobby state after game completion.
+     * Allows players to start a new game.
+     */
+    public void returnToLobby() {
+        rwLock.writeLock().lock();
+        try {
+            game.returnToLobby();
         } finally {
             rwLock.writeLock().unlock();
         }
