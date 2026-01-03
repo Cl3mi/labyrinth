@@ -145,6 +145,43 @@ public class GameService {
         }
     }
 
+    /**
+     * Resets the game to LOBBY state, allowing a new game to be started.
+     * Should be called when a finished game needs to be cleaned up.
+     */
+    public void resetForNewGame() {
+        rwLock.writeLock().lock();
+        try {
+            game.resetForNewGame();
+        } finally {
+            rwLock.writeLock().unlock();
+        }
+    }
+
+    /**
+     * Checks if the game is in FINISHED state.
+     */
+    public boolean isGameFinished() {
+        rwLock.readLock().lock();
+        try {
+            return game.getRoomState() == RoomState.FINISHED;
+        } finally {
+            rwLock.readLock().unlock();
+        }
+    }
+
+    /**
+     * Checks if the game is in IN_GAME state (actively playing).
+     */
+    public boolean isGameInProgress() {
+        rwLock.readLock().lock();
+        try {
+            return game.getRoomState() == RoomState.IN_GAME;
+        } finally {
+            rwLock.readLock().unlock();
+        }
+    }
+
     public int getMaxPlayers() {
         return game.getMAX_PLAYERS();
     }
