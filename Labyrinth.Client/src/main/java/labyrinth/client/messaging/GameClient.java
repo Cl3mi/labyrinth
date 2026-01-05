@@ -6,6 +6,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import labyrinth.contracts.models.*;
 import lombok.Setter;
 import org.java_websocket.client.WebSocketClient;
+import org.java_websocket.enums.ReadyState;
 import org.java_websocket.handshake.ServerHandshake;
 
 import javax.swing.*;
@@ -126,8 +127,15 @@ public class GameClient extends WebSocketClient {
 
                 // ✅ NEU: GAME_OVER
                 case GAME_OVER -> {
+                    System.out.println("[GameClient] GAME_OVER message received, parsing payload...");
                     GameOverEventPayload payload = mapper.treeToValue(payloadNode, GameOverEventPayload.class);
-                    if (onGameOver != null) runOnUiThread(() -> onGameOver.accept(payload));
+                    System.out.println("[GameClient] GAME_OVER payload parsed, winner: " + payload.getWinnerId() + ", callback registered: " + (onGameOver != null));
+                    if (onGameOver != null) {
+                        System.out.println("[GameClient] Calling onGameOver callback...");
+                        runOnUiThread(() -> onGameOver.accept(payload));
+                    } else {
+                        System.err.println("[GameClient] WARNING: onGameOver callback is NULL!");
+                    }
                 }
 
                 // ✅ NEU: NEXT_TREASURE
@@ -381,6 +389,16 @@ public class GameClient extends WebSocketClient {
         }
     }
 
+    public void disconnectLogicalOnly() {
+        try {
+            if (isOpen()) {
+                sendDisconnect();   // NUR Command, KEIN close()
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
     /**
      * Attempts to reconnect to the server using stored credentials.
      * @param identifierToken The reconnection token
@@ -450,6 +468,34 @@ public class GameClient extends WebSocketClient {
             }
             return false;
         }
+    }
+
+    public synchronized void ensureTransportConnected() {
+        ReadyState rs = getReadyState();
+
+        if (rs == ReadyState.OPEN) {
+            return; // alles gut
+        }
+
+        if (rs == ReadyState.NOT_YET_CONNECTED) {
+            connect(); // nur 1x pro Instanz erlaubt
+            return;
+        }
+
+        if (rs == ReadyState.CLOSED) {
+            reconnect(); // erneuter Verbindungsaufbau nach close
+            return;
+        }
+
+        // rs == CLOSING
+        // Robust: erst sauber zu Ende schließen, dann reconnect
+        try {
+            closeBlocking();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            close();
+        }
+        reconnect();
     }
 
     // Getters for state

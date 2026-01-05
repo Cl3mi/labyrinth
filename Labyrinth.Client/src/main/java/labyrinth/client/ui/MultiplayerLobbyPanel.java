@@ -49,8 +49,10 @@ public class MultiplayerLobbyPanel extends JPanel {
     private int configTreasuresToWin = 4;
     private int configTurnTimeSeconds = 30;
     private int configGameDurationMinutes = 30;
+    private String configUsername = "Player";
 
     // UI Components für Settings
+    private JTextField usernameField;
     private JComboBox<String> boardSizeCombo;
     private JSpinner treasureSpinner;
     private JComboBox<String> turnTimeCombo;
@@ -245,8 +247,18 @@ public class MultiplayerLobbyPanel extends JPanel {
         gbc.insets = new Insets(8, 5, 8, 5);
         gbc.anchor = GridBagConstraints.WEST;
 
-        // Spielfeldgröße
+        // Spielername (nur Anzeige - wird im Hauptmenü festgelegt)
         gbc.gridx = 0; gbc.gridy = 0; gbc.weightx = 0.4;
+        settingsGrid.add(createStyledLabel("Spielername:"), gbc);
+
+        gbc.gridx = 1; gbc.weightx = 0.6;
+        usernameField = createStyledTextField(configUsername);
+        usernameField.setEditable(false);
+        usernameField.setToolTipText("Name wird im Hauptmenü festgelegt");
+        settingsGrid.add(usernameField, gbc);
+
+        // Spielfeldgröße
+        gbc.gridx = 0; gbc.gridy = 1; gbc.weightx = 0.4;
         settingsGrid.add(createStyledLabel("Spielfeldgröße:"), gbc);
 
         gbc.gridx = 1; gbc.weightx = 0.6;
@@ -264,7 +276,7 @@ public class MultiplayerLobbyPanel extends JPanel {
         settingsGrid.add(boardSizeCombo, gbc);
 
         // Schätze
-        gbc.gridx = 0; gbc.gridy = 1;
+        gbc.gridx = 0; gbc.gridy = 2;
         settingsGrid.add(createStyledLabel("Schätze pro Spieler:"), gbc);
 
         gbc.gridx = 1;
@@ -273,7 +285,7 @@ public class MultiplayerLobbyPanel extends JPanel {
         settingsGrid.add(treasureSpinner, gbc);
 
         // Runden-Zeit
-        gbc.gridx = 0; gbc.gridy = 2;
+        gbc.gridx = 0; gbc.gridy = 3;
         settingsGrid.add(createStyledLabel("Runden-Zeit:"), gbc);
 
         gbc.gridx = 1;
@@ -294,7 +306,7 @@ public class MultiplayerLobbyPanel extends JPanel {
         settingsGrid.add(turnTimeCombo, gbc);
 
         // Spiel-Dauer
-        gbc.gridx = 0; gbc.gridy = 3;
+        gbc.gridx = 0; gbc.gridy = 4;
         settingsGrid.add(createStyledLabel("Spiel-Dauer:"), gbc);
 
         gbc.gridx = 1;
@@ -315,7 +327,7 @@ public class MultiplayerLobbyPanel extends JPanel {
         settingsGrid.add(durationCombo, gbc);
 
         // Hinweis
-        gbc.gridx = 0; gbc.gridy = 4; gbc.gridwidth = 2;
+        gbc.gridx = 0; gbc.gridy = 5; gbc.gridwidth = 2;
         gbc.insets = new Insets(15, 5, 5, 5);
         JLabel hintLabel = new JLabel("Nur der Admin kann Einstellungen ändern");
         hintLabel.setFont(new Font("SansSerif", Font.ITALIC, 11));
@@ -425,6 +437,20 @@ public class MultiplayerLobbyPanel extends JPanel {
         return spinner;
     }
 
+    private JTextField createStyledTextField(String defaultText) {
+        JTextField textField = new JTextField(defaultText, 15);
+        textField.setFont(new Font("SansSerif", Font.PLAIN, 13));
+        textField.setBackground(STONE_MEDIUM);
+        textField.setForeground(TEXT_LIGHT);
+        textField.setCaretColor(TEXT_LIGHT);
+        textField.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(CARD_BORDER, 1),
+                BorderFactory.createEmptyBorder(5, 8, 5, 8)
+        ));
+        textField.setPreferredSize(new Dimension(150, 30));
+        return textField;
+    }
+
     // --------------------------------------------------------------------------------
     // Public API
     // --------------------------------------------------------------------------------
@@ -461,6 +487,26 @@ public class MultiplayerLobbyPanel extends JPanel {
             startButton.setVisible(!reconnecting);
         });
     }
+
+    /**
+     * Gibt den im Settings-Panel eingegebenen Username zurück.
+     */
+    public String getMultiplayerUsername() {
+        return configUsername;
+    }
+
+    /**
+     * Setzt den Username im Settings-Panel.
+     */
+    public void setMultiplayerUsername(String username) {
+        if (username != null && !username.isBlank()) {
+            this.configUsername = username;
+            if (usernameField != null) {
+                usernameField.setText(username);
+            }
+        }
+    }
+
 
     private void onCancelReconnect() {
         int choice = JOptionPane.showConfirmDialog(this,
@@ -520,6 +566,7 @@ public class MultiplayerLobbyPanel extends JPanel {
     }
 
     private void enableSettingsPanel(boolean enabled) {
+        if (usernameField != null) usernameField.setEnabled(enabled);
         if (boardSizeCombo != null) boardSizeCombo.setEnabled(enabled);
         if (treasureSpinner != null) treasureSpinner.setEnabled(enabled);
         if (turnTimeCombo != null) turnTimeCombo.setEnabled(enabled);

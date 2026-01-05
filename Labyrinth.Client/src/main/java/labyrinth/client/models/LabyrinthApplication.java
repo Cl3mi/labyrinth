@@ -1,9 +1,14 @@
 package labyrinth.client.models;
 
-import labyrinth.client.ui.*;
+import labyrinth.client.ui.BoardPanel;
 import labyrinth.client.factories.BoardFactory;
 import labyrinth.client.messaging.GameClient;
 import labyrinth.client.messaging.ReconnectionManager;
+import labyrinth.client.ui.GameOverPanel;
+import labyrinth.client.ui.MainMenuPanel;
+import labyrinth.client.ui.MultiplayerLobbyPanel;
+import labyrinth.client.ui.OptionsPanel;
+import org.java_websocket.enums.ReadyState;
 
 import javax.swing.*;
 import java.awt.*;
@@ -14,7 +19,6 @@ import java.util.prefs.Preferences;
 
 public class LabyrinthApplication {
 
-    private static final URI SERVER_URI = URI.create("ws://localhost:8081/game");
     private volatile boolean loginSent = false;
     private volatile boolean connectAckReceived = false;
 
@@ -29,7 +33,6 @@ public class LabyrinthApplication {
     private JPanel mainPanel;
     private MainMenuPanel mainMenuPanel;
     private MultiplayerLobbyPanel lobbyPanel;
-    private ServerBrowserPanel serverBrowserPanel;
     private OptionsPanel optionsPanel;
     private BoardPanel boardPanel;
     private GameOverPanel gameOverPanel;
@@ -41,6 +44,9 @@ public class LabyrinthApplication {
     private volatile boolean isShuttingDown = false;
     private volatile boolean gameViewShown = false;
     private volatile boolean pendingSingleplayerStart = false;
+    private volatile boolean sessionResetPending = false;
+    private volatile boolean isGameOverCleanup = false;
+    private volatile boolean isGameOver = false;
 
     public void start() throws Exception {
         frame = new JFrame("Labyrinth Online (" + PROFILE + ")");
@@ -58,23 +64,26 @@ public class LabyrinthApplication {
 
         mainPanel = new JPanel(new CardLayout());
 
-        client = new GameClient(SERVER_URI);
+        // Lade Server-URL aus Einstellungen
+        URI serverUri = URI.create(OptionsPanel.loadServerUrlFromPreferences());
+        client = new GameClient(serverUri);
         reconnectionManager = new ReconnectionManager(client, this);
 
         registerCallbacks();
 
         // Hauptmenü erstellen
         mainMenuPanel = new MainMenuPanel();
+        // Gespeicherten Username laden und setzen (für beide Modi)
+        String storedUsername = ClientIdentityStore.loadUsername();
+        if (storedUsername != null && !storedUsername.isBlank()) {
+            mainMenuPanel.setSingleplayerUsername(storedUsername);
+            mainMenuPanel.setMultiplayerUsername(storedUsername);
+        }
         mainMenuPanel.setOnSingleplayerClicked(this::startSingleplayerGame);
-        mainMenuPanel.setOnMultiplayerClicked(this::showServerBrowser);
+        mainMenuPanel.setOnMultiplayerClicked(this::showMultiplayerLobby);
         mainMenuPanel.setOnOptionsClicked(this::showOptions);
         mainMenuPanel.setOnExitClicked(this::shutdownAndExit);
         mainPanel.add(mainMenuPanel, "mainmenu");
-
-        // Serverbrowser erstellen
-        serverBrowserPanel = new ServerBrowserPanel();
-        serverBrowserPanel.setOnBackToMenu(this::showMainMenu);
-        mainPanel.add(serverBrowserPanel, "serverbrowser");
 
         // Multiplayer-Lobby erstellen
         lobbyPanel = new MultiplayerLobbyPanel(client, null);
@@ -108,7 +117,7 @@ public class LabyrinthApplication {
         mainPanel.add(optionsPanel, "options");
 
         // Game Over Panel
-        gameOverPanel = new GameOverPanel(this::showMainMenu);
+        gameOverPanel = new GameOverPanel(this::exitGameToMainMenu);
         mainPanel.add(gameOverPanel, "gameover");
 
         frame.setContentPane(mainPanel);
@@ -118,8 +127,8 @@ public class LabyrinthApplication {
         connectAckReceived = false;
 
         client.setOnConnectionLost(() -> {
-            if (isShuttingDown) {
-                System.out.println("Connection lost during shutdown - ignoring");
+            if (isShuttingDown || isGameOverCleanup) {
+                System.out.println("Connection lost during shutdown/game-over cleanup - ignoring");
                 return;
             }
             SwingUtilities.invokeLater(() -> {
@@ -163,6 +172,25 @@ public class LabyrinthApplication {
     private void showMainMenu() {
         if (gameOverPanel != null) gameOverPanel.cleanup();
         gameViewShown = false;
+        isGameOver = false;
+
+        // ZUERST alle Flags zurücksetzen und Token löschen
+        loginSent = false;
+        connectAckReceived = false;
+        ClientIdentityStore.clearToken();
+
+        // Verbindung komplett schließen, damit onOpenHook beim nächsten Verbindungsversuch erneut ausgelöst wird
+        if (client != null && client.isOpen()) {
+            isGameOverCleanup = true; // Verhindert ReconnectionManager
+            try {
+                client.disconnectCleanly(); // Vollständig schließen statt nur sendDisconnect
+            } catch (Exception e) {
+                System.err.println("Error disconnecting when returning to main menu: " + e.getMessage());
+            } finally {
+                isGameOverCleanup = false;
+            }
+        }
+
         CardLayout cl = (CardLayout) mainPanel.getLayout();
         cl.show(mainPanel, "mainmenu");
     }
@@ -183,39 +211,102 @@ public class LabyrinthApplication {
         System.out.println("  Dark Theme: " + optionsPanel.isDarkTheme());
     }
 
-    private void showServerBrowser() {
-        CardLayout cl = (CardLayout) mainPanel.getLayout();
-        cl.show(mainPanel, "serverbrowser");
-
-        serverBrowserPanel.onShow();
-    }
-
     private void showMultiplayerLobby() {
+        // Username aus dem MainMenu-Dialog an das LobbyPanel übergeben
+        String multiplayerUsername = mainMenuPanel.getMultiplayerUsername();
+        lobbyPanel.setMultiplayerUsername(multiplayerUsername);
+
+        // Für einen neuen Multiplayer-Beitritt Token löschen und Flags zurücksetzen
+        ClientIdentityStore.clearToken();
+        loginSent = false;
+        connectAckReceived = false;
+
+        // Wenn bereits verbunden, erst komplett schließen (nicht nur sendDisconnect)
+        if (client != null && client.isOpen()) {
+            isGameOverCleanup = true; // Verhindert ReconnectionManager
+            try {
+                client.disconnectCleanly();
+                // Kurz warten damit der Server die Trennung verarbeiten kann
+                Thread.sleep(200);
+            } catch (Exception e) {
+                System.err.println("Error disconnecting before reconnect: " + e.getMessage());
+            } finally {
+                isGameOverCleanup = false;
+            }
+        }
+
         CardLayout cl = (CardLayout) mainPanel.getLayout();
         cl.show(mainPanel, "lobby");
         connectToServer();
     }
 
     private void startSingleplayerGame() {
+        pendingSingleplayerStart = true;
 
-        // Verbinde zum Server für Singleplayer
+        // Bei Singleplayer immer ein neues Spiel starten - keinen alten Token verwenden
+        ClientIdentityStore.clearToken();
         loginSent = false;
         connectAckReceived = false;
 
-        // Setze Flag für Singleplayer-Modus
-        pendingSingleplayerStart = true;
+        // Wenn bereits verbunden, erst komplett schließen und dann neu verbinden
+        if (client != null && client.isOpen()) {
+            isGameOverCleanup = true; // Verhindert ReconnectionManager
+            try {
+                client.disconnectCleanly();
+                // Kurz warten damit der Server die Trennung verarbeiten kann
+                Thread.sleep(200);
+            } catch (Exception e) {
+                System.err.println("Error disconnecting before singleplayer start: " + e.getMessage());
+            } finally {
+                isGameOverCleanup = false;
+            }
+        }
+
 
         try {
-            client.connect();
+            client.ensureTransportConnected();
         } catch (Exception e) {
             e.printStackTrace();
             pendingSingleplayerStart = false;
-            SwingUtilities.invokeLater(() -> {
-                JOptionPane.showMessageDialog(frame,
-                        "Konnte nicht zum Server verbinden: " + e.getMessage(),
-                        "Verbindungsfehler", JOptionPane.ERROR_MESSAGE);
-            });
+            SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(frame,
+                    "Konnte nicht zum Server verbinden: " + e.getMessage(),
+                    "Verbindungsfehler", JOptionPane.ERROR_MESSAGE));
         }
+    }
+
+
+    private void ensureLogin(boolean singleplayer) {
+        if (connectAckReceived) return;
+        if (loginSent) return;
+        if (client == null || !client.isOpen()) return;
+
+        loginSent = true;
+
+        String token = ClientIdentityStore.loadToken();
+        String storedUsername = ClientIdentityStore.loadUsername();
+
+        if (token != null) {
+            client.sendReconnect(token);
+            return;
+        }
+
+        if (singleplayer) {
+            // Username aus dem Singleplayer-Dialog verwenden
+            username = mainMenuPanel.getSingleplayerUsername();
+            if (username == null || username.isBlank()) {
+                username = (storedUsername != null && !storedUsername.isBlank()) ? storedUsername : "Player";
+            }
+            client.sendConnect(username);
+            return;
+        }
+
+        // Multiplayer: Username aus dem MainMenuPanel verwenden (wurde im Dialog festgelegt)
+        username = mainMenuPanel.getMultiplayerUsername();
+        if (username == null || username.isBlank()) {
+            username = (storedUsername != null && !storedUsername.isBlank()) ? storedUsername : "Player";
+        }
+        lobbyPanel.setLocalUsername(username);
+        client.sendConnect(username);
     }
 
     private void sendSingleplayerStartGame() {
@@ -244,20 +335,24 @@ public class LabyrinthApplication {
     }
 
     private void connectToServer() {
+        lobbyPanel.setStatusText("Verbinde...", new Color(170, 120, 0));
+
+        // Wenn gerade ein Session-Reset läuft: nicht CONNECT senden, sondern Transport neu öffnen
+        if (sessionResetPending) {
+            loginSent = false;
+            connectAckReceived = false;
+            client.ensureTransportConnected();
+            return;
+        }
+
+        if (client != null && client.isOpen()) {
+            ensureLogin(false);
+            return;
+        }
+
         loginSent = false;
         connectAckReceived = false;
-        lobbyPanel.setStatusText("Verbinde zum Server...", new Color(170, 120, 0));
-        try {
-            client.connect();
-        } catch (Exception e) {
-            e.printStackTrace();
-            SwingUtilities.invokeLater(() -> {
-                lobbyPanel.setStatusText("Verbindung fehlgeschlagen", new Color(170, 0, 0));
-                JOptionPane.showMessageDialog(frame,
-                        "Konnte nicht zum Server verbinden: " + e.getMessage(),
-                        "Verbindungsfehler", JOptionPane.ERROR_MESSAGE);
-            });
-        }
+        client.ensureTransportConnected();
     }
 
     private void setupConnectionHook() {
@@ -268,24 +363,29 @@ public class LabyrinthApplication {
             String token = ClientIdentityStore.loadToken();
             String storedUsername = ClientIdentityStore.loadUsername();
 
+            // Bei Singleplayer NIE RECONNECT senden - immer neues Spiel starten
+            if (pendingSingleplayerStart) {
+                username = mainMenuPanel.getSingleplayerUsername();
+                if (username == null || username.isBlank()) {
+                    username = storedUsername != null ? storedUsername : "Player";
+                }
+                System.out.println("[" + PROFILE + "] onOpen -> SINGLEPLAYER CONNECT username=" + username);
+                client.sendConnect(username);
+                return;
+            }
+
             if (token != null) {
                 System.out.println("[" + PROFILE + "] onOpen -> RECONNECT with token");
                 client.sendReconnect(token);
             } else {
-                // Bei Singleplayer keinen Dialog zeigen, automatisch Username verwenden
-                if (pendingSingleplayerStart) {
+                // Multiplayer: Username aus dem MainMenuPanel verwenden (wurde im Dialog festgelegt)
+                username = mainMenuPanel.getMultiplayerUsername();
+                if (username == null || username.isBlank()) {
                     username = storedUsername != null ? storedUsername : "Player";
-                    System.out.println("[" + PROFILE + "] onOpen -> SINGLEPLAYER CONNECT username=" + username);
-                    client.sendConnect(username);
-                } else {
-                    String defaultUsername = storedUsername != null ? storedUsername : "Player";
-                    username = JOptionPane.showInputDialog(frame,
-                            "Bitte Username eingeben (" + PROFILE + "):", defaultUsername);
-                    if (username == null || username.isBlank()) username = defaultUsername;
-                    lobbyPanel.setLocalUsername(username);
-                    System.out.println("[" + PROFILE + "] onOpen -> CONNECT username=" + username);
-                    client.sendConnect(username);
                 }
+                lobbyPanel.setLocalUsername(username);
+                System.out.println("[" + PROFILE + "] onOpen -> MULTIPLAYER CONNECT username=" + username);
+                client.sendConnect(username);
             }
 
             final String finalStoredUsername = storedUsername;
@@ -300,14 +400,18 @@ public class LabyrinthApplication {
                         ClientIdentityStore.clearToken();
                     }
                     if (username == null || username.isBlank()) {
-                        // Bei Singleplayer keinen Dialog
+                        // Bei Singleplayer Username aus Dialog verwenden
                         if (pendingSingleplayerStart) {
-                            username = finalStoredUsername != null ? finalStoredUsername : "Player";
+                            username = mainMenuPanel.getSingleplayerUsername();
+                            if (username == null || username.isBlank()) {
+                                username = finalStoredUsername != null ? finalStoredUsername : "Player";
+                            }
                         } else {
-                            String defaultUsername = finalStoredUsername != null ? finalStoredUsername : "Player";
-                            username = JOptionPane.showInputDialog(frame,
-                                    "Reconnect nicht möglich. Bitte Username eingeben (" + PROFILE + "):", defaultUsername);
-                            if (username == null || username.isBlank()) username = defaultUsername;
+                            // Multiplayer: Username aus MainMenuPanel verwenden
+                            username = mainMenuPanel.getMultiplayerUsername();
+                            if (username == null || username.isBlank()) {
+                                username = finalStoredUsername != null ? finalStoredUsername : "Player";
+                            }
                             lobbyPanel.setLocalUsername(username);
                         }
                     }
@@ -338,6 +442,7 @@ public class LabyrinthApplication {
                 reconnectionManager.shutdown();
             }
             if (client != null && client.isOpen()) {
+                sessionResetPending = true;
                 client.disconnectCleanly();
                 try { Thread.sleep(1000); } catch (InterruptedException ignored) {}
             }
@@ -349,7 +454,6 @@ public class LabyrinthApplication {
     }
 
     private void switchToGameView() {
-        // Music is already stopped in ensureBoardPanel before BoardPanel starts its music
         if (gameOverPanel != null) gameOverPanel.cleanup();
         CardLayout cl = (CardLayout) mainPanel.getLayout();
         cl.show(mainPanel, "game");
@@ -357,8 +461,12 @@ public class LabyrinthApplication {
 
     private void switchToGameOverView() {
         if (mainMenuPanel != null) mainMenuPanel.stopMusic();
+        gameViewShown = false;
         CardLayout cl = (CardLayout) mainPanel.getLayout();
         cl.show(mainPanel, "gameover");
+        // Sicherstellen, dass das Panel angezeigt wird
+        mainPanel.revalidate();
+        mainPanel.repaint();
     }
 
     private void switchToLobbyView() {
@@ -374,6 +482,7 @@ public class LabyrinthApplication {
 
         if (boardPanel == null) {
             boardPanel = new BoardPanel(client, board, currentPlayer, allPlayers);
+            boardPanel.setOnExitGame(this::exitGameToMainMenu);
             mainPanel.add(boardPanel, "game");
         } else {
             boardPanel.setBoard(board);
@@ -391,16 +500,33 @@ public class LabyrinthApplication {
     }
 
     private void exitGameToMainMenu() {
-        // Disconnect vom Server senden
         if (client != null && client.isOpen()) {
             try {
                 client.disconnectCleanly();
             } catch (Exception e) {
-                System.err.println("Error disconnecting: " + e.getMessage());
+                System.err.println("Error sending DISCONNECT: " + e.getMessage());
             }
         }
 
-        // Zum Hauptmenü zurückkehren
+        // Token löschen, da der Server das Spiel zurücksetzt und der Token ungültig wird
+        ClientIdentityStore.clearToken();
+
+        // Lokale Login-Flags zurücksetzen, damit beim nächsten Start wieder CONNECT/RECONNECT geschickt wird
+        loginSent = false;
+        connectAckReceived = false;
+        pendingSingleplayerStart = false;
+
+        // BoardPanel entfernen und zurücksetzen, damit beim nächsten Spiel ein frisches Panel erstellt wird
+        if (boardPanel != null) {
+            mainPanel.remove(boardPanel);
+            boardPanel = null;
+        }
+
+        SwingUtilities.invokeLater(() -> {
+            lobbyPanel.setConnected(false);
+            lobbyPanel.setStatusText("Nicht verbunden", new Color(170, 120, 0));
+        });
+
         showMainMenu();
     }
 
@@ -417,6 +543,7 @@ public class LabyrinthApplication {
     private void registerCallbacks() {
         client.setOnConnectAck(ack -> {
             connectAckReceived = true;
+            sessionResetPending = false;
             System.out.println("[" + PROFILE + "] CONNECT_ACK playerId=" + ack.getPlayerId()
                     + " identifierToken=" + ack.getIdentifierToken());
             ClientIdentityStore.saveToken(ack.getIdentifierToken());
@@ -462,29 +589,93 @@ public class LabyrinthApplication {
         });
 
         client.setOnGameOver(gameOver -> {
-            System.out.println("[" + PROFILE + "] Received GAME_OVER");
+            System.out.println("[" + PROFILE + "] *** GAME_OVER EVENT RECEIVED *** Winner: " + gameOver.getWinnerId());
+
+            // Sofort Flag setzen um weitere GAME_STATE_UPDATE Events zu ignorieren
+            isGameOver = true;
+
+            // DEBUG: Zeige ein Popup um zu verifizieren, dass das Event ankommt
+            // (Kann später entfernt werden)
+            // SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(frame, "GAME_OVER empfangen! Winner: " + gameOver.getWinnerId(), "DEBUG", JOptionPane.INFORMATION_MESSAGE));
+
+            // Token löschen, da der Server das Spiel zurücksetzt und der Token ungültig wird
+            ClientIdentityStore.clearToken();
+
+            // Lokale Flags zurücksetzen, damit beim nächsten Start wieder sauber reconnect/login läuft
+            loginSent = false;
+            connectAckReceived = false;
+            pendingSingleplayerStart = false;
+
+            // Flag setzen um ReconnectionManager zu blockieren
+            isGameOverCleanup = true;
+
+            // UI-Updates auf dem EDT ausführen
             SwingUtilities.invokeLater(() -> {
-                gameOverPanel.updateGameOver(gameOver);
-                switchToGameOverView();
+                try {
+                    System.out.println("[" + PROFILE + "] GAME_OVER UI update starting on EDT...");
+
+                    // BoardPanel entfernen und zurücksetzen
+                    if (boardPanel != null) {
+                        mainPanel.remove(boardPanel);
+                        boardPanel = null;
+                        System.out.println("[" + PROFILE + "] BoardPanel removed");
+                    }
+
+                    // GameOverPanel aktualisieren und anzeigen
+                    gameOverPanel.updateGameOver(gameOver);
+                    System.out.println("[" + PROFILE + "] GameOverPanel updated");
+
+                    // Musik stoppen
+                    if (mainMenuPanel != null) mainMenuPanel.stopMusic();
+                    gameViewShown = false;
+
+                    // Zum GameOver-Panel wechseln
+                    CardLayout cl = (CardLayout) mainPanel.getLayout();
+                    cl.show(mainPanel, "gameover");
+                    System.out.println("[" + PROFILE + "] Switched to gameover view");
+
+                    // Panel sichtbar machen und neu zeichnen
+                    gameOverPanel.setVisible(true);
+                    mainPanel.revalidate();
+                    mainPanel.repaint();
+                    frame.revalidate();
+                    frame.repaint();
+                    gameOverPanel.requestFocusInWindow();
+                    System.out.println("[" + PROFILE + "] GAME_OVER UI update complete");
+                } catch (Exception e) {
+                    System.err.println("[" + PROFILE + "] Error in GAME_OVER UI update: " + e.getMessage());
+                    e.printStackTrace();
+                }
+
+                // Disconnect erst NACH den UI-Updates starten
+                new Thread(() -> {
+                    try {
+                        Thread.sleep(1000); // Länger warten um sicher zu sein
+                        if (client != null && client.isOpen()) {
+                            System.out.println("[" + PROFILE + "] Disconnecting after GAME_OVER...");
+                            client.disconnectCleanly();
+                        }
+                    } catch (Exception e) {
+                        System.err.println("Error during GAME_OVER cleanup: " + e.getMessage());
+                    } finally {
+                        try { Thread.sleep(500); } catch (InterruptedException ignored) {}
+                        isGameOverCleanup = false;
+                    }
+                }, "gameover-cleanup").start();
             });
         });
 
         client.setOnErrorMessage(msg -> {
             SwingUtilities.invokeLater(() -> {
                 if (msg != null && msg.contains("PLAYER_NOT_FOUND")) {
-                    System.out.println("[" + PROFILE + "] Token rejected by server - clearing stored credentials");
+                    // Token wurde bereits gelöscht, ignoriere diese Meldung einfach
+                    // Das passiert wenn ein alter RECONNECT-Versuch den Server erreicht
+                    System.out.println("[" + PROFILE + "] PLAYER_NOT_FOUND - ignoring (token already cleared)");
                     ClientIdentityStore.clearToken();
-                    ClientIdentityStore.clearUsername();
-                    JOptionPane.showMessageDialog(frame,
-                            "Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.\n\n" + msg,
-                            "Sitzung abgelaufen", JOptionPane.WARNING_MESSAGE);
-                    String newUsername = JOptionPane.showInputDialog(frame,
-                            "Bitte Username eingeben (" + PROFILE + "):", "Player");
-                    if (newUsername != null && !newUsername.isBlank()) {
-                        username = newUsername;
-                        lobbyPanel.setLocalUsername(username);
-                        if (client != null && client.isOpen()) client.sendConnect(username);
-                    }
+                    // Kein Popup anzeigen, Benutzer soll einfach neu verbinden
+                } else if (msg != null && msg.contains("already connected")) {
+                    // Diese Meldung nur loggen, nicht als Popup anzeigen - passiert bei schnellem Wechsel
+                    System.out.println("[" + PROFILE + "] Session already connected - ignoring: " + msg);
                 } else {
                     if (boardPanel != null && gameViewShown) {
                         handleErrorWithToast(msg);
@@ -592,6 +783,11 @@ public class LabyrinthApplication {
 
     private void showGame(Board board, java.time.OffsetDateTime gameEndTime,
                           labyrinth.contracts.models.CurrentTurnInfo turnInfo) {
+        // Wenn das Spiel bereits beendet ist, keine Game-View mehr anzeigen
+        if (isGameOver || isGameOverCleanup) {
+            System.out.println("[" + PROFILE + "] showGame() ignored - game is over");
+            return;
+        }
         if (board == null || board.getPlayers() == null) return;
         Player currentPlayer = resolveLocalPlayer(board.getPlayers());
         SwingUtilities.invokeLater(() -> {
@@ -613,14 +809,17 @@ public class LabyrinthApplication {
                     lobbyPanel.setStatusText("Manueller Wiederverbindungsversuch...", new Color(170, 120, 0));
                     reconnectionManager.startAutoReconnect();
                 } else {
-                    username = JOptionPane.showInputDialog(frame,
-                            "Bitte Username eingeben (" + PROFILE + "):",
-                            username != null ? username : "Player");
-                    if (username != null && !username.isBlank()) {
-                        lobbyPanel.setLocalUsername(username);
-                        if (client.attemptConnect(username)) {
-                            lobbyPanel.setStatusText("Verbindungsversuch...", new Color(170, 120, 0));
-                        }
+                    // Username aus MainMenuPanel verwenden (Multiplayer oder Singleplayer)
+                    String reconnectUsername = pendingSingleplayerStart
+                            ? mainMenuPanel.getSingleplayerUsername()
+                            : mainMenuPanel.getMultiplayerUsername();
+                    if (reconnectUsername == null || reconnectUsername.isBlank()) {
+                        reconnectUsername = username != null ? username : "Player";
+                    }
+                    username = reconnectUsername;
+                    lobbyPanel.setLocalUsername(username);
+                    if (client.attemptConnect(username)) {
+                        lobbyPanel.setStatusText("Verbindungsversuch...", new Color(170, 120, 0));
                     }
                 }
             } else {

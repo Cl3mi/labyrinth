@@ -32,13 +32,17 @@ public class MainMenuPanel extends JPanel {
     private int singleplayerTreasures = 4;
     private int singleplayerTurnTime = 30;
     private int singleplayerGameDuration = 30;
+    private String singleplayerUsername = "Player";
+
+    // Multiplayer Username
+    private String multiplayerUsername = "Player";
 
     /**
      * Zeigt den Singleplayer-Einstellungsdialog und startet das Spiel.
      */
     private void showSingleplayerSettingsDialog() {
         JDialog dialog = new JDialog((Frame) SwingUtilities.getWindowAncestor(this), "Einzelspieler - Einstellungen", true);
-        dialog.setSize(400, 350);
+        dialog.setSize(400, 420);
         dialog.setLocationRelativeTo(this);
         dialog.setResizable(false);
 
@@ -60,9 +64,19 @@ public class MainMenuPanel extends JPanel {
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.anchor = GridBagConstraints.WEST;
 
-        // Spielfeldgröße
+        // Username
         gbc.gridx = 0;
         gbc.gridy = 0;
+        settingsPanel.add(createDialogLabel("Spielername:"), gbc);
+
+        gbc.gridx = 1;
+        JTextField usernameField = new JTextField(singleplayerUsername, 15);
+        usernameField.setFont(new Font("Arial", Font.PLAIN, 14));
+        settingsPanel.add(usernameField, gbc);
+
+        // Spielfeldgröße
+        gbc.gridx = 0;
+        gbc.gridy = 1;
         settingsPanel.add(createDialogLabel("Spielfeldgröße:"), gbc);
 
         gbc.gridx = 1;
@@ -75,7 +89,7 @@ public class MainMenuPanel extends JPanel {
 
         // Schätze pro Spieler
         gbc.gridx = 0;
-        gbc.gridy = 1;
+        gbc.gridy = 2;
         settingsPanel.add(createDialogLabel("Schätze:"), gbc);
 
         gbc.gridx = 1;
@@ -85,7 +99,7 @@ public class MainMenuPanel extends JPanel {
 
         // Runden-Zeit
         gbc.gridx = 0;
-        gbc.gridy = 2;
+        gbc.gridy = 3;
         settingsPanel.add(createDialogLabel("Runden-Zeit:"), gbc);
 
         gbc.gridx = 1;
@@ -98,7 +112,7 @@ public class MainMenuPanel extends JPanel {
 
         // Spiel-Dauer
         gbc.gridx = 0;
-        gbc.gridy = 3;
+        gbc.gridy = 4;
         settingsPanel.add(createDialogLabel("Spiel-Dauer:"), gbc);
 
         gbc.gridx = 1;
@@ -124,6 +138,18 @@ public class MainMenuPanel extends JPanel {
         startButton.setBackground(new Color(80, 120, 80));
         startButton.setForeground(Color.WHITE);
         startButton.addActionListener(e -> {
+            // Username validieren und speichern
+            String enteredUsername = usernameField.getText().trim();
+            if (enteredUsername.isEmpty()) {
+                JOptionPane.showMessageDialog(dialog,
+                    "Bitte geben Sie einen Spielernamen ein.",
+                    "Spielername erforderlich",
+                    JOptionPane.WARNING_MESSAGE);
+                usernameField.requestFocus();
+                return;
+            }
+            singleplayerUsername = enteredUsername;
+
             // Einstellungen speichern
             String selectedSize = (String) boardSizeCombo.getSelectedItem();
             if (selectedSize != null) {
@@ -160,6 +186,109 @@ public class MainMenuPanel extends JPanel {
         buttonPanel.add(cancelButton);
         buttonPanel.add(startButton);
         mainPanel.add(buttonPanel, BorderLayout.SOUTH);
+
+        dialog.setContentPane(mainPanel);
+        dialog.setVisible(true);
+    }
+
+    /**
+     * Zeigt einen einfachen Dialog zur Eingabe des Spielernamens für Multiplayer.
+     */
+    private void showMultiplayerUsernameDialog() {
+        JDialog dialog = new JDialog((Frame) SwingUtilities.getWindowAncestor(this), "Mehrspieler - Spielername", true);
+        dialog.setSize(400, 200);
+        dialog.setLocationRelativeTo(this);
+        dialog.setResizable(false);
+
+        JPanel mainPanel = new JPanel(new BorderLayout(10, 15));
+        mainPanel.setBorder(BorderFactory.createEmptyBorder(20, 25, 20, 25));
+        mainPanel.setBackground(new Color(45, 42, 38));
+
+        // Titel
+        JLabel titleLabel = new JLabel("Gib deinen Spielernamen ein", SwingConstants.CENTER);
+        titleLabel.setFont(new Font("Serif", Font.BOLD, 18));
+        titleLabel.setForeground(PRIMARY_GOLD_LIGHT);
+        mainPanel.add(titleLabel, BorderLayout.NORTH);
+
+        // Username Eingabe - zentriertes Panel
+        JPanel inputPanel = new JPanel(new GridBagLayout());
+        inputPanel.setOpaque(false);
+
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(10, 5, 10, 5);
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.weightx = 0.3;
+        JLabel nameLabel = createDialogLabel("Spielername:");
+        inputPanel.add(nameLabel, gbc);
+
+        gbc.gridx = 1;
+        gbc.weightx = 0.7;
+        JTextField usernameField = new JTextField(multiplayerUsername, 15);
+        usernameField.setFont(new Font("Arial", Font.PLAIN, 14));
+        usernameField.setBackground(new Color(70, 65, 58));
+        usernameField.setForeground(new Color(255, 248, 230));
+        usernameField.setCaretColor(new Color(255, 248, 230));
+        usernameField.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(100, 85, 60), 1),
+                BorderFactory.createEmptyBorder(8, 10, 8, 10)
+        ));
+        usernameField.setPreferredSize(new Dimension(200, 35));
+        inputPanel.add(usernameField, gbc);
+
+        mainPanel.add(inputPanel, BorderLayout.CENTER);
+
+        // Buttons
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 0));
+        buttonPanel.setOpaque(false);
+
+        JButton cancelButton = new JButton("Abbrechen");
+        cancelButton.setPreferredSize(new Dimension(110, 38));
+        cancelButton.setFont(new Font("SansSerif", Font.BOLD, 13));
+        cancelButton.addActionListener(e -> dialog.dispose());
+
+        JButton joinButton = new JButton("Beitreten");
+        joinButton.setPreferredSize(new Dimension(110, 38));
+        joinButton.setFont(new Font("SansSerif", Font.BOLD, 13));
+        joinButton.setBackground(new Color(80, 120, 80));
+        joinButton.setForeground(Color.WHITE);
+        joinButton.addActionListener(e -> {
+            String enteredUsername = usernameField.getText().trim();
+            if (enteredUsername.isEmpty()) {
+                JOptionPane.showMessageDialog(dialog,
+                        "Bitte geben Sie einen Spielernamen ein.",
+                        "Spielername erforderlich",
+                        JOptionPane.WARNING_MESSAGE);
+                usernameField.requestFocus();
+                return;
+            }
+            multiplayerUsername = enteredUsername;
+
+            dialog.dispose();
+
+            // Callback aufrufen um zur Lobby zu wechseln
+            if (onMultiplayerClicked != null) {
+                onMultiplayerClicked.run();
+            }
+        });
+
+        buttonPanel.add(cancelButton);
+        buttonPanel.add(joinButton);
+        mainPanel.add(buttonPanel, BorderLayout.SOUTH);
+
+        // Enter-Taste soll auch "Beitreten" auslösen
+        usernameField.addActionListener(e -> joinButton.doClick());
+
+        // Fokus auf das Textfeld setzen
+        dialog.addWindowListener(new java.awt.event.WindowAdapter() {
+            @Override
+            public void windowOpened(java.awt.event.WindowEvent e) {
+                usernameField.requestFocusInWindow();
+                usernameField.selectAll();
+            }
+        });
 
         dialog.setContentPane(mainPanel);
         dialog.setVisible(true);
@@ -444,9 +573,7 @@ public class MainMenuPanel extends JPanel {
 
         // Mehrspieler Button
         MenuButton multiplayerBtn = new MenuButton("Mehrspieler", "Spiele online mit Freunden");
-        multiplayerBtn.addActionListener(e -> {
-            if (onMultiplayerClicked != null) onMultiplayerClicked.run();
-        });
+        multiplayerBtn.addActionListener(e -> showMultiplayerUsernameDialog());
         multiplayerBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
         panel.add(multiplayerBtn);
 
@@ -524,6 +651,26 @@ public class MainMenuPanel extends JPanel {
 
     public int getSingleplayerGameDuration() {
         return singleplayerGameDuration;
+    }
+
+    public String getSingleplayerUsername() {
+        return singleplayerUsername;
+    }
+
+    public void setSingleplayerUsername(String username) {
+        if (username != null && !username.isBlank()) {
+            this.singleplayerUsername = username;
+        }
+    }
+
+    public String getMultiplayerUsername() {
+        return multiplayerUsername;
+    }
+
+    public void setMultiplayerUsername(String username) {
+        if (username != null && !username.isBlank()) {
+            this.multiplayerUsername = username;
+        }
     }
 
     // --------------------------------------------------------------------------------
