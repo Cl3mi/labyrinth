@@ -1,13 +1,11 @@
 package labyrinth.client.models;
 
-import labyrinth.client.ui.BoardPanel;
+import labyrinth.client.messaging.ServerClientFactory;
+import labyrinth.client.ui.*;
 import labyrinth.client.factories.BoardFactory;
 import labyrinth.client.messaging.GameClient;
 import labyrinth.client.messaging.ReconnectionManager;
-import labyrinth.client.ui.GameOverPanel;
-import labyrinth.client.ui.MainMenuPanel;
-import labyrinth.client.ui.MultiplayerLobbyPanel;
-import labyrinth.client.ui.OptionsPanel;
+import labyrinth.managementclient.api.ServersApi;
 import org.java_websocket.enums.ReadyState;
 
 import javax.swing.*;
@@ -33,6 +31,7 @@ public class LabyrinthApplication {
     private JPanel mainPanel;
     private MainMenuPanel mainMenuPanel;
     private MultiplayerLobbyPanel lobbyPanel;
+    private ServerBrowserPanel serverBrowserPanel;
     private OptionsPanel optionsPanel;
     private BoardPanel boardPanel;
     private GameOverPanel gameOverPanel;
@@ -80,15 +79,23 @@ public class LabyrinthApplication {
             mainMenuPanel.setMultiplayerUsername(storedUsername);
         }
         mainMenuPanel.setOnSingleplayerClicked(this::startSingleplayerGame);
-        mainMenuPanel.setOnMultiplayerClicked(this::showMultiplayerLobby);
+        mainMenuPanel.setOnMultiplayerClicked(this::showServerBrowser);
         mainMenuPanel.setOnOptionsClicked(this::showOptions);
         mainMenuPanel.setOnExitClicked(this::shutdownAndExit);
         mainPanel.add(mainMenuPanel, "mainmenu");
+
+
+        var serversApi = ServerClientFactory.create(OptionsPanel.loadServerUrlFromPreferences());
+        serverBrowserPanel = new ServerBrowserPanel(serversApi);
+        serverBrowserPanel.setOnBackToMenu(this::showMainMenu);
+        mainPanel.add(serverBrowserPanel, "serverbrowser");
 
         // Multiplayer-Lobby erstellen
         lobbyPanel = new MultiplayerLobbyPanel(client, null);
         lobbyPanel.setOnBackToMenu(this::showMainMenu);
         mainPanel.add(lobbyPanel, "lobby");
+
+
 
         // Options Panel erstellen
         optionsPanel = new OptionsPanel();
@@ -209,6 +216,13 @@ public class LabyrinthApplication {
         System.out.println("  SFX Volume: " + optionsPanel.getSfxVolume() + "%");
         System.out.println("  Server URL: " + optionsPanel.getServerUrl());
         System.out.println("  Dark Theme: " + optionsPanel.isDarkTheme());
+    }
+
+    private void showServerBrowser() {
+        CardLayout cl = (CardLayout) mainPanel.getLayout();
+        cl.show(mainPanel, "serverbrowser");
+
+        serverBrowserPanel.onShow();
     }
 
     private void showMultiplayerLobby() {

@@ -73,7 +73,7 @@ public class OptionsPanel extends JPanel {
     private static final String PREF_WINDOW_SIZE = "windowSize";
 
     // Default Server URL - zentrale Konfiguration
-    public static final String DEFAULT_SERVER_URL = "ws://localhost:8082/game";
+    public static final String DEFAULT_SERVER_URL = "http://localhost:8081";
 
     // Farben - Mystische Labyrinth-Palette
     private static final Color PRIMARY_GOLD = new Color(218, 165, 32);
