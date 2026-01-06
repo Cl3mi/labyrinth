@@ -20,7 +20,8 @@ import java.util.Objects;
  */
 public class MultiplayerLobbyPanel extends JPanel {
 
-    private final GameClient client;
+    @Setter
+    private GameClient client;
 
     @Setter
     private String localPlayerId;
@@ -79,8 +80,7 @@ public class MultiplayerLobbyPanel extends JPanel {
     private Font labelFont;
     private Font buttonFont;
 
-    public MultiplayerLobbyPanel(GameClient client, String localPlayerId) {
-        this.client = Objects.requireNonNull(client, "client must not be null");
+    public MultiplayerLobbyPanel(String localPlayerId) {
         this.localPlayerId = localPlayerId;
 
         initFonts();

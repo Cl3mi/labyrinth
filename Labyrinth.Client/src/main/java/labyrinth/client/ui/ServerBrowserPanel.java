@@ -192,9 +192,6 @@ public class ServerBrowserPanel extends JPanel {
         stopPolling();
     }
 
-    private void onStartGameClicked() {
-    }
-
     @Override
     protected void paintComponent(Graphics g) {
         if (backgroundImage != null) {
