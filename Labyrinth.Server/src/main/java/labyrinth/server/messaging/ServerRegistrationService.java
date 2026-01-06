@@ -26,7 +26,8 @@ public class ServerRegistrationService {
 
     private final ServersApi serversApi;
     private final GameService gameService;
-    private GameServer gameServer;
+    private volatile GameServer gameServer;
+    private final AtomicBoolean shuttingDown = new AtomicBoolean(false);
 
     @Value("${server.name:Random Server}")
     private String serverName;
@@ -42,8 +43,15 @@ public class ServerRegistrationService {
 
     private final AtomicBoolean isRegistering = new AtomicBoolean(false);
 
+    private int tries;
+
     @EventListener(ApplicationReadyEvent.class)
     public void registerServer() {
+        if (shuttingDown.get()) {
+            log.info("Skipping registerServer: shutdown in progress");
+            return;
+        }
+
         if (gameServer != null) {
             return;
         }
@@ -73,6 +81,12 @@ public class ServerRegistrationService {
     }
 
     @PreDestroy
+    public void shutdown() {
+        shuttingDown.set(true);
+        unregisterServer();
+    }
+
+
     public void unregisterServer() {
         if (gameServer != null) {
             try {
@@ -80,7 +94,9 @@ public class ServerRegistrationService {
                 serversApi.deleteServer(gameServer.getId());
                 log.info("Server deregistered successfully.");
             } catch (Exception e) {
-                log.warn("Could not strictly deregister server. It might already be gone.", e);
+                log.warn("Could not deregister server. It might already be gone.", e);
+            } finally {
+                gameServer = null;
             }
         } else {
             log.info("No Server-ID present, skipping deregistration.");
@@ -89,6 +105,12 @@ public class ServerRegistrationService {
 
     @Scheduled(fixedRate = 1000)
     public void sendHeartbeat() {
+
+        if (shuttingDown.get()) {
+            log.debug("Not attempting to send heartbeat during shutdown");
+            return;
+        }
+
         var currentServer = gameServer;
 
         if (currentServer != null) {
@@ -97,6 +119,14 @@ public class ServerRegistrationService {
                 serversApi.updateServer(currentServer.getId(), gameServerUpdate);
             } catch (Exception e) {
                 log.error("Failed to send heartbeat to Management API.", e);
+                tries++;
+
+                if(tries > 5) {
+                    log.error("Failed do send heartbeat to Management 5 times. Registering again...");
+                    tries = 0;
+                    gameServer = null;
+                    registerServer();
+                }
             }
         } else {
             log.warn("Server not registered yet, retrying...");
