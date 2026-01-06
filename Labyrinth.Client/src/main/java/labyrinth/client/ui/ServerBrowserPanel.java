@@ -24,12 +24,10 @@ public class ServerBrowserPanel extends JPanel {
 
     private final ServersApi serversApi;
 
-    // UI
     private final DefaultListModel<GameServer> serverListModel = new DefaultListModel<>();
     private final JList<GameServer> serverList;
     private final JLabel statusLabel;
 
-    // Styling constants (aligned with MultiplayerLobbyPanel)
     private static final Color PRIMARY_GOLD = new Color(218, 165, 32);
     private static final Color PRIMARY_GOLD_LIGHT = new Color(255, 215, 0);
     private static final Color TEXT_LIGHT = new Color(255, 248, 230);
@@ -43,11 +41,9 @@ public class ServerBrowserPanel extends JPanel {
     private final Font nameFont = new Font("SansSerif", Font.BOLD, 15);
     private final Font uriFont = new Font("SansSerif", Font.PLAIN, 12);
 
-    // Polling
     private ScheduledExecutorService poller;
     private final DateTimeFormatter timeFmt = DateTimeFormatter.ofPattern("HH:mm:ss");
 
-    // Click callback
     private Consumer<GameServer> onServerSelected;
 
     public ServerBrowserPanel(ServersApi serversApi) {
@@ -59,11 +55,9 @@ public class ServerBrowserPanel extends JPanel {
         setLayout(new BorderLayout());
         setBorder(new EmptyBorder(12, 12, 12, 12));
 
-        // Header: benutze das MultiplayerLobbyPanel-Layout (zentrierter Titel + Status darunter)
         JPanel header = new JPanel(new BorderLayout(20, 0));
         header.setOpaque(false);
 
-        // Zurück-Button (links)
         JButton backBtn = new JButton("← Zurück");
         backBtn.setFocusPainted(false);
         backBtn.addActionListener(e -> {
@@ -75,7 +69,6 @@ public class ServerBrowserPanel extends JPanel {
         leftPanel.add(backBtn);
         header.add(leftPanel, BorderLayout.WEST);
 
-        // mittlerer Bereich: Titel + Status untereinander
         JPanel centerPanel = new JPanel();
         centerPanel.setLayout(new BoxLayout(centerPanel, BoxLayout.Y_AXIS));
         centerPanel.setOpaque(false);
@@ -97,7 +90,6 @@ public class ServerBrowserPanel extends JPanel {
 
         header.add(centerPanel, BorderLayout.CENTER);
 
-        // Platzhalter rechts (gleiche Breite wie links für Ausrichtung)
         JPanel rightPanel = new JPanel();
         rightPanel.setOpaque(false);
         rightPanel.setPreferredSize(new Dimension(140, 40));
@@ -105,12 +97,11 @@ public class ServerBrowserPanel extends JPanel {
 
         add(header, BorderLayout.NORTH);
 
-        // Center: server list
         serverList = new JList<>(serverListModel);
         serverList.setCellRenderer(new ServerListRenderer());
         serverList.setOpaque(false);
         serverList.setBackground(new Color(0, 0, 0, 0));
-        serverList.setFixedCellHeight(90); // larger card-like cells
+        serverList.setFixedCellHeight(90);
         serverList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 
         serverList.addMouseListener(new MouseAdapter() {
@@ -119,14 +110,26 @@ public class ServerBrowserPanel extends JPanel {
                 int idx = serverList.locationToIndex(e.getPoint());
                 if (idx >= 0) {
                     GameServer gs = serverListModel.getElementAt(idx);
-                    if (onServerSelected != null) {
-                        onServerSelected.accept(gs);
+                    Object[] options = {"Ja", "Nein"};
+                    int res = JOptionPane.showOptionDialog(
+                            ServerBrowserPanel.this,
+                            "Wollen Sie sich mit dem Server \"" + gs.getName() + "\" verbinden?",
+                            "Mit Server verbinden",
+                            JOptionPane.YES_NO_OPTION,
+                            JOptionPane.QUESTION_MESSAGE,
+                            null,
+                            options,
+                            options[1]);
+
+                    if (res == 0) {
+                        if (onServerSelected != null) {
+                            onServerSelected.accept(gs);
+                        }
                     }
                 }
             }
         });
 
-        // Packe die Serverliste in eine Card (wie Player List Card im MultiplayerLobbyPanel)
         JPanel listCard = new JPanel(new BorderLayout(0, 15)) {
             @Override
             protected void paintComponent(Graphics g) {
@@ -164,7 +167,6 @@ public class ServerBrowserPanel extends JPanel {
 
         add(listCard, BorderLayout.CENTER);
 
-        // Footer: Hinweis
         JPanel footer = new JPanel(new FlowLayout(FlowLayout.LEFT));
         footer.setOpaque(false);
         footer.setBorder(new EmptyBorder(8, 8, 8, 8));
@@ -172,8 +174,6 @@ public class ServerBrowserPanel extends JPanel {
         hint.setForeground(TEXT_MUTED);
         footer.add(hint);
         add(footer, BorderLayout.SOUTH);
-
-        // initial load (non-blocking via poller start in onShow)
     }
 
     public void setOnBackToMenu(Runnable callback) {
@@ -193,7 +193,6 @@ public class ServerBrowserPanel extends JPanel {
     }
 
     private void onStartGameClicked() {
-        // not used here
     }
 
     @Override
@@ -218,7 +217,6 @@ public class ServerBrowserPanel extends JPanel {
         }
     }
 
-    // Polling helpers
     private void startPolling() {
         if (poller != null && !poller.isShutdown()) return;
         poller = Executors.newSingleThreadScheduledExecutor(r -> {
@@ -273,7 +271,6 @@ public class ServerBrowserPanel extends JPanel {
         try {
             var st = s.getStatus();
             if (st == null) return false;
-            // compare name / string representation to avoid depending on enum type
             String stStr;
             try {
                 stStr = st.name();
@@ -286,10 +283,8 @@ public class ServerBrowserPanel extends JPanel {
         }
     }
 
-    // Custom renderer für GameServer im Lobby-Stil (Karten)
     private class ServerListRenderer extends JPanel implements ListCellRenderer<GameServer> {
         private final JLabel nameLabel = new JLabel();
-        private final JLabel uriLabel = new JLabel();
         private final JLabel playersLabel = new JLabel();
         private final JPanel avatarPanel = new JPanel();
 
@@ -310,37 +305,32 @@ public class ServerBrowserPanel extends JPanel {
 
             JPanel infoPanel = new JPanel();
             infoPanel.setOpaque(false);
-            infoPanel.setLayout(new BoxLayout(infoPanel, BoxLayout.Y_AXIS));
+            infoPanel.setLayout(new BorderLayout());
 
             nameLabel.setFont(nameFont);
             nameLabel.setForeground(TEXT_LIGHT);
-
-            uriLabel.setFont(uriFont);
-            uriLabel.setForeground(TEXT_MUTED);
+            nameLabel.setHorizontalAlignment(SwingConstants.CENTER);
 
             playersLabel.setFont(new Font("SansSerif", Font.BOLD, 13));
             playersLabel.setForeground(TEXT_MUTED);
+            playersLabel.setHorizontalAlignment(SwingConstants.CENTER);
 
-            infoPanel.add(nameLabel);
-            infoPanel.add(Box.createVerticalStrut(4));
-            infoPanel.add(uriLabel);
+            infoPanel.add(nameLabel, BorderLayout.CENTER);
+            infoPanel.add(playersLabel, BorderLayout.SOUTH);
 
             add(avatarPanel, BorderLayout.WEST);
             add(infoPanel, BorderLayout.CENTER);
-            add(playersLabel, BorderLayout.EAST);
         }
 
         @Override
         public Component getListCellRendererComponent(JList<? extends GameServer> list, GameServer value, int index,
                                                       boolean isSelected, boolean cellHasFocus) {
             nameLabel.setText(value.getName());
-            uriLabel.setText(value.getUri());
             playersLabel.setText(value.getCurrentPlayerCount() + " / " + value.getMaxPlayers());
 
             avatarPanel.setBackground(SERVER_COLORS[Math.abs(index) % SERVER_COLORS.length]);
             avatarPanel.setOpaque(true);
 
-            // selection overlay
             if (isSelected) {
                 setOpaque(true);
                 setBackground(new Color(255, 255, 255, 20));
@@ -360,20 +350,16 @@ public class ServerBrowserPanel extends JPanel {
             int h = getHeight();
             int arc = 12;
 
-            // shadow
             g2.setColor(SHADOW_COLOR);
             g2.fill(new RoundRectangle2D.Float(3, 4, w - 6, h - 6, arc, arc));
 
-            // card background
             g2.setColor(CARD_BG);
             g2.fill(new RoundRectangle2D.Float(0, 0, w - 1, h - 1, arc, arc));
 
-            // border
             g2.setColor(CARD_BORDER);
             g2.setStroke(new BasicStroke(1.2f));
             g2.draw(new RoundRectangle2D.Float(0, 0, w - 1, h - 1, arc, arc));
 
-            // avatar circle
             int ax = 12;
             int ay = (h - 46) / 2;
             g2.setColor(avatarPanel.getBackground());
