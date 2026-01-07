@@ -23,7 +23,7 @@ import java.util.UUID;
 public class GameWebSocketHandler extends TextWebSocketHandler {
     private final CommandMessageParser messageParser;
     private final CommandMessageDispatcher dispatcher;
-    private final PlayerSessionRegistry IPlayerSessionRegistry;
+    private final PlayerSessionRegistry playerSessionRegistry;
     private final MessageService messageService;
     private final GameService gameService;
     private final PlayerInfoMapper playerInfoMapper;
@@ -44,12 +44,16 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
 
     @Override
     public void afterConnectionClosed(@NonNull WebSocketSession session, @NonNull CloseStatus status) {
-        IPlayerSessionRegistry.markDisconnected(session);
-
-        // Broadcast updated lobby state showing player as disconnected
-        UUID playerId = IPlayerSessionRegistry.getPlayerId(session);
+        UUID playerId = playerSessionRegistry.getPlayerId(session);
         if (playerId != null && gameService.getGameState() == RoomState.LOBBY) {
+            var player = gameService.getPlayer(playerId);
+            gameService.leave(player);
+
             broadcastLobbyState();
+            playerSessionRegistry.removePlayer(playerId);
+        }
+        else {
+            playerSessionRegistry.markDisconnected(session);
         }
     }
 

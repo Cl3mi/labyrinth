@@ -47,59 +47,75 @@ public class ConnectCommandHandler extends AbstractCommandHandler<ConnectCommand
         }
 
         if (payload.getIdentifierToken() != null) {
-            var identifierToken = UUID.fromString(payload.getIdentifierToken());
-
-            var playerId = playerSessionRegistry.getPlayerIdByIdentifierToken(identifierToken);
-
-            // If token is invalid or player was removed, reject the reconnection attempt
-            if (playerId == null) {
-                throw new ActionErrorException("Reconnection token is invalid or expired", ErrorCode.PLAYER_NOT_FOUND);
+            UUID identifierToken;
+            try {
+                identifierToken = UUID.fromString(payload.getIdentifierToken());
+            } catch (IllegalArgumentException ex) {
+                identifierToken = null;
             }
 
-            var player = gameService.getPlayer(playerId);
-            if (player == null) {
-                // Player was removed from game but token still exists in registry - clean it up
-                playerSessionRegistry.removePlayer(playerId);
-                throw new ActionErrorException("Player session has expired", ErrorCode.PLAYER_NOT_FOUND);
-            }
+            if (identifierToken != null) {
+                var playerId = playerSessionRegistry.getPlayerIdByIdentifierToken(identifierToken);
 
-            playerSessionRegistry.registerPlayer(playerId, identifierToken, session);
+                if (playerId == null) {
+                    if (payload.getUsername() == null || payload.getUsername().isBlank()) {
+                        throw new ActionErrorException("Reconnection token is invalid or expired", ErrorCode.PLAYER_NOT_FOUND);
+                    }
 
-            var ackPayload = createAckPayload(player.getId(), identifierToken);
-            messageService.sendToPlayer(player.getId(), ackPayload);
+                    connectNewPlayer(session, payload.getUsername());
+                    return;
+                }
 
-            // Check if game is in progress - send game state instead of lobby state
-            RoomState roomState = gameService.getGameState();
-            if (roomState == RoomState.IN_GAME) {
-                // Player is reconnecting to ongoing game - send game state
-                var gameStateDto = gameService.withGameReadLock(gameMapper::toGameStateDto);
-                gameStateDto.setType(EventType.GAME_STATE_UPDATE);
-                messageService.sendToPlayer(player.getId(), gameStateDto);
+                var player = gameService.getPlayer(playerId);
+                if (player == null) {
+                    // Player was removed from game but token still exists in registry - clean it up
+                    playerSessionRegistry.removePlayer(playerId);
+                    throw new ActionErrorException("Player session has expired", ErrorCode.PLAYER_NOT_FOUND);
+                }
+
+                registerExistingPlayer(playerId, identifierToken, session);
             } else {
-                // Game not started - broadcast lobby state
-                var lobbyStatePayload = createLobbyStatePayload();
-                messageService.broadcastToPlayers(lobbyStatePayload);
+                // identifierToken couldn't be parsed -> treat like unknown token above
+                if (payload.getUsername() == null || payload.getUsername().isBlank()) {
+                    throw new ActionErrorException("Reconnection token is invalid or expired", ErrorCode.PLAYER_NOT_FOUND);
+                }
+
+                connectNewPlayer(session, payload.getUsername());
             }
             return;
         }
 
-        var player = gameService.join(payload.getUsername());
+        connectNewPlayer(session, payload.getUsername());
+    }
 
-        var identifierToken = UUID.randomUUID();
-        playerSessionRegistry.registerPlayer(player.getId(), identifierToken, session);
 
-        var ackPayload = createAckPayload(player.getId(), identifierToken);
-        messageService.sendToPlayer(player.getId(), ackPayload);
+    private void connectNewPlayer(WebSocketSession session, String username) throws Exception {
+        var newPlayer = gameService.join(username);
+        var newIdentifier = UUID.randomUUID();
+        playerSessionRegistry.registerPlayer(newPlayer.getId(), newIdentifier, session);
 
-        // Check if game is in progress - send appropriate state
+        registerAndSendAck(newPlayer.getId(), newIdentifier);
+        sendStateForPlayer(newPlayer.getId());
+    }
+
+    private void registerExistingPlayer(UUID playerId, UUID identifierToken, WebSocketSession session) throws Exception {
+        playerSessionRegistry.registerPlayer(playerId, identifierToken, session);
+        registerAndSendAck(playerId, identifierToken);
+        sendStateForPlayer(playerId);
+    }
+
+    private void registerAndSendAck(UUID playerId, UUID identifierToken) {
+        var ackPayload = createAckPayload(playerId, identifierToken);
+        messageService.sendToPlayer(playerId, ackPayload);
+    }
+
+    private void sendStateForPlayer(UUID playerId) {
         RoomState roomState = gameService.getGameState();
         if (roomState == RoomState.IN_GAME) {
-            // Rejoining ongoing game by username - send game state
             var gameStateDto = gameService.withGameReadLock(gameMapper::toGameStateDto);
             gameStateDto.setType(EventType.GAME_STATE_UPDATE);
-            messageService.sendToPlayer(player.getId(), gameStateDto);
+            messageService.sendToPlayer(playerId, gameStateDto);
         } else {
-            // New player in lobby - broadcast lobby state
             var lobbyStatePayload = createLobbyStatePayload();
             messageService.broadcastToPlayers(lobbyStatePayload);
         }
