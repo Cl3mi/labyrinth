@@ -232,7 +232,9 @@ public class GameService {
 
             var board = boardFactory.createBoard(gameConfig.boardWidth(), gameConfig.boardHeight(),
                     gameConfig.totalBonusCount());
-            var treasureCards = treasureCardFactory.createTreasureCards(gameConfig.treasureCardCount(), playersCount);
+            // Multiply treasures per player by actual player count (after AI fill)
+            int totalTreasures = gameConfig.treasureCardCount() * playersCount;
+            var treasureCards = treasureCardFactory.createTreasureCards(totalTreasures, playersCount);
 
             game.startGame(gameConfig, treasureCards, board);
         } finally {
