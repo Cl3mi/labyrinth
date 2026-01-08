@@ -2,6 +2,8 @@ package labyrinth.client.ui;
 
 import labyrinth.managementclient.api.ServersApi;
 import labyrinth.managementclient.model.GameServer;
+import lombok.Setter;
+import org.jspecify.annotations.NonNull;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -19,6 +21,7 @@ import java.util.function.Consumer;
 
 public class ServerBrowserPanel extends JPanel {
 
+    @Setter
     private Runnable onBackToMenu;
     private Image backgroundImage;
 
@@ -28,7 +31,6 @@ public class ServerBrowserPanel extends JPanel {
     private final JList<GameServer> serverList;
     private final JLabel statusLabel;
 
-    private static final Color PRIMARY_GOLD = new Color(218, 165, 32);
     private static final Color PRIMARY_GOLD_LIGHT = new Color(255, 215, 0);
     private static final Color TEXT_LIGHT = new Color(255, 248, 230);
     private static final Color TEXT_MUTED = new Color(180, 170, 155);
@@ -36,14 +38,12 @@ public class ServerBrowserPanel extends JPanel {
     private static final Color CARD_BG = new Color(50, 45, 40, 200);
     private static final Color CARD_BORDER = new Color(80, 70, 55, 120);
 
-    private final Font titleFont = new Font("Serif", Font.BOLD, 28);
-    private final Font labelFont = new Font("Serif", Font.PLAIN, 14);
     private final Font nameFont = new Font("SansSerif", Font.BOLD, 15);
-    private final Font uriFont = new Font("SansSerif", Font.PLAIN, 12);
 
     private ScheduledExecutorService poller;
     private final DateTimeFormatter timeFmt = DateTimeFormatter.ofPattern("HH:mm:ss");
 
+    @Setter
     private Consumer<GameServer> onServerSelected;
 
     public ServerBrowserPanel(ServersApi serversApi) {
@@ -74,11 +74,13 @@ public class ServerBrowserPanel extends JPanel {
         centerPanel.setOpaque(false);
 
         JLabel headerTitle = new JLabel("Verfügbare Server");
+        Font titleFont = new Font("Serif", Font.BOLD, 28);
         headerTitle.setFont(titleFont);
         headerTitle.setForeground(PRIMARY_GOLD_LIGHT);
         headerTitle.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         statusLabel = new JLabel("Lade Server...");
+        Font labelFont = new Font("Serif", Font.PLAIN, 14);
         statusLabel.setFont(labelFont);
         statusLabel.setForeground(new Color(200, 160, 60));
         statusLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
@@ -110,26 +112,32 @@ public class ServerBrowserPanel extends JPanel {
                 int idx = serverList.locationToIndex(e.getPoint());
                 if (idx >= 0) {
                     GameServer gs = serverListModel.getElementAt(idx);
-                    Object[] options = {"Ja", "Nein"};
-                    int res = JOptionPane.showOptionDialog(
-                            ServerBrowserPanel.this,
-                            "Wollen Sie sich mit dem Server \"" + gs.getName() + "\" verbinden?",
-                            "Mit Server verbinden",
-                            JOptionPane.YES_NO_OPTION,
-                            JOptionPane.QUESTION_MESSAGE,
-                            null,
-                            options,
-                            options[1]);
 
-                    if (res == 0) {
-                        if (onServerSelected != null) {
-                            onServerSelected.accept(gs);
-                        }
+                    if (onServerSelected != null) {
+                        onServerSelected.accept(gs);
                     }
                 }
             }
         });
 
+        JPanel listCard = getListPanel();
+
+        JLabel listTitle = new JLabel("📡 Verfügbare Server");
+        listTitle.setFont(new Font("Serif", Font.BOLD, 18));
+        listTitle.setForeground(PRIMARY_GOLD_LIGHT);
+        listCard.add(listTitle, BorderLayout.NORTH);
+
+        JScrollPane sp = new JScrollPane(serverList);
+        sp.setOpaque(false);
+        sp.getViewport().setOpaque(false);
+        sp.setBorder(BorderFactory.createEmptyBorder());
+        sp.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+        listCard.add(sp, BorderLayout.CENTER);
+
+        add(listCard, BorderLayout.CENTER);
+    }
+
+    private @NonNull JPanel getListPanel() {
         JPanel listCard = new JPanel(new BorderLayout(0, 15)) {
             @Override
             protected void paintComponent(Graphics g) {
@@ -152,36 +160,7 @@ public class ServerBrowserPanel extends JPanel {
         };
         listCard.setOpaque(false);
         listCard.setBorder(new EmptyBorder(20, 25, 20, 25));
-
-        JLabel listTitle = new JLabel("📡 Verfügbare Server");
-        listTitle.setFont(new Font("Serif", Font.BOLD, 18));
-        listTitle.setForeground(PRIMARY_GOLD_LIGHT);
-        listCard.add(listTitle, BorderLayout.NORTH);
-
-        JScrollPane sp = new JScrollPane(serverList);
-        sp.setOpaque(false);
-        sp.getViewport().setOpaque(false);
-        sp.setBorder(BorderFactory.createEmptyBorder());
-        sp.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
-        listCard.add(sp, BorderLayout.CENTER);
-
-        add(listCard, BorderLayout.CENTER);
-
-        JPanel footer = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        footer.setOpaque(false);
-        footer.setBorder(new EmptyBorder(8, 8, 8, 8));
-        JLabel hint = new JLabel("Nur Server im Status 'LOBBY' werden angezeigt");
-        hint.setForeground(TEXT_MUTED);
-        footer.add(hint);
-        add(footer, BorderLayout.SOUTH);
-    }
-
-    public void setOnBackToMenu(Runnable callback) {
-        this.onBackToMenu = callback;
-    }
-
-    public void setOnServerSelected(Consumer<GameServer> callback) {
-        this.onServerSelected = callback;
+        return listCard;
     }
 
     public void onShow() {
@@ -323,7 +302,7 @@ public class ServerBrowserPanel extends JPanel {
         public Component getListCellRendererComponent(JList<? extends GameServer> list, GameServer value, int index,
                                                       boolean isSelected, boolean cellHasFocus) {
             nameLabel.setText(value.getName());
-            playersLabel.setText(value.getCurrentPlayerCount() + " / " + value.getMaxPlayers());
+            playersLabel.setText(value.getCurrentPlayerCount() + " / " + value.getMaxPlayers() + " Spieler");
 
             avatarPanel.setBackground(SERVER_COLORS[Math.abs(index) % SERVER_COLORS.length]);
             avatarPanel.setOpaque(true);

@@ -8,6 +8,7 @@ import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.geom.RoundRectangle2D;
+import java.util.function.Consumer;
 
 /**
  * Hauptmenü-Panel für das Labyrinth-Spiel.
@@ -194,7 +195,7 @@ public class MainMenuPanel extends JPanel {
     /**
      * Zeigt einen einfachen Dialog zur Eingabe des Spielernamens für Multiplayer.
      */
-    private void showMultiplayerUsernameDialog() {
+    public void showMultiplayerUsernameDialog(Consumer<String> onUsernameEntered) {
         JDialog dialog = new JDialog((Frame) SwingUtilities.getWindowAncestor(this), "Mehrspieler - Spielername", true);
         dialog.setSize(400, 200);
         dialog.setLocationRelativeTo(this);
@@ -269,8 +270,8 @@ public class MainMenuPanel extends JPanel {
             dialog.dispose();
 
             // Callback aufrufen um zur Lobby zu wechseln
-            if (onMultiplayerClicked != null) {
-                onMultiplayerClicked.run();
+            if (onUsernameEntered != null) {
+                onUsernameEntered.accept(enteredUsername);
             }
         });
 

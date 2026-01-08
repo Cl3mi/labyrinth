@@ -5,15 +5,14 @@ import labyrinth.client.ui.*;
 import labyrinth.client.factories.BoardFactory;
 import labyrinth.client.messaging.GameClient;
 import labyrinth.client.messaging.ReconnectionManager;
-import labyrinth.managementclient.api.ServersApi;
 import labyrinth.managementclient.model.GameServer;
-import org.java_websocket.enums.ReadyState;
 
 import javax.swing.*;
 import java.awt.*;
 import java.net.URI;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.function.Consumer;
 import java.util.prefs.Preferences;
 
 public class LabyrinthApplication {
@@ -83,7 +82,7 @@ public class LabyrinthApplication {
         var serversApi = ServerClientFactory.create(OptionsPanel.loadServerUrlFromPreferences());
         serverBrowserPanel = new ServerBrowserPanel(serversApi);
         serverBrowserPanel.setOnBackToMenu(this::showMainMenu);
-        serverBrowserPanel.setOnServerSelected(this::showMultiplayerLobby);
+        serverBrowserPanel.setOnServerSelected(this::setUsername);
         mainPanel.add(serverBrowserPanel, "serverbrowser");
 
         // Multiplayer-Lobby erstellen
@@ -182,10 +181,16 @@ public class LabyrinthApplication {
         serverBrowserPanel.onShow();
     }
 
-    private void showMultiplayerLobby(GameServer gameServer) {
-        // Username aus dem MainMenu-Dialog an das LobbyPanel übergeben
-        String multiplayerUsername = mainMenuPanel.getMultiplayerUsername();
-        lobbyPanel.setMultiplayerUsername(multiplayerUsername);
+    private void setUsername(GameServer gameServer) {
+        mainMenuPanel.showMultiplayerUsernameDialog(new Consumer<String>() {
+            @Override
+            public void accept(String username) {
+                showMultiplayerLobby(gameServer, username);
+            }
+        });
+    }
+    private void showMultiplayerLobby(GameServer gameServer, String username) {
+        lobbyPanel.setMultiplayerUsername(username);
 
         // Für einen neuen Multiplayer-Beitritt Token löschen und Flags zurücksetzen
         ClientIdentityStore.clearToken();
