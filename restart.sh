@@ -55,10 +55,10 @@ echo ""
 # Step 1: Kill existing processes
 echo -e "${YELLOW}[1/6] Killing existing server and client processes...${NC}"
 
-# Kill server processes on port 8081
-if lsof -ti:8081 >/dev/null 2>&1; then
-    echo "  → Killing process on port 8081"
-    lsof -ti:8081 | xargs kill -9 2>/dev/null || true
+# Kill server processes on port 8082
+if lsof -ti:8082 >/dev/null 2>&1; then
+    echo "  → Killing process on port 8082"
+    lsof -ti:8082 | xargs kill -9 2>/dev/null || true
     sleep 1
 fi
 
@@ -131,7 +131,7 @@ echo ""
 
 # Step 4: Start server
 if [ "$START_SERVER" = true ]; then
-    echo -e "${YELLOW}[4/6] Starting server on port 8081...${NC}"
+    echo -e "${YELLOW}[4/6] Starting server on port 8082...${NC}"
     cd "$SERVER_DIR"
 
     # Start server in background (skip tests to avoid compilation errors)
@@ -144,7 +144,7 @@ if [ "$START_SERVER" = true ]; then
     # Wait for server to be ready (max 30 seconds)
     COUNTER=0
     while [ $COUNTER -lt 30 ]; do
-        if lsof -ti:8081 >/dev/null 2>&1; then
+        if lsof -ti:8082 >/dev/null 2>&1; then
             echo -e "${GREEN}  ✓ Server is ready!${NC}"
             break
         fi
@@ -160,7 +160,7 @@ if [ "$START_SERVER" = true ]; then
         exit 1
     fi
 
-    echo -e "${GREEN}  Server is running on http://localhost:8081${NC}"
+    echo -e "${GREEN}  Server is running on http://localhost:8082${NC}"
     echo -e "${BLUE}  Logs: tail -f /tmp/labyrinth-server.log${NC}"
 else
     echo -e "${YELLOW}[4/6] Skipping server start${NC}"
@@ -198,7 +198,7 @@ else
     echo -e "${BLUE}  cd $CLIENT_DIR && mvn exec:java${NC}"
     echo ""
     echo -e "To stop server:"
-    echo -e "${BLUE}  kill $(lsof -ti:8081 2>/dev/null || echo 'N/A')${NC}"
+    echo -e "${BLUE}  kill $(lsof -ti:8082 2>/dev/null || echo 'N/A')${NC}"
     echo ""
     echo -e "To view server logs:"
     echo -e "${BLUE}  tail -f /tmp/labyrinth-server.log${NC}"

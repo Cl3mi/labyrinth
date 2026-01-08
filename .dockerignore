@@ -1,0 +1,42 @@
+# Maven build artifacts
+**/target/
+**/*.class
+**/*.jar
+**/*.war
+
+# IDE files
+**/.idea/
+**/.vscode/
+**/*.iml
+**/.classpath
+**/.project
+**/.settings/
+
+# OS files
+**/.DS_Store
+**/Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Logs
+**/*.log
+**/logs/
+
+# Client resources (not needed for server build)
+Labyrinth.Client/
+
+# Management Client (not needed for server build)
+Labyrinth.ManagementClient/
+
+# Documentation
+*.md
+!Labyrinth.Server/DOCKER_DEPLOYMENT.md
+Docs/
+.github/
+.claude/
+
+# Other
+.env
+**/.env

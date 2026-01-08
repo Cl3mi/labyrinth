@@ -79,7 +79,10 @@ public class LabyrinthApplication {
         mainPanel.add(mainMenuPanel, "mainmenu");
 
 
-        var serversApi = ServerClientFactory.create(OptionsPanel.loadServerUrlFromPreferences());
+        String managementServerUrl = OptionsPanel.loadServerUrlFromPreferences();
+        System.out.println("=== Management Server Configuration ===");
+        System.out.println("Management server URL: " + managementServerUrl);
+        var serversApi = ServerClientFactory.create(managementServerUrl);
         serverBrowserPanel = new ServerBrowserPanel(serversApi);
         serverBrowserPanel.setOnBackToMenu(this::showMainMenu);
         serverBrowserPanel.setOnServerSelected(this::setUsername);
@@ -216,6 +219,10 @@ public class LabyrinthApplication {
         }
 
         var client = new GameClient(URI.create(gameServer.getUri()));
+        System.out.println("=== Connecting to server ===");
+        System.out.println("Server name: " + gameServer.getName());
+        System.out.println("Server URI: " + gameServer.getUri());
+        System.out.println("Username: " + multiplayerUsername);
         setupClient(client);
 
         CardLayout cl = (CardLayout) mainPanel.getLayout();

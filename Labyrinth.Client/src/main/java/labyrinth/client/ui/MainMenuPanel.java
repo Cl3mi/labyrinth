@@ -574,7 +574,10 @@ public class MainMenuPanel extends JPanel {
 
         // Mehrspieler Button
         MenuButton multiplayerBtn = new MenuButton("Mehrspieler", "Spiele online mit Freunden");
-        multiplayerBtn.addActionListener(e -> onMultiplayerClicked.run());
+        multiplayerBtn.addActionListener(e -> {
+            System.out.println("=== Multiplayer button pressed ===");
+            onMultiplayerClicked.run();
+        });
         multiplayerBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
         panel.add(multiplayerBtn);
 

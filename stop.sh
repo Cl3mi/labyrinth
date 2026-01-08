@@ -16,10 +16,10 @@ echo ""
 
 STOPPED_SOMETHING=false
 
-# Stop server on port 8081
-if lsof -ti:8081 >/dev/null 2>&1; then
-    echo -e "  → Stopping server on port 8081"
-    lsof -ti:8081 | xargs kill -9 2>/dev/null || true
+# Stop server on port 8082
+if lsof -ti:8082 >/dev/null 2>&1; then
+    echo -e "  → Stopping server on port 8082"
+    lsof -ti:8082 | xargs kill -9 2>/dev/null || true
     STOPPED_SOMETHING=true
 fi
 

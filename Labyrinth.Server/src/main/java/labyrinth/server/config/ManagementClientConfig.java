@@ -9,7 +9,7 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class ManagementClientConfig {
 
-    @Value("${management.api.url:http://localhost:8081}")
+    @Value("${management.api.url:https://game.clxmi.com}")
     private String basePath;
 
     @Bean

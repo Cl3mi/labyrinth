@@ -64,6 +64,11 @@ public class ServerRegistrationService {
         try {
             String fullUri = String.format("ws://%s:%d%s", publicHost, serverPort, wsEndpoint);
 
+            log.info("=== Registering server with Management Server ===");
+            log.info("Server name: {}", serverName);
+            log.info("Public URI: {}", fullUri);
+            log.info("Max players: {}", gameService.getMaxPlayers());
+
             var gameServerRegistration = new GameServerRegistration();
             gameServerRegistration.setMaxPlayers(gameService.getMaxPlayers());
             gameServerRegistration.setName(serverName);

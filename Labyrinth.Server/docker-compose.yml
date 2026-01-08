@@ -1,0 +1,24 @@
+services:
+  labyrinth-server:
+    build:
+      context: ..
+      dockerfile: Labyrinth.Server/Dockerfile
+    container_name: labyrinth-server
+    ports:
+      - "8082:8082"
+    environment:
+      # Override application.properties values via environment variables
+      - SPRING_APPLICATION_NAME=Labyrinth.Server
+      - SERVER_ADDRESS=0.0.0.0
+      - SERVER_NAME=Group1
+      - SERVER_PORT=8082
+      - SERVER_WSENDPOINT=/game
+      - SERVER_PUBLICHOST=game.clxmi.com
+      - MANAGEMENT_API_URL=https://game.clxmi.com
+    restart: unless-stopped
+    networks:
+      - labyrinth-network
+
+networks:
+  labyrinth-network:
+    driver: bridge

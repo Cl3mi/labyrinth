@@ -73,7 +73,7 @@ public class OptionsPanel extends JPanel {
     private static final String PREF_WINDOW_SIZE = "windowSize";
 
     // Default Server URL - zentrale Konfiguration
-    public static final String DEFAULT_SERVER_URL = "http://localhost:8081";
+    public static final String DEFAULT_SERVER_URL = "https://game.clxmi.com";
 
     // Farben - Mystische Labyrinth-Palette
     private static final Color PRIMARY_GOLD = new Color(218, 165, 32);
@@ -138,7 +138,7 @@ public class OptionsPanel extends JPanel {
     private void loadSettings() {
         musicVolume = PREFS.getInt(PREF_MUSIC_VOLUME, 50);
         sfxVolume = PREFS.getInt(PREF_SFX_VOLUME, 70);
-        serverUrl = PREFS.get(PREF_SERVER_URL, "ws://localhost:8082/game");
+        serverUrl = PREFS.get(PREF_SERVER_URL, DEFAULT_SERVER_URL);
         darkTheme = PREFS.getBoolean(PREF_DARK_THEME, true);
         windowSizeIndex = PREFS.getInt(PREF_WINDOW_SIZE, 1); // Default: 1400x900
     }

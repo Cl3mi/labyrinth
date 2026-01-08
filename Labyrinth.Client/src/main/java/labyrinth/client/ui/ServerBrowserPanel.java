@@ -203,9 +203,12 @@ public class ServerBrowserPanel extends JPanel {
 
         poller.scheduleAtFixedRate(() -> {
             try {
+                System.out.println("[ServerBrowser] Fetching server list from management server...");
                 List<GameServer> servers = serversApi.listServers();
+                System.out.println("[ServerBrowser] Received " + (servers != null ? servers.size() : 0) + " servers");
                 updateServerList(servers);
             } catch (Exception ex) {
+                System.err.println("[ServerBrowser] Error fetching server list: " + ex.getMessage());
                 ex.printStackTrace();
                 SwingUtilities.invokeLater(() -> statusLabel.setText("Fehler beim Laden"));
             }
