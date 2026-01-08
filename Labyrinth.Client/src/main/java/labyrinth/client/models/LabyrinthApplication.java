@@ -1,20 +1,18 @@
 package labyrinth.client.models;
 
-import labyrinth.client.ui.BoardPanel;
+import labyrinth.client.messaging.ServerClientFactory;
+import labyrinth.client.ui.*;
 import labyrinth.client.factories.BoardFactory;
 import labyrinth.client.messaging.GameClient;
 import labyrinth.client.messaging.ReconnectionManager;
-import labyrinth.client.ui.GameOverPanel;
-import labyrinth.client.ui.MainMenuPanel;
-import labyrinth.client.ui.MultiplayerLobbyPanel;
-import labyrinth.client.ui.OptionsPanel;
-import org.java_websocket.enums.ReadyState;
+import labyrinth.managementclient.model.GameServer;
 
 import javax.swing.*;
 import java.awt.*;
 import java.net.URI;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.function.Consumer;
 import java.util.prefs.Preferences;
 
 public class LabyrinthApplication {
@@ -33,6 +31,7 @@ public class LabyrinthApplication {
     private JPanel mainPanel;
     private MainMenuPanel mainMenuPanel;
     private MultiplayerLobbyPanel lobbyPanel;
+    private ServerBrowserPanel serverBrowserPanel;
     private OptionsPanel optionsPanel;
     private BoardPanel boardPanel;
     private GameOverPanel gameOverPanel;
@@ -64,12 +63,6 @@ public class LabyrinthApplication {
 
         mainPanel = new JPanel(new CardLayout());
 
-        // Lade Server-URL aus Einstellungen
-        URI serverUri = URI.create(OptionsPanel.loadServerUrlFromPreferences());
-        client = new GameClient(serverUri);
-        reconnectionManager = new ReconnectionManager(client, this);
-
-        registerCallbacks();
 
         // Hauptmenü erstellen
         mainMenuPanel = new MainMenuPanel();
@@ -80,15 +73,24 @@ public class LabyrinthApplication {
             mainMenuPanel.setMultiplayerUsername(storedUsername);
         }
         mainMenuPanel.setOnSingleplayerClicked(this::startSingleplayerGame);
-        mainMenuPanel.setOnMultiplayerClicked(this::showMultiplayerLobby);
+        mainMenuPanel.setOnMultiplayerClicked(this::showServerBrowser);
         mainMenuPanel.setOnOptionsClicked(this::showOptions);
         mainMenuPanel.setOnExitClicked(this::shutdownAndExit);
         mainPanel.add(mainMenuPanel, "mainmenu");
 
+
+        var serversApi = ServerClientFactory.create(OptionsPanel.loadServerUrlFromPreferences());
+        serverBrowserPanel = new ServerBrowserPanel(serversApi);
+        serverBrowserPanel.setOnBackToMenu(this::showMainMenu);
+        serverBrowserPanel.setOnServerSelected(this::setUsername);
+        mainPanel.add(serverBrowserPanel, "serverbrowser");
+
         // Multiplayer-Lobby erstellen
-        lobbyPanel = new MultiplayerLobbyPanel(client, null);
+        lobbyPanel = new MultiplayerLobbyPanel(null);
         lobbyPanel.setOnBackToMenu(this::showMainMenu);
         mainPanel.add(lobbyPanel, "lobby");
+
+
 
         // Options Panel erstellen
         optionsPanel = new OptionsPanel();
@@ -126,46 +128,7 @@ public class LabyrinthApplication {
         loginSent = false;
         connectAckReceived = false;
 
-        client.setOnConnectionLost(() -> {
-            if (isShuttingDown || isGameOverCleanup) {
-                System.out.println("Connection lost during shutdown/game-over cleanup - ignoring");
-                return;
-            }
-            SwingUtilities.invokeLater(() -> {
-                lobbyPanel.setStatusText("Verbindung unterbrochen - Wiederverbinden...",
-                        new Color(170, 120, 0));
-            });
-            reconnectionManager.startAutoReconnect();
-        });
 
-        client.setOnAchievementUnlocked(achievement -> {
-            System.out.println("[" + PROFILE + "] Achievement unlocked: "
-                    + achievement.getAchievement() + " for player " + achievement.getPlayerId());
-            SwingUtilities.invokeLater(() -> {
-                if (boardPanel != null) {
-                    String achievementName = achievement.getAchievement() != null
-                            ? achievement.getAchievement().toString() : "UNKNOWN";
-                    String displayName = formatAchievementName(achievementName);
-                    boardPanel.showSuccessToast("ACHIEVEMENT", "🏆 Erfolg freigeschaltet!", displayName);
-                }
-            });
-        });
-
-        client.setOnNextTreasure(nextTreasure -> {
-            System.out.println("[" + PROFILE + "] Next treasure: " + nextTreasure.getTreasure());
-            SwingUtilities.invokeLater(() -> {
-                if (boardPanel != null && nextTreasure.getTreasure() != null) {
-                    String treasureName = nextTreasure.getTreasure().getName();
-                    boardPanel.showInfoToast("NEXT_TREASURE", "🎯 Neues Ziel!", "Finde: " + treasureName);
-                }
-            });
-        });
-
-        client.setOnStatusUpdate(status -> {
-            SwingUtilities.invokeLater(() -> lobbyPanel.setStatusText(status, new Color(0, 150, 0)));
-        });
-
-        setupConnectionHook();
         showMainMenu();
     }
 
@@ -211,10 +174,23 @@ public class LabyrinthApplication {
         System.out.println("  Dark Theme: " + optionsPanel.isDarkTheme());
     }
 
-    private void showMultiplayerLobby() {
-        // Username aus dem MainMenu-Dialog an das LobbyPanel übergeben
-        String multiplayerUsername = mainMenuPanel.getMultiplayerUsername();
-        lobbyPanel.setMultiplayerUsername(multiplayerUsername);
+    private void showServerBrowser() {
+        CardLayout cl = (CardLayout) mainPanel.getLayout();
+        cl.show(mainPanel, "serverbrowser");
+
+        serverBrowserPanel.onShow();
+    }
+
+    private void setUsername(GameServer gameServer) {
+        mainMenuPanel.showMultiplayerUsernameDialog(new Consumer<String>() {
+            @Override
+            public void accept(String username) {
+                showMultiplayerLobby(gameServer, username);
+            }
+        });
+    }
+    private void showMultiplayerLobby(GameServer gameServer, String username) {
+        lobbyPanel.setMultiplayerUsername(username);
 
         // Für einen neuen Multiplayer-Beitritt Token löschen und Flags zurücksetzen
         ClientIdentityStore.clearToken();
@@ -226,6 +202,10 @@ public class LabyrinthApplication {
             isGameOverCleanup = true; // Verhindert ReconnectionManager
             try {
                 client.disconnectCleanly();
+                reconnectionManager.cancelReconnection();
+                client = null;
+                lobbyPanel.setClient(null);
+
                 // Kurz warten damit der Server die Trennung verarbeiten kann
                 Thread.sleep(200);
             } catch (Exception e) {
@@ -235,9 +215,62 @@ public class LabyrinthApplication {
             }
         }
 
+        var client = new GameClient(URI.create(gameServer.getUri()));
+        setupClient(client);
+
         CardLayout cl = (CardLayout) mainPanel.getLayout();
         cl.show(mainPanel, "lobby");
         connectToServer();
+    }
+
+    private void setupClient(GameClient client) {
+        this.client = client;
+
+        reconnectionManager = new ReconnectionManager(client, this);
+        lobbyPanel.setClient(client);
+
+        registerCallbacks();
+
+        client.setOnConnectionLost(() -> {
+            if (isShuttingDown || isGameOverCleanup) {
+                System.out.println("Connection lost during shutdown/game-over cleanup - ignoring");
+                return;
+            }
+            SwingUtilities.invokeLater(() -> {
+                lobbyPanel.setStatusText("Verbindung unterbrochen - Wiederverbinden...",
+                        new Color(170, 120, 0));
+            });
+            reconnectionManager.startAutoReconnect();
+        });
+
+        client.setOnAchievementUnlocked(achievement -> {
+            System.out.println("[" + PROFILE + "] Achievement unlocked: "
+                    + achievement.getAchievement() + " for player " + achievement.getPlayerId());
+            SwingUtilities.invokeLater(() -> {
+                if (boardPanel != null) {
+                    String achievementName = achievement.getAchievement() != null
+                            ? achievement.getAchievement().toString() : "UNKNOWN";
+                    String displayName = formatAchievementName(achievementName);
+                    boardPanel.showSuccessToast("ACHIEVEMENT", "🏆 Erfolg freigeschaltet!", displayName);
+                }
+            });
+        });
+
+        client.setOnNextTreasure(nextTreasure -> {
+            System.out.println("[" + PROFILE + "] Next treasure: " + nextTreasure.getTreasure());
+            SwingUtilities.invokeLater(() -> {
+                if (boardPanel != null && nextTreasure.getTreasure() != null) {
+                    String treasureName = nextTreasure.getTreasure().getName();
+                    boardPanel.showInfoToast("NEXT_TREASURE", "🎯 Neues Ziel!", "Finde: " + treasureName);
+                }
+            });
+        });
+
+        client.setOnStatusUpdate(status -> {
+            SwingUtilities.invokeLater(() -> lobbyPanel.setStatusText(status, new Color(0, 150, 0)));
+        });
+
+        setupConnectionHook();
     }
 
     private void startSingleplayerGame() {
