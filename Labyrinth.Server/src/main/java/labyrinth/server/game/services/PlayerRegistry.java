@@ -50,7 +50,6 @@ public class PlayerRegistry {
         Player player = new Player(UUID.randomUUID(), username);
         player.setColor(getNextColor());
 
-        // First player becomes admin
         if (players.isEmpty()) {
             player.setAdmin(true);
         }
@@ -73,13 +72,11 @@ public class PlayerRegistry {
             return new LeaveResult(false, null, false);
         }
 
-        // Check if we need to reassign admin
         Player newAdmin = null;
         if (player.isAdmin()) {
             newAdmin = reassignAdmin();
         }
 
-        // Check if only AI players remain (or no players at all)
         boolean shouldShutdown = players.stream().noneMatch(p -> !p.isAiActive());
 
         return new LeaveResult(true, newAdmin, shouldShutdown);
