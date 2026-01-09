@@ -271,11 +271,9 @@ public class Game {
         player.getStatistics().increaseScore(PointRewards.REWARD_SHIFT_TILE);
         player.getStatistics().increaseTilesPushed(1);
 
-        var pusherAchieved = achievementService.checkPusherAchievement(player).isPresent();
-
         logShiftAction(index, direction, player);
 
-        return new ShiftResult(true, pusherAchieved);
+        return new ShiftResult(true, false);
     }
 
     public void toggleAiForPlayer(Player player) {
@@ -321,6 +319,10 @@ public class Game {
                 System.out.println("[GAME OVER DEBUG]   Treasure " + i + ": " + tc.getTreasureName() + " collected=" + tc.isCollected());
             }
             System.out.println("[GAME OVER DEBUG] Player reached home tile - game over!");
+
+            // Award end-game achievements BEFORE game over
+            awardEndGameAchievements();
+
             gameOver();
             gameOver = true;
             gameLogger.log(GameLogType.GAME_OVER, "Game Over. Winner: " + player.getUsername(), player, null);
@@ -332,10 +334,32 @@ public class Game {
             gameLogger.log(GameLogType.COLLECT_TREASURE, "Player collected treasure", player, null);
         }
 
-        var runnerAchieved = achievementService.checkRunnerAchievement(player).isPresent();
-
         nextPlayer();
-        return new MovePlayerToTileResult(true, distanceMoved, treasureCollected, gameOver, runnerAchieved);
+        return new MovePlayerToTileResult(true, distanceMoved, treasureCollected, gameOver, false);
+    }
+
+    private List<labyrinth.server.game.services.AchievementService.AchievementAward> endGameAchievements = new ArrayList<>();
+
+    /**
+     * Awards end-game achievements to players with the best statistics.
+     * Called before game over to ensure achievements are awarded before final scoring.
+     */
+    private void awardEndGameAchievements() {
+        endGameAchievements = achievementService.awardEndGameAchievements(playerRegistry.getPlayersInternal());
+
+        // Increase scores for awarded achievements
+        for (var award : endGameAchievements) {
+            award.player().getStatistics().increaseScore(50); // Achievement bonus points
+            System.out.println("[ACHIEVEMENT] " + award.player().getUsername() + " earned " + award.achievement());
+        }
+    }
+
+    /**
+     * Gets the achievements that were awarded at the end of the game.
+     * @return list of achievement awards
+     */
+    public List<labyrinth.server.game.services.AchievementService.AchievementAward> getEndGameAchievements() {
+        return new ArrayList<>(endGameAchievements);
     }
 
     private void gameOver() {

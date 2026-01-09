@@ -25,23 +25,19 @@ class AiHomeReturnTest {
 
     @Test
     void aiShouldTargetHomeTileWhenAllTreasuresCollected() {
-        // Arrange - Create a simple AI strategy for testing
         SimpleAiStrategy aiStrategy = new SimpleAiStrategy();
         Game game = new Game(mock(IGameTimer.class), aiStrategy, new GameLogger());
         GameConfig gameConfig = GameConfig.getDefault();
         Board board = new labyrinth.server.game.factories.BoardFactory().createBoard(7, 7, 0);
 
-        // Create only 1 treasure per player
         List<TreasureCard> treasureCards = new ArrayList<>();
         for (int i = 0; i < 4; i++) {
             treasureCards.add(new TreasureCard(i, "Treasure" + i, "img"));
         }
 
-        // Join and start game
         game.join("TestPlayer");
         game.startGame(gameConfig, treasureCards, board);
 
-        // Get one of the AI players
         Player aiPlayer = game.getPlayers().stream()
                 .filter(Player::isAiActive)
                 .findFirst()
@@ -49,7 +45,6 @@ class AiHomeReturnTest {
 
         assertNotNull(aiPlayer, "Should have at least one AI player");
 
-        // Manually collect AI player's treasure
         aiPlayer.getCurrentTreasureCard().collect();
         assertNull(aiPlayer.getCurrentTreasureCard(), "AI should have no more treasures");
 
@@ -59,31 +54,22 @@ class AiHomeReturnTest {
         System.out.println("Current position: " + game.getCurrentPositionOfPlayer(aiPlayer));
         System.out.println("All treasures collected - AI should target home\n");
 
-        // Act - Run AI strategy simulation (test the logic without async)
-        // The AI's findBestMove should now target the home tile
         var clonedBoard = board.copy();
         var clonedAiPlayer = clonedBoard.getPlayers().stream()
                 .filter(p -> p.getId().equals(aiPlayer.getId()))
                 .findFirst()
                 .get();
 
-        // Verify that home tile position is available in cloned board
         Position homeInClone = clonedBoard.getPositionOfTile(clonedAiPlayer.getHomeTile());
         assertNotNull(homeInClone, "Home tile should exist in cloned board");
         assertEquals(homeTilePos, homeInClone, "Home tile position should be the same");
 
-        // Check if home is reachable
         Set<labyrinth.server.game.models.Tile> reachable = clonedBoard.getReachableTiles(clonedAiPlayer);
         boolean homeIsReachable = reachable.contains(clonedAiPlayer.getHomeTile());
 
         System.out.println("Home tile reachable from current position: " + homeIsReachable);
         System.out.println("Number of reachable tiles: " + reachable.size());
 
-        // Assert - The test verifies the logic is in place
-        // We can't test async AI behavior easily, but we verified:
-        // 1. AI player has no treasures
-        // 2. Home tile exists and has a position
-        // 3. The game logic for detecting home arrival works (other tests verify this)
         assertTrue(true, "AI logic is correctly set up to target home tile when treasures are collected");
     }
 
