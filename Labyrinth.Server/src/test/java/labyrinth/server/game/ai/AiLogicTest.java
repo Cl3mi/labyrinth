@@ -78,8 +78,9 @@ class AiLogicTest {
         System.out.println("P2 End: " + endPosP2);
 
         // If AI worked, it must have shifted the board.
-        // We can check if currentPlayer is P1 again (since P2 finished turn instantly).
-        Assertions.assertEquals(p1, game.getCurrentPlayer(), "AI should have finished its turn and passed back to P1");
+        // Game now fills with AI players to 4 total, so after P2 comes Bot 3, not back to P1
+        // Check that current player is not P2 (meaning P2's turn finished)
+        Assertions.assertNotEquals(p2, game.getCurrentPlayer(), "AI should have finished its turn");
     }
 
     // Helper to create a board if needed, or use real one
