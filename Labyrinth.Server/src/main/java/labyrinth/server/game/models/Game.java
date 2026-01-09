@@ -8,13 +8,14 @@ import labyrinth.server.game.constants.PointRewards;
 import labyrinth.server.game.enums.*;
 import labyrinth.server.game.models.records.GameConfig;
 import labyrinth.server.game.models.records.Position;
-import labyrinth.server.game.results.LeaveResult;
 import labyrinth.server.game.results.MovePlayerToTileResult;
 import labyrinth.server.game.results.ShiftResult;
 import labyrinth.server.game.services.GameLogger;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.Setter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
@@ -30,6 +31,7 @@ import java.util.UUID;
 @Setter
 public class Game {
 
+    private static final Logger log = LoggerFactory.getLogger(Game.class);
     private final int MAX_PLAYERS = 4;
 
     private IGameTimer nextTurnTimer;
@@ -181,32 +183,27 @@ public class Game {
         }
     }
 
-    public LeaveResult leave(Player player) {
-        // Check if player exists in the list
-        boolean wasRemoved = players.removeIf(p -> p.getId().equals(player.getId()));
-
-        if (!wasRemoved) {
-            return new LeaveResult(false, null, false);
+    public void leave(Player player) {
+        if (roomState == RoomState.LOBBY) {
+            players.remove(player);
+        } else {
+            player.setAiActive(true);
         }
 
-        // Check if we need to reassign admin
-        Player newAdmin = null;
         if (player.isAdmin()) {
-            // Find first non-AI player to become new admin
             var nextAdmin = players.stream()
                     .filter(p -> !p.isAiActive())
                     .findFirst();
 
-            if (nextAdmin.isPresent()) {
-                nextAdmin.get().setAdmin(true);
-                newAdmin = nextAdmin.get();
-            }
+            nextAdmin.ifPresent(value -> value.setAdmin(true));
         }
 
         // Check if only AI players remain (or no players at all)
-        boolean shouldShutdown = players.stream().noneMatch(p -> !p.isAiActive());
+        boolean shouldShutdown = players.stream().allMatch(Player::isAiActive);
 
-        return new LeaveResult(true, newAdmin, shouldShutdown);
+        if (shouldShutdown) {
+            resetForNewGame();
+        }
     }
 
     /**
@@ -240,7 +237,7 @@ public class Game {
         // Reset to LOBBY state - this is the key change!
         this.roomState = RoomState.LOBBY;
 
-        System.out.println("[Game] Game reset to LOBBY state for new game");
+        log.info("[Game] Game reset to LOBBY state for new game");
     }
 
     public Player getPlayer(UUID playerId) {
@@ -440,10 +437,10 @@ public class Game {
 
     private synchronized void nextPlayer() {
         turnController.advanceToNextPlayer(
-                            players,
-                            roomState,
-                            gameConfig,
-                      player -> aiStrategy.performTurn(this, player));
+                players,
+                roomState,
+                gameConfig,
+                player -> aiStrategy.performTurn(this, player));
     }
 
     private void guardFor(MoveState moveState) {

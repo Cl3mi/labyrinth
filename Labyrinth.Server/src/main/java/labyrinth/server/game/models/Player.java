@@ -24,6 +24,8 @@ public class Player {
     private OffsetDateTime joinDate;
 
     private boolean isAiActive;
+    private boolean isDisconnected; //TODO : implement reconnection logic
+
     private boolean isAdmin;
     private PlayerColor color;
     private PlayerStatistics statistics;

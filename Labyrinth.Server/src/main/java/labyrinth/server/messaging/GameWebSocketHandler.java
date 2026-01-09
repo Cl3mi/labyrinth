@@ -47,10 +47,17 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
         UUID playerId = playerSessionRegistry.getPlayerId(session);
         if (playerId != null && gameService.getGameState() == RoomState.LOBBY) {
             var player = gameService.getPlayer(playerId);
+
+            if(player == null) {
+                return;
+            }
+
+            playerSessionRegistry.removePlayer(playerId);
             gameService.leave(player);
 
-            broadcastLobbyState();
-            playerSessionRegistry.removePlayer(playerId);
+            if(gameService.getGameState() == RoomState.LOBBY) {
+                broadcastLobbyState();
+            }
         }
         else {
             playerSessionRegistry.markDisconnected(session);

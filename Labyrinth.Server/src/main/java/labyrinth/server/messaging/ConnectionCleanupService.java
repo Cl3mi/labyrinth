@@ -3,8 +3,10 @@ package labyrinth.server.messaging;
 import labyrinth.contracts.models.EventType;
 import labyrinth.contracts.models.LobbyStateEventPayload;
 import labyrinth.contracts.models.PlayerInfo;
+import labyrinth.contracts.models.PlayerUpdatedEventPayload;
 import labyrinth.server.game.GameService;
 import labyrinth.server.game.enums.RoomState;
+import labyrinth.server.game.models.Player;
 import labyrinth.server.messaging.mapper.PlayerInfoMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -37,6 +39,8 @@ public class ConnectionCleanupService {
                     if (gameService.getGameState() == RoomState.LOBBY) {
                         broadcastLobbyState();
                     }
+
+                    broadcastPlayerUpdated(player);
                 }
 
                 playerSessionRegistry.removePlayer(playerId);
@@ -78,5 +82,13 @@ public class ConnectionCleanupService {
         lobbyStateUpdated.setPlayers(players);
 
         messageService.broadcastToPlayers(lobbyStateUpdated);
+    }
+
+    private void broadcastPlayerUpdated(Player player) {
+        var playerUpdatedEventPayload = new PlayerUpdatedEventPayload();
+        playerUpdatedEventPayload.setType(EventType.PLAYER_UPDATED);
+        playerUpdatedEventPayload.setPlayer(playerInfoMapper.toDto(player));
+
+        messageService.broadcastToPlayers(playerUpdatedEventPayload);
     }
 }

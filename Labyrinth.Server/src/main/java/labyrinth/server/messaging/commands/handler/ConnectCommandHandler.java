@@ -4,6 +4,7 @@ import labyrinth.contracts.models.*;
 import labyrinth.server.exceptions.ActionErrorException;
 import labyrinth.server.game.GameService;
 import labyrinth.server.game.enums.RoomState;
+import labyrinth.server.game.models.Player;
 import labyrinth.server.messaging.MessageService;
 import labyrinth.server.messaging.PlayerSessionRegistry;
 import labyrinth.server.messaging.mapper.GameMapper;
@@ -73,7 +74,7 @@ public class ConnectCommandHandler extends AbstractCommandHandler<ConnectCommand
                     throw new ActionErrorException("Player session has expired", ErrorCode.PLAYER_NOT_FOUND);
                 }
 
-                registerExistingPlayer(playerId, identifierToken, session);
+                registerExistingPlayer(player, identifierToken, session);
             } else {
                 // identifierToken couldn't be parsed -> treat like unknown token above
                 if (payload.getUsername() == null || payload.getUsername().isBlank()) {
@@ -96,12 +97,14 @@ public class ConnectCommandHandler extends AbstractCommandHandler<ConnectCommand
 
         registerAndSendAck(newPlayer.getId(), newIdentifier);
         sendStateForPlayer(newPlayer.getId());
+        broadcastPlayerUpdated(newPlayer);
     }
 
-    private void registerExistingPlayer(UUID playerId, UUID identifierToken, WebSocketSession session) throws Exception {
-        playerSessionRegistry.registerPlayer(playerId, identifierToken, session);
-        registerAndSendAck(playerId, identifierToken);
-        sendStateForPlayer(playerId);
+    private void registerExistingPlayer(Player player, UUID identifierToken, WebSocketSession session) throws Exception {
+        playerSessionRegistry.registerPlayer(player.getId(), identifierToken, session);
+        registerAndSendAck(player.getId(), identifierToken);
+        sendStateForPlayer(player.getId());
+        broadcastPlayerUpdated(player);
     }
 
     private void registerAndSendAck(UUID playerId, UUID identifierToken) {
@@ -140,5 +143,13 @@ public class ConnectCommandHandler extends AbstractCommandHandler<ConnectCommand
         lobbyStateUpdated.setPlayers(players);
 
         return lobbyStateUpdated;
+    }
+
+    private void broadcastPlayerUpdated(Player player) {
+        var playerUpdatedEventPayload = new PlayerUpdatedEventPayload();
+        playerUpdatedEventPayload.setType(EventType.PLAYER_UPDATED);
+        playerUpdatedEventPayload.setPlayer(playerInfoMapper.toDto(player));
+
+        messageService.broadcastToPlayers(playerUpdatedEventPayload);
     }
 }
