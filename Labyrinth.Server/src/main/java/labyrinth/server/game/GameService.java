@@ -204,6 +204,13 @@ public class GameService {
         }
     }
 
+    /**
+     * Alias for getGameState() for backward compatibility with tests.
+     */
+    public RoomState getRoomState() {
+        return getGameState();
+    }
+
     public Player getPlayer(UUID playerId) {
         rwLock.readLock().lock();
         try {
@@ -225,7 +232,9 @@ public class GameService {
     public void startGame(GameConfig gameConfig) {
         rwLock.writeLock().lock();
         try {
-            // Fill with AI players before calculating treasure count
+            // Note: Game.startGame() will call fillWithAiPlayers() internally
+            // We need to know the player count AFTER AI fill to create the right number of treasures
+            // So we call it here first to get the correct count
             game.fillWithAiPlayers();
 
             int playersCount = game.getPlayers().size();

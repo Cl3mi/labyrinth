@@ -11,8 +11,8 @@ public record GameConfig(
     public GameConfig {
         if (boardWidth <= 0 || boardHeight <= 0)
             throw new IllegalArgumentException("Board size must be positive");
-        if (treasureCardCount <= 0 || treasureCardCount > 100)
-            throw new IllegalArgumentException("Treasure card count must be between 1 and 100");
+        if (treasureCardCount <= 0 || treasureCardCount > 24)
+            throw new IllegalArgumentException("Treasure card count must be between 1 and 22");
         if (gameDurationInSeconds <= 0 || gameDurationInSeconds > 3600)
             throw new IllegalArgumentException("Game duration must be between 1 and 3600 seconds");
         if (totalBonusCount < 0 || totalBonusCount > 20)

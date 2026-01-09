@@ -38,8 +38,9 @@ class GameServiceTest {
     void testAdminReassignmentOnLeave() {
         // Create real Game object for testing admin reassignment logic
         IGameTimer mockTimer = mock(IGameTimer.class);
-        org.springframework.context.ApplicationEventPublisher mockEventPublisher = mock(org.springframework.context.ApplicationEventPublisher.class);
-        Game game = new Game(mockTimer, mockEventPublisher);
+        labyrinth.server.game.ai.AiStrategy mockAiStrategy = mock(labyrinth.server.game.ai.AiStrategy.class);
+        labyrinth.server.game.services.GameLogger mockGameLogger = new labyrinth.server.game.services.GameLogger();
+        Game game = new Game(mockTimer, mockAiStrategy, mockGameLogger);
 
         // Add two players
         Player player1 = game.join("Player1");
@@ -60,8 +61,9 @@ class GameServiceTest {
     @Test
     void testAdminReassignmentPrefersHuman() {
         IGameTimer mockTimer = mock(IGameTimer.class);
-        org.springframework.context.ApplicationEventPublisher mockEventPublisher = mock(org.springframework.context.ApplicationEventPublisher.class);
-        Game game = new Game(mockTimer, mockEventPublisher);
+        labyrinth.server.game.ai.AiStrategy mockAiStrategy = mock(labyrinth.server.game.ai.AiStrategy.class);
+        labyrinth.server.game.services.GameLogger mockGameLogger = new labyrinth.server.game.services.GameLogger();
+        Game game = new Game(mockTimer, mockAiStrategy, mockGameLogger);
 
         // Add human player
         Player human = game.join("HumanPlayer");
@@ -97,8 +99,9 @@ class GameServiceTest {
     @Test
     void testLeaveEmptyLobby() {
         IGameTimer mockTimer = mock(IGameTimer.class);
-        org.springframework.context.ApplicationEventPublisher mockEventPublisher = mock(org.springframework.context.ApplicationEventPublisher.class);
-        Game game = new Game(mockTimer, mockEventPublisher);
+        labyrinth.server.game.ai.AiStrategy mockAiStrategy = mock(labyrinth.server.game.ai.AiStrategy.class);
+        labyrinth.server.game.services.GameLogger mockGameLogger = new labyrinth.server.game.services.GameLogger();
+        Game game = new Game(mockTimer, mockAiStrategy, mockGameLogger);
 
         Player player1 = game.join("Player1");
         assertTrue(player1.isAdmin());
@@ -113,8 +116,9 @@ class GameServiceTest {
     @Test
     void testNonAdminLeave_NoReassignment() {
         IGameTimer mockTimer = mock(IGameTimer.class);
-        org.springframework.context.ApplicationEventPublisher mockEventPublisher = mock(org.springframework.context.ApplicationEventPublisher.class);
-        Game game = new Game(mockTimer, mockEventPublisher);
+        labyrinth.server.game.ai.AiStrategy mockAiStrategy = mock(labyrinth.server.game.ai.AiStrategy.class);
+        labyrinth.server.game.services.GameLogger mockGameLogger = new labyrinth.server.game.services.GameLogger();
+        Game game = new Game(mockTimer, mockAiStrategy, mockGameLogger);
 
         Player player1 = game.join("Player1"); // Admin
         Player player2 = game.join("Player2"); // Not admin
@@ -133,8 +137,9 @@ class GameServiceTest {
     @Test
     void testAdminReassignmentWithMultiplePlayers() {
         IGameTimer mockTimer = mock(IGameTimer.class);
-        org.springframework.context.ApplicationEventPublisher mockEventPublisher = mock(org.springframework.context.ApplicationEventPublisher.class);
-        Game game = new Game(mockTimer, mockEventPublisher);
+        labyrinth.server.game.ai.AiStrategy mockAiStrategy = mock(labyrinth.server.game.ai.AiStrategy.class);
+        labyrinth.server.game.services.GameLogger mockGameLogger = new labyrinth.server.game.services.GameLogger();
+        Game game = new Game(mockTimer, mockAiStrategy, mockGameLogger);
 
         Player player1 = game.join("Player1"); // Admin
         Player player2 = game.join("Player2");
