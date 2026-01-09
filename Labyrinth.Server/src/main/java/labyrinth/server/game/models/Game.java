@@ -312,13 +312,15 @@ public class Game {
         }
 
         var gameOver = false;
-        if (currentTreasureCardAfterMove == null) {
+        // Check if player has collected all treasures AND reached their home tile
+        if (currentTreasureCardAfterMove == null && player.getCurrentTile() == player.getHomeTile()) {
             System.out.println("[GAME OVER DEBUG] Player " + player.getUsername() + " triggered game over");
             System.out.println("[GAME OVER DEBUG] Player has " + player.getAssignedTreasureCards().size() + " assigned treasures");
             for (int i = 0; i < player.getAssignedTreasureCards().size(); i++) {
                 TreasureCard tc = player.getAssignedTreasureCards().get(i);
                 System.out.println("[GAME OVER DEBUG]   Treasure " + i + ": " + tc.getTreasureName() + " collected=" + tc.isCollected());
             }
+            System.out.println("[GAME OVER DEBUG] Player reached home tile - game over!");
             gameOver();
             gameOver = true;
             gameLogger.log(GameLogType.GAME_OVER, "Game Over. Winner: " + player.getUsername(), player, null);
