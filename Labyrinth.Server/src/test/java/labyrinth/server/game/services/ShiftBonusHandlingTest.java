@@ -57,8 +57,8 @@ class ShiftBonusHandlingTest {
 
     @Test
     void shift_withPushTwiceBonus_shouldAllowAnotherPush() {
-        // Arrange
-        player.getBonuses().add(BonusTypes.PUSH_TWICE);
+        // Arrange - use package-private method to add bonus for testing
+        player.addBonus(BonusTypes.PUSH_TWICE);
         game.usePushTwiceBonus(player);
 
         // Act - first shift with PUSH_TWICE active
@@ -72,8 +72,8 @@ class ShiftBonusHandlingTest {
 
     @Test
     void shift_withPushTwiceBonus_shouldConsumeBonus() {
-        // Arrange
-        player.getBonuses().add(BonusTypes.PUSH_TWICE);
+        // Arrange - use package-private method to add bonus for testing
+        player.addBonus(BonusTypes.PUSH_TWICE);
         game.usePushTwiceBonus(player);
         BonusTypes activeBonusBeforeShift = game.getActiveBonus();
 
@@ -87,8 +87,8 @@ class ShiftBonusHandlingTest {
 
     @Test
     void shift_withPushFixedBonus_shouldAllowShiftingFixedTiles() {
-        // Arrange
-        player.getBonuses().add(BonusTypes.PUSH_FIXED);
+        // Arrange - use package-private method to add bonus for testing
+        player.addBonus(BonusTypes.PUSH_FIXED);
         game.usePushFixedBonus(player);
 
         // Act
@@ -100,8 +100,8 @@ class ShiftBonusHandlingTest {
 
     @Test
     void shift_withPushFixedBonus_shouldConsumeBonus() {
-        // Arrange
-        player.getBonuses().add(BonusTypes.PUSH_FIXED);
+        // Arrange - use package-private method to add bonus for testing
+        player.addBonus(BonusTypes.PUSH_FIXED);
         game.usePushFixedBonus(player);
         BonusTypes activeBonusBeforeShift = game.getActiveBonus();
 

@@ -25,9 +25,11 @@ import java.util.UUID;
 /**
  * Represents a game room for the Labyrinth game.
  * Each game has a unique code, a board, and manages 2–4 players.
+ *
+ * Encapsulation: Uses explicit methods instead of blanket @Setter.
+ * Critical game state is protected from external modification.
  */
 @Getter
-@Setter
 public class Game {
 
     private final int MAX_PLAYERS = 4;

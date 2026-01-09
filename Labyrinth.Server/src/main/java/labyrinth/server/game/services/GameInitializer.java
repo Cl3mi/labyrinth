@@ -40,7 +40,7 @@ public class GameInitializer {
             board.placeRandomTreasure(card);
 
             Player player = players.get(playerToAssignCardsToIndex);
-            player.getAssignedTreasureCards().add(card);
+            player.addTreasureCard(card);  // Use package-private method
             System.out.println("[TREASURE DEBUG] Assigned '" + card.getTreasureName() + "' to " + player.getUsername());
 
             playerToAssignCardsToIndex++;

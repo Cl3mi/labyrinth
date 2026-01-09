@@ -77,7 +77,7 @@ public class MovementManager {
         if (result.collectedBonus() != null) {
             LOGGER.info("Player " + player.getUsername() + " collected bonus: "
                     + result.collectedBonus());
-            player.getBonuses().add(result.collectedBonus());
+            player.addBonus(result.collectedBonus());  // Use package-private method
             tile.setBonus(null); // Remove from tile
         }
 
