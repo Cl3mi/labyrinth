@@ -105,8 +105,6 @@ public class Game {
         return result;
     }
 
-    // Kept for backward compatibility / API contract compliance, but delegates to strategy
-    // Should be cleaned up I guess?
     public boolean useBeamBonus(int row, int col, Player player) {
         guardFor(RoomState.IN_GAME);
         guardFor(player);
@@ -164,30 +162,16 @@ public class Game {
      * This allows starting a new game after the previous one has finished.
      */
     public void resetForNewGame() {
-        // Stop any running timers
         if (nextTurnTimer != null) {
             nextTurnTimer.stop();
         }
 
-        // Clear all players (including AI bots)
         playerRegistry.clear();
-
-        // Reset board
         this.board = null;
-
-        // Reset game config to defaults
         this.gameConfig = GameConfig.getDefault();
-
-        // Reset bonus state
         this.activeBonusState = NoBonusActive.getInstance();
-
-        // Reset turn controller
         turnController.reset();
-
-        // Reset game timing
         this.gameStartTime = null;
-
-        // Reset to LOBBY state - this is the key change!
         this.roomState = RoomState.LOBBY;
 
         System.out.println("[Game] Game reset to LOBBY state for new game");
