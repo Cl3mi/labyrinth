@@ -250,11 +250,6 @@ public class Game {
 
         var fixedBonusActive = activeBonusState.isOfType(BonusTypes.PUSH_FIXED);
 
-        if (fixedBonusActive) {
-            // TODO: do not allow to shift border rows/columns because it would move home
-            // tiles
-        }
-
         boolean res = switch (direction) {
             case UP -> board.shiftColumnUp(index, fixedBonusActive);
             case DOWN -> board.shiftColumnDown(index, fixedBonusActive);

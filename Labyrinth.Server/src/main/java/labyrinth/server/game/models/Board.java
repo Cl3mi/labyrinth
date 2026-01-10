@@ -134,6 +134,11 @@ public class Board {
     }
 
     public boolean shiftColumnDown(int columnIndex, boolean fixedBonusActive) {
+        // Never allow pushing the outer columns (home positions)
+        if (columnIndex == 0 || columnIndex == width - 1) {
+            return false;
+        }
+
         if (colContainsFixedTile(columnIndex) && !fixedBonusActive) {
             return false;
         }
@@ -154,6 +159,11 @@ public class Board {
     }
 
     public boolean shiftColumnUp(int columnIndex, boolean fixedBonusActive) {
+        // Never allow pushing the outer columns (home positions)
+        if (columnIndex == 0 || columnIndex == width - 1) {
+            return false;
+        }
+
         if (colContainsFixedTile(columnIndex) && !fixedBonusActive) {
             return false;
         }
@@ -172,6 +182,11 @@ public class Board {
     }
 
     public boolean shiftRowLeft(int rowIndex, boolean fixedBonusActive) {
+        // Never allow pushing the outer rows (home positions)
+        if (rowIndex == 0 || rowIndex == height - 1) {
+            return false;
+        }
+
         if (rowContainsFixedTile(rowIndex) && !fixedBonusActive) {
             return false;
         }
@@ -192,6 +207,11 @@ public class Board {
     }
 
     public boolean shiftRowRight(int rowIndex, boolean fixedBonusActive) {
+        // Never allow pushing the outer rows (home positions)
+        if (rowIndex == 0 || rowIndex == height - 1) {
+            return false;
+        }
+
         if (rowContainsFixedTile(rowIndex) && !fixedBonusActive) {
             return false;
         }

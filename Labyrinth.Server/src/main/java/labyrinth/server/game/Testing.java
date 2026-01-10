@@ -1,6 +1,7 @@
 package labyrinth.server.game;
 
 import labyrinth.server.game.abstractions.IGameTimer;
+import labyrinth.server.game.enums.BonusTypes;
 import labyrinth.server.game.enums.Direction;
 import labyrinth.server.game.factories.BoardFactory;
 import labyrinth.server.game.factories.TreasureCardFactory;
@@ -54,12 +55,13 @@ public class Testing {
 
         var p4 = game.getPlayers().get(3);
 
-         game.toggleAiForPlayer(p1);
-         game.toggleAiForPlayer(p2);
-         game.toggleAiForPlayer(p3);
-         game.toggleAiForPlayer(p4);
+//         game.toggleAiForPlayer(p1);
+//         game.toggleAiForPlayer(p2);
+//         game.toggleAiForPlayer(p3);
+//         game.toggleAiForPlayer(p4);
 
         game.startGame(gameConfig, cards, board);
+        game.setActiveBonus(BonusTypes.PUSH_FIXED);
 
         // Open Debug Viewer
         LabyrinthViewer.viewSwing(game);
