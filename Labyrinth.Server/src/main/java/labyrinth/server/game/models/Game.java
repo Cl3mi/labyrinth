@@ -11,6 +11,7 @@ import labyrinth.server.game.models.records.Position;
 import labyrinth.server.game.results.LeaveResult;
 import labyrinth.server.game.results.MovePlayerToTileResult;
 import labyrinth.server.game.results.ShiftResult;
+import labyrinth.server.game.services.GameInitializer;
 import labyrinth.server.game.services.GameLogger;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -70,13 +71,14 @@ public class Game {
     public Game(
             IGameTimer nextTurnTimer,
             AiStrategy aiStrategy,
-            GameLogger gameLogger
+            GameLogger gameLogger,
+            GameInitializer gameInitializer
     ) {
         this.nextTurnTimer = nextTurnTimer;
         this.aiStrategy = aiStrategy;
         this.gameLogger = gameLogger;
         this.playerRegistry = new labyrinth.server.game.services.PlayerRegistry(MAX_PLAYERS);
-        this.gameInitializer = new labyrinth.server.game.services.GameInitializer();
+        this.gameInitializer = gameInitializer;
         this.roomState = RoomState.LOBBY;
         this.board = null;
         this.gameConfig = GameConfig.getDefault();
@@ -201,8 +203,7 @@ public class Game {
 
         // Delegate initialization to GameInitializer
         List<Player> players = playerRegistry.getPlayersInternal(); // Internal mutable list
-        gameInitializer.distributeTreasureCards(treasureCards, board, players);
-        gameInitializer.placeBonuses(board, this.gameConfig.totalBonusCount());
+        gameInitializer.distributeTreasuresAndBonuses(treasureCards, board, players, this.gameConfig.totalBonusCount());
         gameInitializer.initializePlayerPositions(board, this.gameConfig, players);
         gameInitializer.logGameStart(board, this.gameConfig, players, gameLogger);
 

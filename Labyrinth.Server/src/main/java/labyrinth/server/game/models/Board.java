@@ -267,43 +267,6 @@ public class Board {
         return graph.findReachable(startTile);
     }
 
-    public void placeRandomTreasure(TreasureCard treasureCard) {
-        Random random = new Random();
-        Tile tile;
-        int row, col;
-        boolean tileHasTreasure;
-
-        do {
-            row = random.nextInt(height);
-            col = random.nextInt(width);
-            tile = tileMap.getForward(new Position(row, col));
-            tileHasTreasure = tile != null && tile.getTreasureCard() != null;
-        } while (isCornerCoordinate(row, col) || tileHasTreasure);
-        LOGGER.info("Placing " + treasureCard.getTreasureName() + " at " + row + "/" + col);
-
-        tile.setTreasureCard(treasureCard);
-    }
-
-    public void placeRandomBonuses(List<BonusTypes> bonuses) {
-        Random random = new Random();
-        Tile tile;
-        int row, col;
-        boolean tileIsOccupied;
-
-        for (BonusTypes bonus : bonuses) {
-            do {
-                row = random.nextInt(height);
-                col = random.nextInt(width);
-                tile = tileMap.getForward(new Position(row, col));
-                // Check if tile has treasure OR bonus
-                tileIsOccupied = tile != null && (tile.getTreasureCard() != null || tile.getBonus() != null);
-            } while (isCornerCoordinate(row, col) || tileIsOccupied);
-
-            LOGGER.info("Placing bonus " + bonus + " at " + row + "/" + col);
-            tile.setBonus(bonus);
-        }
-    }
-
     public boolean isCornerCoordinate(int row, int col) {
         boolean isTopLeft = (row == 0 && col == 0);
         boolean isTopRight = (row == 0 && col == this.width - 1);

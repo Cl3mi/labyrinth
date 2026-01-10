@@ -36,7 +36,7 @@ class EndGameAchievementTest {
     void setUp() {
         game = new Game(mock(IGameTimer.class), new SimpleAiStrategy(), new GameLogger());
         gameConfig = GameConfig.getDefault();
-        board = new labyrinth.server.game.factories.BoardFactory().createBoard(7, 7, 0);
+        board = new labyrinth.server.game.factories.BoardFactory().createBoard(7, 7);
         treasureCards = new ArrayList<>();
         // Create only 1 treasure per player for quick testing
         IntStream.range(0, 4).forEach(i -> treasureCards.add(new TreasureCard(i, "Card" + i, "img")));

@@ -1,12 +1,16 @@
 package labyrinth.server.game;
 
 import labyrinth.server.game.abstractions.IGameTimer;
+import labyrinth.server.game.ai.SimpleAiStrategy;
 import labyrinth.server.game.enums.BonusTypes;
 import labyrinth.server.game.enums.Direction;
 import labyrinth.server.game.factories.BoardFactory;
+import labyrinth.server.game.factories.BonusFactory;
 import labyrinth.server.game.factories.TreasureCardFactory;
 import labyrinth.server.game.models.Game;
 import labyrinth.server.game.models.records.GameConfig;
+import labyrinth.server.game.services.GameInitializer;
+import labyrinth.server.game.services.TreasureBonusDistributionService;
 import labyrinth.server.game.util.GameTimer;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 
@@ -25,7 +29,10 @@ public class Testing {
 
         IGameTimer gameTimer = new GameTimer(scheduler);
         var gameLogger = new labyrinth.server.game.services.GameLogger();
-        game = new Game(gameTimer, new labyrinth.server.game.ai.SimpleAiStrategy(), gameLogger);
+        var bonusFactory = new BonusFactory();
+        var distributionService = new TreasureBonusDistributionService(bonusFactory);
+        var gameInitializer = new GameInitializer(distributionService);
+        game = new Game(gameTimer, new SimpleAiStrategy(), gameLogger, gameInitializer);
         simulateGameStart();
         // simulateGameMoves(1000);
     }
@@ -43,8 +50,8 @@ public class Testing {
         var treasureCardFactory = new TreasureCardFactory();
         var boardFactory = new BoardFactory();
 
-        var gameConfig = new GameConfig(7, 7, 24, 1800, 3, 30);
-        var board = boardFactory.createBoard(gameConfig.boardWidth(), gameConfig.boardHeight(), gameConfig.totalBonusCount());
+        var gameConfig = new GameConfig(5, 5, 24, 1800, 5, 30);
+        var board = boardFactory.createBoard(gameConfig.boardWidth(), gameConfig.boardHeight());
         var cards = treasureCardFactory.createTreasureCards(gameConfig.treasureCardCount(), game.getPlayers().size());
 
         var p2 = game.getPlayers().get(1);

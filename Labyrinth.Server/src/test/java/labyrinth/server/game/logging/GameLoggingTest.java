@@ -37,7 +37,7 @@ class GameLoggingTest {
         List<TreasureCard> cards = new ArrayList<>();
         IntStream.range(0, 24).forEach(i -> cards.add(new TreasureCard(i, "Card" + i, "img")));
 
-        Board board = new labyrinth.server.game.factories.BoardFactory().createBoard(7, 7, 4);
+        Board board = new labyrinth.server.game.factories.BoardFactory().createBoard(7, 7);
 
         // Act
         game.startGame(GameConfig.getDefault(), cards, board);
@@ -59,7 +59,7 @@ class GameLoggingTest {
         game.join("P2");
         List<TreasureCard> cards = new ArrayList<>();
         IntStream.range(0, 24).forEach(i -> cards.add(new TreasureCard(i, "Card" + i, "img")));
-        Board board = new labyrinth.server.game.factories.BoardFactory().createBoard(7, 7, 0);
+        Board board = new labyrinth.server.game.factories.BoardFactory().createBoard(7, 7);
         game.startGame(GameConfig.getDefault(), cards, board);
 
         Player current = game.getCurrentPlayer();

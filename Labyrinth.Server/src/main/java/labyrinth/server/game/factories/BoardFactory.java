@@ -17,15 +17,14 @@ public class BoardFactory {
 
     private static final Random RANDOM = new Random();
 
-    public Board createBoard(int width, int height, int bonusCount) {
-        var tileMap = createRandomTileMap(width, height, bonusCount);
+    public Board createBoard(int width, int height) {
+        var tileMap = createRandomTileMap(width, height);
         replaceCornerTiles(tileMap, width, height);
-        distributeBonuses(tileMap, width, height, bonusCount);
 
         return new Board(width, height, tileMap, createRandomTile());
     }
 
-    private BiMap<Position, Tile> createRandomTileMap(int width, int height, int bonusCount) {
+    private BiMap<Position, Tile> createRandomTileMap(int width, int height) {
         BiMap<Position, Tile> tileMap = new BiMap<>();
 
         for (int row = 0; row < height; row++) {
@@ -105,32 +104,4 @@ public class BoardFactory {
     private static boolean shouldBeFixed(int index, int dimension) {
         return index % 2 == 0;
     }
-
-    private void distributeBonuses(BiMap<Position, Tile> tileMap, int width, int height, int bonusCount) {
-        List<Position> allPositions = new ArrayList<>();
-
-        for (int row = 0; row < height; row++) {
-            for (int col = 0; col < width; col++) {
-                allPositions.add(new Position(row, col));
-            }
-        }
-
-        Collections.shuffle(allPositions, RANDOM);
-
-        int countToDistribute = Math.min(bonusCount, allPositions.size());
-        BonusTypes[] bonusValues = BonusTypes.values();
-
-        for (int i = 0; i < countToDistribute; i++) {
-            Position pos = allPositions.get(i);
-
-            Tile tile = tileMap.getForward(pos);
-
-            if (tile != null) {
-                BonusTypes randomBonus = bonusValues[RANDOM.nextInt(bonusValues.length)];
-                tile.setBonus(randomBonus);
-            }
-        }
-    }
-
-
 }

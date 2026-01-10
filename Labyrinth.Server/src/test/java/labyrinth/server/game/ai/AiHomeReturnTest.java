@@ -29,7 +29,7 @@ class AiHomeReturnTest {
         SimpleAiStrategy aiStrategy = new SimpleAiStrategy();
         Game game = new Game(mock(IGameTimer.class), aiStrategy, new GameLogger());
         GameConfig gameConfig = GameConfig.getDefault();
-        Board board = new BoardFactory().createBoard(9, 9, 0);
+        Board board = new BoardFactory().createBoard(9, 9);
 
         List<TreasureCard> treasureCards = new ArrayList<>();
         for (int i = 0; i < 4; i++) {
@@ -79,7 +79,7 @@ class AiHomeReturnTest {
         // This test verifies the actual game-over condition
         Game game = new Game(mock(IGameTimer.class), new SimpleAiStrategy(), new GameLogger());
         GameConfig gameConfig = GameConfig.getDefault();
-        Board board = new labyrinth.server.game.factories.BoardFactory().createBoard(7, 7, 0);
+        Board board = new labyrinth.server.game.factories.BoardFactory().createBoard(7, 7);
 
         List<TreasureCard> treasureCards = new ArrayList<>();
         for (int i = 0; i < 4; i++) {
