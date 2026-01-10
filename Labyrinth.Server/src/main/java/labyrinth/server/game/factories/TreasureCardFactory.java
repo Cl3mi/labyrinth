@@ -30,19 +30,16 @@ public class TreasureCardFactory {
             "Helm",        // Helmet (German)
             "Buch",        // Book
             "Kerze",       // Candle
-            "Ring",
+            "Ring",        //Ring
             "Beutel",      // Bag
             "Totenkopf",   // Skull
             "Karte",       // Map
-            "Schwert",
+            "Schwert",     // Sword
             "Kelch",       // Chalice
             "Edelstein",   // Gemstone
             "Krug",        // Jug
-            "Maus",         // Mouse
-            "Haus",
-            "Wolle"
+            "Maus"         // Mouse
     );
-
     /**
      * Creates treasure cards for competitive mode where all players compete for the same treasures.
      * If more treasures are needed than available names, names will be reused with numeric suffixes.

@@ -108,6 +108,9 @@ public class BoardPanel extends JPanel {
 
     private boolean inputLocked = false;
 
+    // Flag to prevent commands after game is over
+    private boolean gameIsOver = false;
+
     private static final String EXTRA_KEY = "EXTRA";
 
     public BoardPanel(GameClient client, Board board, Player currentPlayer, List<Player> players) {
@@ -454,6 +457,7 @@ public class BoardPanel extends JPanel {
         addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
+                if (gameIsOver) return;  // Don't allow any input if game is over
                 if (inputLocked) return;
                 if (board == null) return;
 
@@ -485,6 +489,7 @@ public class BoardPanel extends JPanel {
         addKeyListener(new java.awt.event.KeyAdapter() {
             @Override
             public void keyPressed(java.awt.event.KeyEvent e) {
+                if (gameIsOver && e.getKeyCode() != java.awt.event.KeyEvent.VK_ESCAPE) return;
                 handleKeyPress(e);
             }
         });
@@ -2106,5 +2111,13 @@ public class BoardPanel extends JPanel {
         btn.setFocusPainted(false);
         btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
         return btn;
+    }
+
+    /**
+     * Called when the game ends to prevent further input
+     */
+    public void setGameOver(boolean gameOver) {
+        this.gameIsOver = gameOver;
+        this.inputLocked = gameOver; // Also lock input
     }
 }

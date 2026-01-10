@@ -657,6 +657,11 @@ public class LabyrinthApplication {
                 try {
                     System.out.println("[" + PROFILE + "] GAME_OVER UI update starting on EDT...");
 
+                    // Prevent any further input on the board
+                    if (boardPanel != null) {
+                        boardPanel.setGameOver(true);
+                    }
+
                     // BoardPanel entfernen und zurücksetzen
                     if (boardPanel != null) {
                         mainPanel.remove(boardPanel);

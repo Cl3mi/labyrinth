@@ -92,7 +92,7 @@ public final class AudioPlayer {
         // Always stop music for a clean applause moment.
         stopMusic();
 
-        playSfxOnceInternal(GAMEOVER_APPLAUSE_PATH, () -> {
+        playSfxOnceInternal(GAMEOVER_APPLAUSE_PATH,getSfxVolume(), () -> {
             // Only resume if nothing newer cancelled/overrode this sequence.
             if (resumeToken.get() != token) return;
             playMenuMusic();
@@ -223,11 +223,13 @@ public final class AudioPlayer {
         return sfxVolume;
     }
 
-    public void playSfxOnce(String path) {
-        playSfxOnceInternal(path, null);
-    }
+    private void playSfxOnceInternal(String path,float volume, Runnable onFinished) {
 
-    private void playSfxOnceInternal(String path, Runnable onFinished) {
+        if (volume <= 0) {
+            if (onFinished != null) onFinished.run();
+            return;
+        }
+
         new Thread(() -> {
             Clip c = null;
             try {
@@ -244,7 +246,7 @@ public final class AudioPlayer {
                 c.open(pcm);
 
                 final Clip clipRef = c;
-                applyVolume(clipRef, sfxVolume);
+                applyVolume(clipRef, volume);
                 unmute(clipRef);
 
                 // Close + callback after the sound finished.

@@ -354,9 +354,9 @@ public class GameOverPanel extends JPanel {
             for (RankingEntry entry : payload.getRanking()) {
                 // Show medal emojis for top 3 ranks, numbers for others
                 String rankIcon = switch (entry.getRank()) {
-                    case 1 -> "🥇 1.";
-                    case 2 -> "🥈 2.";
-                    case 3 -> "🥉 3.";
+                    case 1 -> " 1.";
+                    case 2 -> " 2.";
+                    case 3 -> " 3.";
                     default -> entry.getRank() + ".";
                 };
 
