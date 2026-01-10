@@ -103,26 +103,7 @@ public class BoardFactory {
     }
 
     private static boolean shouldBeFixed(int index, int dimension) {
-        if (dimension % 2 == 0) {
-            int mid1 = dimension / 2 - 1;
-            int mid2 = dimension / 2;
-
-            if (index == mid1 || index == mid2) {
-                return true;
-            }
-
-            if (index < mid1) {
-                return index % 2 == 0;
-            }
-
-            if (index > mid2) {
-                return (index - mid2) % 2 == 0;
-            }
-        } else {
-            return index % 2 == 0;
-        }
-
-        return false;
+        return index % 2 == 0;
     }
 
     private void distributeBonuses(BiMap<Position, Tile> tileMap, int width, int height, int bonusCount) {

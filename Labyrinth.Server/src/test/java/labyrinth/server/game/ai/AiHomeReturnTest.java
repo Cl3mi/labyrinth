@@ -2,6 +2,7 @@ package labyrinth.server.game.ai;
 
 import labyrinth.server.game.abstractions.IGameTimer;
 import labyrinth.server.game.enums.RoomState;
+import labyrinth.server.game.factories.BoardFactory;
 import labyrinth.server.game.models.Board;
 import labyrinth.server.game.models.Game;
 import labyrinth.server.game.models.Player;
@@ -28,7 +29,7 @@ class AiHomeReturnTest {
         SimpleAiStrategy aiStrategy = new SimpleAiStrategy();
         Game game = new Game(mock(IGameTimer.class), aiStrategy, new GameLogger());
         GameConfig gameConfig = GameConfig.getDefault();
-        Board board = new labyrinth.server.game.factories.BoardFactory().createBoard(7, 7, 0);
+        Board board = new BoardFactory().createBoard(9, 9, 0);
 
         List<TreasureCard> treasureCards = new ArrayList<>();
         for (int i = 0; i < 4; i++) {

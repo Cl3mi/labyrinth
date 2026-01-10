@@ -46,6 +46,19 @@ public class Board {
      * @param extraTile the spare tile which will be inserted during shifts
      */
     public Board(int width, int height, BiMap<Position, Tile> tileMap, Tile extraTile) {
+        if (width < 5 || width > 11) {
+            throw new IllegalArgumentException("Board width must be between 5 and 11");
+        }
+        if (height < 5 || height > 11) {
+            throw new IllegalArgumentException("Board height must be between 5 and 11");
+        }
+        if (width % 2 == 0) {
+            throw new IllegalArgumentException("Board width must be odd");
+        }
+        if (height % 2 == 0) {
+            throw new IllegalArgumentException("Board height must be odd");
+        }
+
         this.width = width;
         this.height = height;
         this.tileMap = tileMap;
@@ -55,22 +68,18 @@ public class Board {
     }
 
     public Board copy() {
-        // Deep copy tileMap: Position is immutable (record), Tile needs copy()
         BiMap<Position, Tile> newTileMap = this.tileMap.copy(p -> p, Tile::copy);
 
-        // Deep copy extraTile
         Tile newExtraTile = this.extraTile.copy();
 
         Board newBoard = new Board(this.width, this.height, newTileMap, newExtraTile);
 
-        // Copy other state
         newBoard.setFreeRoam(this.freeRoam);
 
         if (this.players != null) {
             List<Player> newPlayers = new ArrayList<>();
             for (Player p : this.players) {
                 Player newP = p.copy();
-                // Map old current tile to new tile
                 if (p.getCurrentTile() != null) {
                     Position pos = this.getPositionOfTile(p.getCurrentTile());
                     if (pos != null) {
@@ -78,7 +87,6 @@ public class Board {
                         newP.setCurrentTile(newTile);
                     }
                 }
-                // Map old home tile to new tile
                 if (p.getHomeTile() != null) {
                     Position homePos = this.getPositionOfTile(p.getHomeTile());
                     if (homePos != null) {
