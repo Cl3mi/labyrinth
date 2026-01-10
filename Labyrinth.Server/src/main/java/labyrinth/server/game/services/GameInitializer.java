@@ -1,7 +1,6 @@
 package labyrinth.server.game.services;
 
 import labyrinth.server.game.enums.GameLogType;
-import labyrinth.server.game.factories.BonusFactory;
 import labyrinth.server.game.models.Board;
 import labyrinth.server.game.models.Player;
 import labyrinth.server.game.models.Tile;
@@ -17,28 +16,37 @@ import java.util.Map;
  * bonus placement, and player positioning.
  *
  * Responsibilities:
- * - Treasure card distribution (round-robin)
- * - Bonus placement on board
+ * - Treasure card distribution (round-robin to players)
+ * - Delegating treasure and bonus placement to TreasureBonusDistributionService
  * - Player position initialization
  * - Game start logging
  */
 public class GameInitializer {
 
+    private final TreasureBonusDistributionService distributionService;
+
+    public GameInitializer(TreasureBonusDistributionService distributionService) {
+        this.distributionService = distributionService;
+    }
+
     /**
      * Distributes treasure cards to players in round-robin fashion and places them on the board.
+     * Also places bonuses on the board using the distribution service.
      *
      * @param treasureCards the list of treasure cards to distribute
-     * @param board         the board to place treasures on
+     * @param board         the board to place treasures and bonuses on
      * @param players       the players to assign cards to
+     * @param bonusCount    number of bonuses to create and place
      */
-    public void distributeTreasureCards(List<TreasureCard> treasureCards, Board board, List<Player> players) {
-        System.out.println("[TREASURE DEBUG] Distributing " + treasureCards.size() + " treasures to " + players.size() + " players");
+    public void distributeTreasuresAndBonuses(List<TreasureCard> treasureCards, Board board, List<Player> players, int bonusCount) {
+        System.out.println("[TREASURE DEBUG] Distributing " + treasureCards.size() + " treasures and " + bonusCount + " bonuses");
 
+        // Use the distribution service to place treasures and bonuses on the board
+        distributionService.distributeAll(board, treasureCards, bonusCount);
+
+        // Assign treasure cards to players in round-robin fashion
         var playerToAssignCardsToIndex = 0;
-        while (!treasureCards.isEmpty()) {
-            TreasureCard card = treasureCards.getFirst();
-            board.placeRandomTreasure(card);
-
+        for (TreasureCard card : treasureCards) {
             Player player = players.get(playerToAssignCardsToIndex);
             player.getAssignedTreasureCards().add(card);
             System.out.println("[TREASURE DEBUG] Assigned '" + card.getTreasureName() + "' to " + player.getUsername());
@@ -47,26 +55,12 @@ public class GameInitializer {
             if (playerToAssignCardsToIndex >= players.size()) {
                 playerToAssignCardsToIndex = 0;
             }
-
-            treasureCards.removeFirst();
         }
 
         // Verify distribution
         for (Player p : players) {
             System.out.println("[TREASURE DEBUG] " + p.getUsername() + " has " + p.getAssignedTreasureCards().size() + " treasures");
         }
-    }
-
-    /**
-     * Places bonuses randomly on the board.
-     *
-     * @param board      the board to place bonuses on
-     * @param bonusCount number of bonuses to create
-     */
-    public void placeBonuses(Board board, int bonusCount) {
-        BonusFactory bonusFactory = new BonusFactory();
-        var bonuses = bonusFactory.createBonuses(bonusCount);
-        board.placeRandomBonuses(bonuses);
     }
 
     /**

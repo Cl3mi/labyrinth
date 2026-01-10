@@ -90,14 +90,6 @@ public class StartGameCommandHandler extends AbstractCommandHandler<StartGameCom
     }
 
     private void validateConfig(StartGameCommandPayload payload) {
-        var boardSize = payload.getBoardSize();
-        if (boardSize.getRows() != boardSize.getCols()) {
-            throw new IllegalArgumentException("Board must be square");
-        }
-        if (boardSize.getRows() < 5 || boardSize.getRows() > 15) {
-            throw new IllegalArgumentException("Board size must be between 5x5 and 15x15");
-        }
-
         // Extract turnTimeInSeconds from additionalProperties for validation
         Integer turnTime = null;
         if (payload.getAdditionalProperties() != null && payload.getAdditionalProperties().containsKey("turnTimeInSeconds")) {

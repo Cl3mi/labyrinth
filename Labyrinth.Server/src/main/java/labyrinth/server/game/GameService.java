@@ -48,7 +48,8 @@ public class GameService {
                        EventPublisher eventPublisher,
                        TaskScheduler scheduler,
                        MessageService messageService,
-                       GameMapper gameMapper) {
+                       GameMapper gameMapper,
+                       labyrinth.server.game.services.GameInitializer gameInitializer) {
 
         this.treasureCardFactory = treasureCardFactory;
         this.boardFactory = boardFactory;
@@ -62,7 +63,7 @@ public class GameService {
         // AI-Strategie erstellen
         this.aiStrategy = new labyrinth.server.game.ai.SligthlyLessSimpleAiStrategy();
 
-        game = new Game(gameTimer, aiStrategy, gameLogger);
+        game = new Game(gameTimer, aiStrategy, gameLogger, gameInitializer);
 
         // Broadcast-Callback NACH der Game-Initialisierung setzen
         // Wir verwenden ein Lambda das auf die Instanz-Methode verweist
@@ -242,8 +243,7 @@ public class GameService {
 
             int playersCount = game.getPlayers().size();
 
-            var board = boardFactory.createBoard(gameConfig.boardWidth(), gameConfig.boardHeight(),
-                    gameConfig.totalBonusCount());
+            var board = boardFactory.createBoard(gameConfig.boardWidth(), gameConfig.boardHeight());
             // Multiply treasures per player by actual player count (after AI fill)
             int totalTreasures = gameConfig.treasureCardCount() * playersCount;
             var treasureCards = treasureCardFactory.createTreasureCards(totalTreasures, playersCount);

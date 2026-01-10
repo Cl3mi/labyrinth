@@ -33,7 +33,7 @@ class GameStartTest {
     void setUp() {
         game = new Game(mock(IGameTimer.class), new SimpleAiStrategy(), new GameLogger());
         gameConfig = GameConfig.getDefault();
-        board = new labyrinth.server.game.factories.BoardFactory().createBoard(7, 7, 0);
+        board = new labyrinth.server.game.factories.BoardFactory().createBoard(7, 7);
         treasureCards = new ArrayList<>();
         IntStream.range(0, 24).forEach(i -> treasureCards.add(new TreasureCard(i, "Card" + i, "img")));
     }
@@ -297,7 +297,7 @@ class GameStartTest {
         game.join("Player1");
         game.join("Player2");
         GameConfig configWithBonuses = new GameConfig(7, 7, 24, 3600, 10, 60);
-        Board freshBoard = new labyrinth.server.game.factories.BoardFactory().createBoard(7, 7, 0);
+        Board freshBoard = new labyrinth.server.game.factories.BoardFactory().createBoard(7, 7);
 
         // Act
         game.startGame(configWithBonuses, treasureCards, freshBoard);

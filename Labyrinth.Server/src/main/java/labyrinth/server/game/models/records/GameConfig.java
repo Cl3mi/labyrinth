@@ -9,8 +9,14 @@ public record GameConfig(
         int turnTimeInSeconds
 ) {
     public GameConfig {
-        if (boardWidth <= 0 || boardHeight <= 0)
-            throw new IllegalArgumentException("Board size must be positive");
+        if (boardWidth < 5 || boardWidth > 11)
+            throw new IllegalArgumentException("Board width must be between 5 and 11");
+        if (boardHeight < 5 || boardHeight > 11)
+            throw new IllegalArgumentException("Board height must be between 5 and 11");
+        if (boardWidth % 2 == 0)
+            throw new IllegalArgumentException("Board width must be odd");
+        if (boardHeight % 2 == 0)
+            throw new IllegalArgumentException("Board height must be odd");
         if (treasureCardCount <= 0 || treasureCardCount > 24)
             throw new IllegalArgumentException("Treasure card count must be between 1 and 22");
         if (gameDurationInSeconds <= 0 || gameDurationInSeconds > 3600)
