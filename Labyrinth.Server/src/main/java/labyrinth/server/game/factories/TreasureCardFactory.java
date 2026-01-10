@@ -38,7 +38,9 @@ public class TreasureCardFactory {
             "Kelch",       // Chalice
             "Edelstein",   // Gemstone
             "Krug",        // Jug
-            "Maus"         // Mouse
+            "Maus",         // Mouse
+            "Haus",
+            "Wolle"
     );
 
     /**

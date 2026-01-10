@@ -35,11 +35,12 @@ public class Game {
     private IGameTimer nextTurnTimer;
 
     private final labyrinth.server.game.services.TurnController turnController;
+    private final labyrinth.server.game.services.PlayerRegistry playerRegistry;
+    private final labyrinth.server.game.services.GameInitializer gameInitializer;
 
     @Setter(lombok.AccessLevel.NONE)
     private Board board;
 
-    private final List<Player> players;
     private RoomState roomState;
 
     private BonusState activeBonusState;
@@ -74,7 +75,8 @@ public class Game {
         this.nextTurnTimer = nextTurnTimer;
         this.aiStrategy = aiStrategy;
         this.gameLogger = gameLogger;
-        this.players = new ArrayList<>();
+        this.playerRegistry = new labyrinth.server.game.services.PlayerRegistry(MAX_PLAYERS);
+        this.gameInitializer = new labyrinth.server.game.services.GameInitializer();
         this.roomState = RoomState.LOBBY;
         this.board = null;
         this.gameConfig = GameConfig.getDefault();
@@ -103,8 +105,6 @@ public class Game {
         return result;
     }
 
-    // Kept for backward compatibility / API contract compliance, but delegates to strategy
-    // Should be cleaned up I guess?
     public boolean useBeamBonus(int row, int col, Player player) {
         guardFor(RoomState.IN_GAME);
         guardFor(player);
@@ -142,33 +142,7 @@ public class Game {
             throw new IllegalStateException("Cannot join a game that is in progress!");
         }
 
-        if (isFull()) {
-            throw new IllegalStateException("Room is full");
-        }
-
-        if (!isUsernameAvailable(username)) {
-            throw new IllegalArgumentException("Username is already taken");
-        }
-
-        Player player = new Player(UUID.randomUUID(), username);
-        player.setColor(getNextColor());
-
-        if (players.isEmpty()) {
-            player.setAdmin(true);
-        }
-
-        player.setJoinDate(OffsetDateTime.now());
-        players.add(player);
-        return player;
-    }
-
-    private void addAiPlayer() {
-        Player player = new Player(UUID.randomUUID(), "Bot " + (players.size() + 1));
-        player.setColor(getNextColor());
-        player.setAiActive(true);
-
-        player.setJoinDate(OffsetDateTime.now());
-        players.add(player);
+        return playerRegistry.addPlayer(username);
     }
 
     /**
@@ -176,37 +150,11 @@ public class Game {
      * Called before creating treasure cards to ensure correct player count.
      */
     public void fillWithAiPlayers() {
-        while (players.size() < MAX_PLAYERS) {
-            addAiPlayer();
-        }
+        playerRegistry.fillWithAiPlayers();
     }
 
     public LeaveResult leave(Player player) {
-        // Check if player exists in the list
-        boolean wasRemoved = players.removeIf(p -> p.getId().equals(player.getId()));
-
-        if (!wasRemoved) {
-            return new LeaveResult(false, null, false);
-        }
-
-        // Check if we need to reassign admin
-        Player newAdmin = null;
-        if (player.isAdmin()) {
-            // Find first non-AI player to become new admin
-            var nextAdmin = players.stream()
-                    .filter(p -> !p.isAiActive())
-                    .findFirst();
-
-            if (nextAdmin.isPresent()) {
-                nextAdmin.get().setAdmin(true);
-                newAdmin = nextAdmin.get();
-            }
-        }
-
-        // Check if only AI players remain (or no players at all)
-        boolean shouldShutdown = players.stream().noneMatch(p -> !p.isAiActive());
-
-        return new LeaveResult(true, newAdmin, shouldShutdown);
+        return playerRegistry.removePlayer(player);
     }
 
     /**
@@ -214,40 +162,23 @@ public class Game {
      * This allows starting a new game after the previous one has finished.
      */
     public void resetForNewGame() {
-        // Stop any running timers
         if (nextTurnTimer != null) {
             nextTurnTimer.stop();
         }
 
-        // Clear all players (including AI bots)
-        players.clear();
-
-        // Reset board
+        playerRegistry.clear();
         this.board = null;
-
-        // Reset game config to defaults
         this.gameConfig = GameConfig.getDefault();
-
-        // Reset bonus state
         this.activeBonusState = NoBonusActive.getInstance();
-
-        // Reset turn controller
         turnController.reset();
-
-        // Reset game timing
         this.gameStartTime = null;
-
-        // Reset to LOBBY state - this is the key change!
         this.roomState = RoomState.LOBBY;
 
         System.out.println("[Game] Game reset to LOBBY state for new game");
     }
 
     public Player getPlayer(UUID playerId) {
-        return players.stream()
-                .filter(p -> p.getId().equals(playerId))
-                .findFirst()
-                .orElse(null);
+        return playerRegistry.getPlayer(playerId);
     }
 
     /**
@@ -259,27 +190,24 @@ public class Game {
             throw new IllegalStateException("Cannot start a game that is in progress or finished!");
         }
 
-        if (players.isEmpty()) {
+        if (playerRegistry.getPlayers().isEmpty()) {
             throw new IllegalStateException("At least 1 player is required to start the game");
         }
 
-        // AI players are now filled before this method is called (in GameService)
-        // to ensure correct treasure count calculation
+        // Fill with AI players to ensure we have 4 players
+        fillWithAiPlayers();
 
         this.gameConfig = Objects.requireNonNullElseGet(gameConfig, GameConfig::getDefault);
 
-        distributeTreasureCards(treasureCards, board);
-
-        labyrinth.server.game.factories.BonusFactory bonusFactory = new labyrinth.server.game.factories.BonusFactory();
-        var bonuses = bonusFactory.createBonuses(this.gameConfig.totalBonusCount());
-        board.placeRandomBonuses(bonuses);
-
-        initializePlayerPositions(board, this.gameConfig);
+        // Delegate initialization to GameInitializer
+        List<Player> players = playerRegistry.getPlayersInternal(); // Internal mutable list
+        gameInitializer.distributeTreasureCards(treasureCards, board, players);
+        gameInitializer.placeBonuses(board, this.gameConfig.totalBonusCount());
+        gameInitializer.initializePlayerPositions(board, this.gameConfig, players);
+        gameInitializer.logGameStart(board, this.gameConfig, players, gameLogger);
 
         this.board = board;
         this.board.setPlayers(players);
-
-        logGameStart(board, this.gameConfig);
 
         if (getCurrentPlayer().isAiActive()) {
             this.aiStrategy.performTurn(this, getCurrentPlayer());
@@ -290,7 +218,7 @@ public class Game {
     }
 
     public Player getCurrentPlayer() {
-        return turnController.getCurrentPlayer(players);
+        return turnController.getCurrentPlayer(playerRegistry.getPlayersInternal());
     }
 
     public int getCurrentPlayerIndex() {
@@ -343,11 +271,9 @@ public class Game {
         player.getStatistics().increaseScore(PointRewards.REWARD_SHIFT_TILE);
         player.getStatistics().increaseTilesPushed(1);
 
-        var pusherAchieved = achievementService.checkPusherAchievement(player).isPresent();
-
         logShiftAction(index, direction, player);
 
-        return new ShiftResult(true, pusherAchieved);
+        return new ShiftResult(true, false);
     }
 
     public void toggleAiForPlayer(Player player) {
@@ -384,13 +310,19 @@ public class Game {
         }
 
         var gameOver = false;
-        if (currentTreasureCardAfterMove == null) {
+        // Check if player has collected all treasures AND reached their home tile
+        if (currentTreasureCardAfterMove == null && player.getCurrentTile() == player.getHomeTile()) {
             System.out.println("[GAME OVER DEBUG] Player " + player.getUsername() + " triggered game over");
             System.out.println("[GAME OVER DEBUG] Player has " + player.getAssignedTreasureCards().size() + " assigned treasures");
             for (int i = 0; i < player.getAssignedTreasureCards().size(); i++) {
                 TreasureCard tc = player.getAssignedTreasureCards().get(i);
                 System.out.println("[GAME OVER DEBUG]   Treasure " + i + ": " + tc.getTreasureName() + " collected=" + tc.isCollected());
             }
+            System.out.println("[GAME OVER DEBUG] Player reached home tile - game over!");
+
+            // Award end-game achievements BEFORE game over
+            awardEndGameAchievements();
+
             gameOver();
             gameOver = true;
             gameLogger.log(GameLogType.GAME_OVER, "Game Over. Winner: " + player.getUsername(), player, null);
@@ -402,10 +334,32 @@ public class Game {
             gameLogger.log(GameLogType.COLLECT_TREASURE, "Player collected treasure", player, null);
         }
 
-        var runnerAchieved = achievementService.checkRunnerAchievement(player).isPresent();
-
         nextPlayer();
-        return new MovePlayerToTileResult(true, distanceMoved, treasureCollected, gameOver, runnerAchieved);
+        return new MovePlayerToTileResult(true, distanceMoved, treasureCollected, gameOver, false);
+    }
+
+    private List<labyrinth.server.game.services.AchievementService.AchievementAward> endGameAchievements = new ArrayList<>();
+
+    /**
+     * Awards end-game achievements to players with the best statistics.
+     * Called before game over to ensure achievements are awarded before final scoring.
+     */
+    private void awardEndGameAchievements() {
+        endGameAchievements = achievementService.awardEndGameAchievements(playerRegistry.getPlayersInternal());
+
+        // Increase scores for awarded achievements
+        for (var award : endGameAchievements) {
+            award.player().getStatistics().increaseScore(50); // Achievement bonus points
+            System.out.println("[ACHIEVEMENT] " + award.player().getUsername() + " earned " + award.achievement());
+        }
+    }
+
+    /**
+     * Gets the achievements that were awarded at the end of the game.
+     * @return list of achievement awards
+     */
+    public List<labyrinth.server.game.services.AchievementService.AchievementAward> getEndGameAchievements() {
+        return new ArrayList<>(endGameAchievements);
     }
 
     private void gameOver() {
@@ -431,16 +385,16 @@ public class Game {
         turnController.reset();
 
         // Reset player stats and treasures for new game
-        for (Player player : players) {
+        for (Player player : playerRegistry.getPlayersInternal()) {
             player.resetForNewGame();
         }
 
-        System.out.println("[RETURN TO LOBBY] Reset complete. Players remaining: " + players.size());
+        System.out.println("[RETURN TO LOBBY] Reset complete. Players remaining: " + playerRegistry.getPlayers().size());
     }
 
     private synchronized void nextPlayer() {
         turnController.advanceToNextPlayer(
-                            players,
+                            playerRegistry.getPlayersInternal(),
                             roomState,
                             gameConfig,
                       player -> aiStrategy.performTurn(this, player));
@@ -455,22 +409,21 @@ public class Game {
     }
 
     private void guardFor(Player playerToMove) {
-        turnController.guardForPlayer(board, players, playerToMove);
+        turnController.guardForPlayer(board, playerRegistry.getPlayersInternal(), playerToMove);
     }
 
-    private boolean isUsernameAvailable(String username) {
-        return players.stream()
-                .noneMatch(p -> p.getUsername().equalsIgnoreCase(username));
+    public List<Player> getPlayers() {
+        return playerRegistry.getPlayers();
     }
 
-    private boolean isFull() {
-        return players.size() >= MAX_PLAYERS;
+    public int getMAX_PLAYERS() {
+        return MAX_PLAYERS;
     }
 
     @Override
     public String toString() {
         return "Room{" +
-                ", players=" + players +
+                ", players=" + playerRegistry.getPlayers() +
                 '}';
     }
 
@@ -527,86 +480,6 @@ public class Game {
             case RIGHT -> board.getTileAt(index, 0);
             case LEFT -> board.getTileAt(index, board.getWidth() - 1);
         };
-    }
-
-    /**
-     * Distributes treasure cards to players in round-robin fashion and places them on the board.
-     *
-     * @param treasureCards the list of treasure cards to distribute
-     * @param board         the board to place treasures on
-     */
-    private void distributeTreasureCards(List<TreasureCard> treasureCards, Board board) {
-        System.out.println("[TREASURE DEBUG] Distributing " + treasureCards.size() + " treasures to " + players.size() + " players");
-
-        var playerToAssignCardsToIndex = 0;
-        while (!treasureCards.isEmpty()) {
-            TreasureCard card = treasureCards.getFirst();
-            board.placeRandomTreasure(card);
-
-            Player player = players.get(playerToAssignCardsToIndex);
-            player.getAssignedTreasureCards().add(card);
-            System.out.println("[TREASURE DEBUG] Assigned '" + card.getTreasureName() + "' to " + player.getUsername());
-
-            playerToAssignCardsToIndex++;
-            if (playerToAssignCardsToIndex >= players.size()) {
-                playerToAssignCardsToIndex = 0;
-            }
-
-            treasureCards.removeFirst();
-        }
-
-        // Verify distribution
-        for (Player p : players) {
-            System.out.println("[TREASURE DEBUG] " + p.getUsername() + " has " + p.getAssignedTreasureCards().size() + " treasures");
-        }
-    }
-
-    /**
-     * Initializes player positions on the board based on the game configuration.
-     * Sets both the home tile and current tile for each player.
-     *
-     * @param board      the board to place players on
-     * @param gameConfig the game configuration containing start positions
-     */
-    private void initializePlayerPositions(Board board, GameConfig gameConfig) {
-        for (int i = 0; i < players.size(); i++) {
-            Player player = players.get(i);
-            var position = gameConfig.getStartPosition(i);
-
-            Tile startingTile = board.getTileAt(position);
-            player.setHomeTile(startingTile);
-            player.setCurrentTile(startingTile);
-        }
-    }
-
-    /**
-     * Logs the game start event with board state and player positions.
-     *
-     * @param board      the initialized board
-     * @param gameConfig the game configuration
-     */
-    private void logGameStart(Board board, GameConfig gameConfig) {
-        java.util.Map<String, String> startMeta = new java.util.HashMap<>();
-        startMeta.put("boardState", gameLogger.serializeBoard(board));
-
-        for (Player p : players) {
-            startMeta.put("player_" + p.getId(),
-                    p.getUsername() + "@" + gameConfig.getStartPosition(players.indexOf(p)));
-        }
-
-        gameLogger.log(GameLogType.START_GAME, "Game started in GameLobby with " + players.size() + " players.", null,
-                startMeta);
-    }
-
-    private PlayerColor getNextColor() {
-        for (PlayerColor color : PlayerColor.values()) {
-            boolean used = players.stream()
-                    .anyMatch(p -> p.getColor() == color);
-            if (!used) {
-                return color;
-            }
-        }
-        throw new IllegalStateException("No available colors left");
     }
 
     /**

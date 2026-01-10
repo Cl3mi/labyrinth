@@ -160,10 +160,11 @@ public class SimpleAiStrategy implements AiStrategy {
         Set<Tile> reachable = clonedBoard.getReachableTiles(clonedMe);
 
         // 4. Find best tile reachable
-        // If targetCard is null, just pick anything (maybe center?)
+        // If targetCard is null, target home tile to win
         // If targetCard is set, find its position
 
         Position targetPosInSim = null;
+        boolean goingHome = false;
         if (targetCard != null) {
             // Find where the treasure is on the CLONED board
             for (int r = 0; r < clonedBoard.getHeight(); r++) {
@@ -177,6 +178,11 @@ public class SimpleAiStrategy implements AiStrategy {
                 if (targetPosInSim != null)
                     break;
             }
+        } else {
+            // No more treasures - target the home tile to win
+            goingHome = true;
+            targetPosInSim = clonedBoard.getPositionOfTile(clonedMe.getHomeTile());
+            System.out.println("AI " + realPlayer.getUsername() + " - All treasures collected! Targeting home tile at " + targetPosInSim);
         }
 
         int score = 0;
@@ -187,7 +193,10 @@ public class SimpleAiStrategy implements AiStrategy {
             // Check if we can reach it
             Tile targetTile = clonedBoard.getTileAt(targetPosInSim);
             if (reachable.contains(targetTile)) {
-                score = 100; // Can reach treasure!
+                if (goingHome) {
+                    System.out.println("AI " + realPlayer.getUsername() + " - HOME TILE IS REACHABLE! Score=100, returning home!");
+                }
+                score = 100; // Can reach treasure or home!
                 minDist = 0;
                 bestPosForOp = targetPosInSim;
             } else {
@@ -201,6 +210,9 @@ public class SimpleAiStrategy implements AiStrategy {
                         minDist = dist;
                         bestPosForOp = rPos;
                     }
+                }
+                if (goingHome) {
+                    System.out.println("AI " + realPlayer.getUsername() + " - Moving closer to home. Distance: " + minDist + ", moving to: " + bestPosForOp);
                 }
             }
         } else {

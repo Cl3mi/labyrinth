@@ -92,15 +92,18 @@ public class GameService {
                 System.out.println("[GameService] AI triggered game over! Publishing GameOverEvent...");
                 rwLock.readLock().lock();
                 try {
+                    // Publish end-game achievements
+                    for (var award : game.getEndGameAchievements()) {
+                        var achievementEvent = new AchievementUnlockedEvent(award.player(), award.achievement());
+                        eventPublisher.publishAsync(achievementEvent);
+                        System.out.println("[GameService] Achievement awarded: " + award.player().getUsername() + " - " + award.achievement());
+                    }
+
                     var gameOverEvent = new GameOverEvent(game.getPlayers());
                     eventPublisher.publishAsync(gameOverEvent);
                 } finally {
                     rwLock.readLock().unlock();
                 }
-            }
-
-            if (result.runnerAchieved()) {
-                System.out.println("[GameService] AI achieved RUNNER achievement!");
             }
         } catch (Exception e) {
             System.err.println("[GameService] Error handling AI move result: " + e.getMessage());
@@ -204,6 +207,13 @@ public class GameService {
         }
     }
 
+    /**
+     * Alias for getGameState() for backward compatibility with tests.
+     */
+    public RoomState getRoomState() {
+        return getGameState();
+    }
+
     public Player getPlayer(UUID playerId) {
         rwLock.readLock().lock();
         try {
@@ -225,7 +235,9 @@ public class GameService {
     public void startGame(GameConfig gameConfig) {
         rwLock.writeLock().lock();
         try {
-            // Fill with AI players before calculating treasure count
+            // Note: Game.startGame() will call fillWithAiPlayers() internally
+            // We need to know the player count AFTER AI fill to create the right number of treasures
+            // So we call it here first to get the correct count
             game.fillWithAiPlayers();
 
             int playersCount = game.getPlayers().size();
@@ -257,17 +269,18 @@ public class GameService {
             var result = game.movePlayerToTile(row, col, player);
             boolean moveSuccess = result.moveSuccess();
 
-            if (result.runnerAchieved()) {
-                var achievementEvent = new AchievementUnlockedEvent(player, Achievement.RUNNER);
-                eventPublisher.publishAsync(achievementEvent);
-            }
-
             if (result.treasureCollected()) {
                 var treasureCardEvent = new NextTreasureCardEvent(player, player.getCurrentTreasureCard());
                 eventPublisher.publishAsync(treasureCardEvent);
             }
 
             if (result.gameOver()) {
+                // Publish end-game achievements
+                for (var award : game.getEndGameAchievements()) {
+                    var achievementEvent = new AchievementUnlockedEvent(award.player(), award.achievement());
+                    eventPublisher.publishAsync(achievementEvent);
+                }
+
                 var gameOverEvent = new GameOverEvent(game.getPlayers());
                 eventPublisher.publishAsync(gameOverEvent);
             }
@@ -291,12 +304,6 @@ public class GameService {
         rwLock.writeLock().lock();
         try {
             var pushResult = game.shift(index, direction, player);
-
-            if (pushResult.pusherAchieved()) {
-                var achievementEvent = new AchievementUnlockedEvent(player, Achievement.PUSHER);
-                eventPublisher.publishAsync(achievementEvent);
-            }
-
             return pushResult.shiftSuccess();
         } finally {
             rwLock.writeLock().unlock();
