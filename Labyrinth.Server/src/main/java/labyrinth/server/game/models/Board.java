@@ -70,12 +70,20 @@ public class Board {
             List<Player> newPlayers = new ArrayList<>();
             for (Player p : this.players) {
                 Player newP = p.copy();
-                // Map old tile to new tile
+                // Map old current tile to new tile
                 if (p.getCurrentTile() != null) {
                     Position pos = this.getPositionOfTile(p.getCurrentTile());
                     if (pos != null) {
                         Tile newTile = newTileMap.getForward(pos);
                         newP.setCurrentTile(newTile);
+                    }
+                }
+                // Map old home tile to new tile
+                if (p.getHomeTile() != null) {
+                    Position homePos = this.getPositionOfTile(p.getHomeTile());
+                    if (homePos != null) {
+                        Tile newHomeTile = newTileMap.getForward(homePos);
+                        newP.setHomeTile(newHomeTile);
                     }
                 }
                 newPlayers.add(newP);

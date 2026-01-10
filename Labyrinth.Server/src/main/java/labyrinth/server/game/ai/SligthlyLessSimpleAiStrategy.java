@@ -55,7 +55,8 @@ public class SligthlyLessSimpleAiStrategy implements AiStrategy {
 
         // 1. Berechne den besten Zug
         TreasureCard targetCard = player.getCurrentTreasureCard();
-        System.out.println("AI " + player.getUsername() + " - Target treasure: " + (targetCard != null ? targetCard.getTreasureName() : "NONE"));
+
+        System.out.println("AI " + player.getUsername() + " - Target treasure: " + (targetCard != null ? targetCard.getTreasureName() : "NONE (ALL TREASURES COLLECTED - GOING HOME)"));
 
         SimulationResult result = findBestMove(game, player, targetCard);
         System.out.println("AI " + player.getUsername() + " - Simulation result: " + (result != null ? "FOUND" : "NULL"));
@@ -269,13 +270,22 @@ public class SligthlyLessSimpleAiStrategy implements AiStrategy {
         Set<Tile> reachable = clonedBoard.getReachableTiles(clonedMe);
 
         Position targetPos = null;
+        boolean goingHome = false;
         if (targetCard != null) {
             targetPos = findTreasurePosition(clonedBoard, targetCard);
+        } else {
+            // No more treasures - target the home tile to win
+            goingHome = true;
+            targetPos = clonedBoard.getPositionOfTile(clonedMe.getHomeTile());
+            System.out.println("AI " + realPlayer.getUsername() + " - All treasures collected! Targeting home tile at " + targetPos);
         }
 
         if (targetPos != null) {
             Tile targetTile = clonedBoard.getTileAt(targetPos);
             if (reachable.contains(targetTile)) {
+                if (goingHome) {
+                    System.out.println("AI " + realPlayer.getUsername() + " - HOME TILE IS REACHABLE! Score=100, returning home!");
+                }
                 return new SimulationResult(op.type, op.index, 100, 0, targetPos);
             }
 
@@ -289,10 +299,13 @@ public class SligthlyLessSimpleAiStrategy implements AiStrategy {
                     bestPos = rPos;
                 }
             }
+            if (goingHome) {
+                System.out.println("AI " + realPlayer.getUsername() + " - Moving closer to home. Distance: " + minDist + ", moving to: " + bestPos);
+            }
             return new SimulationResult(op.type, op.index, 10, minDist, bestPos);
         }
 
-        // No target - move to random reachable position
+        // Fallback: No target available - move to random reachable position
         Position cur = clonedBoard.getPositionOfTile(clonedMe.getCurrentTile());
         if (!reachable.isEmpty()) {
             List<Tile> reachableList = new ArrayList<>(reachable);

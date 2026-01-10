@@ -3,6 +3,9 @@ package labyrinth.server.game.services;
 import labyrinth.server.game.enums.Achievement;
 import labyrinth.server.game.models.Player;
 
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -11,44 +14,79 @@ import java.util.Optional;
  */
 public class AchievementService {
 
-    private static final int PUSHER_TILES_REQUIRED = 20;
-    private static final int RUNNER_STEPS_REQUIRED = 200;
+    /**
+     * Awards achievements at the end of the game.
+     * PUSHER goes to the player(s) with the most tiles pushed.
+     * RUNNER goes to the player(s) with the most steps taken.
+     *
+     * @param players all players in the game
+     * @return list of players who received achievements
+     */
+    public List<AchievementAward> awardEndGameAchievements(List<Player> players) {
+        List<AchievementAward> awards = new ArrayList<>();
+
+        if (players == null || players.isEmpty()) {
+            return awards;
+        }
+
+        // Award PUSHER to player(s) with most tiles pushed
+        int maxTilesPushed = players.stream()
+                .mapToInt(p -> p.getStatistics().getTilesPushed())
+                .max()
+                .orElse(0);
+
+        if (maxTilesPushed > 0) {
+            players.stream()
+                    .filter(p -> p.getStatistics().getTilesPushed() == maxTilesPushed)
+                    .forEach(player -> {
+                        if (!player.getStatistics().getCollectedAchievements().contains(Achievement.PUSHER)) {
+                            player.getStatistics().collectAchievement(Achievement.PUSHER);
+                            awards.add(new AchievementAward(player, Achievement.PUSHER));
+                        }
+                    });
+        }
+
+        // Award RUNNER to player(s) with most steps taken
+        int maxStepsTaken = players.stream()
+                .mapToInt(p -> p.getStatistics().getStepsTaken())
+                .max()
+                .orElse(0);
+
+        if (maxStepsTaken > 0) {
+            players.stream()
+                    .filter(p -> p.getStatistics().getStepsTaken() == maxStepsTaken)
+                    .forEach(player -> {
+                        if (!player.getStatistics().getCollectedAchievements().contains(Achievement.RUNNER)) {
+                            player.getStatistics().collectAchievement(Achievement.RUNNER);
+                            awards.add(new AchievementAward(player, Achievement.RUNNER));
+                        }
+                    });
+        }
+
+        return awards;
+    }
 
     /**
-     * Checks if the player has earned the PUSHER achievement.
-     * PUSHER is awarded when a player has pushed tiles 20 or more times.
-     *
-     * @param player the player to check
-     * @return Optional containing PUSHER achievement if newly earned, empty otherwise
+     * Record representing an achievement award.
      */
-    public Optional<Achievement> checkPusherAchievement(Player player) {
-        var statistics = player.getStatistics();
-        boolean alreadyHas = statistics.getCollectedAchievements().contains(Achievement.PUSHER);
-        boolean meetsRequirement = statistics.getTilesPushed() >= PUSHER_TILES_REQUIRED;
+    public record AchievementAward(Player player, Achievement achievement) {
+    }
 
-        if (!alreadyHas && meetsRequirement) {
-            statistics.collectAchievement(Achievement.PUSHER);
-            return Optional.of(Achievement.PUSHER);
-        }
+    /**
+     * @deprecated Use awardEndGameAchievements instead. This method is kept for backward compatibility with tests.
+     */
+    @Deprecated
+    public Optional<Achievement> checkPusherAchievement(Player player) {
+        // Kept for backward compatibility - does nothing now
         return Optional.empty();
     }
 
     /**
-     * Checks if the player has earned the RUNNER achievement.
-     * RUNNER is awarded when a player has taken 200 or more steps.
-     *
-     * @param player the player to check
-     * @return Optional containing RUNNER achievement if newly earned, empty otherwise
+     * @deprecated Use awardEndGameAchievements instead. This method is kept for backward compatibility with tests.
      */
+    @Deprecated
     public Optional<Achievement> checkRunnerAchievement(Player player) {
-        var statistics = player.getStatistics();
-        boolean alreadyHas = statistics.getCollectedAchievements().contains(Achievement.RUNNER);
-        boolean meetsRequirement = statistics.getStepsTaken() >= RUNNER_STEPS_REQUIRED;
-
-        if (!alreadyHas && meetsRequirement) {
-            statistics.collectAchievement(Achievement.RUNNER);
-            return Optional.of(Achievement.RUNNER);
-        }
+        // Kept for backward compatibility - does nothing now
         return Optional.empty();
     }
 }
