@@ -60,7 +60,7 @@ class ConnectCommandHandlerTest {
         // Default mock behaviors
         when(mockSession.getAttributes()).thenReturn(new ConcurrentHashMap<>());
         when(playerSessionRegistry.isSessionRegistered(mockSession)).thenReturn(false);
-        when(gameService.getRoomState()).thenReturn(RoomState.LOBBY);
+        when(gameService.getGameState()).thenReturn(RoomState.LOBBY);
         when(gameService.getPlayers()).thenReturn(new ArrayList<>());
     }
 
@@ -161,7 +161,7 @@ class ConnectCommandHandlerTest {
 
         when(playerSessionRegistry.getPlayerIdByIdentifierToken(token)).thenReturn(playerId);
         when(gameService.getPlayer(playerId)).thenReturn(player);
-        when(gameService.getRoomState()).thenReturn(RoomState.IN_GAME);
+        when(gameService.getGameState()).thenReturn(RoomState.IN_GAME);
 
         GameStateEventPayload gameState = new GameStateEventPayload();
         when(gameService.withGameReadLock(any())).thenReturn(gameState);
@@ -190,7 +190,7 @@ class ConnectCommandHandlerTest {
         payload.setUsername(username);
 
         when(gameService.join(username)).thenReturn(player);
-        when(gameService.getRoomState()).thenReturn(RoomState.IN_GAME);
+        when(gameService.getGameState()).thenReturn(RoomState.IN_GAME);
 
         GameStateEventPayload gameState = new GameStateEventPayload();
         when(gameService.withGameReadLock(any())).thenReturn(gameState);

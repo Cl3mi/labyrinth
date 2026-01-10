@@ -1,6 +1,7 @@
 package labyrinth.client.ui;
 
 import labyrinth.client.audio.AudioPlayer;
+import labyrinth.client.ui.Styles.ColorsFonts;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -73,47 +74,17 @@ public class OptionsPanel extends JPanel {
     private static final String PREF_WINDOW_SIZE = "windowSize";
 
     // Default Server URL - zentrale Konfiguration
-    public static final String DEFAULT_SERVER_URL = "http://localhost:8081";
-
-    // Farben - Mystische Labyrinth-Palette
-    private static final Color PRIMARY_GOLD = new Color(218, 165, 32);
-    private static final Color PRIMARY_GOLD_LIGHT = new Color(255, 215, 0);
-    private static final Color PRIMARY_GOLD_DARK = new Color(184, 134, 11);
-    private static final Color STONE_DARK = new Color(45, 42, 38);
-    private static final Color STONE_MEDIUM = new Color(82, 75, 66);
-    private static final Color TEXT_LIGHT = new Color(255, 248, 230);
-    private static final Color TEXT_MUTED = new Color(180, 170, 155);
-    private static final Color CARD_BG = new Color(35, 32, 28, 220);
-    private static final Color CARD_BORDER = new Color(100, 85, 60);
-
-    // Fonts
-    private Font titleFont;
-    private Font sectionFont;
-    private Font labelFont;
-    private Font buttonFont;
+    public static final String DEFAULT_SERVER_URL = "https://mgmt.dvl.spalx.dev";
 
     public OptionsPanel() {
 
         onMusicVolumeChanged = v -> AudioPlayer.getInstance().setMusicVolume(v / 100f);
         onSfxVolumeChanged   = v -> AudioPlayer.getInstance().setSfxVolume(v / 100f);
 
-        initFonts();
+        ColorsFonts.initFonts();
         loadSettings();
         loadBackgroundImage();
         setupUI();
-    }
-
-    private void initFonts() {
-        titleFont = new Font("Serif", Font.BOLD, 32);
-        sectionFont = new Font("Serif", Font.BOLD, 18);
-        labelFont = new Font("Serif", Font.PLAIN, 14);
-        buttonFont = new Font("Serif", Font.BOLD, 16);
-
-        if (isFontAvailable("Cinzel")) {
-            titleFont = new Font("Cinzel", Font.BOLD, 32);
-            sectionFont = new Font("Cinzel", Font.BOLD, 18);
-            buttonFont = new Font("Cinzel", Font.BOLD, 16);
-        }
     }
 
     private boolean isFontAvailable(String fontName) {
@@ -180,7 +151,7 @@ public class OptionsPanel extends JPanel {
         header.setOpaque(false);
 
         // Zurück-Button
-        StyledButton backButton = new StyledButton("← Zurück", StyledButton.Style.SECONDARY);
+        StyledButton backButton = new StyledButton("Zurück", StyledButton.Style.SECONDARY);
         backButton.setPreferredSize(new Dimension(140, 40));
         backButton.addActionListener(e -> {
             if (onBackToMenu != null) onBackToMenu.run();
@@ -192,9 +163,9 @@ public class OptionsPanel extends JPanel {
         header.add(leftPanel, BorderLayout.WEST);
 
         // Titel
-        JLabel titleLabel = new JLabel("⚙ Einstellungen");
-        titleLabel.setFont(titleFont);
-        titleLabel.setForeground(PRIMARY_GOLD_LIGHT);
+        JLabel titleLabel = new JLabel("Einstellungen");
+        titleLabel.setFont(ColorsFonts.titleFont);
+        titleLabel.setForeground(ColorsFonts.PRIMARY_GOLD_LIGHT);
         titleLabel.setHorizontalAlignment(SwingConstants.CENTER);
         header.add(titleLabel, BorderLayout.CENTER);
 
@@ -213,21 +184,21 @@ public class OptionsPanel extends JPanel {
         center.setOpaque(false);
 
         // Audio Settings Card
-        JPanel audioCard = createSettingsCard("🔊 Audio", createAudioSettings());
+        JPanel audioCard = createSettingsCard("Audio", createAudioSettings());
         audioCard.setAlignmentX(Component.CENTER_ALIGNMENT);
         center.add(audioCard);
 
         center.add(Box.createVerticalStrut(20));
 
         // Connection Settings Card
-        JPanel connectionCard = createSettingsCard("🌐 Verbindung", createConnectionSettings());
+        JPanel connectionCard = createSettingsCard("Verbindung", createConnectionSettings());
         connectionCard.setAlignmentX(Component.CENTER_ALIGNMENT);
         center.add(connectionCard);
 
         center.add(Box.createVerticalStrut(20));
 
         // Appearance Settings Card
-        JPanel appearanceCard = createSettingsCard("🎨 Darstellung", createAppearanceSettings());
+        JPanel appearanceCard = createSettingsCard("Darstellung", createAppearanceSettings());
         appearanceCard.setAlignmentX(Component.CENTER_ALIGNMENT);
         center.add(appearanceCard);
 
@@ -247,11 +218,11 @@ public class OptionsPanel extends JPanel {
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
                 // Card Background
-                g2.setColor(CARD_BG);
+                g2.setColor(ColorsFonts.CARD_BG);
                 g2.fill(new RoundRectangle2D.Float(0, 0, getWidth(), getHeight(), 15, 15));
 
                 // Border
-                g2.setColor(CARD_BORDER);
+                g2.setColor(ColorsFonts.CARD_BORDER);
                 g2.setStroke(new BasicStroke(2));
                 g2.draw(new RoundRectangle2D.Float(1, 1, getWidth() - 2, getHeight() - 2, 15, 15));
 
@@ -274,8 +245,8 @@ public class OptionsPanel extends JPanel {
 
         // Titel
         JLabel titleLabel = new JLabel(title);
-        titleLabel.setFont(sectionFont);
-        titleLabel.setForeground(PRIMARY_GOLD_LIGHT);
+        titleLabel.setFont(ColorsFonts.titleFont);
+        titleLabel.setForeground(ColorsFonts.PRIMARY_GOLD_LIGHT);
         card.add(titleLabel, BorderLayout.NORTH);
 
         card.add(content, BorderLayout.CENTER);
@@ -384,7 +355,7 @@ public class OptionsPanel extends JPanel {
         gbc.insets = new Insets(5, 5, 0, 5);
         JLabel hintLabel = new JLabel("Format: ws://hostname:port/path");
         hintLabel.setFont(new Font("SansSerif", Font.ITALIC, 11));
-        hintLabel.setForeground(TEXT_MUTED);
+        hintLabel.setForeground(ColorsFonts.TEXT_MUTED);
         panel.add(hintLabel, gbc);
 
         panel.setPreferredSize(new Dimension(480, 90));
@@ -411,8 +382,8 @@ public class OptionsPanel extends JPanel {
         themePanel.add(themeToggle);
 
         JLabel themeStatusLabel = new JLabel(darkTheme ? "Dunkel" : "Hell");
-        themeStatusLabel.setFont(labelFont);
-        themeStatusLabel.setForeground(TEXT_LIGHT);
+        themeStatusLabel.setFont(ColorsFonts.labelFont);
+        themeStatusLabel.setForeground(ColorsFonts.TEXT_LIGHT);
         themePanel.add(themeStatusLabel);
 
         themeToggle.addActionListener(e -> {
@@ -443,7 +414,7 @@ public class OptionsPanel extends JPanel {
         gbc.insets = new Insets(5, 5, 0, 5);
         JLabel hintLabel = new JLabel("Änderungen werden nach Neustart wirksam");
         hintLabel.setFont(new Font("SansSerif", Font.ITALIC, 11));
-        hintLabel.setForeground(TEXT_MUTED);
+        hintLabel.setForeground(ColorsFonts.TEXT_MUTED);
         panel.add(hintLabel, gbc);
 
         panel.setPreferredSize(new Dimension(480, 130));
@@ -459,7 +430,7 @@ public class OptionsPanel extends JPanel {
         resetButton.addActionListener(e -> resetToDefaults());
         footer.add(resetButton);
 
-        StyledButton saveButton = new StyledButton("💾  Speichern", StyledButton.Style.PRIMARY);
+        StyledButton saveButton = new StyledButton("Speichern", StyledButton.Style.PRIMARY);
         saveButton.setPreferredSize(new Dimension(150, 45));
         saveButton.addActionListener(e -> {
             saveSettings();
@@ -476,8 +447,8 @@ public class OptionsPanel extends JPanel {
 
     private JLabel createStyledLabel(String text) {
         JLabel label = new JLabel(text);
-        label.setFont(labelFont);
-        label.setForeground(TEXT_LIGHT);
+        label.setFont(ColorsFonts.labelFont);
+        label.setForeground(ColorsFonts.TEXT_LIGHT);
         return label;
     }
 
@@ -492,19 +463,19 @@ public class OptionsPanel extends JPanel {
                 int trackHeight = 6;
 
                 // Track background
-                g2.setColor(STONE_DARK);
+                g2.setColor(ColorsFonts.STONE_DARK);
                 g2.fillRoundRect(8, trackY - trackHeight/2, getWidth() - 16, trackHeight, 3, 3);
 
                 // Filled portion
                 int fillWidth = (int) ((getValue() - getMinimum()) / (double) (getMaximum() - getMinimum()) * (getWidth() - 16));
-                g2.setColor(PRIMARY_GOLD);
+                g2.setColor(ColorsFonts.PRIMARY_GOLD);
                 g2.fillRoundRect(8, trackY - trackHeight/2, fillWidth, trackHeight, 3, 3);
 
                 // Thumb
                 int thumbX = 8 + fillWidth - 8;
-                g2.setColor(PRIMARY_GOLD_LIGHT);
+                g2.setColor(ColorsFonts.PRIMARY_GOLD_LIGHT);
                 g2.fillOval(thumbX, trackY - 8, 16, 16);
-                g2.setColor(PRIMARY_GOLD_DARK);
+                g2.setColor(ColorsFonts.PRIMARY_GOLD_DARK);
                 g2.setStroke(new BasicStroke(2));
                 g2.drawOval(thumbX, trackY - 8, 16, 16);
 
@@ -519,11 +490,11 @@ public class OptionsPanel extends JPanel {
     private JTextField createStyledTextField(String text) {
         JTextField field = new JTextField(text);
         field.setFont(new Font("Monospaced", Font.PLAIN, 13));
-        field.setBackground(STONE_DARK);
-        field.setForeground(TEXT_LIGHT);
-        field.setCaretColor(PRIMARY_GOLD_LIGHT);
+        field.setBackground(ColorsFonts.STONE_DARK);
+        field.setForeground(ColorsFonts.TEXT_LIGHT);
+        field.setCaretColor(ColorsFonts.PRIMARY_GOLD_LIGHT);
         field.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(CARD_BORDER, 1),
+                BorderFactory.createLineBorder(ColorsFonts.CARD_BORDER, 1),
                 BorderFactory.createEmptyBorder(8, 10, 8, 10)
         ));
         field.setPreferredSize(new Dimension(300, 35));
@@ -533,8 +504,8 @@ public class OptionsPanel extends JPanel {
     private JComboBox<String> createStyledComboBox() {
         JComboBox<String> combo = new JComboBox<>();
         combo.setFont(new Font("SansSerif", Font.PLAIN, 13));
-        combo.setBackground(STONE_DARK);
-        combo.setForeground(TEXT_LIGHT);
+        combo.setBackground(ColorsFonts.STONE_DARK);
+        combo.setForeground(ColorsFonts.TEXT_LIGHT);
         combo.setPreferredSize(new Dimension(150, 30));
 
         // Custom renderer for dropdown items
@@ -543,8 +514,8 @@ public class OptionsPanel extends JPanel {
             public Component getListCellRendererComponent(JList<?> list, Object value,
                                                           int index, boolean isSelected, boolean cellHasFocus) {
                 super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
-                setBackground(isSelected ? PRIMARY_GOLD_DARK : STONE_DARK);
-                setForeground(TEXT_LIGHT);
+                setBackground(isSelected ? ColorsFonts.PRIMARY_GOLD_DARK : ColorsFonts.STONE_DARK);
+                setForeground(ColorsFonts.TEXT_LIGHT);
                 setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
                 return this;
             }
@@ -572,7 +543,7 @@ public class OptionsPanel extends JPanel {
                 g2.fillRoundRect(0, 0, w, h, h, h);
 
                 // Border
-                g2.setColor(CARD_BORDER);
+                g2.setColor(ColorsFonts.CARD_BORDER);
                 g2.setStroke(new BasicStroke(2));
                 g2.drawRoundRect(1, 1, w - 2, h - 2, h - 2, h - 2);
 
@@ -584,7 +555,7 @@ public class OptionsPanel extends JPanel {
 
                 // Icon
                 g2.setFont(new Font("SansSerif", Font.PLAIN, 12));
-                g2.setColor(TEXT_LIGHT);
+                g2.setColor(ColorsFonts.TEXT_LIGHT);
                 if (isSelected()) {
                     g2.drawString("🌙", knobX + 4, h - 7);
                 } else {
@@ -750,7 +721,7 @@ public class OptionsPanel extends JPanel {
         if (backgroundImage != null) {
             g2.drawImage(backgroundImage, 0, 0, w, h, this);
         } else {
-            GradientPaint gradient = new GradientPaint(0, 0, STONE_DARK, 0, h, new Color(75, 45, 90));
+            GradientPaint gradient = new GradientPaint(0, 0, ColorsFonts.STONE_DARK, 0, h, new Color(75, 45, 90));
             g2.setPaint(gradient);
             g2.fillRect(0, 0, w, h);
         }
@@ -818,8 +789,8 @@ public class OptionsPanel extends JPanel {
             super(text);
             this.style = style;
 
-            setFont(buttonFont);
-            setForeground(TEXT_LIGHT);
+            setFont(ColorsFonts.buttonFont);
+            setForeground(ColorsFonts.TEXT_LIGHT);
             setFocusPainted(false);
             setBorderPainted(false);
             setContentAreaFilled(false);
@@ -866,9 +837,9 @@ public class OptionsPanel extends JPanel {
                     borderColor = interpolate(new Color(180, 80, 80), new Color(220, 100, 100), hoverProgress);
                 }
                 default -> {
-                    bgStart = interpolate(STONE_DARK, new Color(65, 55, 45), hoverProgress);
-                    bgEnd = interpolate(STONE_MEDIUM, new Color(90, 75, 60), hoverProgress);
-                    borderColor = interpolate(PRIMARY_GOLD_DARK, PRIMARY_GOLD_LIGHT, hoverProgress);
+                    bgStart = interpolate(ColorsFonts.STONE_DARK, new Color(65, 55, 45), hoverProgress);
+                    bgEnd = interpolate(ColorsFonts.STONE_MEDIUM, new Color(90, 75, 60), hoverProgress);
+                    borderColor = interpolate(ColorsFonts.PRIMARY_GOLD_DARK, ColorsFonts.PRIMARY_GOLD_LIGHT, hoverProgress);
                 }
             }
 

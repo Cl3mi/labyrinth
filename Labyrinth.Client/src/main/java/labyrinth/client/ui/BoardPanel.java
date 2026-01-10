@@ -274,7 +274,7 @@ public class BoardPanel extends JPanel {
         treasureFileMapping.put("Totenkopf", "Skull");       // id: 18
         treasureFileMapping.put("Karte", "Map");             // id: 19
         treasureFileMapping.put("Schwert", "Sword");         // id: 20
-        treasureFileMapping.put("Kelch", "chalice");         // id: 21 - lowercase!
+        treasureFileMapping.put("Kelch", "chalice");         // id: 21
         treasureFileMapping.put("Edelstein", "Diamond");     // id: 22
         treasureFileMapping.put("Krug", "Jug");              // id: 23
         treasureFileMapping.put("Maus", "Mouse");            // id: 24

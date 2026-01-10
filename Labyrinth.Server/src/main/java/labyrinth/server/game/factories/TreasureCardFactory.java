@@ -30,9 +30,11 @@ public class TreasureCardFactory {
             "Helm",        // Helmet (German)
             "Buch",        // Book
             "Kerze",       // Candle
+            "Ring",
             "Beutel",      // Bag
             "Totenkopf",   // Skull
             "Karte",       // Map
+            "Schwert",
             "Kelch",       // Chalice
             "Edelstein",   // Gemstone
             "Krug",        // Jug

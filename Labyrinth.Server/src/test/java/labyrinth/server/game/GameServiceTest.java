@@ -2,8 +2,10 @@ package labyrinth.server.game;
 
 import labyrinth.contracts.models.PlayerColor;
 import labyrinth.server.game.abstractions.IGameTimer;
+import labyrinth.server.game.ai.AiStrategy;
 import labyrinth.server.game.models.Game;
 import labyrinth.server.game.models.Player;
+import labyrinth.server.game.services.GameLogger;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
@@ -24,6 +26,12 @@ class GameServiceTest {
     @Mock
     private IGameTimer mockGameTimer; // Mock game timer for Game constructor
 
+    @Mock
+    private AiStrategy mockAiStrategy; // Mock AI strategy for Game constructor
+
+    @Mock
+    private GameLogger mockGameLogger; // Mock game logger for Game constructor
+
     @InjectMocks
     private GameService gameService; // Inject mocks into GameService
 
@@ -38,8 +46,9 @@ class GameServiceTest {
     void testAdminReassignmentOnLeave() {
         // Create real Game object for testing admin reassignment logic
         IGameTimer mockTimer = mock(IGameTimer.class);
-        org.springframework.context.ApplicationEventPublisher mockEventPublisher = mock(org.springframework.context.ApplicationEventPublisher.class);
-        Game game = new Game(mockTimer, mockEventPublisher);
+        AiStrategy mockAi = mock(AiStrategy.class);
+        GameLogger mockLogger = mock(GameLogger.class);
+        Game game = new Game(mockTimer, mockAi, mockLogger);
 
         // Add two players
         Player player1 = game.join("Player1");
@@ -60,8 +69,9 @@ class GameServiceTest {
     @Test
     void testAdminReassignmentPrefersHuman() {
         IGameTimer mockTimer = mock(IGameTimer.class);
-        org.springframework.context.ApplicationEventPublisher mockEventPublisher = mock(org.springframework.context.ApplicationEventPublisher.class);
-        Game game = new Game(mockTimer, mockEventPublisher);
+        AiStrategy mockAi = mock(AiStrategy.class);
+        GameLogger mockLogger = mock(GameLogger.class);
+        Game game = new Game(mockTimer, mockAi, mockLogger);
 
         // Add human player
         Player human = game.join("HumanPlayer");
@@ -97,8 +107,9 @@ class GameServiceTest {
     @Test
     void testLeaveEmptyLobby() {
         IGameTimer mockTimer = mock(IGameTimer.class);
-        org.springframework.context.ApplicationEventPublisher mockEventPublisher = mock(org.springframework.context.ApplicationEventPublisher.class);
-        Game game = new Game(mockTimer, mockEventPublisher);
+        AiStrategy mockAi = mock(AiStrategy.class);
+        GameLogger mockLogger = mock(GameLogger.class);
+        Game game = new Game(mockTimer, mockAi, mockLogger);
 
         Player player1 = game.join("Player1");
         assertTrue(player1.isAdmin());
@@ -113,8 +124,9 @@ class GameServiceTest {
     @Test
     void testNonAdminLeave_NoReassignment() {
         IGameTimer mockTimer = mock(IGameTimer.class);
-        org.springframework.context.ApplicationEventPublisher mockEventPublisher = mock(org.springframework.context.ApplicationEventPublisher.class);
-        Game game = new Game(mockTimer, mockEventPublisher);
+        AiStrategy mockAi = mock(AiStrategy.class);
+        GameLogger mockLogger = mock(GameLogger.class);
+        Game game = new Game(mockTimer, mockAi, mockLogger);
 
         Player player1 = game.join("Player1"); // Admin
         Player player2 = game.join("Player2"); // Not admin
@@ -133,8 +145,9 @@ class GameServiceTest {
     @Test
     void testAdminReassignmentWithMultiplePlayers() {
         IGameTimer mockTimer = mock(IGameTimer.class);
-        org.springframework.context.ApplicationEventPublisher mockEventPublisher = mock(org.springframework.context.ApplicationEventPublisher.class);
-        Game game = new Game(mockTimer, mockEventPublisher);
+        AiStrategy mockAi = mock(AiStrategy.class);
+        GameLogger mockLogger = mock(GameLogger.class);
+        Game game = new Game(mockTimer, mockAi, mockLogger);
 
         Player player1 = game.join("Player1"); // Admin
         Player player2 = game.join("Player2");

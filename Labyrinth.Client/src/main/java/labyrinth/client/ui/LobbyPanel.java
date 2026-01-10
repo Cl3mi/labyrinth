@@ -157,7 +157,7 @@ public class LobbyPanel extends JPanel {
 
     private void loadBackgroundImage() {
         try {
-            var url = getClass().getResource("/images/ui/background.jpg");
+            var url = getClass().getResource("/images/ui/background.png");
             if (url != null) {
                 backgroundImage = new ImageIcon(url).getImage();
             } else {
