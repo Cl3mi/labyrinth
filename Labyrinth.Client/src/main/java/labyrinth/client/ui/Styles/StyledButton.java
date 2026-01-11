@@ -4,6 +4,9 @@ package labyrinth.client.ui.Styles;
 // Styled Button
 // --------------------------------------------------------------------------------
 
+import labyrinth.client.ui.theme.FontManager;
+import labyrinth.client.ui.theme.GameTheme;
+
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
@@ -22,8 +25,8 @@ public class StyledButton extends JButton {
         super(text);
         this.style = style;
 
-        setFont(ColorsFonts.buttonFont);
-        setForeground(ColorsFonts.TEXT_LIGHT);
+        setFont(FontManager.buttonFont);
+        setForeground(GameTheme.Colors.TEXT_LIGHT);
         setFocusPainted(false);
         setBorderPainted(false);
         setContentAreaFilled(false);
@@ -70,9 +73,9 @@ public class StyledButton extends JButton {
                 borderColor = interpolate(new Color(180, 80, 80), new Color(220, 100, 100), hoverProgress);
             }
             default -> {
-                bgStart = interpolate(ColorsFonts.STONE_DARK, new Color(65, 55, 45), hoverProgress);
-                bgEnd = interpolate(ColorsFonts.STONE_MEDIUM, new Color(90, 75, 60), hoverProgress);
-                borderColor = interpolate(ColorsFonts.PRIMARY_GOLD_DARK, ColorsFonts.PRIMARY_GOLD_LIGHT, hoverProgress);
+                bgStart = interpolate(GameTheme.Colors.STONE_DARK, new Color(65, 55, 45), hoverProgress);
+                bgEnd = interpolate(GameTheme.Colors.STONE_MEDIUM, new Color(90, 75, 60), hoverProgress);
+                borderColor = interpolate(GameTheme.Colors.PRIMARY_GOLD_DARK, GameTheme.Colors.PRIMARY_GOLD_LIGHT, hoverProgress);
             }
         }
 

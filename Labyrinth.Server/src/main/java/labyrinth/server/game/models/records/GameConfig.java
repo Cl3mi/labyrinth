@@ -9,10 +9,10 @@ public record GameConfig(
         int turnTimeInSeconds
 ) {
     public GameConfig {
-        if (boardWidth < 5 || boardWidth > 11)
-            throw new IllegalArgumentException("Board width must be between 5 and 11");
-        if (boardHeight < 5 || boardHeight > 11)
-            throw new IllegalArgumentException("Board height must be between 5 and 11");
+        if (boardWidth < 3 || boardWidth > 11)
+            throw new IllegalArgumentException("Board width must be between 3 and 11");
+        if (boardHeight < 3 || boardHeight > 11)
+            throw new IllegalArgumentException("Board height must be between 3 and 11");
         if (boardWidth % 2 == 0)
             throw new IllegalArgumentException("Board width must be odd");
         if (boardHeight % 2 == 0)

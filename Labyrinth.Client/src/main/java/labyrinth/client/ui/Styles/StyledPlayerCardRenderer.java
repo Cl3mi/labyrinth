@@ -4,6 +4,8 @@ package labyrinth.client.ui.Styles;
 // Styled Player Card Renderer
 // --------------------------------------------------------------------------------
 
+import labyrinth.client.ui.theme.GameTheme;
+
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
@@ -49,7 +51,7 @@ public class StyledPlayerCardRenderer extends JPanel implements ListCellRenderer
 
         nameLabel = new JLabel();
         nameLabel.setFont(new Font("SansSerif", Font.BOLD, 15));
-        nameLabel.setForeground(ColorsFonts.TEXT_LIGHT);
+        nameLabel.setForeground(GameTheme.Colors.TEXT_LIGHT);
 
         statusLabel = new JLabel();
         statusLabel.setFont(new Font("SansSerif", Font.PLAIN, 12));
@@ -84,7 +86,7 @@ public class StyledPlayerCardRenderer extends JPanel implements ListCellRenderer
         avatarPanel.setBackground(isOffline ? new Color(80, 80, 80) : PLAYER_COLORS[index % PLAYER_COLORS.length]);
 
         nameLabel.setText(cleanName);
-        nameLabel.setForeground(isOffline ? ColorsFonts.TEXT_MUTED : ColorsFonts.TEXT_LIGHT);
+        nameLabel.setForeground(isOffline ? GameTheme.Colors.TEXT_MUTED : GameTheme.Colors.TEXT_LIGHT);
 
         statusLabel.setText(isOffline ? "● Offline" : "● Bereit");
         statusLabel.setForeground(isOffline ? new Color(180, 100, 100) : new Color(100, 180, 100));

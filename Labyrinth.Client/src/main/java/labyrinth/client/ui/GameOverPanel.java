@@ -8,10 +8,13 @@ import labyrinth.contracts.models.GameOverEventPayload;
 import labyrinth.contracts.models.RankingEntry;
 
 import javax.swing.*;
+import javax.swing.Timer;
 import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
+import java.util.*;
+import java.util.List;
 
 /**
  * Game Over UI showing winner and leaderboard with fantasy/medieval theme.
@@ -23,10 +26,14 @@ public class GameOverPanel extends JPanel {
     private final DefaultTableModel tableModel;
     private final JButton backToLobbyButton;
     private final JScrollPane scrollPane;
+    private final JPanel achievementsPanel;
 
     private Image backgroundImage;
     private int animationFrame = 0;
     private Timer animationTimer;
+
+    // Track achievements per player
+    private final Map<String, List<String>> playerAchievements = new HashMap<>();
 
     public GameOverPanel(Runnable onBackToLobby) {
         loadBackgroundImage();
@@ -49,12 +56,12 @@ public class GameOverPanel extends JPanel {
 
                 // Parchment banner background
                 GradientPaint bannerGradient = new GradientPaint(
-                    0, bannerY, GameTheme.Colors.SURFACE_PRIMARY,
-                    0, bannerY + bannerHeight, GameTheme.Colors.SURFACE_SECONDARY
+                        0, bannerY, GameTheme.Colors.SURFACE_PRIMARY,
+                        0, bannerY + bannerHeight, GameTheme.Colors.SURFACE_SECONDARY
                 );
                 g2.setPaint(bannerGradient);
                 g2.fillRoundRect(40, bannerY, getWidth() - 80, bannerHeight,
-                    GameTheme.Spacing.RADIUS_LARGE, GameTheme.Spacing.RADIUS_LARGE);
+                        GameTheme.Spacing.RADIUS_LARGE, GameTheme.Spacing.RADIUS_LARGE);
 
                 // Ornate border
                 ThemeEffects.drawOrnateBorder(g2, 40, bannerY, getWidth() - 80, bannerHeight);
@@ -84,12 +91,12 @@ public class GameOverPanel extends JPanel {
                 int centerX = getWidth() / 2;
                 int centerY = getHeight() / 2;
                 RadialGradientPaint glow = new RadialGradientPaint(
-                    centerX, centerY, 30f,
-                    new float[]{0.0f, 1.0f},
-                    new Color[]{
-                        ThemeEffects.withAlpha(GameTheme.Colors.ACCENT_GOLD, 200),
-                        ThemeEffects.withAlpha(GameTheme.Colors.ACCENT_GOLD, 0)
-                    }
+                        centerX, centerY, 30f,
+                        new float[]{0.0f, 1.0f},
+                        new Color[]{
+                                ThemeEffects.withAlpha(GameTheme.Colors.ACCENT_GOLD, 200),
+                                ThemeEffects.withAlpha(GameTheme.Colors.ACCENT_GOLD, 0)
+                        }
                 );
                 g2.setPaint(glow);
                 g2.fillOval(centerX - 30, centerY - 30, 60, 60);
@@ -175,7 +182,7 @@ public class GameOverPanel extends JPanel {
         DefaultTableCellRenderer centerRenderer = new DefaultTableCellRenderer() {
             @Override
             public Component getTableCellRendererComponent(JTable table, Object value,
-                    boolean isSelected, boolean hasFocus, int row, int column) {
+                                                           boolean isSelected, boolean hasFocus, int row, int column) {
                 Component comp = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
 
                 // Don't override the prepareRenderer background/foreground
@@ -251,22 +258,22 @@ public class GameOverPanel extends JPanel {
 
                 // Wood texture background
                 GradientPaint woodGradient = new GradientPaint(
-                    0, 0, GameTheme.Colors.SURFACE_PRIMARY,
-                    0, getHeight(), GameTheme.Colors.SURFACE_SECONDARY
+                        0, 0, GameTheme.Colors.SURFACE_PRIMARY,
+                        0, getHeight(), GameTheme.Colors.SURFACE_SECONDARY
                 );
                 g2.setPaint(woodGradient);
                 g2.fillRoundRect(0, 0, getWidth(), getHeight(),
-                    GameTheme.Spacing.RADIUS_MEDIUM, GameTheme.Spacing.RADIUS_MEDIUM);
+                        GameTheme.Spacing.RADIUS_MEDIUM, GameTheme.Spacing.RADIUS_MEDIUM);
 
                 // Embossed button effect
                 ThemeEffects.drawEmbossedButton(g2, 0, 0, getWidth(), getHeight(),
-                    getModel().isPressed());
+                        getModel().isPressed());
 
                 // Copper border
                 g2.setColor(GameTheme.Colors.ACCENT_COPPER);
                 g2.setStroke(new BasicStroke(2f));
                 g2.drawRoundRect(1, 1, getWidth() - 3, getHeight() - 3,
-                    GameTheme.Spacing.RADIUS_MEDIUM, GameTheme.Spacing.RADIUS_MEDIUM);
+                        GameTheme.Spacing.RADIUS_MEDIUM, GameTheme.Spacing.RADIUS_MEDIUM);
 
                 // Text with shadow
                 g2.setFont(FontManager.getLargeUI());
@@ -299,10 +306,28 @@ public class GameOverPanel extends JPanel {
 
         footer.add(backToLobbyButton);
 
+        // ===== Achievements Panel =====
+        achievementsPanel = createAchievementsPanel();
+
         // ===== Add to panel =====
         add(header, BorderLayout.NORTH);
-        add(scrollPane, BorderLayout.CENTER);
+
+        // Center panel with leaderboard and achievements
+        JPanel centerContainer = new JPanel(new BorderLayout(0, 15));
+        centerContainer.setOpaque(false);
+        centerContainer.add(scrollPane, BorderLayout.CENTER);
+        centerContainer.add(achievementsPanel, BorderLayout.SOUTH);
+
+        add(centerContainer, BorderLayout.CENTER);
         add(footer, BorderLayout.SOUTH);
+    }
+
+    private JPanel createAchievementsPanel() {
+        JPanel panel = new JPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        panel.setOpaque(false);
+        panel.setBorder(new EmptyBorder(10, 0, 0, 0));
+        return panel;
     }
 
     public void updateGameOver(GameOverEventPayload payload) {
@@ -313,12 +338,20 @@ public class GameOverPanel extends JPanel {
 
         AudioPlayer.getInstance().playGameOverSequence();
 
+        // Build player ID to name mapping
+        Map<String, String> playerIdToName = new HashMap<>();
+        if (payload.getRanking() != null) {
+            for (RankingEntry entry : payload.getRanking()) {
+                String playerName = getPlayerName(entry);
+                playerIdToName.put(entry.getPlayerId(), playerName);
+            }
+        }
+
         // Find winner name
         String winnerName = "Unknown";
         if (payload.getRanking() != null && payload.getRanking().length > 0) {
             for (RankingEntry entry : payload.getRanking()) {
                 if (entry.getPlayerId().equals(payload.getWinnerId())) {
-                    // Get playerName from additionalProperties (not in standard Contracts)
                     winnerName = getPlayerName(entry);
                     break;
                 }
@@ -336,9 +369,9 @@ public class GameOverPanel extends JPanel {
             } else {
                 winnerLabel.setText("⚔ " + winnerNameFinal + " gewinnt! ⚔");
                 winnerLabel.setForeground(ThemeEffects.blendColors(
-                    GameTheme.Colors.ACCENT_GOLD,
-                    GameTheme.Colors.TEXT_PRIMARY,
-                    0.3f
+                        GameTheme.Colors.ACCENT_GOLD,
+                        GameTheme.Colors.TEXT_PRIMARY,
+                        0.3f
                 ));
             }
             if (animationFrame > 8) {
@@ -372,9 +405,53 @@ public class GameOverPanel extends JPanel {
             }
         }
 
+        // Update achievements display with player names
+        updateAchievementsDisplayWithNames(playerIdToName);
+
         // Resize scroll pane to fit content and redraw border
         scrollPane.revalidate();
         scrollPane.repaint();
+    }
+
+    /**
+     * Update achievements display with proper player names from ranking data.
+     */
+    private void updateAchievementsDisplayWithNames(Map<String, String> playerIdToName) {
+        achievementsPanel.removeAll();
+
+        if (playerAchievements.isEmpty()) {
+            achievementsPanel.setVisible(false);
+            return;
+        }
+
+        achievementsPanel.setVisible(true);
+
+        // Title
+        JLabel achievementTitle = new JLabel("🏅 Errungenschaften", SwingConstants.CENTER);
+        achievementTitle.setFont(FontManager.getMediumDisplay());
+        achievementTitle.setForeground(GameTheme.Colors.ACCENT_GOLD);
+        achievementTitle.setAlignmentX(Component.CENTER_ALIGNMENT);
+        achievementTitle.setBorder(new EmptyBorder(5, 0, 10, 0));
+        achievementsPanel.add(achievementTitle);
+
+        // Create achievement entries for each player
+        for (Map.Entry<String, List<String>> entry : playerAchievements.entrySet()) {
+            String playerId = entry.getKey();
+            List<String> achievements = entry.getValue();
+
+            if (achievements.isEmpty()) continue;
+
+            // Get player name from mapping, fallback to ID
+            String playerName = playerIdToName.getOrDefault(playerId, playerId);
+
+            // Create achievement card for this player
+            JPanel playerAchievementCard = createPlayerAchievementCard(playerName, achievements);
+            achievementsPanel.add(playerAchievementCard);
+            achievementsPanel.add(Box.createVerticalStrut(5));
+        }
+
+        achievementsPanel.revalidate();
+        achievementsPanel.repaint();
     }
 
     /**
@@ -414,8 +491,8 @@ public class GameOverPanel extends JPanel {
         } else {
             // Fallback: Dark earthy gradient background
             GradientPaint gradient = new GradientPaint(
-                0, 0, GameTheme.Colors.BACKGROUND_PRIMARY,
-                0, getHeight(), GameTheme.Colors.BACKGROUND_SECONDARY
+                    0, 0, GameTheme.Colors.BACKGROUND_PRIMARY,
+                    0, getHeight(), GameTheme.Colors.BACKGROUND_SECONDARY
             );
             g2.setPaint(gradient);
             g2.fillRect(0, 0, getWidth(), getHeight());
@@ -423,13 +500,13 @@ public class GameOverPanel extends JPanel {
 
         // Subtle vignette effect
         RadialGradientPaint vignette = new RadialGradientPaint(
-            getWidth() / 2f, getHeight() / 2f,
-            Math.max(getWidth(), getHeight()) * 0.8f,
-            new float[]{0.0f, 1.0f},
-            new Color[]{
-                ThemeEffects.withAlpha(GameTheme.Colors.BACKGROUND_PRIMARY, 0),
-                ThemeEffects.withAlpha(GameTheme.Colors.BACKGROUND_PRIMARY, 150)
-            }
+                getWidth() / 2f, getHeight() / 2f,
+                Math.max(getWidth(), getHeight()) * 0.8f,
+                new float[]{0.0f, 1.0f},
+                new Color[]{
+                        ThemeEffects.withAlpha(GameTheme.Colors.BACKGROUND_PRIMARY, 0),
+                        ThemeEffects.withAlpha(GameTheme.Colors.BACKGROUND_PRIMARY, 150)
+                }
         );
         g2.setPaint(vignette);
         g2.fillRect(0, 0, getWidth(), getHeight());
@@ -439,5 +516,131 @@ public class GameOverPanel extends JPanel {
         if (animationTimer != null && animationTimer.isRunning()) {
             animationTimer.stop();
         }
+        // Clear achievements when panel is cleaned up
+        playerAchievements.clear();
+        achievementsPanel.removeAll();
+    }
+
+    /**
+     * Add an achievement for a player.
+     * This should be called when ACHIEVEMENT_UNLOCKED events are received.
+     */
+    public void addAchievement(String playerId, String achievementName) {
+        playerAchievements.computeIfAbsent(playerId, k -> new ArrayList<>()).add(achievementName);
+        System.out.println("[GameOverPanel] Added achievement " + achievementName + " for player " + playerId);
+    }
+
+    /**
+     * Update the achievements display after all achievements have been added.
+     */
+    private void updateAchievementsDisplay() {
+        achievementsPanel.removeAll();
+
+        if (playerAchievements.isEmpty()) {
+            achievementsPanel.setVisible(false);
+            return;
+        }
+
+        achievementsPanel.setVisible(true);
+
+        // Title
+        JLabel achievementTitle = new JLabel("Errungenschaften", SwingConstants.CENTER);
+        achievementTitle.setFont(FontManager.getMediumDisplay());
+        achievementTitle.setForeground(GameTheme.Colors.ACCENT_GOLD);
+        achievementTitle.setAlignmentX(Component.CENTER_ALIGNMENT);
+        achievementTitle.setBorder(new EmptyBorder(5, 0, 10, 0));
+        achievementsPanel.add(achievementTitle);
+
+        // Create achievement entries for each player
+        for (Map.Entry<String, List<String>> entry : playerAchievements.entrySet()) {
+            String playerId = entry.getKey();
+            List<String> achievements = entry.getValue();
+
+            if (achievements.isEmpty()) continue;
+
+            // Find player name
+            String playerName = playerId; // fallback
+            // Will be set from ranking data in updateGameOver
+
+            // Create achievement card for this player
+            JPanel playerAchievementCard = createPlayerAchievementCard(playerName, achievements);
+            achievementsPanel.add(playerAchievementCard);
+            achievementsPanel.add(Box.createVerticalStrut(5));
+        }
+
+        achievementsPanel.revalidate();
+        achievementsPanel.repaint();
+    }
+
+    private JPanel createPlayerAchievementCard(String playerName, List<String> achievements) {
+        JPanel card = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+                // Semi-transparent background
+                g2.setColor(ThemeEffects.withAlpha(GameTheme.Colors.SURFACE_PRIMARY, 180));
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 10, 10);
+
+                // Border
+                g2.setColor(GameTheme.Colors.ACCENT_GOLD);
+                g2.setStroke(new BasicStroke(1.5f));
+                g2.drawRoundRect(1, 1, getWidth() - 2, getHeight() - 2, 10, 10);
+
+                g2.dispose();
+                super.paintComponent(g);
+            }
+        };
+        card.setLayout(new FlowLayout(FlowLayout.LEFT, 10, 8));
+        card.setOpaque(false);
+        card.setMaximumSize(new Dimension(Integer.MAX_VALUE, 45));
+
+        // Player name
+        JLabel nameLabel = new JLabel(playerName + ": ");
+        nameLabel.setFont(FontManager.getMediumUI());
+        nameLabel.setForeground(GameTheme.Colors.TEXT_PRIMARY);
+        card.add(nameLabel);
+
+        // Achievement badges
+        for (String achievement : achievements) {
+            JLabel badge = createAchievementBadge(achievement);
+            card.add(badge);
+        }
+
+        return card;
+    }
+
+    private JLabel createAchievementBadge(String achievementName) {
+        String icon = getAchievementIcon(achievementName);
+        String displayName = formatAchievementName(achievementName);
+
+        JLabel badge = new JLabel(icon + " " + displayName);
+        badge.setFont(new Font("SansSerif", Font.BOLD, 12));
+        badge.setForeground(GameTheme.Colors.ACCENT_GOLD);
+        badge.setOpaque(true);
+        badge.setBackground(ThemeEffects.withAlpha(GameTheme.Colors.ACCENT_GOLD, 30));
+        badge.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(GameTheme.Colors.ACCENT_GOLD, 1),
+                BorderFactory.createEmptyBorder(3, 8, 3, 8)
+        ));
+
+        return badge;
+    }
+
+    private String getAchievementIcon(String achievementName) {
+        return switch (achievementName.toUpperCase()) {
+            case "RUNNER" -> "🏃";
+            case "PUSHER" -> "💪";
+            default -> "🏅";
+        };
+    }
+
+    private String formatAchievementName(String achievementName) {
+        return switch (achievementName.toUpperCase()) {
+            case "RUNNER" -> "Runner";
+            case "PUSHER" -> "Pusher";
+            default -> achievementName;
+        };
     }
 }

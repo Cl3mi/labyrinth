@@ -1,4 +1,4 @@
-package labyrinth.client.ui;
+package labyrinth.client.audio;
 
 import javax.sound.sampled.*;
 

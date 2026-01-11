@@ -19,12 +19,35 @@ public final class FontManager {
     private static Font crimsonTextBold;
     private static Font jetBrainsMonoRegular;
 
+    public static Font titleFont;
+    public static Font labelFont;
+    public static Font buttonFont;
+
     static {
         loadFonts();
     }
 
     private FontManager() {
         // Prevent instantiation
+    }
+
+    public static void initFonts() {
+        titleFont = new Font("Serif", Font.BOLD, 28);
+        labelFont = new Font("Serif", Font.PLAIN, 14);
+        buttonFont = new Font("Serif", Font.BOLD, 16);
+
+        if (isFontAvailable("Cinzel")) {
+            titleFont = new Font("Cinzel", Font.BOLD, 28);
+            buttonFont = new Font("Cinzel", Font.BOLD, 16);
+        }
+    }
+
+    private static boolean isFontAvailable(String fontName) {
+        GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
+        for (String family : ge.getAvailableFontFamilyNames()) {
+            if (family.equalsIgnoreCase(fontName)) return true;
+        }
+        return false;
     }
 
     /**

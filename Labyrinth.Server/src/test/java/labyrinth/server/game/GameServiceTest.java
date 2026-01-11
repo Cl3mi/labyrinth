@@ -39,8 +39,9 @@ class GameServiceTest {
         // Create real Game object for testing admin reassignment logic
         IGameTimer mockTimer = mock(IGameTimer.class);
         labyrinth.server.game.ai.AiStrategy mockAiStrategy = mock(labyrinth.server.game.ai.AiStrategy.class);
-        labyrinth.server.game.services.GameLogger mockGameLogger = new labyrinth.server.game.services.GameLogger();
-        Game game = new Game(mockTimer, mockAiStrategy, mockGameLogger);
+        labyrinth.server.game.services.GameLogger mockGameLogger = mock(labyrinth.server.game.services.GameLogger.class);
+        labyrinth.server.game.services.GameInitializer mockGameInitializer = mock(labyrinth.server.game.services.GameInitializer.class);
+        Game game = new Game(mockTimer, mockAiStrategy, mockGameLogger, mockGameInitializer);
 
         // Add two players
         Player player1 = game.join("Player1");
@@ -62,8 +63,9 @@ class GameServiceTest {
     void testAdminReassignmentPrefersHuman() {
         IGameTimer mockTimer = mock(IGameTimer.class);
         labyrinth.server.game.ai.AiStrategy mockAiStrategy = mock(labyrinth.server.game.ai.AiStrategy.class);
-        labyrinth.server.game.services.GameLogger mockGameLogger = new labyrinth.server.game.services.GameLogger();
-        Game game = new Game(mockTimer, mockAiStrategy, mockGameLogger);
+        labyrinth.server.game.services.GameLogger mockGameLogger = mock(labyrinth.server.game.services.GameLogger.class);
+        labyrinth.server.game.services.GameInitializer mockGameInitializer = mock(labyrinth.server.game.services.GameInitializer.class);
+        Game game = new Game(mockTimer, mockAiStrategy, mockGameLogger, mockGameInitializer);
 
         // Add human player
         Player human = game.join("HumanPlayer");
@@ -100,8 +102,9 @@ class GameServiceTest {
     void testLeaveEmptyLobby() {
         IGameTimer mockTimer = mock(IGameTimer.class);
         labyrinth.server.game.ai.AiStrategy mockAiStrategy = mock(labyrinth.server.game.ai.AiStrategy.class);
-        labyrinth.server.game.services.GameLogger mockGameLogger = new labyrinth.server.game.services.GameLogger();
-        Game game = new Game(mockTimer, mockAiStrategy, mockGameLogger);
+        labyrinth.server.game.services.GameLogger mockGameLogger = mock(labyrinth.server.game.services.GameLogger.class);
+        labyrinth.server.game.services.GameInitializer mockGameInitializer = mock(labyrinth.server.game.services.GameInitializer.class);
+        Game game = new Game(mockTimer, mockAiStrategy, mockGameLogger, mockGameInitializer);
 
         Player player1 = game.join("Player1");
         assertTrue(player1.isAdmin());
@@ -117,8 +120,9 @@ class GameServiceTest {
     void testNonAdminLeave_NoReassignment() {
         IGameTimer mockTimer = mock(IGameTimer.class);
         labyrinth.server.game.ai.AiStrategy mockAiStrategy = mock(labyrinth.server.game.ai.AiStrategy.class);
-        labyrinth.server.game.services.GameLogger mockGameLogger = new labyrinth.server.game.services.GameLogger();
-        Game game = new Game(mockTimer, mockAiStrategy, mockGameLogger);
+        labyrinth.server.game.services.GameLogger mockGameLogger = mock(labyrinth.server.game.services.GameLogger.class);
+        labyrinth.server.game.services.GameInitializer mockGameInitializer = mock(labyrinth.server.game.services.GameInitializer.class);
+        Game game = new Game(mockTimer, mockAiStrategy, mockGameLogger, mockGameInitializer);
 
         Player player1 = game.join("Player1"); // Admin
         Player player2 = game.join("Player2"); // Not admin
@@ -138,8 +142,9 @@ class GameServiceTest {
     void testAdminReassignmentWithMultiplePlayers() {
         IGameTimer mockTimer = mock(IGameTimer.class);
         labyrinth.server.game.ai.AiStrategy mockAiStrategy = mock(labyrinth.server.game.ai.AiStrategy.class);
-        labyrinth.server.game.services.GameLogger mockGameLogger = new labyrinth.server.game.services.GameLogger();
-        Game game = new Game(mockTimer, mockAiStrategy, mockGameLogger);
+        labyrinth.server.game.services.GameLogger mockGameLogger = mock(labyrinth.server.game.services.GameLogger.class);
+        labyrinth.server.game.services.GameInitializer mockGameInitializer = mock(labyrinth.server.game.services.GameInitializer.class);
+        Game game = new Game(mockTimer, mockAiStrategy, mockGameLogger, mockGameInitializer);
 
         Player player1 = game.join("Player1"); // Admin
         Player player2 = game.join("Player2");

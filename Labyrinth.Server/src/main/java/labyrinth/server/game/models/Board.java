@@ -46,11 +46,11 @@ public class Board {
      * @param extraTile the spare tile which will be inserted during shifts
      */
     public Board(int width, int height, BiMap<Position, Tile> tileMap, Tile extraTile) {
-        if (width < 5 || width > 11) {
-            throw new IllegalArgumentException("Board width must be between 5 and 11");
+        if (width < 3 || width > 11) {
+            throw new IllegalArgumentException("Board width must be between 3 and 11");
         }
-        if (height < 5 || height > 11) {
-            throw new IllegalArgumentException("Board height must be between 5 and 11");
+        if (height < 3 || height > 11) {
+            throw new IllegalArgumentException("Board height must be between 3 and 11");
         }
         if (width % 2 == 0) {
             throw new IllegalArgumentException("Board width must be odd");

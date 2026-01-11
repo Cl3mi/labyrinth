@@ -1,7 +1,7 @@
 package labyrinth.client.ui;
 
-import labyrinth.client.ui.Styles.ColorsFonts;
 import labyrinth.client.ui.Styles.StyledButton;
+import labyrinth.client.ui.theme.GameTheme;
 import labyrinth.managementclient.api.ServersApi;
 import labyrinth.managementclient.model.GameServer;
 import lombok.Setter;
@@ -72,7 +72,7 @@ public class ServerBrowserPanel extends JPanel {
         JLabel headerTitle = new JLabel("Verfügbare Server");
         Font titleFont = new Font("Serif", Font.BOLD, 28);
         headerTitle.setFont(titleFont);
-        headerTitle.setForeground(ColorsFonts.PRIMARY_GOLD_LIGHT);
+        headerTitle.setForeground(GameTheme.Colors.PRIMARY_GOLD_LIGHT);
         headerTitle.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         statusLabel = new JLabel("Lade Server...");
@@ -120,7 +120,7 @@ public class ServerBrowserPanel extends JPanel {
 
         JLabel listTitle = new JLabel("📡 Verfügbare Server");
         listTitle.setFont(new Font("Serif", Font.BOLD, 18));
-        listTitle.setForeground(ColorsFonts.PRIMARY_GOLD_LIGHT);
+        listTitle.setForeground(GameTheme.Colors.PRIMARY_GOLD_LIGHT);
         listCard.add(listTitle, BorderLayout.NORTH);
 
         JScrollPane sp = new JScrollPane(serverList);
@@ -140,10 +140,10 @@ public class ServerBrowserPanel extends JPanel {
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-                g2.setColor(ColorsFonts.CARD_BG);
+                g2.setColor(GameTheme.Colors.CARD_BG);
                 g2.fill(new RoundRectangle2D.Float(0, 0, getWidth(), getHeight(), 15, 15));
 
-                g2.setColor(ColorsFonts.CARD_BORDER);
+                g2.setColor(GameTheme.Colors.CARD_BORDER);
                 g2.setStroke(new BasicStroke(2));
                 g2.draw(new RoundRectangle2D.Float(1, 1, getWidth() - 2, getHeight() - 2, 15, 15));
 
@@ -280,11 +280,11 @@ public class ServerBrowserPanel extends JPanel {
             infoPanel.setLayout(new BorderLayout());
 
             nameLabel.setFont(nameFont);
-            nameLabel.setForeground(ColorsFonts.TEXT_LIGHT);
+            nameLabel.setForeground(GameTheme.Colors.TEXT_LIGHT);
             nameLabel.setHorizontalAlignment(SwingConstants.CENTER);
 
             playersLabel.setFont(new Font("SansSerif", Font.BOLD, 13));
-            playersLabel.setForeground(ColorsFonts.TEXT_MUTED);
+            playersLabel.setForeground(GameTheme.Colors.TEXT_MUTED);
             playersLabel.setHorizontalAlignment(SwingConstants.CENTER);
 
             infoPanel.add(nameLabel, BorderLayout.CENTER);
@@ -322,13 +322,13 @@ public class ServerBrowserPanel extends JPanel {
             int h = getHeight();
             int arc = 12;
 
-            g2.setColor(ColorsFonts.SHADOW_COLOR);
+            g2.setColor(GameTheme.Colors.SHADOW_COLOR);
             g2.fill(new RoundRectangle2D.Float(3, 4, w - 6, h - 6, arc, arc));
 
-            g2.setColor(ColorsFonts.CARD_BG);
+            g2.setColor(GameTheme.Colors.CARD_BG);
             g2.fill(new RoundRectangle2D.Float(0, 0, w - 1, h - 1, arc, arc));
 
-            g2.setColor(ColorsFonts.CARD_BORDER);
+            g2.setColor(GameTheme.Colors.CARD_BORDER);
             g2.setStroke(new BasicStroke(1.2f));
             g2.draw(new RoundRectangle2D.Float(0, 0, w - 1, h - 1, arc, arc));
 

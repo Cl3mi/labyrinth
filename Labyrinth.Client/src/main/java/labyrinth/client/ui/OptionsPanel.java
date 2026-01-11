@@ -1,11 +1,11 @@
 package labyrinth.client.ui;
 
 import labyrinth.client.audio.AudioPlayer;
-import labyrinth.client.ui.Styles.ColorsFonts;
+import labyrinth.client.ui.theme.FontManager;
+import labyrinth.client.ui.theme.GameTheme;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
-import javax.swing.event.ChangeListener;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -81,7 +81,7 @@ public class OptionsPanel extends JPanel {
         onMusicVolumeChanged = v -> AudioPlayer.getInstance().setMusicVolume(v / 100f);
         onSfxVolumeChanged   = v -> AudioPlayer.getInstance().setSfxVolume(v / 100f);
 
-        ColorsFonts.initFonts();
+        FontManager.initFonts();
         loadSettings();
         loadBackgroundImage();
         setupUI();
@@ -164,8 +164,8 @@ public class OptionsPanel extends JPanel {
 
         // Titel
         JLabel titleLabel = new JLabel("Einstellungen");
-        titleLabel.setFont(ColorsFonts.titleFont);
-        titleLabel.setForeground(ColorsFonts.PRIMARY_GOLD_LIGHT);
+        titleLabel.setFont(FontManager.titleFont);
+        titleLabel.setForeground(GameTheme.Colors.PRIMARY_GOLD_LIGHT);
         titleLabel.setHorizontalAlignment(SwingConstants.CENTER);
         header.add(titleLabel, BorderLayout.CENTER);
 
@@ -218,11 +218,11 @@ public class OptionsPanel extends JPanel {
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
                 // Card Background
-                g2.setColor(ColorsFonts.CARD_BG);
+                g2.setColor(GameTheme.Colors.CARD_BG);
                 g2.fill(new RoundRectangle2D.Float(0, 0, getWidth(), getHeight(), 15, 15));
 
                 // Border
-                g2.setColor(ColorsFonts.CARD_BORDER);
+                g2.setColor(GameTheme.Colors.CARD_BORDER);
                 g2.setStroke(new BasicStroke(2));
                 g2.draw(new RoundRectangle2D.Float(1, 1, getWidth() - 2, getHeight() - 2, 15, 15));
 
@@ -245,8 +245,8 @@ public class OptionsPanel extends JPanel {
 
         // Titel
         JLabel titleLabel = new JLabel(title);
-        titleLabel.setFont(ColorsFonts.titleFont);
-        titleLabel.setForeground(ColorsFonts.PRIMARY_GOLD_LIGHT);
+        titleLabel.setFont(FontManager.titleFont);
+        titleLabel.setForeground(GameTheme.Colors.PRIMARY_GOLD_LIGHT);
         card.add(titleLabel, BorderLayout.NORTH);
 
         card.add(content, BorderLayout.CENTER);
@@ -355,7 +355,7 @@ public class OptionsPanel extends JPanel {
         gbc.insets = new Insets(5, 5, 0, 5);
         JLabel hintLabel = new JLabel("Format: ws://hostname:port/path");
         hintLabel.setFont(new Font("SansSerif", Font.ITALIC, 11));
-        hintLabel.setForeground(ColorsFonts.TEXT_MUTED);
+        hintLabel.setForeground(GameTheme.Colors.TEXT_MUTED);
         panel.add(hintLabel, gbc);
 
         panel.setPreferredSize(new Dimension(480, 90));
@@ -382,8 +382,8 @@ public class OptionsPanel extends JPanel {
         themePanel.add(themeToggle);
 
         JLabel themeStatusLabel = new JLabel(darkTheme ? "Dunkel" : "Hell");
-        themeStatusLabel.setFont(ColorsFonts.labelFont);
-        themeStatusLabel.setForeground(ColorsFonts.TEXT_LIGHT);
+        themeStatusLabel.setFont(FontManager.labelFont);
+        themeStatusLabel.setForeground(GameTheme.Colors.TEXT_LIGHT);
         themePanel.add(themeStatusLabel);
 
         themeToggle.addActionListener(e -> {
@@ -414,7 +414,7 @@ public class OptionsPanel extends JPanel {
         gbc.insets = new Insets(5, 5, 0, 5);
         JLabel hintLabel = new JLabel("Änderungen werden nach Neustart wirksam");
         hintLabel.setFont(new Font("SansSerif", Font.ITALIC, 11));
-        hintLabel.setForeground(ColorsFonts.TEXT_MUTED);
+        hintLabel.setForeground(GameTheme.Colors.TEXT_MUTED);
         panel.add(hintLabel, gbc);
 
         panel.setPreferredSize(new Dimension(480, 130));
@@ -447,8 +447,8 @@ public class OptionsPanel extends JPanel {
 
     private JLabel createStyledLabel(String text) {
         JLabel label = new JLabel(text);
-        label.setFont(ColorsFonts.labelFont);
-        label.setForeground(ColorsFonts.TEXT_LIGHT);
+        label.setFont(FontManager.labelFont);
+        label.setForeground(GameTheme.Colors.TEXT_LIGHT);
         return label;
     }
 
@@ -463,19 +463,19 @@ public class OptionsPanel extends JPanel {
                 int trackHeight = 6;
 
                 // Track background
-                g2.setColor(ColorsFonts.STONE_DARK);
+                g2.setColor(GameTheme.Colors.STONE_DARK);
                 g2.fillRoundRect(8, trackY - trackHeight/2, getWidth() - 16, trackHeight, 3, 3);
 
                 // Filled portion
                 int fillWidth = (int) ((getValue() - getMinimum()) / (double) (getMaximum() - getMinimum()) * (getWidth() - 16));
-                g2.setColor(ColorsFonts.PRIMARY_GOLD);
+                g2.setColor(GameTheme.Colors.PRIMARY_GOLD);
                 g2.fillRoundRect(8, trackY - trackHeight/2, fillWidth, trackHeight, 3, 3);
 
                 // Thumb
                 int thumbX = 8 + fillWidth - 8;
-                g2.setColor(ColorsFonts.PRIMARY_GOLD_LIGHT);
+                g2.setColor(GameTheme.Colors.PRIMARY_GOLD_LIGHT);
                 g2.fillOval(thumbX, trackY - 8, 16, 16);
-                g2.setColor(ColorsFonts.PRIMARY_GOLD_DARK);
+                g2.setColor(GameTheme.Colors.PRIMARY_GOLD_DARK);
                 g2.setStroke(new BasicStroke(2));
                 g2.drawOval(thumbX, trackY - 8, 16, 16);
 
@@ -490,11 +490,11 @@ public class OptionsPanel extends JPanel {
     private JTextField createStyledTextField(String text) {
         JTextField field = new JTextField(text);
         field.setFont(new Font("Monospaced", Font.PLAIN, 13));
-        field.setBackground(ColorsFonts.STONE_DARK);
-        field.setForeground(ColorsFonts.TEXT_LIGHT);
-        field.setCaretColor(ColorsFonts.PRIMARY_GOLD_LIGHT);
+        field.setBackground(GameTheme.Colors.STONE_DARK);
+        field.setForeground(GameTheme.Colors.TEXT_LIGHT);
+        field.setCaretColor(GameTheme.Colors.PRIMARY_GOLD_LIGHT);
         field.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(ColorsFonts.CARD_BORDER, 1),
+                BorderFactory.createLineBorder(GameTheme.Colors.CARD_BORDER, 1),
                 BorderFactory.createEmptyBorder(8, 10, 8, 10)
         ));
         field.setPreferredSize(new Dimension(300, 35));
@@ -504,8 +504,8 @@ public class OptionsPanel extends JPanel {
     private JComboBox<String> createStyledComboBox() {
         JComboBox<String> combo = new JComboBox<>();
         combo.setFont(new Font("SansSerif", Font.PLAIN, 13));
-        combo.setBackground(ColorsFonts.STONE_DARK);
-        combo.setForeground(ColorsFonts.TEXT_LIGHT);
+        combo.setBackground(GameTheme.Colors.STONE_DARK);
+        combo.setForeground(GameTheme.Colors.TEXT_LIGHT);
         combo.setPreferredSize(new Dimension(150, 30));
 
         // Custom renderer for dropdown items
@@ -514,8 +514,8 @@ public class OptionsPanel extends JPanel {
             public Component getListCellRendererComponent(JList<?> list, Object value,
                                                           int index, boolean isSelected, boolean cellHasFocus) {
                 super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
-                setBackground(isSelected ? ColorsFonts.PRIMARY_GOLD_DARK : ColorsFonts.STONE_DARK);
-                setForeground(ColorsFonts.TEXT_LIGHT);
+                setBackground(isSelected ? GameTheme.Colors.PRIMARY_GOLD_DARK : GameTheme.Colors.STONE_DARK);
+                setForeground(GameTheme.Colors.TEXT_LIGHT);
                 setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
                 return this;
             }
@@ -543,7 +543,7 @@ public class OptionsPanel extends JPanel {
                 g2.fillRoundRect(0, 0, w, h, h, h);
 
                 // Border
-                g2.setColor(ColorsFonts.CARD_BORDER);
+                g2.setColor(GameTheme.Colors.CARD_BORDER);
                 g2.setStroke(new BasicStroke(2));
                 g2.drawRoundRect(1, 1, w - 2, h - 2, h - 2, h - 2);
 
@@ -555,7 +555,7 @@ public class OptionsPanel extends JPanel {
 
                 // Icon
                 g2.setFont(new Font("SansSerif", Font.PLAIN, 12));
-                g2.setColor(ColorsFonts.TEXT_LIGHT);
+                g2.setColor(GameTheme.Colors.TEXT_LIGHT);
                 if (isSelected()) {
                     g2.drawString("🌙", knobX + 4, h - 7);
                 } else {
@@ -721,7 +721,7 @@ public class OptionsPanel extends JPanel {
         if (backgroundImage != null) {
             g2.drawImage(backgroundImage, 0, 0, w, h, this);
         } else {
-            GradientPaint gradient = new GradientPaint(0, 0, ColorsFonts.STONE_DARK, 0, h, new Color(75, 45, 90));
+            GradientPaint gradient = new GradientPaint(0, 0, GameTheme.Colors.STONE_DARK, 0, h, new Color(75, 45, 90));
             g2.setPaint(gradient);
             g2.fillRect(0, 0, w, h);
         }
@@ -789,8 +789,8 @@ public class OptionsPanel extends JPanel {
             super(text);
             this.style = style;
 
-            setFont(ColorsFonts.buttonFont);
-            setForeground(ColorsFonts.TEXT_LIGHT);
+            setFont(FontManager.buttonFont);
+            setForeground(GameTheme.Colors.TEXT_LIGHT);
             setFocusPainted(false);
             setBorderPainted(false);
             setContentAreaFilled(false);
@@ -837,9 +837,9 @@ public class OptionsPanel extends JPanel {
                     borderColor = interpolate(new Color(180, 80, 80), new Color(220, 100, 100), hoverProgress);
                 }
                 default -> {
-                    bgStart = interpolate(ColorsFonts.STONE_DARK, new Color(65, 55, 45), hoverProgress);
-                    bgEnd = interpolate(ColorsFonts.STONE_MEDIUM, new Color(90, 75, 60), hoverProgress);
-                    borderColor = interpolate(ColorsFonts.PRIMARY_GOLD_DARK, ColorsFonts.PRIMARY_GOLD_LIGHT, hoverProgress);
+                    bgStart = interpolate(GameTheme.Colors.STONE_DARK, new Color(65, 55, 45), hoverProgress);
+                    bgEnd = interpolate(GameTheme.Colors.STONE_MEDIUM, new Color(90, 75, 60), hoverProgress);
+                    borderColor = interpolate(GameTheme.Colors.PRIMARY_GOLD_DARK, GameTheme.Colors.PRIMARY_GOLD_LIGHT, hoverProgress);
                 }
             }
 

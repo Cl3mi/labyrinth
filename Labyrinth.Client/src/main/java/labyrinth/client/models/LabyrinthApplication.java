@@ -35,6 +35,7 @@ public class LabyrinthApplication {
     private OptionsPanel optionsPanel;
     private BoardPanel boardPanel;
     private GameOverPanel gameOverPanel;
+    private JPanel gamePanel; // Ensure gamePanel is defined
 
     private String username;
     private String identifierToken;
@@ -119,7 +120,7 @@ public class LabyrinthApplication {
         mainPanel.add(optionsPanel, "options");
 
         // Game Over Panel
-        gameOverPanel = new GameOverPanel(this::exitGameToMainMenu);
+        gameOverPanel = new GameOverPanel(this::exitGameToLobby);
         mainPanel.add(gameOverPanel, "gameover");
 
         frame.setContentPane(mainPanel);
@@ -256,6 +257,14 @@ public class LabyrinthApplication {
         client.setOnAchievementUnlocked(achievement -> {
             System.out.println("[" + PROFILE + "] Achievement unlocked: "
                     + achievement.getAchievement() + " for player " + achievement.getPlayerId());
+
+            // Add achievement to GameOverPanel for later display
+            if (gameOverPanel != null) {
+                String achievementName = achievement.getAchievement() != null
+                        ? achievement.getAchievement().toString() : "UNKNOWN";
+                gameOverPanel.addAchievement(achievement.getPlayerId(), achievementName);
+            }
+
             SwingUtilities.invokeLater(() -> {
                 if (boardPanel != null) {
                     String achievementName = achievement.getAchievement() != null
@@ -502,30 +511,13 @@ public class LabyrinthApplication {
         cl.show(mainPanel, "game");
     }
 
-    private void switchToGameOverView() {
-        if (mainMenuPanel != null) mainMenuPanel.stopMusic();
-        gameViewShown = false;
-        CardLayout cl = (CardLayout) mainPanel.getLayout();
-        cl.show(mainPanel, "gameover");
-        // Sicherstellen, dass das Panel angezeigt wird
-        mainPanel.revalidate();
-        mainPanel.repaint();
-    }
-
-    private void switchToLobbyView() {
-        if (gameOverPanel != null) gameOverPanel.cleanup();
-        gameViewShown = false;
-        CardLayout cl = (CardLayout) mainPanel.getLayout();
-        cl.show(mainPanel, "lobby");
-    }
-
     private void ensureBoardPanel(Board board, Player currentPlayer, List<Player> allPlayers,
                                   java.time.OffsetDateTime gameEndTime,
                                   labyrinth.contracts.models.CurrentTurnInfo turnInfo) {
 
         if (boardPanel == null) {
             boardPanel = new BoardPanel(client, board, currentPlayer, allPlayers);
-            boardPanel.setOnExitGame(this::exitGameToMainMenu);
+            boardPanel.setOnExitGame(this::exitGameToLobby);
             mainPanel.add(boardPanel, "game");
         } else {
             boardPanel.setBoard(board);
@@ -571,6 +563,61 @@ public class LabyrinthApplication {
         });
 
         showMainMenu();
+    }
+
+    private void exitGameToLobby() {
+        System.out.println("[" + PROFILE + "] exitGameToLobby() - Returning to lobby");
+
+        // Cleanup game over panel
+        if (gameOverPanel != null) {
+            gameOverPanel.cleanup();
+        }
+
+        // Reset game state flags
+        gameViewShown = false;
+        isGameOver = false;
+        pendingSingleplayerStart = false;
+
+        // BoardPanel entfernen und zurücksetzen
+        if (boardPanel != null) {
+            mainPanel.remove(boardPanel);
+            boardPanel = null;
+        }
+
+        // WICHTIG: Der Server sendet automatisch LOBBY_STATE nach GAME_OVER
+        // Wir müssen nur sicherstellen, dass das LobbyPanel die richtigen Werte hat
+        SwingUtilities.invokeLater(() -> {
+            if (client != null && client.isOpen()) {
+                // PlayerId aus gespeicherten Preferences laden
+                String savedPlayerId = ClientIdentityStore.loadPlayerId();
+                if (savedPlayerId != null) {
+                    lobbyPanel.setLocalPlayerId(savedPlayerId);
+                    System.out.println("[" + PROFILE + "] Set localPlayerId in lobby: " + savedPlayerId);
+                }
+
+                // Username setzen
+                if (username != null) {
+                    lobbyPanel.setLocalUsername(username);
+                    System.out.println("[" + PROFILE + "] Set localUsername in lobby: " + username);
+                }
+
+                lobbyPanel.setConnected(true);
+                lobbyPanel.setStatusText("✓ Verbunden - Bereit für neues Spiel", new Color(100, 200, 100));
+                System.out.println("[" + PROFILE + "] Lobby ready, waiting for LOBBY_STATE update");
+            } else {
+                lobbyPanel.setConnected(false);
+                lobbyPanel.setStatusText("Nicht verbunden", new Color(170, 120, 0));
+            }
+        });
+
+        showLobby();
+        System.out.println("[" + PROFILE + "] Returned to lobby");
+    }
+
+    private void showLobby() {
+        // Use CardLayout to switch to lobby
+        CardLayout cl = (CardLayout) mainPanel.getLayout();
+        cl.show(mainPanel, "lobby");
     }
 
     private Player resolveLocalPlayer(List<Player> players) {
@@ -695,21 +742,9 @@ public class LabyrinthApplication {
                     e.printStackTrace();
                 }
 
-                // Disconnect erst NACH den UI-Updates starten
-                new Thread(() -> {
-                    try {
-                        Thread.sleep(1000); // Länger warten um sicher zu sein
-                        if (client != null && client.isOpen()) {
-                            System.out.println("[" + PROFILE + "] Disconnecting after GAME_OVER...");
-                            client.disconnectCleanly();
-                        }
-                    } catch (Exception e) {
-                        System.err.println("Error during GAME_OVER cleanup: " + e.getMessage());
-                    } finally {
-                        try { Thread.sleep(500); } catch (InterruptedException ignored) {}
-                        isGameOverCleanup = false;
-                    }
-                }, "gameover-cleanup").start();
+                // WICHTIG: NICHT disconnecten! Der Server sendet automatisch LOBBY_STATE
+                // und wir wollen in der Lobby bleiben um ein neues Spiel zu starten
+                System.out.println("[" + PROFILE + "] GAME_OVER complete - staying connected for lobby");
             });
         });
 

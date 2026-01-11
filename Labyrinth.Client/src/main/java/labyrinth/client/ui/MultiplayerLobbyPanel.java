@@ -1,9 +1,10 @@
 package labyrinth.client.ui;
 
 import labyrinth.client.messaging.GameClient;
-import labyrinth.client.ui.Styles.ColorsFonts;
 import labyrinth.client.ui.Styles.StyledButton;
 import labyrinth.client.ui.Styles.StyledPlayerCardRenderer;
+import labyrinth.client.ui.theme.FontManager;
+import labyrinth.client.ui.theme.GameTheme;
 import labyrinth.contracts.models.BoardSize;
 import labyrinth.contracts.models.LobbyStateEventPayload;
 import labyrinth.contracts.models.PlayerInfo;
@@ -12,8 +13,6 @@ import lombok.Setter;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
 import java.awt.geom.RoundRectangle2D;
 
 /**
@@ -69,7 +68,7 @@ public class MultiplayerLobbyPanel extends JPanel {
     public MultiplayerLobbyPanel(String localPlayerId) {
         this.localPlayerId = localPlayerId;
 
-        ColorsFonts.initFonts();
+        FontManager.initFonts();
         loadBackgroundImage();
         setupUI();
     }
@@ -126,12 +125,12 @@ public class MultiplayerLobbyPanel extends JPanel {
         centerPanel.setOpaque(false);
 
         lobbyTitleLabel = new JLabel("Multiplayer Lobby");
-        lobbyTitleLabel.setFont(ColorsFonts.titleFont);
-        lobbyTitleLabel.setForeground(ColorsFonts.PRIMARY_GOLD_LIGHT);
+        lobbyTitleLabel.setFont(FontManager.titleFont);
+        lobbyTitleLabel.setForeground(GameTheme.Colors.PRIMARY_GOLD_LIGHT);
         lobbyTitleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         connectionLabel = new JLabel("Verbindung wird aufgebaut...");
-        connectionLabel.setFont(ColorsFonts.labelFont);
+        connectionLabel.setFont(FontManager.labelFont);
         connectionLabel.setForeground(new Color(200, 160, 60));
         connectionLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
@@ -183,11 +182,11 @@ public class MultiplayerLobbyPanel extends JPanel {
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
                 // Card Background
-                g2.setColor(ColorsFonts.CARD_BG);
+                g2.setColor(GameTheme.Colors.CARD_BG);
                 g2.fill(new RoundRectangle2D.Float(0, 0, getWidth(), getHeight(), 15, 15));
 
                 // Border
-                g2.setColor(ColorsFonts.CARD_BORDER);
+                g2.setColor(GameTheme.Colors.CARD_BORDER);
                 g2.setStroke(new BasicStroke(2));
                 g2.draw(new RoundRectangle2D.Float(1, 1, getWidth() - 2, getHeight() - 2, 15, 15));
 
@@ -206,7 +205,7 @@ public class MultiplayerLobbyPanel extends JPanel {
         // Titel
         JLabel titleLabel = new JLabel("⚙ Spiel-Einstellungen");
         titleLabel.setFont(new Font("Serif", Font.BOLD, 18));
-        titleLabel.setForeground(ColorsFonts.PRIMARY_GOLD_LIGHT);
+        titleLabel.setForeground(GameTheme.Colors.PRIMARY_GOLD_LIGHT);
         card.add(titleLabel, BorderLayout.NORTH);
 
         // Settings Grid
@@ -234,7 +233,7 @@ public class MultiplayerLobbyPanel extends JPanel {
 
         gbc.gridx = 1; gbc.weightx = 0.6;
         boardSizeCombo = createStyledComboBox();
-        for (int i = 5; i <= 15; i++) {
+        for (int i = 3; i <= 11; i += 2) {
             boardSizeCombo.addItem(i + " × " + i);
         }
         boardSizeCombo.setSelectedItem("7 × 7");
@@ -302,7 +301,7 @@ public class MultiplayerLobbyPanel extends JPanel {
         gbc.insets = new Insets(15, 5, 5, 5);
         JLabel hintLabel = new JLabel("Nur der Admin kann Einstellungen ändern");
         hintLabel.setFont(new Font("SansSerif", Font.ITALIC, 11));
-        hintLabel.setForeground(ColorsFonts.TEXT_MUTED);
+        hintLabel.setForeground(GameTheme.Colors.TEXT_MUTED);
         settingsGrid.add(hintLabel, gbc);
 
         card.add(settingsGrid, BorderLayout.CENTER);
@@ -317,10 +316,10 @@ public class MultiplayerLobbyPanel extends JPanel {
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-                g2.setColor(ColorsFonts.CARD_BG);
+                g2.setColor(GameTheme.Colors.CARD_BG);
                 g2.fill(new RoundRectangle2D.Float(0, 0, getWidth(), getHeight(), 15, 15));
 
-                g2.setColor(ColorsFonts.CARD_BORDER);
+                g2.setColor(GameTheme.Colors.CARD_BORDER);
                 g2.setStroke(new BasicStroke(2));
                 g2.draw(new RoundRectangle2D.Float(1, 1, getWidth() - 2, getHeight() - 2, 15, 15));
 
@@ -338,7 +337,7 @@ public class MultiplayerLobbyPanel extends JPanel {
         // Titel
         JLabel titleLabel = new JLabel("👥 Spieler in der Lobby");
         titleLabel.setFont(new Font("Serif", Font.BOLD, 18));
-        titleLabel.setForeground(ColorsFonts.PRIMARY_GOLD_LIGHT);
+        titleLabel.setForeground(GameTheme.Colors.PRIMARY_GOLD_LIGHT);
         card.add(titleLabel, BorderLayout.NORTH);
 
         // Player List
@@ -386,16 +385,16 @@ public class MultiplayerLobbyPanel extends JPanel {
 
     private JLabel createStyledLabel(String text) {
         JLabel label = new JLabel(text);
-        label.setFont(ColorsFonts.labelFont);
-        label.setForeground(ColorsFonts.TEXT_LIGHT);
+        label.setFont(FontManager.labelFont);
+        label.setForeground(GameTheme.Colors.TEXT_LIGHT);
         return label;
     }
 
     private JComboBox<String> createStyledComboBox() {
         JComboBox<String> combo = new JComboBox<>();
         combo.setFont(new Font("SansSerif", Font.PLAIN, 13));
-        combo.setBackground(ColorsFonts.STONE_MEDIUM);
-        combo.setForeground(ColorsFonts.TEXT_LIGHT);
+        combo.setBackground(GameTheme.Colors.STONE_MEDIUM);
+        combo.setForeground(GameTheme.Colors.TEXT_LIGHT);
         combo.setPreferredSize(new Dimension(150, 30));
         return combo;
     }
@@ -411,11 +410,11 @@ public class MultiplayerLobbyPanel extends JPanel {
     private JTextField createStyledTextField(String defaultText) {
         JTextField textField = new JTextField(defaultText, 15);
         textField.setFont(new Font("SansSerif", Font.PLAIN, 13));
-        textField.setBackground(ColorsFonts.STONE_MEDIUM);
-        textField.setForeground(ColorsFonts.TEXT_LIGHT);
-        textField.setCaretColor(ColorsFonts.TEXT_LIGHT);
+        textField.setBackground(GameTheme.Colors.STONE_MEDIUM);
+        textField.setForeground(GameTheme.Colors.TEXT_LIGHT);
+        textField.setCaretColor(GameTheme.Colors.TEXT_LIGHT);
         textField.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(ColorsFonts.CARD_BORDER, 1),
+                BorderFactory.createLineBorder(GameTheme.Colors.CARD_BORDER, 1),
                 BorderFactory.createEmptyBorder(5, 8, 5, 8)
         ));
         textField.setPreferredSize(new Dimension(150, 30));
@@ -580,7 +579,7 @@ public class MultiplayerLobbyPanel extends JPanel {
         if (backgroundImage != null) {
             g2.drawImage(backgroundImage, 0, 0, w, h, this);
         } else {
-            GradientPaint gradient = new GradientPaint(0, 0, ColorsFonts.STONE_DARK, 0, h, new Color(75, 45, 90));
+            GradientPaint gradient = new GradientPaint(0, 0, GameTheme.Colors.STONE_DARK, 0, h, new Color(75, 45, 90));
             g2.setPaint(gradient);
             g2.fillRect(0, 0, w, h);
         }
