@@ -78,6 +78,10 @@ public class Player {
         return null;
     }
 
+    // TODO: we need to change this to disconnected
+    public boolean shouldMoveBePerformedByAi(){
+        return isAiActive;
+    }
     /**
      * Resets the player's state for a new game.
      * Clears treasures, bonuses, tiles, and statistics while preserving

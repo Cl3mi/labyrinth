@@ -1,6 +1,7 @@
 package labyrinth.server.game.models;
 
 import labyrinth.server.game.abstractions.IBoardEventListener;
+import labyrinth.server.game.abstractions.IMovementManager;
 import labyrinth.server.game.enums.*;
 import labyrinth.server.game.events.BoardEvent;
 import labyrinth.server.game.models.records.Position;
@@ -276,7 +277,7 @@ public class Board {
         return isTopLeft || isTopRight || isBottomLeft || isBottomRight;
     }
 
-    int movePlayerToTile(Player player, int targetRow, int targetCol, MovementManager movementManager) {
+    int movePlayerToTile(Player player, int targetRow, int targetCol, IMovementManager movementManager) {
         Tile currentTile = player.getCurrentTile();
         Tile targetTile = tileMap.getForward(new Position(targetRow, targetCol));
 

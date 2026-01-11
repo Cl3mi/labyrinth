@@ -37,11 +37,9 @@ public class GameService {
     private final BoardFactory boardFactory;
     private final EventPublisher eventPublisher;
 
-    // Neu: Für AI-Broadcast
     private final MessageService messageService;
     private final GameMapper gameMapper;
 
-    // AI Strategy (nicht final, damit wir den Callback setzen können)
     private final labyrinth.server.game.ai.SligthlyLessSimpleAiStrategy aiStrategy;
 
     public GameService(TreasureCardFactory treasureCardFactory,
@@ -61,13 +59,26 @@ public class GameService {
         var gameTimer = new GameTimer(scheduler);
         var gameLogger = new labyrinth.server.game.services.GameLogger();
 
-        // AI-Strategie erstellen
         this.aiStrategy = new labyrinth.server.game.ai.SligthlyLessSimpleAiStrategy();
 
-        game = new Game(gameTimer, aiStrategy, gameLogger, gameInitializer);
+        var playerRegistry = new labyrinth.server.game.services.PlayerRegistry(4);
+        var turnController = new labyrinth.server.game.services.TurnController(gameTimer, gameLogger);
+        var movementManager = new labyrinth.server.game.services.MovementManager();
+        var achievementService = new labyrinth.server.game.services.AchievementService();
+        var bonusManager = new labyrinth.server.game.services.BonusManager(turnController, gameLogger);
 
-        // Broadcast-Callback NACH der Game-Initialisierung setzen
-        // Wir verwenden ein Lambda das auf die Instanz-Methode verweist
+        game = new Game(
+                playerRegistry,
+                turnController,
+                movementManager,
+                achievementService,
+                bonusManager,
+                gameTimer,
+                aiStrategy,
+                gameLogger,
+                gameInitializer
+        );
+
         aiStrategy.setBroadcastCallback(new Runnable() {
             @Override
             public void run() {
@@ -75,7 +86,6 @@ public class GameService {
             }
         });
 
-        // MoveResult-Callback setzen um Events wie GameOver, TreasureCollected etc. zu publishen
         aiStrategy.setMoveResultCallback(moveResult -> {
             handleAiMoveResult(moveResult);
         });
@@ -237,12 +247,7 @@ public class GameService {
     public void startGame(GameConfig gameConfig) {
         rwLock.writeLock().lock();
         try {
-            // Note: Game.startGame() will call fillWithAiPlayers() internally
-            // We need to know the player count AFTER AI fill to create the right number of treasures
-            // So we call it here first to get the correct count
-            game.fillWithAiPlayers();
-
-            int playersCount = game.getPlayers().size();
+            int playersCount = 4;
 
             var board = boardFactory.createBoard(gameConfig.boardWidth(), gameConfig.boardHeight());
             // Multiply treasures per player by actual player count (after AI fill)

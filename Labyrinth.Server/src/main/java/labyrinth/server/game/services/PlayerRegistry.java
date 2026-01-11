@@ -1,6 +1,7 @@
 package labyrinth.server.game.services;
 
 import labyrinth.contracts.models.PlayerColor;
+import labyrinth.server.game.abstractions.IPlayerRegistry;
 import labyrinth.server.game.models.Player;
 import labyrinth.server.game.results.LeaveResult;
 
@@ -20,7 +21,7 @@ import java.util.UUID;
  * - Username validation
  * - Player color assignment
  */
-public class PlayerRegistry {
+public class PlayerRegistry implements IPlayerRegistry {
 
     private final List<Player> players;
     private final int maxPlayers;

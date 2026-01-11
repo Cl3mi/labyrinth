@@ -1,6 +1,5 @@
 package labyrinth.server.game;
 
-import labyrinth.contracts.models.PlayerColor;
 import labyrinth.server.game.abstractions.IGameTimer;
 import labyrinth.server.game.models.Game;
 import labyrinth.server.game.models.Player;
@@ -10,9 +9,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-import java.util.ArrayList;
-import java.util.List;
 
+import static labyrinth.server.game.GameTestHelper.createGame;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
@@ -40,8 +38,8 @@ class GameServiceTest {
         IGameTimer mockTimer = mock(IGameTimer.class);
         labyrinth.server.game.ai.AiStrategy mockAiStrategy = mock(labyrinth.server.game.ai.AiStrategy.class);
         labyrinth.server.game.services.GameLogger mockGameLogger = mock(labyrinth.server.game.services.GameLogger.class);
-        labyrinth.server.game.services.GameInitializer mockGameInitializer = mock(labyrinth.server.game.services.GameInitializer.class);
-        Game game = new Game(mockTimer, mockAiStrategy, mockGameLogger, mockGameInitializer);
+        labyrinth.server.game.services.GameInitializerService mockGameInitializer = mock(labyrinth.server.game.services.GameInitializerService.class);
+        Game game = createGame(mockTimer, mockAiStrategy, mockGameLogger, mockGameInitializer);
 
         // Add two players
         Player player1 = game.join("Player1");
@@ -64,8 +62,8 @@ class GameServiceTest {
         IGameTimer mockTimer = mock(IGameTimer.class);
         labyrinth.server.game.ai.AiStrategy mockAiStrategy = mock(labyrinth.server.game.ai.AiStrategy.class);
         labyrinth.server.game.services.GameLogger mockGameLogger = mock(labyrinth.server.game.services.GameLogger.class);
-        labyrinth.server.game.services.GameInitializer mockGameInitializer = mock(labyrinth.server.game.services.GameInitializer.class);
-        Game game = new Game(mockTimer, mockAiStrategy, mockGameLogger, mockGameInitializer);
+        labyrinth.server.game.services.GameInitializerService mockGameInitializer = mock(labyrinth.server.game.services.GameInitializerService.class);
+        Game game = createGame(mockTimer, mockAiStrategy, mockGameLogger, mockGameInitializer);
 
         // Add human player
         Player human = game.join("HumanPlayer");
@@ -103,8 +101,8 @@ class GameServiceTest {
         IGameTimer mockTimer = mock(IGameTimer.class);
         labyrinth.server.game.ai.AiStrategy mockAiStrategy = mock(labyrinth.server.game.ai.AiStrategy.class);
         labyrinth.server.game.services.GameLogger mockGameLogger = mock(labyrinth.server.game.services.GameLogger.class);
-        labyrinth.server.game.services.GameInitializer mockGameInitializer = mock(labyrinth.server.game.services.GameInitializer.class);
-        Game game = new Game(mockTimer, mockAiStrategy, mockGameLogger, mockGameInitializer);
+        labyrinth.server.game.services.GameInitializerService mockGameInitializer = mock(labyrinth.server.game.services.GameInitializerService.class);
+        Game game = createGame(mockTimer, mockAiStrategy, mockGameLogger, mockGameInitializer);
 
         Player player1 = game.join("Player1");
         assertTrue(player1.isAdmin());
@@ -121,8 +119,8 @@ class GameServiceTest {
         IGameTimer mockTimer = mock(IGameTimer.class);
         labyrinth.server.game.ai.AiStrategy mockAiStrategy = mock(labyrinth.server.game.ai.AiStrategy.class);
         labyrinth.server.game.services.GameLogger mockGameLogger = mock(labyrinth.server.game.services.GameLogger.class);
-        labyrinth.server.game.services.GameInitializer mockGameInitializer = mock(labyrinth.server.game.services.GameInitializer.class);
-        Game game = new Game(mockTimer, mockAiStrategy, mockGameLogger, mockGameInitializer);
+        labyrinth.server.game.services.GameInitializerService mockGameInitializer = mock(labyrinth.server.game.services.GameInitializerService.class);
+        Game game = createGame(mockTimer, mockAiStrategy, mockGameLogger, mockGameInitializer);
 
         Player player1 = game.join("Player1"); // Admin
         Player player2 = game.join("Player2"); // Not admin
@@ -143,8 +141,8 @@ class GameServiceTest {
         IGameTimer mockTimer = mock(IGameTimer.class);
         labyrinth.server.game.ai.AiStrategy mockAiStrategy = mock(labyrinth.server.game.ai.AiStrategy.class);
         labyrinth.server.game.services.GameLogger mockGameLogger = mock(labyrinth.server.game.services.GameLogger.class);
-        labyrinth.server.game.services.GameInitializer mockGameInitializer = mock(labyrinth.server.game.services.GameInitializer.class);
-        Game game = new Game(mockTimer, mockAiStrategy, mockGameLogger, mockGameInitializer);
+        labyrinth.server.game.services.GameInitializerService mockGameInitializer = mock(labyrinth.server.game.services.GameInitializerService.class);
+        Game game = createGame(mockTimer, mockAiStrategy, mockGameLogger, mockGameInitializer);
 
         Player player1 = game.join("Player1"); // Admin
         Player player2 = game.join("Player2");

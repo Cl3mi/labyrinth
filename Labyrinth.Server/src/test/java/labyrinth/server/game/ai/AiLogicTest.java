@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.*;
 import static org.mockito.Mockito.mock;
+import static labyrinth.server.game.GameTestHelper.createGame;
 import labyrinth.server.game.abstractions.IGameTimer;
 import labyrinth.server.game.ai.SimpleAiStrategy;
 
@@ -17,7 +18,7 @@ class AiLogicTest {
     @Test
     void testAiTriggersOnNextPlayer() {
         // Setup simple game
-        Game game = new Game(mock(IGameTimer.class), new SimpleAiStrategy(),
+        Game game = createGame(mock(IGameTimer.class), new SimpleAiStrategy(),
                 new labyrinth.server.game.services.GameLogger());
 
         Player p1 = game.join("P1");

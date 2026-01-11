@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.stream.IntStream;
 
 import static org.mockito.Mockito.mock;
+import static labyrinth.server.game.GameTestHelper.createGame;
 
 class GameLoggingTest {
 
@@ -25,7 +26,7 @@ class GameLoggingTest {
 
     @BeforeEach
     void setUp() {
-        game = new Game(mock(IGameTimer.class), new SimpleAiStrategy(),
+        game = createGame(mock(IGameTimer.class), new SimpleAiStrategy(),
                 new labyrinth.server.game.services.GameLogger());
     }
 

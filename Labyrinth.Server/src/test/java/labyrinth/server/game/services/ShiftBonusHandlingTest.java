@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.stream.IntStream;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static labyrinth.server.game.GameTestHelper.createGame;
 import static org.mockito.Mockito.mock;
 
 /**
@@ -36,7 +37,7 @@ class ShiftBonusHandlingTest {
         var distributionService = new TreasureBonusDistributionService(bonusFactory);
         var gameInitializer = new GameInitializerService(distributionService);
 
-        game = new Game(mock(IGameTimer.class), new SimpleAiStrategy(), new GameLogger(), gameInitializer);
+        game = createGame(mock(IGameTimer.class), new SimpleAiStrategy(), new GameLogger(), gameInitializer);
         player = game.join("TestPlayer");
         game.join("Player2");
 

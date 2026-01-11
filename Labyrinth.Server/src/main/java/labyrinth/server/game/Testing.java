@@ -32,7 +32,26 @@ public class Testing {
         var bonusFactory = new BonusFactory();
         var distributionService = new TreasureBonusDistributionService(bonusFactory);
         var gameInitializer = new GameInitializerService(distributionService);
-        game = new Game(gameTimer, new SimpleAiStrategy(), gameLogger, gameInitializer);
+
+        // Create service instances (Phase 1 & 2 refactoring)
+        var playerRegistry = new labyrinth.server.game.services.PlayerRegistry(4);
+        var turnController = new labyrinth.server.game.services.TurnController(gameTimer, gameLogger);
+        var movementManager = new labyrinth.server.game.services.MovementManager();
+        var achievementService = new labyrinth.server.game.services.AchievementService();
+        var bonusManager = new labyrinth.server.game.services.BonusManager(turnController, gameLogger);
+
+        // Create Game with interface-based dependencies
+        game = new Game(
+                playerRegistry,
+                turnController,
+                movementManager,
+                achievementService,
+                bonusManager,
+                gameTimer,
+                new SimpleAiStrategy(),
+                gameLogger,
+                gameInitializer
+        );
         simulateGameStart();
         // simulateGameMoves(1000);
     }
@@ -68,10 +87,10 @@ public class Testing {
         p1.getBonuses().add(BonusTypes.PUSH_FIXED);
         p1.getBonuses().add(BonusTypes.SWAP);
 
-//         game.toggleAiForPlayer(p1);
-//         game.toggleAiForPlayer(p2);
-//         game.toggleAiForPlayer(p3);
-//         game.toggleAiForPlayer(p4);
+         game.toggleAiForPlayer(p1);
+         game.toggleAiForPlayer(p2);
+         game.toggleAiForPlayer(p3);
+         game.toggleAiForPlayer(p4);
 
         game.startGame(gameConfig, cards, board);
 
