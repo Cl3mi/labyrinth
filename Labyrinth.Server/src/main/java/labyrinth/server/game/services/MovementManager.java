@@ -1,5 +1,6 @@
 package labyrinth.server.game.services;
 
+import labyrinth.server.game.abstractions.IMovementManager;
 import labyrinth.server.game.constants.PointRewards;
 import labyrinth.server.game.models.Player;
 import labyrinth.server.game.models.Tile;
@@ -13,7 +14,7 @@ import java.util.logging.Logger;
  * treasures, bonuses)
  * while keeping the Tile class as a pure data entity.
  */
-public class MovementManager {
+public class MovementManager implements IMovementManager {
 
     private static final Logger LOGGER = Logger.getLogger(MovementManager.class.getName());
 

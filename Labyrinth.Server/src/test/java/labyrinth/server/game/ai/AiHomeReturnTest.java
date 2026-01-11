@@ -17,7 +17,9 @@ import java.util.List;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static labyrinth.server.game.GameTestHelper.createGame;
 import static org.mockito.Mockito.mock;
+import static labyrinth.server.game.GameTestHelper.createGame;
 
 /**
  * Test to verify AI behavior when returning home after collecting all treasures.
@@ -27,7 +29,7 @@ class AiHomeReturnTest {
     @Test
     void aiShouldTargetHomeTileWhenAllTreasuresCollected() {
         SimpleAiStrategy aiStrategy = new SimpleAiStrategy();
-        Game game = new Game(mock(IGameTimer.class), aiStrategy, new GameLogger());
+        Game game = createGame(mock(IGameTimer.class), aiStrategy, new GameLogger());
         GameConfig gameConfig = GameConfig.getDefault();
         Board board = new BoardFactory().createBoard(9, 9);
 
@@ -77,7 +79,7 @@ class AiHomeReturnTest {
     @Test
     void gameOverLogicWorksCorrectly() {
         // This test verifies the actual game-over condition
-        Game game = new Game(mock(IGameTimer.class), new SimpleAiStrategy(), new GameLogger());
+        Game game = createGame(mock(IGameTimer.class), new SimpleAiStrategy(), new GameLogger());
         GameConfig gameConfig = GameConfig.getDefault();
         Board board = new labyrinth.server.game.factories.BoardFactory().createBoard(7, 7);
 

@@ -1,6 +1,7 @@
 package labyrinth.server.game.services;
 
 import labyrinth.server.game.abstractions.IGameTimer;
+import labyrinth.server.game.abstractions.ITurnController;
 import labyrinth.server.game.enums.GameLogType;
 import labyrinth.server.game.enums.MoveState;
 import labyrinth.server.game.enums.RoomState;
@@ -16,7 +17,7 @@ import java.util.function.Consumer;
  * Encapsulates the state machine for whose turn it is and what phase of the
  * turn they are in.
  */
-public class TurnController {
+public class TurnController implements ITurnController {
 
     private int currentPlayerIndex = 0;
     private MoveState currentMoveState = MoveState.PLACE_TILE;

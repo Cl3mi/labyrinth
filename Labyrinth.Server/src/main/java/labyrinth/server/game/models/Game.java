@@ -1,6 +1,6 @@
 package labyrinth.server.game.models;
 
-import labyrinth.server.game.abstractions.IGameTimer;
+import labyrinth.server.game.abstractions.*;
 import labyrinth.server.game.ai.AiStrategy;
 import labyrinth.server.game.bonuses.IBonusEffect;
 import labyrinth.server.game.constants.PointRewards;
@@ -26,6 +26,10 @@ import java.util.UUID;
 /**
  * Represents a game room for the Labyrinth game.
  * Each game has a unique code, a board, and manages 2–4 players.
+ *
+ * <p>This class now uses interface-based dependencies to enable
+ * dependency injection, testing with mocks, and flexibility in
+ * swapping implementations.</p>
  */
 @Getter
 @Setter
@@ -35,8 +39,12 @@ public class Game {
 
     private IGameTimer nextTurnTimer;
 
-    private final labyrinth.server.game.services.TurnController turnController;
-    private final labyrinth.server.game.services.PlayerRegistry playerRegistry;
+    // Interface-based dependencies - can be injected and mocked
+    private final ITurnController turnController;
+    private final IPlayerRegistry playerRegistry;
+    private final IMovementManager movementManager;
+    private final IAchievementService achievementService;
+
     private final GameInitializerService gameInitializer;
 
     @Setter(lombok.AccessLevel.NONE)
@@ -58,34 +66,47 @@ public class Game {
 
     private final labyrinth.server.game.services.GameLogger gameLogger;
 
-    private final labyrinth.server.game.services.MovementManager movementManager;
-
-    private final labyrinth.server.game.services.AchievementService achievementService;
-
     public java.util.List<labyrinth.server.game.models.records.GameLogEntry> getExecutionLogs() {
         return gameLogger.getExecutionLogs();
     }
 
     private final java.util.Map<BonusTypes, IBonusEffect> bonusEffects = new java.util.EnumMap<>(BonusTypes.class);
 
+    /**
+     * Constructor with interface-based dependencies for improved testability.
+     *
+     * @param playerRegistry player management service
+     * @param turnController turn state management service
+     * @param movementManager movement and tile interaction service
+     * @param achievementService achievement awarding service
+     * @param nextTurnTimer timer for turn management
+     * @param aiStrategy AI strategy for automated players
+     * @param gameLogger game event logger
+     * @param gameInitializer game initialization service
+     */
     public Game(
+            IPlayerRegistry playerRegistry,
+            ITurnController turnController,
+            IMovementManager movementManager,
+            IAchievementService achievementService,
             IGameTimer nextTurnTimer,
             AiStrategy aiStrategy,
             GameLogger gameLogger,
             GameInitializerService gameInitializer
     ) {
+        this.playerRegistry = playerRegistry;
+        this.turnController = turnController;
+        this.movementManager = movementManager;
+        this.achievementService = achievementService;
         this.nextTurnTimer = nextTurnTimer;
         this.aiStrategy = aiStrategy;
         this.gameLogger = gameLogger;
-        this.playerRegistry = new labyrinth.server.game.services.PlayerRegistry(MAX_PLAYERS);
         this.gameInitializer = gameInitializer;
+
         this.roomState = RoomState.LOBBY;
         this.board = null;
         this.gameConfig = GameConfig.getDefault();
         this.activeBonusState = NoBonusActive.getInstance();
-        this.turnController = new labyrinth.server.game.services.TurnController(nextTurnTimer, gameLogger);
-        this.movementManager = new labyrinth.server.game.services.MovementManager();
-        this.achievementService = new labyrinth.server.game.services.AchievementService();
 
         // Initialize Bonus Strategies
         bonusEffects.put(BonusTypes.BEAM, new labyrinth.server.game.bonuses.BeamBonusEffect());

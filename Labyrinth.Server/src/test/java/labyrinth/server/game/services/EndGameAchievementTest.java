@@ -18,7 +18,13 @@ import java.util.List;
 import java.util.stream.IntStream;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static labyrinth.server.game.GameTestHelper.createGame;
+import static labyrinth.server.game.GameTestHelper.createGame;
+import static labyrinth.server.game.GameTestHelper.createGame;
 import static org.mockito.Mockito.mock;
+import static labyrinth.server.game.GameTestHelper.createGame;
+import static labyrinth.server.game.GameTestHelper.createGame;
+import static labyrinth.server.game.GameTestHelper.createGame;
 
 /**
  * Tests for end-game achievement awarding system.
@@ -34,7 +40,7 @@ class EndGameAchievementTest {
 
     @BeforeEach
     void setUp() {
-        game = new Game(mock(IGameTimer.class), new SimpleAiStrategy(), new GameLogger());
+        game = createGame(mock(IGameTimer.class), new SimpleAiStrategy(), new GameLogger());
         gameConfig = GameConfig.getDefault();
         board = new labyrinth.server.game.factories.BoardFactory().createBoard(7, 7);
         treasureCards = new ArrayList<>();

@@ -1,5 +1,6 @@
 package labyrinth.server.game.services;
 
+import labyrinth.server.game.abstractions.IAchievementService;
 import labyrinth.server.game.enums.Achievement;
 import labyrinth.server.game.models.Player;
 
@@ -12,7 +13,7 @@ import java.util.Optional;
  * Service responsible for checking and awarding achievements to players.
  * Encapsulates achievement criteria and checking logic in one place.
  */
-public class AchievementService {
+public class AchievementService implements IAchievementService {
 
     /**
      * Awards achievements at the end of the game.

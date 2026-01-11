@@ -32,7 +32,24 @@ public class Testing {
         var bonusFactory = new BonusFactory();
         var distributionService = new TreasureBonusDistributionService(bonusFactory);
         var gameInitializer = new GameInitializerService(distributionService);
-        game = new Game(gameTimer, new SimpleAiStrategy(), gameLogger, gameInitializer);
+
+        // Create service instances (Phase 1 refactoring)
+        var playerRegistry = new labyrinth.server.game.services.PlayerRegistry(4);
+        var turnController = new labyrinth.server.game.services.TurnController(gameTimer, gameLogger);
+        var movementManager = new labyrinth.server.game.services.MovementManager();
+        var achievementService = new labyrinth.server.game.services.AchievementService();
+
+        // Create Game with interface-based dependencies
+        game = new Game(
+                playerRegistry,
+                turnController,
+                movementManager,
+                achievementService,
+                gameTimer,
+                new SimpleAiStrategy(),
+                gameLogger,
+                gameInitializer
+        );
         simulateGameStart();
         // simulateGameMoves(1000);
     }
