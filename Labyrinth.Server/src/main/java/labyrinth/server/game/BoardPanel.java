@@ -48,10 +48,6 @@ public class BoardPanel extends JPanel {
     private int currentPlayerIndex = 0;
     private final Set<Tile> reachableTiles;
     private final List<ArrowButton> arrowButtons = new ArrayList<>();
-    private final List<BonusButton> bonusButtons = new ArrayList<>();
-
-    // Pending bonus activation state
-    private BonusTypes pendingBonusActivation = null;
 
     // --- Dynamic Layout Fields ---
     private int xOffset;
@@ -81,18 +77,6 @@ public class BoardPanel extends JPanel {
         addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
-                // Right-click cancels pending bonus activation
-                if (e.getButton() == MouseEvent.BUTTON3 && pendingBonusActivation != null) {
-                    System.out.println("Cancelled bonus activation: " + pendingBonusActivation);
-                    pendingBonusActivation = null;
-                    repaint();
-                    return;
-                }
-
-                // Prioritize bonus button clicks
-                if (handleBonusButtonClick(e.getPoint())) {
-                    return;
-                }
                 // Prioritize arrow clicks. If an arrow was clicked, the event is handled.
                 if (handleArrowClick(e.getPoint())) {
                     return;
@@ -101,53 +85,6 @@ public class BoardPanel extends JPanel {
                 handleTileClick(e.getPoint());
             }
         });
-    }
-
-    /**
-     * Checks for and handles a click on a bonus activation button.
-     *
-     * @return true if a bonus button was clicked, false otherwise.
-     */
-    private boolean handleBonusButtonClick(Point p) {
-        for (BonusButton button : bonusButtons) {
-            if (button.contains(p)) {
-                // Check if a bonus has already been used this turn
-                if (game.isBonusUsedThisTurn()) {
-                    System.out.println("Only one bonus can be used per turn!");
-                    return true;
-                }
-
-                // Attempt to activate the bonus for the current player
-                if (currentPlayer != null && currentPlayer.getBonuses().contains(button.bonusType)) {
-                    // Check if this bonus requires additional input (coordinates or target player)
-                    if (button.bonusType == BonusTypes.BEAM || button.bonusType == BonusTypes.SWAP) {
-                        // Set pending state and wait for tile/player click
-                        pendingBonusActivation = button.bonusType;
-                        System.out.println("Click on a " +
-                            (button.bonusType == BonusTypes.BEAM ? "tile" : "player") +
-                            " to activate " + button.bonusType);
-                        repaint();
-                    } else {
-                        // Activate immediately for bonuses that don't need extra args
-                        try {
-                            boolean success = game.useBonus(button.bonusType);
-                            if (success) {
-                                System.out.println("Activated bonus: " + button.bonusType + " for player: " + currentPlayer.getUsername());
-                                updateReachableTilesAndRepaint();
-                            } else {
-                                System.out.println("Failed to activate bonus: " + button.bonusType);
-                            }
-                        } catch (IllegalStateException e) {
-                            System.out.println("Error: " + e.getMessage());
-                        }
-                    }
-                } else {
-                    System.out.println("Player does not have bonus: " + button.bonusType);
-                }
-                return true;
-            }
-        }
-        return false;
     }
 
     /**
@@ -181,13 +118,6 @@ public class BoardPanel extends JPanel {
             for (int col = 0; col < game.getBoard().getWidth(); col++) {
                 Rectangle tileRect = new Rectangle(xOffset + col * size, yOffset + row * size, size, size);
                 if (tileRect.contains(p)) {
-                    // Check if we have a pending bonus activation
-                    if (pendingBonusActivation != null) {
-                        handlePendingBonusActivation(row, col);
-                        break outer;
-                    }
-
-                    // Normal tile click for movement
                     Tile clickedTile = game.getBoard().getTileAt(row, col);
                     if (reachableTiles.contains(clickedTile)) {
                         boolean moved = game.movePlayerToTile(row, col, currentPlayer).moveSuccess();
@@ -200,53 +130,6 @@ public class BoardPanel extends JPanel {
             }
         }
         System.out.println("---------");
-    }
-
-    /**
-     * Handles the completion of a pending bonus activation after the user has clicked on a tile.
-     */
-    private void handlePendingBonusActivation(int row, int col) {
-        boolean success = false;
-
-        try {
-            if (pendingBonusActivation == BonusTypes.BEAM) {
-                // BEAM bonus: teleport to the clicked tile
-                success = game.useBonus(BonusTypes.BEAM, row, col);
-                if (success) {
-                    System.out.println("Activated BEAM bonus to tile (" + row + ", " + col + ")");
-                } else {
-                    System.out.println("Failed to activate BEAM bonus (tile may be occupied)");
-                }
-            } else if (pendingBonusActivation == BonusTypes.SWAP) {
-                // SWAP bonus: find player at the clicked tile and swap with them
-                Tile clickedTile = game.getBoard().getTileAt(row, col);
-                Player targetPlayer = null;
-
-                for (Player p : game.getPlayers()) {
-                    if (p != currentPlayer && p.getCurrentTile() == clickedTile) {
-                        targetPlayer = p;
-                        break;
-                    }
-                }
-
-                if (targetPlayer != null) {
-                    success = game.useBonus(BonusTypes.SWAP, targetPlayer);
-                    if (success) {
-                        System.out.println("Activated SWAP bonus with player: " + targetPlayer.getUsername());
-                    } else {
-                        System.out.println("Failed to activate SWAP bonus");
-                    }
-                } else {
-                    System.out.println("No player found at tile (" + row + ", " + col + ")");
-                }
-            }
-        } catch (Exception e) {
-            System.out.println("Error activating bonus: " + e.getMessage());
-        } finally {
-            // Clear pending state and update UI
-            pendingBonusActivation = null;
-            updateReachableTilesAndRepaint();
-        }
     }
 
     /**
@@ -291,7 +174,6 @@ public class BoardPanel extends JPanel {
             createAndDrawArrowButtons(g2);
             drawExtraTile(g2);
             drawDebugInfo(g2);
-            createAndDrawBonusButtons(g2);
 
             if (currentPlayer != null) {
                 drawTreasureCards(g2, currentPlayer);
@@ -555,95 +437,6 @@ public class BoardPanel extends JPanel {
         }
     }
 
-    /**
-     * Creates and draws clickable bonus activation buttons for each bonus type.
-     * Only shows buttons for bonuses that the current player has collected.
-     */
-    private void createAndDrawBonusButtons(Graphics2D g2) {
-        bonusButtons.clear();
-
-        if (currentPlayer == null || currentPlayer.getBonuses().isEmpty()) {
-            return;
-        }
-
-        int buttonWidth = 120;
-        int buttonHeight = 30;
-        int buttonX = getWidth() - 260;
-        int buttonY = getHeight() - 200;
-        int buttonSpacing = 10;
-
-        g2.setFont(new Font("Arial", Font.BOLD, 12));
-
-        // Draw title
-        g2.setColor(Color.CYAN);
-        String title = "=== Activate Bonus ===";
-        if (pendingBonusActivation != null) {
-            title = ">>> Click a " +
-                (pendingBonusActivation == BonusTypes.BEAM ? "tile" : "player") +
-                " <<<";
-        }
-        g2.drawString(title, buttonX, buttonY - 15);
-
-        int index = 0;
-        for (BonusTypes bonusType : currentPlayer.getBonuses()) {
-            int y = buttonY + index * (buttonHeight + buttonSpacing);
-
-            Rectangle buttonBounds = new Rectangle(buttonX, y, buttonWidth, buttonHeight);
-            BonusButton button = new BonusButton(buttonBounds, bonusType);
-            bonusButtons.add(button);
-
-            // Check if this bonus is pending activation
-            boolean isPending = (pendingBonusActivation == bonusType);
-            // Check if any bonus has been used this turn
-            boolean bonusAlreadyUsed = game.isBonusUsedThisTurn();
-
-            // Draw button background (highlight if pending, gray if disabled)
-            if (bonusAlreadyUsed && !isPending) {
-                g2.setColor(new Color(100, 100, 100)); // Gray for disabled
-            } else if (isPending) {
-                g2.setColor(new Color(255, 150, 0)); // Orange for pending
-            } else {
-                g2.setColor(new Color(50, 150, 200)); // Normal blue
-            }
-            g2.fillRoundRect(buttonX, y, buttonWidth, buttonHeight, 10, 10);
-
-            // Draw button border (thicker if pending)
-            if (isPending) {
-                g2.setStroke(new BasicStroke(3));
-                g2.setColor(new Color(200, 100, 0));
-            } else {
-                g2.setStroke(new BasicStroke(1));
-                if (bonusAlreadyUsed) {
-                    g2.setColor(new Color(60, 60, 60)); // Dark gray border for disabled
-                } else {
-                    g2.setColor(new Color(30, 100, 150));
-                }
-            }
-            g2.drawRoundRect(buttonX, y, buttonWidth, buttonHeight, 10, 10);
-            g2.setStroke(new BasicStroke(1)); // Reset stroke
-
-            // Draw button text
-            if (bonusAlreadyUsed && !isPending) {
-                g2.setColor(new Color(150, 150, 150)); // Light gray text for disabled
-            } else {
-                g2.setColor(Color.WHITE);
-            }
-            String buttonText = bonusType.name();
-            if (isPending) {
-                buttonText += " (ACTIVE)";
-            } else if (bonusAlreadyUsed) {
-                buttonText += " (USED)";
-            }
-            FontMetrics fm = g2.getFontMetrics();
-            int textWidth = fm.stringWidth(buttonText);
-            int textX = buttonX + (buttonWidth - textWidth) / 2;
-            int textY = y + (buttonHeight + fm.getAscent()) / 2 - 2;
-            g2.drawString(buttonText, textX, textY);
-
-            index++;
-        }
-    }
-
     private void drawTreasureCards(Graphics2D g2, Player player) {
         int cardWidth = 60;
         int cardHeight = 90;
@@ -756,23 +549,6 @@ public class BoardPanel extends JPanel {
             }
             arrow.closePath();
             return arrow;
-        }
-
-        boolean contains(Point p) {
-            return bounds.contains(p);
-        }
-    }
-
-    /**
-     * Represents a clickable button for activating a bonus.
-     */
-    private static class BonusButton {
-        Rectangle bounds;
-        BonusTypes bonusType;
-
-        BonusButton(Rectangle bounds, BonusTypes bonusType) {
-            this.bounds = bounds;
-            this.bonusType = bonusType;
         }
 
         boolean contains(Point p) {
