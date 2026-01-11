@@ -124,12 +124,14 @@ public class Game {
     public boolean usePushTwiceBonus(Player player) {
         guardFor(RoomState.IN_GAME);
         guardFor(player);
+        guardFor(MoveState.PLACE_TILE);
         return useBonus(BonusTypes.PUSH_TWICE);
     }
 
     public boolean usePushFixedBonus(Player player) {
-        guardFor(player);
         guardFor(RoomState.IN_GAME);
+        guardFor(player);
+        guardFor(MoveState.PLACE_TILE);
         return useBonus(BonusTypes.PUSH_FIXED);
     }
 
@@ -496,6 +498,15 @@ public class Game {
      */
     public BonusTypes getActiveBonus() {
         return activeBonusState.getBonusType().orElse(null);
+    }
+
+    /**
+     * Sets the current move state.
+     *
+     * @param moveState the new move state
+     */
+    public void setMoveState(MoveState moveState) {
+        turnController.setMoveState(moveState);
     }
 
     public OffsetDateTime getGameEndTime() {

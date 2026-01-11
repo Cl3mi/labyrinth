@@ -29,7 +29,6 @@ public class AchievementService {
             return awards;
         }
 
-        // Award PUSHER to player(s) with most tiles pushed
         int maxTilesPushed = players.stream()
                 .mapToInt(p -> p.getStatistics().getTilesPushed())
                 .max()
@@ -46,7 +45,6 @@ public class AchievementService {
                     });
         }
 
-        // Award RUNNER to player(s) with most steps taken
         int maxStepsTaken = players.stream()
                 .mapToInt(p -> p.getStatistics().getStepsTaken())
                 .max()
@@ -66,27 +64,10 @@ public class AchievementService {
         return awards;
     }
 
+
     /**
      * Record representing an achievement award.
      */
     public record AchievementAward(Player player, Achievement achievement) {
-    }
-
-    /**
-     * @deprecated Use awardEndGameAchievements instead. This method is kept for backward compatibility with tests.
-     */
-    @Deprecated
-    public Optional<Achievement> checkPusherAchievement(Player player) {
-        // Kept for backward compatibility - does nothing now
-        return Optional.empty();
-    }
-
-    /**
-     * @deprecated Use awardEndGameAchievements instead. This method is kept for backward compatibility with tests.
-     */
-    @Deprecated
-    public Optional<Achievement> checkRunnerAchievement(Player player) {
-        // Kept for backward compatibility - does nothing now
-        return Optional.empty();
     }
 }

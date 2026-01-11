@@ -2,6 +2,7 @@ package labyrinth.server.game.bonuses;
 
 import labyrinth.server.game.constants.PointRewards;
 import labyrinth.server.game.enums.BonusTypes;
+import labyrinth.server.game.enums.MoveState;
 import labyrinth.server.game.models.Game;
 import labyrinth.server.game.models.Player;
 import labyrinth.server.game.models.Tile;
@@ -31,6 +32,10 @@ public class BeamBonusEffect implements IBonusEffect {
 
         player.getStatistics().increaseScore(PointRewards.REWARD_BONUS_USED);
         player.setCurrentTile(targetTile);
+
+        // Transition to MOVE state after using BEAM (replaces the push)
+        game.setMoveState(MoveState.MOVE);
+
         return true;
     }
 }
