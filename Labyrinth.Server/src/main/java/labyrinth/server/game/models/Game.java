@@ -1,6 +1,5 @@
 package labyrinth.server.game.models;
 
-import labyrinth.contracts.models.PlayerColor;
 import labyrinth.server.game.abstractions.IGameTimer;
 import labyrinth.server.game.ai.AiStrategy;
 import labyrinth.server.game.bonuses.IBonusEffect;
@@ -11,7 +10,8 @@ import labyrinth.server.game.models.records.Position;
 import labyrinth.server.game.results.LeaveResult;
 import labyrinth.server.game.results.MovePlayerToTileResult;
 import labyrinth.server.game.results.ShiftResult;
-import labyrinth.server.game.services.GameInitializer;
+import labyrinth.server.game.services.AchievementService;
+import labyrinth.server.game.services.GameInitializerService;
 import labyrinth.server.game.services.GameLogger;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -37,7 +37,7 @@ public class Game {
 
     private final labyrinth.server.game.services.TurnController turnController;
     private final labyrinth.server.game.services.PlayerRegistry playerRegistry;
-    private final labyrinth.server.game.services.GameInitializer gameInitializer;
+    private final GameInitializerService gameInitializer;
 
     @Setter(lombok.AccessLevel.NONE)
     private Board board;
@@ -72,7 +72,7 @@ public class Game {
             IGameTimer nextTurnTimer,
             AiStrategy aiStrategy,
             GameLogger gameLogger,
-            GameInitializer gameInitializer
+            GameInitializerService gameInitializer
     ) {
         this.nextTurnTimer = nextTurnTimer;
         this.aiStrategy = aiStrategy;
@@ -98,39 +98,22 @@ public class Game {
         if (!bonusEffects.containsKey(type)) {
             throw new IllegalArgumentException("No strategy found for bonus type: " + type);
         }
+
+        // Check if a bonus has already been used this turn
+        if (turnController.isBonusUsedThisTurn()) {
+            throw new IllegalStateException("Only one bonus can be used per turn");
+        }
+
         boolean result = bonusEffects.get(type).apply(this, getCurrentPlayer(), args);
         if (result) {
+            // Mark that a bonus has been used this turn
+            turnController.markBonusUsed();
+
             java.util.Map<String, String> meta = new java.util.HashMap<>();
             meta.put("bonusType", type.toString());
             gameLogger.log(GameLogType.USE_BONUS, "Player used bonus " + type, getCurrentPlayer(), meta);
         }
         return result;
-    }
-
-    public boolean useBeamBonus(int row, int col, Player player) {
-        guardFor(RoomState.IN_GAME);
-        guardFor(player);
-        guardFor(MoveState.PLACE_TILE);
-        return useBonus(BonusTypes.BEAM, row, col);
-    }
-
-    public boolean useSwapBonus(Player currentPlayer, Player targetPlayer) {
-        guardFor(RoomState.IN_GAME);
-        guardFor(currentPlayer);
-        guardFor(MoveState.PLACE_TILE);
-        return useBonus(BonusTypes.SWAP, targetPlayer);
-    }
-
-    public boolean usePushTwiceBonus(Player player) {
-        guardFor(RoomState.IN_GAME);
-        guardFor(player);
-        return useBonus(BonusTypes.PUSH_TWICE);
-    }
-
-    public boolean usePushFixedBonus(Player player) {
-        guardFor(player);
-        guardFor(RoomState.IN_GAME);
-        return useBonus(BonusTypes.PUSH_FIXED);
     }
 
     /**
@@ -201,8 +184,7 @@ public class Game {
 
         this.gameConfig = Objects.requireNonNullElseGet(gameConfig, GameConfig::getDefault);
 
-        // Delegate initialization to GameInitializer
-        List<Player> players = playerRegistry.getPlayersInternal(); // Internal mutable list
+        List<Player> players = playerRegistry.getPlayersInternal();
         gameInitializer.distributeTreasuresAndBonuses(treasureCards, board, players, this.gameConfig.totalBonusCount());
         gameInitializer.initializePlayerPositions(board, this.gameConfig, players);
         gameInitializer.logGameStart(board, this.gameConfig, players, gameLogger);
@@ -334,7 +316,7 @@ public class Game {
         return new MovePlayerToTileResult(true, distanceMoved, treasureCollected, gameOver, false);
     }
 
-    private List<labyrinth.server.game.services.AchievementService.AchievementAward> endGameAchievements = new ArrayList<>();
+    private List<AchievementService.AchievementAward> endGameAchievements = new ArrayList<>();
 
     /**
      * Awards end-game achievements to players with the best statistics.
@@ -496,6 +478,35 @@ public class Game {
      */
     public BonusTypes getActiveBonus() {
         return activeBonusState.getBonusType().orElse(null);
+    }
+
+    /**
+     * Sets the current move state.
+     *
+     * @param moveState the new move state
+     */
+    public void setMoveState(MoveState moveState) {
+        turnController.setMoveState(moveState);
+    }
+
+    /**
+     * Processes a player stepping onto a tile, handling treasure and bonus collection.
+     * Used by bonus effects that move players (BEAM, SWAP).
+     *
+     * @param player the player stepping onto the tile
+     * @param tile   the tile being stepped on
+     */
+    public void processPlayerStepOnTile(Player player, Tile tile) {
+        movementManager.processPlayerStepOnTile(player, tile);
+    }
+
+    /**
+     * Checks if a bonus has already been used this turn.
+     *
+     * @return true if a bonus was used this turn, false otherwise
+     */
+    public boolean isBonusUsedThisTurn() {
+        return turnController.isBonusUsedThisTurn();
     }
 
     public OffsetDateTime getGameEndTime() {

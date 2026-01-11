@@ -1,7 +1,7 @@
 package labyrinth.server.game;
 
 import labyrinth.server.game.constants.PointRewards;
-import labyrinth.server.game.enums.Achievement;
+import labyrinth.server.game.enums.BonusTypes;
 import labyrinth.server.game.enums.Direction;
 import labyrinth.server.game.enums.RoomState;
 import labyrinth.server.game.events.AchievementUnlockedEvent;
@@ -13,6 +13,7 @@ import labyrinth.server.game.models.Board;
 import labyrinth.server.game.models.Game;
 import labyrinth.server.game.models.Player;
 import labyrinth.server.game.models.records.GameConfig;
+import labyrinth.server.game.services.GameInitializerService;
 import labyrinth.server.game.util.GameTimer;
 import labyrinth.server.messaging.events.EventPublisher;
 import labyrinth.server.messaging.MessageService;
@@ -49,7 +50,7 @@ public class GameService {
                        TaskScheduler scheduler,
                        MessageService messageService,
                        GameMapper gameMapper,
-                       labyrinth.server.game.services.GameInitializer gameInitializer) {
+                       GameInitializerService gameInitializer) {
 
         this.treasureCardFactory = treasureCardFactory;
         this.boardFactory = boardFactory;
@@ -322,7 +323,7 @@ public class GameService {
     public void useBeamBonus(int row, int col, Player player) {
         rwLock.writeLock().lock();
         try {
-            var useSuccessfull = game.useBeamBonus(row, col, player);
+            var useSuccessfull = game.useBonus(BonusTypes.BEAM, row, col);
 
             if (useSuccessfull) {
                 player.getStatistics().increaseScore(PointRewards.REWARD_SHIFT_TILE);
@@ -336,7 +337,7 @@ public class GameService {
     public void useSwapBonus(Player currentPlayer, Player targetPlayer) {
         rwLock.writeLock().lock();
         try {
-            game.useSwapBonus(currentPlayer, targetPlayer);
+            game.useBonus(BonusTypes.SWAP, targetPlayer);
         } finally {
             rwLock.writeLock().unlock();
         }
@@ -345,7 +346,7 @@ public class GameService {
     public void usePushTwiceBonus(Player player) {
         rwLock.writeLock().lock();
         try {
-            game.usePushTwiceBonus(player);
+            game.useBonus(BonusTypes.PUSH_TWICE);
         } finally {
             rwLock.writeLock().unlock();
         }
@@ -354,7 +355,7 @@ public class GameService {
     public void usePushFixedBonus(Player player) {
         rwLock.writeLock().lock();
         try {
-            game.usePushFixedBonus(player);
+            game.useBonus(BonusTypes.PUSH_FIXED);
         } finally {
             rwLock.writeLock().unlock();
         }

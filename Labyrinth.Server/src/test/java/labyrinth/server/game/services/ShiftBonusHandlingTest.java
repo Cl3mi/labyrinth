@@ -5,6 +5,7 @@ import labyrinth.server.game.ai.SimpleAiStrategy;
 import labyrinth.server.game.enums.BonusTypes;
 import labyrinth.server.game.enums.Direction;
 import labyrinth.server.game.enums.MoveState;
+import labyrinth.server.game.factories.BonusFactory;
 import labyrinth.server.game.models.Board;
 import labyrinth.server.game.models.Game;
 import labyrinth.server.game.models.Player;
@@ -31,7 +32,11 @@ class ShiftBonusHandlingTest {
 
     @BeforeEach
     void setUp() {
-        game = new Game(mock(IGameTimer.class), new SimpleAiStrategy(), new GameLogger());
+        var bonusFactory = new BonusFactory();
+        var distributionService = new TreasureBonusDistributionService(bonusFactory);
+        var gameInitializer = new GameInitializerService(distributionService);
+
+        game = new Game(mock(IGameTimer.class), new SimpleAiStrategy(), new GameLogger(), gameInitializer);
         player = game.join("TestPlayer");
         game.join("Player2");
 
@@ -59,7 +64,7 @@ class ShiftBonusHandlingTest {
     void shift_withPushTwiceBonus_shouldAllowAnotherPush() {
         // Arrange
         player.getBonuses().add(BonusTypes.PUSH_TWICE);
-        game.usePushTwiceBonus(player);
+        game.useBonus(BonusTypes.PUSH_TWICE);
 
         // Act - first shift with PUSH_TWICE active
         var result = game.shift(1, Direction.RIGHT, player);
@@ -74,7 +79,7 @@ class ShiftBonusHandlingTest {
     void shift_withPushTwiceBonus_shouldConsumeBonus() {
         // Arrange
         player.getBonuses().add(BonusTypes.PUSH_TWICE);
-        game.usePushTwiceBonus(player);
+        game.useBonus(BonusTypes.PUSH_TWICE);
         BonusTypes activeBonusBeforeShift = game.getActiveBonus();
 
         // Act
@@ -89,7 +94,7 @@ class ShiftBonusHandlingTest {
     void shift_withPushFixedBonus_shouldAllowShiftingFixedTiles() {
         // Arrange
         player.getBonuses().add(BonusTypes.PUSH_FIXED);
-        game.usePushFixedBonus(player);
+        game.useBonus(BonusTypes.PUSH_FIXED);
 
         // Act
         var result = game.shift(0, Direction.RIGHT, player); // Row 0 contains fixed tiles
@@ -102,7 +107,7 @@ class ShiftBonusHandlingTest {
     void shift_withPushFixedBonus_shouldConsumeBonus() {
         // Arrange
         player.getBonuses().add(BonusTypes.PUSH_FIXED);
-        game.usePushFixedBonus(player);
+        game.useBonus(BonusTypes.PUSH_FIXED);
         BonusTypes activeBonusBeforeShift = game.getActiveBonus();
 
         // Act

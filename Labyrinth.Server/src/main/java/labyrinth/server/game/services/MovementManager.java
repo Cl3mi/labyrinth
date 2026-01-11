@@ -63,25 +63,20 @@ public class MovementManager {
      * @param result the interaction result to apply
      */
     private void applyInteractionEffects(Player player, Tile tile, TileInteractionResult result) {
-        // Handle treasure collection
         if (result.collectedTreasure() != null) {
-            LOGGER.info("Player " + player.getUsername() + " collected treasure: "
-                    + result.collectedTreasure().getTreasureName());
+            LOGGER.info("Player " + player.getUsername() + " collected treasure: " + result.collectedTreasure().getTreasureName());
             result.collectedTreasure().collect();
             player.getStatistics().increaseScore(PointRewards.REWARD_TREASURE);
             player.getStatistics().increaseTreasuresCollected(1);
-            tile.setTreasureCard(null); // Remove from tile
+            tile.setTreasureCard(null);
         }
 
-        // Handle bonus collection
         if (result.collectedBonus() != null) {
-            LOGGER.info("Player " + player.getUsername() + " collected bonus: "
-                    + result.collectedBonus());
+            LOGGER.info("Player " + player.getUsername() + " collected bonus: " + result.collectedBonus());
             player.getBonuses().add(result.collectedBonus());
-            tile.setBonus(null); // Remove from tile
+            tile.setBonus(null);
         }
 
-        // Update player position
         player.setCurrentTile(tile);
     }
 

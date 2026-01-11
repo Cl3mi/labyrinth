@@ -20,6 +20,7 @@ public class TurnController {
 
     private int currentPlayerIndex = 0;
     private MoveState currentMoveState = MoveState.PLACE_TILE;
+    private boolean bonusUsedThisTurn = false;
 
     private final IGameTimer turnTimer;
     private final GameLogger gameLogger;
@@ -58,6 +59,20 @@ public class TurnController {
     }
 
     /**
+     * Checks if a bonus has been used this turn.
+     */
+    public boolean isBonusUsedThisTurn() {
+        return bonusUsedThisTurn;
+    }
+
+    /**
+     * Marks that a bonus has been used this turn.
+     */
+    public void markBonusUsed() {
+        this.bonusUsedThisTurn = true;
+    }
+
+    /**
      * Advances to the next player and handles AI turns.
      *
      * @param players        the list of players
@@ -82,6 +97,7 @@ public class TurnController {
         Player nextPlayer = getCurrentPlayer(players);
         gameLogger.log(GameLogType.NEXT_TURN, "New Player to move: " + nextPlayer.getUsername(), nextPlayer, null);
         currentMoveState = MoveState.PLACE_TILE;
+        bonusUsedThisTurn = false; // Reset bonus usage for new turn
 
         if (nextPlayer.isAiActive()) {
             aiTurnExecutor.accept(nextPlayer);
@@ -148,6 +164,7 @@ public class TurnController {
     public void reset() {
         currentPlayerIndex = 0;
         currentMoveState = MoveState.PLACE_TILE;
+        bonusUsedThisTurn = false;
     }
 
     /**

@@ -9,7 +9,7 @@ import labyrinth.server.game.factories.BonusFactory;
 import labyrinth.server.game.factories.TreasureCardFactory;
 import labyrinth.server.game.models.Game;
 import labyrinth.server.game.models.records.GameConfig;
-import labyrinth.server.game.services.GameInitializer;
+import labyrinth.server.game.services.GameInitializerService;
 import labyrinth.server.game.services.TreasureBonusDistributionService;
 import labyrinth.server.game.util.GameTimer;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
@@ -31,7 +31,7 @@ public class Testing {
         var gameLogger = new labyrinth.server.game.services.GameLogger();
         var bonusFactory = new BonusFactory();
         var distributionService = new TreasureBonusDistributionService(bonusFactory);
-        var gameInitializer = new GameInitializer(distributionService);
+        var gameInitializer = new GameInitializerService(distributionService);
         game = new Game(gameTimer, new SimpleAiStrategy(), gameLogger, gameInitializer);
         simulateGameStart();
         // simulateGameMoves(1000);
@@ -50,7 +50,7 @@ public class Testing {
         var treasureCardFactory = new TreasureCardFactory();
         var boardFactory = new BoardFactory();
 
-        var gameConfig = new GameConfig(5, 5, 24, 1800, 5, 30);
+        var gameConfig = new GameConfig(7, 7, 24, 1800, 5, 30);
         var board = boardFactory.createBoard(gameConfig.boardWidth(), gameConfig.boardHeight());
         var cards = treasureCardFactory.createTreasureCards(gameConfig.treasureCardCount(), game.getPlayers().size());
 
@@ -58,9 +58,15 @@ public class Testing {
 
         var p1 = game.getPlayers().get(0);
 
+
         var p3 = game.getPlayers().get(2);
 
         var p4 = game.getPlayers().get(3);
+
+        p1.getBonuses().add(BonusTypes.BEAM);
+        p1.getBonuses().add(BonusTypes.PUSH_TWICE);
+        p1.getBonuses().add(BonusTypes.PUSH_FIXED);
+        p1.getBonuses().add(BonusTypes.SWAP);
 
 //         game.toggleAiForPlayer(p1);
 //         game.toggleAiForPlayer(p2);
@@ -68,7 +74,6 @@ public class Testing {
 //         game.toggleAiForPlayer(p4);
 
         game.startGame(gameConfig, cards, board);
-        game.setActiveBonus(BonusTypes.PUSH_FIXED);
 
         // Open Debug Viewer
         LabyrinthViewer.viewSwing(game);
