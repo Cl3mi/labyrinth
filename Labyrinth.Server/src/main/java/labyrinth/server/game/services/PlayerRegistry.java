@@ -135,6 +135,13 @@ public class PlayerRegistry implements IPlayerRegistry {
         return players.size() >= maxPlayers;
     }
 
+    @Override
+    public void resetForNewGame() {
+        for (Player player : players) {
+            player.resetForNewGame();
+        }
+    }
+
     /**
      * Clears all players from the registry.
      * Used when resetting for a new game.

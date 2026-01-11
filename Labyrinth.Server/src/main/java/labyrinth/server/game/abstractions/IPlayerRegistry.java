@@ -71,10 +71,9 @@ public interface IPlayerRegistry {
     boolean isFull();
 
     /**
-     * Clears all players from the registry.
      * Used when resetting for a new game.
      */
-    void clear();
+    void resetForNewGame();
 
     /**
      * Gets the maximum number of players allowed.

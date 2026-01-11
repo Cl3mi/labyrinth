@@ -148,7 +148,7 @@ public class Game {
             nextTurnTimer.stop();
         }
 
-        playerRegistry.clear();
+        playerRegistry.resetForNewGame();
         this.board = null;
         this.gameConfig = GameConfig.getDefault();
         this.activeBonusState = NoBonusActive.getInstance();
@@ -361,31 +361,6 @@ public class Game {
         this.roomState = RoomState.FINISHED;
     }
 
-    /**
-     * Resets the game back to lobby state after game completion.
-     * Clears the board and prepares for a new game to be started.
-     */
-    public void returnToLobby() {
-        System.out.println("[RETURN TO LOBBY] Current state: " + this.roomState);
-
-        if (this.roomState != RoomState.FINISHED) {
-            System.err.println("[RETURN TO LOBBY ERROR] Cannot return to lobby from state: " + this.roomState);
-            throw new IllegalStateException("Cannot return to lobby from state: " + this.roomState);
-        }
-
-        System.out.println("[RETURN TO LOBBY] Resetting game to lobby state");
-        this.roomState = RoomState.LOBBY;
-        this.board = null;
-        this.gameStartTime = null;
-        turnController.reset();
-
-        // Reset player stats and treasures for new game
-        for (Player player : playerRegistry.getPlayersInternal()) {
-            player.resetForNewGame();
-        }
-
-        System.out.println("[RETURN TO LOBBY] Reset complete. Players remaining: " + playerRegistry.getPlayers().size());
-    }
 
     private synchronized void nextPlayer() {
         turnController.advanceToNextPlayer(
