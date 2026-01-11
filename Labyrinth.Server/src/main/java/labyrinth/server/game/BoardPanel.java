@@ -48,6 +48,7 @@ public class BoardPanel extends JPanel {
     private int currentPlayerIndex = 0;
     private final Set<Tile> reachableTiles;
     private final List<ArrowButton> arrowButtons = new ArrayList<>();
+    private final List<BonusButton> bonusButtons = new ArrayList<>();
 
     // --- Dynamic Layout Fields ---
     private int xOffset;
@@ -77,6 +78,10 @@ public class BoardPanel extends JPanel {
         addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
+                // Prioritize bonus button clicks
+                if (handleBonusButtonClick(e.getPoint())) {
+                    return;
+                }
                 // Prioritize arrow clicks. If an arrow was clicked, the event is handled.
                 if (handleArrowClick(e.getPoint())) {
                     return;
@@ -85,6 +90,34 @@ public class BoardPanel extends JPanel {
                 handleTileClick(e.getPoint());
             }
         });
+    }
+
+    /**
+     * Checks for and handles a click on a bonus activation button.
+     *
+     * @return true if a bonus button was clicked, false otherwise.
+     */
+    private boolean handleBonusButtonClick(Point p) {
+        for (BonusButton button : bonusButtons) {
+            if (button.contains(p)) {
+                // Attempt to activate the bonus for the current player
+                if (currentPlayer != null && currentPlayer.getBonuses().contains(button.bonusType)) {
+                    // For testing purposes, activate the bonus without additional args
+                    // In a real scenario, some bonuses might need extra parameters
+                    boolean success = game.useBonus(button.bonusType);
+                    if (success) {
+                        System.out.println("Activated bonus: " + button.bonusType + " for player: " + currentPlayer.getUsername());
+                        updateReachableTilesAndRepaint();
+                    } else {
+                        System.out.println("Failed to activate bonus: " + button.bonusType);
+                    }
+                } else {
+                    System.out.println("Player does not have bonus: " + button.bonusType);
+                }
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -174,6 +207,7 @@ public class BoardPanel extends JPanel {
             createAndDrawArrowButtons(g2);
             drawExtraTile(g2);
             drawDebugInfo(g2);
+            createAndDrawBonusButtons(g2);
 
             if (currentPlayer != null) {
                 drawTreasureCards(g2, currentPlayer);
@@ -437,6 +471,58 @@ public class BoardPanel extends JPanel {
         }
     }
 
+    /**
+     * Creates and draws clickable bonus activation buttons for each bonus type.
+     * Only shows buttons for bonuses that the current player has collected.
+     */
+    private void createAndDrawBonusButtons(Graphics2D g2) {
+        bonusButtons.clear();
+
+        if (currentPlayer == null || currentPlayer.getBonuses().isEmpty()) {
+            return;
+        }
+
+        int buttonWidth = 120;
+        int buttonHeight = 30;
+        int buttonX = getWidth() - 260;
+        int buttonY = getHeight() - 200;
+        int buttonSpacing = 10;
+
+        g2.setFont(new Font("Arial", Font.BOLD, 12));
+
+        // Draw title
+        g2.setColor(Color.CYAN);
+        g2.drawString("=== Activate Bonus ===", buttonX, buttonY - 15);
+
+        int index = 0;
+        for (BonusTypes bonusType : currentPlayer.getBonuses()) {
+            int y = buttonY + index * (buttonHeight + buttonSpacing);
+
+            Rectangle buttonBounds = new Rectangle(buttonX, y, buttonWidth, buttonHeight);
+            BonusButton button = new BonusButton(buttonBounds, bonusType);
+            bonusButtons.add(button);
+
+            // Draw button background
+            g2.setColor(new Color(50, 150, 200));
+            g2.fillRoundRect(buttonX, y, buttonWidth, buttonHeight, 10, 10);
+
+            // Draw button border
+            g2.setColor(new Color(30, 100, 150));
+            g2.drawRoundRect(buttonX, y, buttonWidth, buttonHeight, 10, 10);
+
+            // Draw button text
+            g2.setColor(Color.WHITE);
+            String buttonText = bonusType.name();
+            FontMetrics fm = g2.getFontMetrics();
+            int textWidth = fm.stringWidth(buttonText);
+            int textX = buttonX + (buttonWidth - textWidth) / 2;
+            int textY = y + (buttonHeight + fm.getAscent()) / 2 - 2;
+            g2.drawString(buttonText, textX, textY);
+
+            index++;
+        }
+    }
+
     private void drawTreasureCards(Graphics2D g2, Player player) {
         int cardWidth = 60;
         int cardHeight = 90;
@@ -549,6 +635,23 @@ public class BoardPanel extends JPanel {
             }
             arrow.closePath();
             return arrow;
+        }
+
+        boolean contains(Point p) {
+            return bounds.contains(p);
+        }
+    }
+
+    /**
+     * Represents a clickable button for activating a bonus.
+     */
+    private static class BonusButton {
+        Rectangle bounds;
+        BonusTypes bonusType;
+
+        BonusButton(Rectangle bounds, BonusTypes bonusType) {
+            this.bounds = bounds;
+            this.bonusType = bonusType;
         }
 
         boolean contains(Point p) {
