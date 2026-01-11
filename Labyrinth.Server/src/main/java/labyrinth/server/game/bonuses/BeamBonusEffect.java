@@ -31,7 +31,9 @@ public class BeamBonusEffect implements IBonusEffect {
         }
 
         player.getStatistics().increaseScore(PointRewards.REWARD_BONUS_USED);
-        player.setCurrentTile(targetTile);
+
+        // Process tile interaction (collect treasures and bonuses)
+        game.processPlayerStepOnTile(player, targetTile);
 
         // Transition to MOVE state after using BEAM (replaces the push)
         game.setMoveState(MoveState.MOVE);

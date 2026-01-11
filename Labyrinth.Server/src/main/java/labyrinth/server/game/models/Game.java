@@ -480,6 +480,17 @@ public class Game {
         turnController.setMoveState(moveState);
     }
 
+    /**
+     * Processes a player stepping onto a tile, handling treasure and bonus collection.
+     * Used by bonus effects that move players (BEAM, SWAP).
+     *
+     * @param player the player stepping onto the tile
+     * @param tile   the tile being stepped on
+     */
+    public void processPlayerStepOnTile(Player player, Tile tile) {
+        movementManager.processPlayerStepOnTile(player, tile);
+    }
+
     public OffsetDateTime getGameEndTime() {
         if (gameStartTime == null) {
             return null;
