@@ -247,6 +247,11 @@ public class GameService {
     public void startGame(GameConfig gameConfig) {
         rwLock.writeLock().lock();
         try {
+            // If game is finished, reset to lobby first
+            if (game.getRoomState() == RoomState.FINISHED) {
+                game.returnToLobby();
+            }
+
             int playersCount = 4;
 
             var board = boardFactory.createBoard(gameConfig.boardWidth(), gameConfig.boardHeight());

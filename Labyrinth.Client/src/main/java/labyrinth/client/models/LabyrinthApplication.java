@@ -577,6 +577,7 @@ public class LabyrinthApplication {
         gameViewShown = false;
         isGameOver = false;
         pendingSingleplayerStart = false;
+        isGameOverCleanup = false;
 
         // BoardPanel entfernen und zurücksetzen
         if (boardPanel != null) {
