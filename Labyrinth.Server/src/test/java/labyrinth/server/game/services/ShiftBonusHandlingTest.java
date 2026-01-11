@@ -37,7 +37,7 @@ class ShiftBonusHandlingTest {
 
         List<TreasureCard> cards = new ArrayList<>();
         IntStream.range(0, 24).forEach(i -> cards.add(new TreasureCard(i, "Card" + i, "img")));
-        Board board = new labyrinth.server.game.factories.BoardFactory().createBoard(7, 7, 0);
+        Board board = new labyrinth.server.game.factories.BoardFactory().createBoard(7, 7);
 
         game.startGame(GameConfig.getDefault(), cards, board);
         player = game.getCurrentPlayer(); // Get the actual current player after game start

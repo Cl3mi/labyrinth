@@ -46,6 +46,19 @@ public class Board {
      * @param extraTile the spare tile which will be inserted during shifts
      */
     public Board(int width, int height, BiMap<Position, Tile> tileMap, Tile extraTile) {
+        if (width < 5 || width > 11) {
+            throw new IllegalArgumentException("Board width must be between 5 and 11");
+        }
+        if (height < 5 || height > 11) {
+            throw new IllegalArgumentException("Board height must be between 5 and 11");
+        }
+        if (width % 2 == 0) {
+            throw new IllegalArgumentException("Board width must be odd");
+        }
+        if (height % 2 == 0) {
+            throw new IllegalArgumentException("Board height must be odd");
+        }
+
         this.width = width;
         this.height = height;
         this.tileMap = tileMap;
@@ -55,22 +68,18 @@ public class Board {
     }
 
     public Board copy() {
-        // Deep copy tileMap: Position is immutable (record), Tile needs copy()
         BiMap<Position, Tile> newTileMap = this.tileMap.copy(p -> p, Tile::copy);
 
-        // Deep copy extraTile
         Tile newExtraTile = this.extraTile.copy();
 
         Board newBoard = new Board(this.width, this.height, newTileMap, newExtraTile);
 
-        // Copy other state
         newBoard.setFreeRoam(this.freeRoam);
 
         if (this.players != null) {
             List<Player> newPlayers = new ArrayList<>();
             for (Player p : this.players) {
                 Player newP = p.copy();
-                // Map old current tile to new tile
                 if (p.getCurrentTile() != null) {
                     Position pos = this.getPositionOfTile(p.getCurrentTile());
                     if (pos != null) {
@@ -78,7 +87,6 @@ public class Board {
                         newP.setCurrentTile(newTile);
                     }
                 }
-                // Map old home tile to new tile
                 if (p.getHomeTile() != null) {
                     Position homePos = this.getPositionOfTile(p.getHomeTile());
                     if (homePos != null) {
@@ -126,6 +134,11 @@ public class Board {
     }
 
     public boolean shiftColumnDown(int columnIndex, boolean fixedBonusActive) {
+        // Never allow pushing the outer columns (home positions)
+        if (columnIndex == 0 || columnIndex == width - 1) {
+            return false;
+        }
+
         if (colContainsFixedTile(columnIndex) && !fixedBonusActive) {
             return false;
         }
@@ -146,6 +159,11 @@ public class Board {
     }
 
     public boolean shiftColumnUp(int columnIndex, boolean fixedBonusActive) {
+        // Never allow pushing the outer columns (home positions)
+        if (columnIndex == 0 || columnIndex == width - 1) {
+            return false;
+        }
+
         if (colContainsFixedTile(columnIndex) && !fixedBonusActive) {
             return false;
         }
@@ -164,6 +182,11 @@ public class Board {
     }
 
     public boolean shiftRowLeft(int rowIndex, boolean fixedBonusActive) {
+        // Never allow pushing the outer rows (home positions)
+        if (rowIndex == 0 || rowIndex == height - 1) {
+            return false;
+        }
+
         if (rowContainsFixedTile(rowIndex) && !fixedBonusActive) {
             return false;
         }
@@ -184,6 +207,11 @@ public class Board {
     }
 
     public boolean shiftRowRight(int rowIndex, boolean fixedBonusActive) {
+        // Never allow pushing the outer rows (home positions)
+        if (rowIndex == 0 || rowIndex == height - 1) {
+            return false;
+        }
+
         if (rowContainsFixedTile(rowIndex) && !fixedBonusActive) {
             return false;
         }
@@ -237,43 +265,6 @@ public class Board {
             return Collections.emptySet();
         }
         return graph.findReachable(startTile);
-    }
-
-    public void placeRandomTreasure(TreasureCard treasureCard) {
-        Random random = new Random();
-        Tile tile;
-        int row, col;
-        boolean tileHasTreasure;
-
-        do {
-            row = random.nextInt(height);
-            col = random.nextInt(width);
-            tile = tileMap.getForward(new Position(row, col));
-            tileHasTreasure = tile != null && tile.getTreasureCard() != null;
-        } while (isCornerCoordinate(row, col) || tileHasTreasure);
-        LOGGER.info("Placing " + treasureCard.getTreasureName() + " at " + row + "/" + col);
-
-        tile.setTreasureCard(treasureCard);
-    }
-
-    public void placeRandomBonuses(List<BonusTypes> bonuses) {
-        Random random = new Random();
-        Tile tile;
-        int row, col;
-        boolean tileIsOccupied;
-
-        for (BonusTypes bonus : bonuses) {
-            do {
-                row = random.nextInt(height);
-                col = random.nextInt(width);
-                tile = tileMap.getForward(new Position(row, col));
-                // Check if tile has treasure OR bonus
-                tileIsOccupied = tile != null && (tile.getTreasureCard() != null || tile.getBonus() != null);
-            } while (isCornerCoordinate(row, col) || tileIsOccupied);
-
-            LOGGER.info("Placing bonus " + bonus + " at " + row + "/" + col);
-            tile.setBonus(bonus);
-        }
     }
 
     public boolean isCornerCoordinate(int row, int col) {
