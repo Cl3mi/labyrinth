@@ -63,13 +63,17 @@ public class Testing {
 
         var p4 = game.getPlayers().get(3);
 
+        p1.getBonuses().add(BonusTypes.BEAM);
+        p1.getBonuses().add(BonusTypes.PUSH_TWICE);
+        p1.getBonuses().add(BonusTypes.PUSH_FIXED);
+        p1.getBonuses().add(BonusTypes.SWAP);
+
 //         game.toggleAiForPlayer(p1);
 //         game.toggleAiForPlayer(p2);
 //         game.toggleAiForPlayer(p3);
 //         game.toggleAiForPlayer(p4);
 
         game.startGame(gameConfig, cards, board);
-        game.setActiveBonus(BonusTypes.PUSH_FIXED);
 
         // Open Debug Viewer
         LabyrinthViewer.viewSwing(game);

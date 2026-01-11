@@ -50,6 +50,9 @@ public class BoardPanel extends JPanel {
     private final List<ArrowButton> arrowButtons = new ArrayList<>();
     private final List<BonusButton> bonusButtons = new ArrayList<>();
 
+    // Pending bonus activation state
+    private BonusTypes pendingBonusActivation = null;
+
     // --- Dynamic Layout Fields ---
     private int xOffset;
     private int yOffset;
@@ -78,6 +81,14 @@ public class BoardPanel extends JPanel {
         addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
+                // Right-click cancels pending bonus activation
+                if (e.getButton() == MouseEvent.BUTTON3 && pendingBonusActivation != null) {
+                    System.out.println("Cancelled bonus activation: " + pendingBonusActivation);
+                    pendingBonusActivation = null;
+                    repaint();
+                    return;
+                }
+
                 // Prioritize bonus button clicks
                 if (handleBonusButtonClick(e.getPoint())) {
                     return;
@@ -102,14 +113,23 @@ public class BoardPanel extends JPanel {
             if (button.contains(p)) {
                 // Attempt to activate the bonus for the current player
                 if (currentPlayer != null && currentPlayer.getBonuses().contains(button.bonusType)) {
-                    // For testing purposes, activate the bonus without additional args
-                    // In a real scenario, some bonuses might need extra parameters
-                    boolean success = game.useBonus(button.bonusType);
-                    if (success) {
-                        System.out.println("Activated bonus: " + button.bonusType + " for player: " + currentPlayer.getUsername());
-                        updateReachableTilesAndRepaint();
+                    // Check if this bonus requires additional input (coordinates or target player)
+                    if (button.bonusType == BonusTypes.BEAM || button.bonusType == BonusTypes.SWAP) {
+                        // Set pending state and wait for tile/player click
+                        pendingBonusActivation = button.bonusType;
+                        System.out.println("Click on a " +
+                            (button.bonusType == BonusTypes.BEAM ? "tile" : "player") +
+                            " to activate " + button.bonusType);
+                        repaint();
                     } else {
-                        System.out.println("Failed to activate bonus: " + button.bonusType);
+                        // Activate immediately for bonuses that don't need extra args
+                        boolean success = game.useBonus(button.bonusType);
+                        if (success) {
+                            System.out.println("Activated bonus: " + button.bonusType + " for player: " + currentPlayer.getUsername());
+                            updateReachableTilesAndRepaint();
+                        } else {
+                            System.out.println("Failed to activate bonus: " + button.bonusType);
+                        }
                     }
                 } else {
                     System.out.println("Player does not have bonus: " + button.bonusType);
@@ -151,6 +171,13 @@ public class BoardPanel extends JPanel {
             for (int col = 0; col < game.getBoard().getWidth(); col++) {
                 Rectangle tileRect = new Rectangle(xOffset + col * size, yOffset + row * size, size, size);
                 if (tileRect.contains(p)) {
+                    // Check if we have a pending bonus activation
+                    if (pendingBonusActivation != null) {
+                        handlePendingBonusActivation(row, col);
+                        break outer;
+                    }
+
+                    // Normal tile click for movement
                     Tile clickedTile = game.getBoard().getTileAt(row, col);
                     if (reachableTiles.contains(clickedTile)) {
                         boolean moved = game.movePlayerToTile(row, col, currentPlayer).moveSuccess();
@@ -163,6 +190,53 @@ public class BoardPanel extends JPanel {
             }
         }
         System.out.println("---------");
+    }
+
+    /**
+     * Handles the completion of a pending bonus activation after the user has clicked on a tile.
+     */
+    private void handlePendingBonusActivation(int row, int col) {
+        boolean success = false;
+
+        try {
+            if (pendingBonusActivation == BonusTypes.BEAM) {
+                // BEAM bonus: teleport to the clicked tile
+                success = game.useBonus(BonusTypes.BEAM, row, col);
+                if (success) {
+                    System.out.println("Activated BEAM bonus to tile (" + row + ", " + col + ")");
+                } else {
+                    System.out.println("Failed to activate BEAM bonus (tile may be occupied)");
+                }
+            } else if (pendingBonusActivation == BonusTypes.SWAP) {
+                // SWAP bonus: find player at the clicked tile and swap with them
+                Tile clickedTile = game.getBoard().getTileAt(row, col);
+                Player targetPlayer = null;
+
+                for (Player p : game.getPlayers()) {
+                    if (p != currentPlayer && p.getCurrentTile() == clickedTile) {
+                        targetPlayer = p;
+                        break;
+                    }
+                }
+
+                if (targetPlayer != null) {
+                    success = game.useBonus(BonusTypes.SWAP, targetPlayer);
+                    if (success) {
+                        System.out.println("Activated SWAP bonus with player: " + targetPlayer.getUsername());
+                    } else {
+                        System.out.println("Failed to activate SWAP bonus");
+                    }
+                } else {
+                    System.out.println("No player found at tile (" + row + ", " + col + ")");
+                }
+            }
+        } catch (Exception e) {
+            System.out.println("Error activating bonus: " + e.getMessage());
+        } finally {
+            // Clear pending state and update UI
+            pendingBonusActivation = null;
+            updateReachableTilesAndRepaint();
+        }
     }
 
     /**
@@ -492,7 +566,13 @@ public class BoardPanel extends JPanel {
 
         // Draw title
         g2.setColor(Color.CYAN);
-        g2.drawString("=== Activate Bonus ===", buttonX, buttonY - 15);
+        String title = "=== Activate Bonus ===";
+        if (pendingBonusActivation != null) {
+            title = ">>> Click a " +
+                (pendingBonusActivation == BonusTypes.BEAM ? "tile" : "player") +
+                " <<<";
+        }
+        g2.drawString(title, buttonX, buttonY - 15);
 
         int index = 0;
         for (BonusTypes bonusType : currentPlayer.getBonuses()) {
@@ -502,17 +582,34 @@ public class BoardPanel extends JPanel {
             BonusButton button = new BonusButton(buttonBounds, bonusType);
             bonusButtons.add(button);
 
-            // Draw button background
-            g2.setColor(new Color(50, 150, 200));
+            // Check if this bonus is pending activation
+            boolean isPending = (pendingBonusActivation == bonusType);
+
+            // Draw button background (highlight if pending)
+            if (isPending) {
+                g2.setColor(new Color(255, 150, 0)); // Orange for pending
+            } else {
+                g2.setColor(new Color(50, 150, 200)); // Normal blue
+            }
             g2.fillRoundRect(buttonX, y, buttonWidth, buttonHeight, 10, 10);
 
-            // Draw button border
-            g2.setColor(new Color(30, 100, 150));
+            // Draw button border (thicker if pending)
+            if (isPending) {
+                g2.setStroke(new BasicStroke(3));
+                g2.setColor(new Color(200, 100, 0));
+            } else {
+                g2.setStroke(new BasicStroke(1));
+                g2.setColor(new Color(30, 100, 150));
+            }
             g2.drawRoundRect(buttonX, y, buttonWidth, buttonHeight, 10, 10);
+            g2.setStroke(new BasicStroke(1)); // Reset stroke
 
             // Draw button text
             g2.setColor(Color.WHITE);
             String buttonText = bonusType.name();
+            if (isPending) {
+                buttonText += " (ACTIVE)";
+            }
             FontMetrics fm = g2.getFontMetrics();
             int textWidth = fm.stringWidth(buttonText);
             int textX = buttonX + (buttonWidth - textWidth) / 2;
