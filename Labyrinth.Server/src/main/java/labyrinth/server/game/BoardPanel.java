@@ -111,6 +111,12 @@ public class BoardPanel extends JPanel {
     private boolean handleBonusButtonClick(Point p) {
         for (BonusButton button : bonusButtons) {
             if (button.contains(p)) {
+                // Check if a bonus has already been used this turn
+                if (game.isBonusUsedThisTurn()) {
+                    System.out.println("Only one bonus can be used per turn!");
+                    return true;
+                }
+
                 // Attempt to activate the bonus for the current player
                 if (currentPlayer != null && currentPlayer.getBonuses().contains(button.bonusType)) {
                     // Check if this bonus requires additional input (coordinates or target player)
@@ -123,12 +129,16 @@ public class BoardPanel extends JPanel {
                         repaint();
                     } else {
                         // Activate immediately for bonuses that don't need extra args
-                        boolean success = game.useBonus(button.bonusType);
-                        if (success) {
-                            System.out.println("Activated bonus: " + button.bonusType + " for player: " + currentPlayer.getUsername());
-                            updateReachableTilesAndRepaint();
-                        } else {
-                            System.out.println("Failed to activate bonus: " + button.bonusType);
+                        try {
+                            boolean success = game.useBonus(button.bonusType);
+                            if (success) {
+                                System.out.println("Activated bonus: " + button.bonusType + " for player: " + currentPlayer.getUsername());
+                                updateReachableTilesAndRepaint();
+                            } else {
+                                System.out.println("Failed to activate bonus: " + button.bonusType);
+                            }
+                        } catch (IllegalStateException e) {
+                            System.out.println("Error: " + e.getMessage());
                         }
                     }
                 } else {
@@ -584,9 +594,13 @@ public class BoardPanel extends JPanel {
 
             // Check if this bonus is pending activation
             boolean isPending = (pendingBonusActivation == bonusType);
+            // Check if any bonus has been used this turn
+            boolean bonusAlreadyUsed = game.isBonusUsedThisTurn();
 
-            // Draw button background (highlight if pending)
-            if (isPending) {
+            // Draw button background (highlight if pending, gray if disabled)
+            if (bonusAlreadyUsed && !isPending) {
+                g2.setColor(new Color(100, 100, 100)); // Gray for disabled
+            } else if (isPending) {
                 g2.setColor(new Color(255, 150, 0)); // Orange for pending
             } else {
                 g2.setColor(new Color(50, 150, 200)); // Normal blue
@@ -599,16 +613,26 @@ public class BoardPanel extends JPanel {
                 g2.setColor(new Color(200, 100, 0));
             } else {
                 g2.setStroke(new BasicStroke(1));
-                g2.setColor(new Color(30, 100, 150));
+                if (bonusAlreadyUsed) {
+                    g2.setColor(new Color(60, 60, 60)); // Dark gray border for disabled
+                } else {
+                    g2.setColor(new Color(30, 100, 150));
+                }
             }
             g2.drawRoundRect(buttonX, y, buttonWidth, buttonHeight, 10, 10);
             g2.setStroke(new BasicStroke(1)); // Reset stroke
 
             // Draw button text
-            g2.setColor(Color.WHITE);
+            if (bonusAlreadyUsed && !isPending) {
+                g2.setColor(new Color(150, 150, 150)); // Light gray text for disabled
+            } else {
+                g2.setColor(Color.WHITE);
+            }
             String buttonText = bonusType.name();
             if (isPending) {
                 buttonText += " (ACTIVE)";
+            } else if (bonusAlreadyUsed) {
+                buttonText += " (USED)";
             }
             FontMetrics fm = g2.getFontMetrics();
             int textWidth = fm.stringWidth(buttonText);

@@ -98,8 +98,17 @@ public class Game {
         if (!bonusEffects.containsKey(type)) {
             throw new IllegalArgumentException("No strategy found for bonus type: " + type);
         }
+
+        // Check if a bonus has already been used this turn
+        if (turnController.isBonusUsedThisTurn()) {
+            throw new IllegalStateException("Only one bonus can be used per turn");
+        }
+
         boolean result = bonusEffects.get(type).apply(this, getCurrentPlayer(), args);
         if (result) {
+            // Mark that a bonus has been used this turn
+            turnController.markBonusUsed();
+
             java.util.Map<String, String> meta = new java.util.HashMap<>();
             meta.put("bonusType", type.toString());
             gameLogger.log(GameLogType.USE_BONUS, "Player used bonus " + type, getCurrentPlayer(), meta);
@@ -489,6 +498,15 @@ public class Game {
      */
     public void processPlayerStepOnTile(Player player, Tile tile) {
         movementManager.processPlayerStepOnTile(player, tile);
+    }
+
+    /**
+     * Checks if a bonus has already been used this turn.
+     *
+     * @return true if a bonus was used this turn, false otherwise
+     */
+    public boolean isBonusUsedThisTurn() {
+        return turnController.isBonusUsedThisTurn();
     }
 
     public OffsetDateTime getGameEndTime() {
