@@ -19,12 +19,7 @@ import java.util.stream.IntStream;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static labyrinth.server.game.GameTestHelper.createGame;
-import static labyrinth.server.game.GameTestHelper.createGame;
-import static labyrinth.server.game.GameTestHelper.createGame;
 import static org.mockito.Mockito.mock;
-import static labyrinth.server.game.GameTestHelper.createGame;
-import static labyrinth.server.game.GameTestHelper.createGame;
-import static labyrinth.server.game.GameTestHelper.createGame;
 
 /**
  * Tests for end-game achievement awarding system.

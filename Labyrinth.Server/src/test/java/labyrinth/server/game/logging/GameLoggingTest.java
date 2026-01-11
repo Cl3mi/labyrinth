@@ -19,8 +19,6 @@ import java.util.stream.IntStream;
 
 import static org.mockito.Mockito.mock;
 import static labyrinth.server.game.GameTestHelper.createGame;
-import static labyrinth.server.game.GameTestHelper.createGame;
-import static labyrinth.server.game.GameTestHelper.createGame;
 
 class GameLoggingTest {
 

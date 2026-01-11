@@ -19,7 +19,6 @@ import java.util.Set;
 import static org.junit.jupiter.api.Assertions.*;
 import static labyrinth.server.game.GameTestHelper.createGame;
 import static org.mockito.Mockito.mock;
-import static labyrinth.server.game.GameTestHelper.createGame;
 
 /**
  * Test to verify AI behavior when returning home after collecting all treasures.

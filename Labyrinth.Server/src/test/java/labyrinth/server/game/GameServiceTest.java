@@ -1,6 +1,5 @@
 package labyrinth.server.game;
 
-import labyrinth.contracts.models.PlayerColor;
 import labyrinth.server.game.abstractions.IGameTimer;
 import labyrinth.server.game.models.Game;
 import labyrinth.server.game.models.Player;
@@ -10,8 +9,6 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-import java.util.ArrayList;
-import java.util.List;
 
 import static labyrinth.server.game.GameTestHelper.createGame;
 import static org.junit.jupiter.api.Assertions.*;
