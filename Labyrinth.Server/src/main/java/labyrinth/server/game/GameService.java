@@ -247,8 +247,9 @@ public class GameService {
     public void startGame(GameConfig gameConfig) {
         rwLock.writeLock().lock();
         try {
-            // If game is finished, reset to lobby first
-            if (game.getRoomState() == RoomState.FINISHED) {
+            // If game is finished or in progress, reset to lobby first
+            if (game.getRoomState() == RoomState.FINISHED || game.getRoomState() == RoomState.IN_GAME) {
+                System.out.println("[GameService] Game is " + game.getRoomState() + ", resetting to LOBBY before starting new game");
                 game.returnToLobby();
             }
 

@@ -368,7 +368,7 @@ public class Game {
     public void returnToLobby() {
         System.out.println("[RETURN TO LOBBY] Current state: " + this.roomState);
 
-        if (this.roomState != RoomState.FINISHED) {
+        if (this.roomState != RoomState.FINISHED && this.roomState != RoomState.IN_GAME) {
             System.err.println("[RETURN TO LOBBY ERROR] Cannot return to lobby from state: " + this.roomState);
             throw new IllegalStateException("Cannot return to lobby from state: " + this.roomState);
         }

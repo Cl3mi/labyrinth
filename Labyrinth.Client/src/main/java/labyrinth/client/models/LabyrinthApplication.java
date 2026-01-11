@@ -2,6 +2,7 @@ package labyrinth.client.models;
 
 import labyrinth.client.messaging.ServerClientFactory;
 import labyrinth.client.ui.*;
+import labyrinth.client.ui.theme.ThemeManager;
 import labyrinth.client.factories.BoardFactory;
 import labyrinth.client.messaging.GameClient;
 import labyrinth.client.messaging.ReconnectionManager;
@@ -47,6 +48,7 @@ public class LabyrinthApplication {
     private volatile boolean sessionResetPending = false;
     private volatile boolean isGameOverCleanup = false;
     private volatile boolean isGameOver = false;
+    private volatile boolean exitedToLobby = false;
 
     public void start() throws Exception {
         frame = new JFrame("Labyrinth Online (" + PROFILE + ")");
@@ -64,6 +66,31 @@ public class LabyrinthApplication {
 
         mainPanel = new JPanel(new CardLayout());
 
+        // Theme-Änderungen überwachen und UI neu zeichnen
+        ThemeManager.getInstance().addThemeChangeListener(() -> {
+            SwingUtilities.invokeLater(() -> {
+                // Alle Komponenten invalidieren und neu zeichnen
+                if (mainMenuPanel != null) {
+                    mainMenuPanel.revalidate();
+                    mainMenuPanel.repaint();
+                }
+                if (lobbyPanel != null) {
+                    lobbyPanel.revalidate();
+                    lobbyPanel.repaint();
+                }
+                if (optionsPanel != null) {
+                    optionsPanel.revalidate();
+                    optionsPanel.repaint();
+                }
+                if (boardPanel != null) {
+                    boardPanel.revalidate();
+                    boardPanel.repaint();
+                }
+                mainPanel.revalidate();
+                mainPanel.repaint();
+                frame.repaint();
+            });
+        });
 
         // Hauptmenü erstellen
         mainMenuPanel = new MainMenuPanel();
@@ -578,6 +605,7 @@ public class LabyrinthApplication {
         isGameOver = false;
         pendingSingleplayerStart = false;
         isGameOverCleanup = false;
+        exitedToLobby = true;  // Block GAME_STATE_UPDATE from showing game again
 
         // BoardPanel entfernen und zurücksetzen
         if (boardPanel != null) {
@@ -585,8 +613,7 @@ public class LabyrinthApplication {
             boardPanel = null;
         }
 
-        // WICHTIG: Der Server sendet automatisch LOBBY_STATE nach GAME_OVER
-        // Wir müssen nur sicherstellen, dass das LobbyPanel die richtigen Werte hat
+        // Lobby-Panel aktualisieren
         SwingUtilities.invokeLater(() -> {
             if (client != null && client.isOpen()) {
                 // PlayerId aus gespeicherten Preferences laden
@@ -604,7 +631,10 @@ public class LabyrinthApplication {
 
                 lobbyPanel.setConnected(true);
                 lobbyPanel.setStatusText("✓ Verbunden - Bereit für neues Spiel", new Color(100, 200, 100));
-                System.out.println("[" + PROFILE + "] Lobby ready, waiting for LOBBY_STATE update");
+
+                // Start-Button manuell aktivieren wenn Admin
+                lobbyPanel.forceEnableStartButton();
+                System.out.println("[" + PROFILE + "] Lobby ready, start button force-enabled");
             } else {
                 lobbyPanel.setConnected(false);
                 lobbyPanel.setStatusText("Nicht verbunden", new Color(170, 120, 0));
@@ -661,6 +691,7 @@ public class LabyrinthApplication {
 
         client.setOnGameStarted(started -> {
             System.out.println("[" + PROFILE + "] Received GAME_STARTED");
+            exitedToLobby = false;  // Reset flag - neues Spiel startet
             Board board = BoardFactory.fromContracts(started.getBoard());
             List<Player> players = BoardFactory.convertPlayerStates(started.getPlayers());
             board.setPlayers(players);
@@ -671,6 +702,13 @@ public class LabyrinthApplication {
 
         client.setOnGameStateUpdate(state -> {
             System.out.println("[" + PROFILE + "] Received GAME_STATE_UPDATE");
+
+            // Ignoriere Updates wenn der Spieler zur Lobby zurückgekehrt ist
+            if (exitedToLobby) {
+                System.out.println("[" + PROFILE + "] Ignoring GAME_STATE_UPDATE - player exited to lobby");
+                return;
+            }
+
             Board board = BoardFactory.fromContracts(state.getBoard());
             List<Player> players = BoardFactory.convertPlayerStates(state.getPlayers());
             board.setPlayers(players);

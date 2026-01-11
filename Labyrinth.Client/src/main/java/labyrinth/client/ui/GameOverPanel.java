@@ -427,7 +427,7 @@ public class GameOverPanel extends JPanel {
         achievementsPanel.setVisible(true);
 
         // Title
-        JLabel achievementTitle = new JLabel("🏅 Errungenschaften", SwingConstants.CENTER);
+        JLabel achievementTitle = new JLabel("Errungenschaften", SwingConstants.CENTER);
         achievementTitle.setFont(FontManager.getMediumDisplay());
         achievementTitle.setForeground(GameTheme.Colors.ACCENT_GOLD);
         achievementTitle.setAlignmentX(Component.CENTER_ALIGNMENT);

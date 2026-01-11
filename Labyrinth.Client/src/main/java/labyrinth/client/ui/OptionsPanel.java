@@ -3,6 +3,7 @@ package labyrinth.client.ui;
 import labyrinth.client.audio.AudioPlayer;
 import labyrinth.client.ui.theme.FontManager;
 import labyrinth.client.ui.theme.GameTheme;
+import labyrinth.client.ui.theme.ThemeManager;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -85,6 +86,12 @@ public class OptionsPanel extends JPanel {
         loadSettings();
         loadBackgroundImage();
         setupUI();
+
+        // Theme-Änderungen überwachen
+        ThemeManager.getInstance().addThemeChangeListener(() -> {
+            loadBackgroundImage();
+            repaint();
+        });
     }
 
     private boolean isFontAvailable(String fontName) {
@@ -97,9 +104,11 @@ public class OptionsPanel extends JPanel {
 
     private void loadBackgroundImage() {
         try {
-            var url = getClass().getResource("/images/ui/background.png");
+            String imagePath = ThemeManager.getInstance().getBackgroundImagePath();
+            var url = getClass().getResource(imagePath);
             if (url != null) {
                 backgroundImage = new ImageIcon(url).getImage();
+                System.out.println("[OptionsPanel] Loaded background: " + imagePath);
             }
         } catch (Exception e) {
             System.err.println("Error loading background: " + e.getMessage());
@@ -110,7 +119,7 @@ public class OptionsPanel extends JPanel {
         musicVolume = PREFS.getInt(PREF_MUSIC_VOLUME, 50);
         sfxVolume = PREFS.getInt(PREF_SFX_VOLUME, 70);
         serverUrl = PREFS.get(PREF_SERVER_URL, "ws://localhost:8082/game");
-        darkTheme = PREFS.getBoolean(PREF_DARK_THEME, true);
+        darkTheme = ThemeManager.getInstance().isDarkMode(); // Use ThemeManager as source of truth
         windowSizeIndex = PREFS.getInt(PREF_WINDOW_SIZE, 1); // Default: 1400x900
     }
 
@@ -389,6 +398,8 @@ public class OptionsPanel extends JPanel {
         themeToggle.addActionListener(e -> {
             darkTheme = themeToggle.isSelected();
             themeStatusLabel.setText(darkTheme ? "Dunkel" : "Hell");
+            // Update ThemeManager and notify all listeners
+            ThemeManager.getInstance().setDarkMode(darkTheme);
         });
 
         panel.add(themePanel, gbc);
@@ -721,13 +732,16 @@ public class OptionsPanel extends JPanel {
         if (backgroundImage != null) {
             g2.drawImage(backgroundImage, 0, 0, w, h, this);
         } else {
-            GradientPaint gradient = new GradientPaint(0, 0, GameTheme.Colors.STONE_DARK, 0, h, new Color(75, 45, 90));
+            // Use dynamic colors based on current theme
+            GradientPaint gradient = new GradientPaint(0, 0, GameTheme.Colors.stoneDark(), 0, h, GameTheme.Colors.backgroundSecondary());
             g2.setPaint(gradient);
             g2.fillRect(0, 0, w, h);
         }
 
         // Overlay
-        g2.setColor(new Color(0, 0, 0, 100));
+        g2.setColor(ThemeManager.getInstance().isDarkMode()
+            ? new Color(0, 0, 0, 80)
+            : new Color(0, 0, 0, 30));
         g2.fillRect(0, 0, w, h);
 
         // Vignette

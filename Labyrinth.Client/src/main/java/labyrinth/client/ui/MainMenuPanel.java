@@ -1,6 +1,7 @@
 package labyrinth.client.ui;
 
 import labyrinth.client.audio.AudioPlayer;
+import labyrinth.client.ui.theme.ThemeManager;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -165,11 +166,21 @@ public class MainMenuPanel extends JPanel {
     private Font buttonFont;
     private Font subtitleFont;
 
+    // UI-Elemente für Theme-Updates
+    private JLabel subtitleLabel;
+
     public MainMenuPanel() {
         initFonts();
         loadResources();
         initMusic();
         setupUI();
+
+        // Theme-Änderungen überwachen
+        ThemeManager.getInstance().addThemeChangeListener(() -> {
+            loadBackgroundImage();
+            subtitleLabel.setForeground(ThemeManager.getInstance().getSubtitleColor());
+            repaint();
+        });
     }
 
     @Override
@@ -216,17 +227,7 @@ public class MainMenuPanel extends JPanel {
     }
 
     private void loadResources() {
-        // Hintergrundbild laden
-        try {
-            var url = getClass().getResource("/images/ui/background.png");
-            if (url != null) {
-                backgroundImage = new ImageIcon(url).getImage();
-            } else {
-                System.err.println("Background not found: /images/ui/background.png");
-            }
-        } catch (Exception e) {
-            System.err.println("Error loading background: " + e.getMessage());
-        }
+        loadBackgroundImage();
 
         // Logo laden
         try {
@@ -238,6 +239,22 @@ public class MainMenuPanel extends JPanel {
             }
         } catch (Exception e) {
             System.err.println("Error loading logo: " + e.getMessage());
+        }
+    }
+
+    private void loadBackgroundImage() {
+        // Hintergrundbild laden - je nach Theme
+        try {
+            String imagePath = ThemeManager.getInstance().getBackgroundImagePath();
+            var url = getClass().getResource(imagePath);
+            if (url != null) {
+                backgroundImage = new ImageIcon(url).getImage();
+                System.out.println("[MainMenuPanel] Loaded background: " + imagePath);
+            } else {
+                System.err.println("Background not found: " + imagePath);
+            }
+        } catch (Exception e) {
+            System.err.println("Error loading background: " + e.getMessage());
         }
     }
 
@@ -284,9 +301,9 @@ public class MainMenuPanel extends JPanel {
         contentPanel.add(Box.createVerticalStrut(15));
 
         // Untertitel
-        JLabel subtitleLabel = new JLabel("Das mystische Abenteuer beginnt... DiBSE 2025");
+        subtitleLabel = new JLabel("Das mystische Abenteuer beginnt... DiBSE 2025");
         subtitleLabel.setFont(new Font("SansSerif", Font.BOLD, 24));
-        subtitleLabel.setForeground(new Color(255, 153, 0, 255));
+        subtitleLabel.setForeground(ThemeManager.getInstance().getSubtitleColor());
         subtitleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         contentPanel.add(subtitleLabel);
 
@@ -411,7 +428,7 @@ public class MainMenuPanel extends JPanel {
         panel.setOpaque(false);
 
         // Mehrspieler Button
-        MenuButton multiplayerBtn = new MenuButton("Mehrspieler", "Spiele online mit Freunden");
+        MenuButton multiplayerBtn = new MenuButton("Spiel starten", "Spiele alleine gegen KI oder online mit Freunden");
         multiplayerBtn.addActionListener(e -> onMultiplayerClicked.run());
         multiplayerBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
         panel.add(multiplayerBtn);
@@ -535,8 +552,10 @@ public class MainMenuPanel extends JPanel {
             g2.fillRect(0, 0, w, h);
         }
 
-        // Dunkler Overlay
-        g2.setColor(new Color(0, 0, 0, 60));
+        // Overlay
+        g2.setColor(ThemeManager.getInstance().isDarkMode()
+            ? new Color(0, 0, 0, 60)
+            : new Color(0, 0, 0, 20));
         g2.fillRect(0, 0, w, h);
 
         // Vignette

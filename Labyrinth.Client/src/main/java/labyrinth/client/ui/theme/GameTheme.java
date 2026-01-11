@@ -66,6 +66,57 @@ public final class GameTheme {
             Color[] colors = {PLAYER_RED, PLAYER_GREEN, PLAYER_BLUE, PLAYER_YELLOW};
             return colors[index % colors.length];
         }
+
+        // ==================== DYNAMIC COLOR GETTERS ====================
+        // These methods return colors based on the current theme
+
+        public static Color backgroundPrimary() {
+            return ThemeManager.getInstance().getBackgroundPrimary();
+        }
+
+        public static Color backgroundSecondary() {
+            return ThemeManager.getInstance().getBackgroundSecondary();
+        }
+
+        public static Color surfacePrimary() {
+            return ThemeManager.getInstance().getSurfacePrimary();
+        }
+
+        public static Color surfaceSecondary() {
+            return ThemeManager.getInstance().getSurfaceSecondary();
+        }
+
+        public static Color textPrimary() {
+            return ThemeManager.getInstance().getTextPrimary();
+        }
+
+        public static Color textMuted() {
+            return ThemeManager.getInstance().getTextMuted();
+        }
+
+        public static Color textLight() {
+            return ThemeManager.getInstance().getTextLight();
+        }
+
+        public static Color stoneDark() {
+            return ThemeManager.getInstance().getStoneDark();
+        }
+
+        public static Color stoneMedium() {
+            return ThemeManager.getInstance().getStoneMedium();
+        }
+
+        public static Color cardBackground() {
+            return ThemeManager.getInstance().getCardBackground();
+        }
+
+        public static Color cardBorder() {
+            return ThemeManager.getInstance().getCardBorder();
+        }
+
+        public static Color shadow() {
+            return ThemeManager.getInstance().getShadow();
+        }
     }
 
     /**

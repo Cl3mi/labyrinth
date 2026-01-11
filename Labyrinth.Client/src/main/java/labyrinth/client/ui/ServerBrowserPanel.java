@@ -2,6 +2,7 @@ package labyrinth.client.ui;
 
 import labyrinth.client.ui.Styles.StyledButton;
 import labyrinth.client.ui.theme.GameTheme;
+import labyrinth.client.ui.theme.ThemeManager;
 import labyrinth.managementclient.api.ServersApi;
 import labyrinth.managementclient.model.GameServer;
 import lombok.Setter;
@@ -45,6 +46,12 @@ public class ServerBrowserPanel extends JPanel {
         this.serversApi = serversApi;
 
         loadBackgroundImage();
+
+        // Listen for theme changes
+        ThemeManager.getInstance().addThemeChangeListener(() -> {
+            loadBackgroundImage();
+            repaint();
+        });
 
         setOpaque(false);
         setLayout(new BorderLayout());
@@ -178,14 +185,16 @@ public class ServerBrowserPanel extends JPanel {
 
     private void loadBackgroundImage() {
         try {
-            var url = getClass().getResource("/images/ui/background.png");
+            String imagePath = ThemeManager.getInstance().getBackgroundImagePath();
+            var url = getClass().getResource(imagePath);
             if (url != null) {
                 backgroundImage = new ImageIcon(url).getImage();
+                System.out.println("[ServerBrowserPanel] Loaded background: " + imagePath);
             } else {
-                System.err.println("Lobby background not found: /images/ui/background.jpg");
+                System.err.println("Background not found: " + imagePath);
             }
         } catch (Exception e) {
-            System.err.println("Error loading lobby background: " + e.getMessage());
+            System.err.println("Error loading background: " + e.getMessage());
         }
     }
 

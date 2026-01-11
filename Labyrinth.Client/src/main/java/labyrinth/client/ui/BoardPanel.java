@@ -5,6 +5,7 @@ import labyrinth.client.audio.SoundEffects;
 import labyrinth.client.messaging.GameClient;
 import labyrinth.client.models.Board;
 import labyrinth.client.models.Player;
+import labyrinth.client.ui.theme.ThemeManager;
 import labyrinth.contracts.models.Direction;
 import labyrinth.contracts.models.Tile;
 import labyrinth.contracts.models.Treasure;
@@ -125,6 +126,12 @@ public class BoardPanel extends JPanel {
         loadTreasureImages();
         loadPlayerIcons();
 
+        // Listen for theme changes
+        ThemeManager.getInstance().addThemeChangeListener(() -> {
+            loadBackgroundImage();
+            repaint();
+        });
+
         setBackground(BACKGROUND_COLOR);
         setPreferredSize(new Dimension(1920, 1080));
 
@@ -228,11 +235,13 @@ public class BoardPanel extends JPanel {
 
     private void loadBackgroundImage() {
         try {
-            var url = getClass().getResource("/images/ui/background.png");
+            String imagePath = ThemeManager.getInstance().getBackgroundImagePath();
+            var url = getClass().getResource(imagePath);
             if (url != null) {
                 backgroundImage = new ImageIcon(url).getImage();
+                System.out.println("[BoardPanel] Loaded background: " + imagePath);
             } else {
-                System.err.println("Background image not found: /images/ui/background.png");
+                System.err.println("Background image not found: " + imagePath);
             }
         } catch (Exception e) {
             System.err.println("Error loading background image: " + e.getMessage());
@@ -1055,7 +1064,7 @@ public class BoardPanel extends JPanel {
 
             BufferedImage icon = (i < playerIcons.size()) ? playerIcons.get(i) : null;
             if (icon != null) {
-                int iconSize = count > 1 ? (int) (size * 0.35) : (int) (size * 0.6);
+                int iconSize = count > 1 ? (int) (size * 0.25) : (int) (size * 0.4);
                 g2.drawImage(icon,
                         px - iconSize / 2,
                         py - iconSize / 2,
@@ -1881,7 +1890,7 @@ public class BoardPanel extends JPanel {
         java.util.prefs.Preferences prefs = java.util.prefs.Preferences.userNodeForPackage(getClass());
         int currentMusicVolume = prefs.getInt("musicVolume", 50);
         int currentSfxVolume = prefs.getInt("sfxVolume", 70);
-        boolean darkTheme = prefs.getBoolean("darkTheme", true);
+        boolean darkTheme = ThemeManager.getInstance().isDarkMode();
 
         // === AUDIO SECTION ===
         JPanel audioSection = createOptionsSection("🔊 Audio", CARD_BG, CARD_BORDER, PRIMARY_GOLD_LIGHT);
@@ -1991,7 +2000,10 @@ public class BoardPanel extends JPanel {
         themeStatusLabel.setForeground(TEXT_LIGHT);
         themeContent.add(themeStatusLabel);
 
-        themeToggle.addActionListener(e -> themeStatusLabel.setText(themeToggle.isSelected() ? "Dunkel" : "Hell"));
+        themeToggle.addActionListener(e -> {
+            themeStatusLabel.setText(themeToggle.isSelected() ? "Dunkel" : "Hell");
+            ThemeManager.getInstance().setDarkMode(themeToggle.isSelected());
+        });
 
         themeSection.add(themeContent, BorderLayout.CENTER);
         contentPanel.add(themeSection);

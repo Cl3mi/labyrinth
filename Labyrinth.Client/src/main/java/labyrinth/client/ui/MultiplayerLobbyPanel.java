@@ -5,6 +5,7 @@ import labyrinth.client.ui.Styles.StyledButton;
 import labyrinth.client.ui.Styles.StyledPlayerCardRenderer;
 import labyrinth.client.ui.theme.FontManager;
 import labyrinth.client.ui.theme.GameTheme;
+import labyrinth.client.ui.theme.ThemeManager;
 import labyrinth.contracts.models.BoardSize;
 import labyrinth.contracts.models.LobbyStateEventPayload;
 import labyrinth.contracts.models.PlayerInfo;
@@ -71,6 +72,12 @@ public class MultiplayerLobbyPanel extends JPanel {
         FontManager.initFonts();
         loadBackgroundImage();
         setupUI();
+
+        // Theme-Änderungen überwachen
+        ThemeManager.getInstance().addThemeChangeListener(() -> {
+            loadBackgroundImage();
+            repaint();
+        });
     }
 
 
@@ -79,9 +86,11 @@ public class MultiplayerLobbyPanel extends JPanel {
 
     private void loadBackgroundImage() {
         try {
-            var url = getClass().getResource("/images/ui/background.png");
+            String imagePath = ThemeManager.getInstance().getBackgroundImagePath();
+            var url = getClass().getResource(imagePath);
             if (url != null) {
                 backgroundImage = new ImageIcon(url).getImage();
+                System.out.println("[MultiplayerLobbyPanel] Loaded background: " + imagePath);
             }
         } catch (Exception e) {
             System.err.println("Error loading background: " + e.getMessage());
@@ -564,6 +573,18 @@ public class MultiplayerLobbyPanel extends JPanel {
         }
     }
 
+    /**
+     * Force-enables the start button for returning to lobby after a game.
+     * This is needed because the server doesn't send LOBBY_STATE when returning mid-game.
+     */
+    public void forceEnableStartButton() {
+        SwingUtilities.invokeLater(() -> {
+            startButton.setEnabled(true);
+            enableSettingsPanel(true);
+            System.out.println("[MultiplayerLobbyPanel] Start button force-enabled");
+        });
+    }
+
     // --------------------------------------------------------------------------------
     // Hintergrund zeichnen
     // --------------------------------------------------------------------------------
@@ -579,13 +600,16 @@ public class MultiplayerLobbyPanel extends JPanel {
         if (backgroundImage != null) {
             g2.drawImage(backgroundImage, 0, 0, w, h, this);
         } else {
-            GradientPaint gradient = new GradientPaint(0, 0, GameTheme.Colors.STONE_DARK, 0, h, new Color(75, 45, 90));
+            // Use dynamic colors based on current theme
+            GradientPaint gradient = new GradientPaint(0, 0, GameTheme.Colors.stoneDark(), 0, h, GameTheme.Colors.backgroundSecondary());
             g2.setPaint(gradient);
             g2.fillRect(0, 0, w, h);
         }
 
         // Overlay
-        g2.setColor(new Color(0, 0, 0, 100));
+        g2.setColor(ThemeManager.getInstance().isDarkMode()
+            ? new Color(0, 0, 0, 80)
+            : new Color(0, 0, 0, 30));
         g2.fillRect(0, 0, w, h);
 
         // Vignette
