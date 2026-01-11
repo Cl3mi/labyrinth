@@ -45,7 +45,6 @@ public class TreasureBonusDistributionService {
     public void distributeAll(Board board, List<TreasureCard> treasureCards, int bonusCount) {
         List<Position> viablePositions = getViablePositions(board);
 
-        // Check if we have enough space for all treasures
         if (treasureCards.size() > viablePositions.size()) {
             throw new IllegalStateException(
                 "Not enough viable positions for treasures. Need " + treasureCards.size() +
@@ -53,13 +52,10 @@ public class TreasureBonusDistributionService {
             );
         }
 
-        // Shuffle positions for random distribution
         Collections.shuffle(viablePositions, RANDOM);
 
-        // Place treasures first
         distributeTreasures(board, treasureCards, viablePositions);
 
-        // Calculate remaining free positions after placing treasures
         List<Position> remainingPositions = getFreePositions(board);
 
         if (bonusCount > remainingPositions.size()) {
@@ -69,7 +65,6 @@ public class TreasureBonusDistributionService {
             );
         }
 
-        // Place bonuses in remaining free positions
         distributeBonuses(board, bonusCount, remainingPositions);
     }
 

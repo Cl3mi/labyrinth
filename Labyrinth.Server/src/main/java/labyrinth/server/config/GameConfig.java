@@ -1,7 +1,7 @@
 package labyrinth.server.config;
 
 import labyrinth.server.game.factories.BonusFactory;
-import labyrinth.server.game.services.GameInitializer;
+import labyrinth.server.game.services.GameInitializerService;
 import labyrinth.server.game.services.TreasureBonusDistributionService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -15,7 +15,7 @@ public class GameConfig {
     }
 
     @Bean
-    public GameInitializer gameInitializer(TreasureBonusDistributionService distributionService) {
-        return new GameInitializer(distributionService);
+    public GameInitializerService gameInitializer(TreasureBonusDistributionService distributionService) {
+        return new GameInitializerService(distributionService);
     }
 }

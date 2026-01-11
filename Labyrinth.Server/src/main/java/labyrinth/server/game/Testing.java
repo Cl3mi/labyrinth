@@ -9,7 +9,7 @@ import labyrinth.server.game.factories.BonusFactory;
 import labyrinth.server.game.factories.TreasureCardFactory;
 import labyrinth.server.game.models.Game;
 import labyrinth.server.game.models.records.GameConfig;
-import labyrinth.server.game.services.GameInitializer;
+import labyrinth.server.game.services.GameInitializerService;
 import labyrinth.server.game.services.TreasureBonusDistributionService;
 import labyrinth.server.game.util.GameTimer;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
@@ -31,7 +31,7 @@ public class Testing {
         var gameLogger = new labyrinth.server.game.services.GameLogger();
         var bonusFactory = new BonusFactory();
         var distributionService = new TreasureBonusDistributionService(bonusFactory);
-        var gameInitializer = new GameInitializer(distributionService);
+        var gameInitializer = new GameInitializerService(distributionService);
         game = new Game(gameTimer, new SimpleAiStrategy(), gameLogger, gameInitializer);
         simulateGameStart();
         // simulateGameMoves(1000);

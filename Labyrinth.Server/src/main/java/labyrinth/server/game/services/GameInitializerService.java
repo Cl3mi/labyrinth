@@ -21,11 +21,11 @@ import java.util.Map;
  * - Player position initialization
  * - Game start logging
  */
-public class GameInitializer {
+public class GameInitializerService {
 
     private final TreasureBonusDistributionService distributionService;
 
-    public GameInitializer(TreasureBonusDistributionService distributionService) {
+    public GameInitializerService(TreasureBonusDistributionService distributionService) {
         this.distributionService = distributionService;
     }
 

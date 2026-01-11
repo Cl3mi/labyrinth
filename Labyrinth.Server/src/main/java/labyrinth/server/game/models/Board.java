@@ -276,12 +276,7 @@ public class Board {
         return isTopLeft || isTopRight || isBottomLeft || isBottomRight;
     }
 
-    int movePlayerToTile(
-            Player player,
-            int targetRow,
-            int targetCol,
-            MovementManager movementManager
-    ) {
+    int movePlayerToTile(Player player, int targetRow, int targetCol, MovementManager movementManager) {
         Tile currentTile = player.getCurrentTile();
         Tile targetTile = tileMap.getForward(new Position(targetRow, targetCol));
 

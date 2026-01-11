@@ -63,7 +63,6 @@ public class MovementManager {
      * @param result the interaction result to apply
      */
     private void applyInteractionEffects(Player player, Tile tile, TileInteractionResult result) {
-        // Handle treasure collection
         if (result.collectedTreasure() != null) {
             LOGGER.info("Player " + player.getUsername() + " collected treasure: " + result.collectedTreasure().getTreasureName());
             result.collectedTreasure().collect();
@@ -72,14 +71,12 @@ public class MovementManager {
             tile.setTreasureCard(null);
         }
 
-        // Handle bonus collection
         if (result.collectedBonus() != null) {
             LOGGER.info("Player " + player.getUsername() + " collected bonus: " + result.collectedBonus());
             player.getBonuses().add(result.collectedBonus());
             tile.setBonus(null);
         }
 
-        // Update player position
         player.setCurrentTile(tile);
     }
 
