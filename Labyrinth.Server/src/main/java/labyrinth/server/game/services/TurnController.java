@@ -98,9 +98,9 @@ public class TurnController implements ITurnController {
         Player nextPlayer = getCurrentPlayer(players);
         gameLogger.log(GameLogType.NEXT_TURN, "New Player to move: " + nextPlayer.getUsername(), nextPlayer, null);
         currentMoveState = MoveState.PLACE_TILE;
-        bonusUsedThisTurn = false; // Reset bonus usage for new turn
+        bonusUsedThisTurn = false;
 
-        if (nextPlayer.isAiActive()) {
+        if (nextPlayer.shouldMoveBePerformedByAi()) {
             aiTurnExecutor.accept(nextPlayer);
         } else {
             turnTimer.start(gameConfig.turnTimeInSeconds(), () -> {

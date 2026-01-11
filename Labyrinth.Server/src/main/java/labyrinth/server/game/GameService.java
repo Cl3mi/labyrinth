@@ -247,12 +247,7 @@ public class GameService {
     public void startGame(GameConfig gameConfig) {
         rwLock.writeLock().lock();
         try {
-            // Note: Game.startGame() will call fillWithAiPlayers() internally
-            // We need to know the player count AFTER AI fill to create the right number of treasures
-            // So we call it here first to get the correct count
-            game.fillWithAiPlayers();
-
-            int playersCount = game.getPlayers().size();
+            int playersCount = 4;
 
             var board = boardFactory.createBoard(gameConfig.boardWidth(), gameConfig.boardHeight());
             // Multiply treasures per player by actual player count (after AI fill)

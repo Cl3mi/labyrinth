@@ -38,7 +38,6 @@ public class Game {
 
     private IGameTimer nextTurnTimer;
 
-    // Interface-based dependencies - can be injected and mocked
     private final ITurnController turnController;
     private final IPlayerRegistry playerRegistry;
     private final IMovementManager movementManager;
@@ -136,14 +135,6 @@ public class Game {
         return playerRegistry.addPlayer(username);
     }
 
-    /**
-     * Fills the game with AI players up to MAX_PLAYERS.
-     * Called before creating treasure cards to ensure correct player count.
-     */
-    public void fillWithAiPlayers() {
-        playerRegistry.fillWithAiPlayers();
-    }
-
     public LeaveResult leave(Player player) {
         return playerRegistry.removePlayer(player);
     }
@@ -185,8 +176,7 @@ public class Game {
             throw new IllegalStateException("At least 1 player is required to start the game");
         }
 
-        // Fill with AI players to ensure we have 4 players
-        fillWithAiPlayers();
+        playerRegistry.fillWithAiPlayers();
 
         this.gameConfig = Objects.requireNonNullElseGet(gameConfig, GameConfig::getDefault);
 
@@ -198,7 +188,7 @@ public class Game {
         this.board = board;
         this.board.setPlayers(players);
 
-        if (getCurrentPlayer().isAiActive()) {
+        if (getCurrentPlayer().shouldMoveBePerformedByAi()) {
             this.aiStrategy.performTurn(this, getCurrentPlayer());
         }
 
@@ -273,29 +263,60 @@ public class Game {
         var distanceMoved = board.movePlayerToTile(player, row, col, movementManager);
 
         if (distanceMoved == -1) {
-            // Move failed - no logging needed for failed attempt
             return new MovePlayerToTileResult(false, distanceMoved, false, false, false);
         }
 
+        logPlayerMove(row, col, distanceMoved, player);
+        updatePlayerStatisticsAfterMove(player, distanceMoved);
+
+        var currentTreasureCardAfterMove = player.getCurrentTreasureCard();
+        boolean treasureCollected = currentTreasureCardAfterMove != currentTreasureCardBeforeMove;
+        boolean gameOver = checkAndHandleGameOver(player, currentTreasureCardAfterMove);
+
+        if (treasureCollected) {
+            gameLogger.log(GameLogType.COLLECT_TREASURE, "Player collected treasure", player, null);
+        }
+
+        if (!gameOver) {
+            nextPlayer();
+        }
+
+        return new MovePlayerToTileResult(true, distanceMoved, treasureCollected, gameOver, false);
+    }
+
+    /**
+     * Logs a player's move to the game logger.
+     */
+    private void logPlayerMove(int row, int col, int distanceMoved, Player player) {
         java.util.Map<String, String> meta = new java.util.HashMap<>();
         meta.put("toRow", String.valueOf(row));
         meta.put("toCol", String.valueOf(col));
         meta.put("distance", String.valueOf(distanceMoved));
-        gameLogger.log(GameLogType.MOVE_PLAYER, "Player moved to " + row + "/" + col + " (" + distanceMoved + " steps)",
+        gameLogger.log(GameLogType.MOVE_PLAYER,
+                "Player moved to " + row + "/" + col + " (" + distanceMoved + " steps)",
                 player, meta);
+    }
 
+    /**
+     * Updates player statistics after a successful move.
+     */
+    private void updatePlayerStatisticsAfterMove(Player player, int distanceMoved) {
         player.getStatistics().increaseScore(PointRewards.REWARD_MOVE * distanceMoved);
         player.getStatistics().increaseStepsTaken(distanceMoved);
 
-        var currentTreasureCardAfterMove = player.getCurrentTreasureCard();
-
-        if (currentTreasureCardAfterMove == null) {
+        if (player.getCurrentTreasureCard() == null) {
             player.getStatistics().increaseScore(PointRewards.REWARD_ALL_TREASURES_COLLECTED);
         }
+    }
 
-        var gameOver = false;
-        // Check if player has collected all treasures AND reached their home tile
-        if (currentTreasureCardAfterMove == null && player.getCurrentTile() == player.getHomeTile()) {
+    /**
+     * Checks if the player has won (all treasures collected and reached home tile).
+     * If so, triggers game over sequence.
+     *
+     * @return true if game is over, false otherwise
+     */
+    private boolean checkAndHandleGameOver(Player player, TreasureCard currentTreasureCard) {
+        if (currentTreasureCard == null && player.getCurrentTile() == player.getHomeTile()) {
             System.out.println("[GAME OVER DEBUG] Player " + player.getUsername() + " triggered game over");
             System.out.println("[GAME OVER DEBUG] Player has " + player.getAssignedTreasureCards().size() + " assigned treasures");
             for (int i = 0; i < player.getAssignedTreasureCards().size(); i++) {
@@ -304,25 +325,12 @@ public class Game {
             }
             System.out.println("[GAME OVER DEBUG] Player reached home tile - game over!");
 
-            // Award end-game achievements BEFORE game over
             awardEndGameAchievements();
-
             gameOver();
-            gameOver = true;
             gameLogger.log(GameLogType.GAME_OVER, "Game Over. Winner: " + player.getUsername(), player, null);
+            return true;
         }
-
-        var treasureCollected = currentTreasureCardAfterMove != currentTreasureCardBeforeMove;
-
-        if (treasureCollected) {
-            gameLogger.log(GameLogType.COLLECT_TREASURE, "Player collected treasure", player, null);
-        }
-
-        // Only advance to next player if game is not over
-        if (!gameOver) {
-            nextPlayer();
-        }
-        return new MovePlayerToTileResult(true, distanceMoved, treasureCollected, gameOver, false);
+        return false;
     }
 
     private List<AchievementService.AchievementAward> endGameAchievements = new ArrayList<>();
