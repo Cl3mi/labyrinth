@@ -2,7 +2,6 @@ package labyrinth.server.game.models;
 
 import labyrinth.server.game.abstractions.*;
 import labyrinth.server.game.ai.AiStrategy;
-import labyrinth.server.game.bonuses.IBonusEffect;
 import labyrinth.server.game.constants.PointRewards;
 import labyrinth.server.game.enums.*;
 import labyrinth.server.game.models.records.GameConfig;
@@ -44,6 +43,7 @@ public class Game {
     private final IPlayerRegistry playerRegistry;
     private final IMovementManager movementManager;
     private final IAchievementService achievementService;
+    private final IBonusManager bonusManager;
 
     private final GameInitializerService gameInitializer;
 
@@ -70,8 +70,6 @@ public class Game {
         return gameLogger.getExecutionLogs();
     }
 
-    private final java.util.Map<BonusTypes, IBonusEffect> bonusEffects = new java.util.EnumMap<>(BonusTypes.class);
-
     /**
      * Constructor with interface-based dependencies for improved testability.
      *
@@ -79,6 +77,7 @@ public class Game {
      * @param turnController turn state management service
      * @param movementManager movement and tile interaction service
      * @param achievementService achievement awarding service
+     * @param bonusManager bonus management service
      * @param nextTurnTimer timer for turn management
      * @param aiStrategy AI strategy for automated players
      * @param gameLogger game event logger
@@ -89,6 +88,7 @@ public class Game {
             ITurnController turnController,
             IMovementManager movementManager,
             IAchievementService achievementService,
+            IBonusManager bonusManager,
             IGameTimer nextTurnTimer,
             AiStrategy aiStrategy,
             GameLogger gameLogger,
@@ -98,6 +98,7 @@ public class Game {
         this.turnController = turnController;
         this.movementManager = movementManager;
         this.achievementService = achievementService;
+        this.bonusManager = bonusManager;
         this.nextTurnTimer = nextTurnTimer;
         this.aiStrategy = aiStrategy;
         this.gameLogger = gameLogger;
@@ -107,34 +108,18 @@ public class Game {
         this.board = null;
         this.gameConfig = GameConfig.getDefault();
         this.activeBonusState = NoBonusActive.getInstance();
-
-        // Initialize Bonus Strategies
-        bonusEffects.put(BonusTypes.BEAM, new labyrinth.server.game.bonuses.BeamBonusEffect());
-        bonusEffects.put(BonusTypes.SWAP, new labyrinth.server.game.bonuses.SwapBonusEffect());
-        bonusEffects.put(BonusTypes.PUSH_TWICE, new labyrinth.server.game.bonuses.PushTwiceBonusEffect());
-        bonusEffects.put(BonusTypes.PUSH_FIXED, new labyrinth.server.game.bonuses.PushFixedBonusEffect());
     }
 
+    /**
+     * Uses a bonus for the current player.
+     * Delegates to the BonusManager for validation and application.
+     *
+     * @param type the type of bonus to use
+     * @param args additional arguments required by the specific bonus
+     * @return true if the bonus was successfully applied
+     */
     public boolean useBonus(BonusTypes type, Object... args) {
-        if (!bonusEffects.containsKey(type)) {
-            throw new IllegalArgumentException("No strategy found for bonus type: " + type);
-        }
-
-        // Check if a bonus has already been used this turn
-        if (turnController.isBonusUsedThisTurn()) {
-            throw new IllegalStateException("Only one bonus can be used per turn");
-        }
-
-        boolean result = bonusEffects.get(type).apply(this, getCurrentPlayer(), args);
-        if (result) {
-            // Mark that a bonus has been used this turn
-            turnController.markBonusUsed();
-
-            java.util.Map<String, String> meta = new java.util.HashMap<>();
-            meta.put("bonusType", type.toString());
-            gameLogger.log(GameLogType.USE_BONUS, "Player used bonus " + type, getCurrentPlayer(), meta);
-        }
-        return result;
+        return bonusManager.useBonus(type, this, getCurrentPlayer(), args);
     }
 
     /**
@@ -333,7 +318,10 @@ public class Game {
             gameLogger.log(GameLogType.COLLECT_TREASURE, "Player collected treasure", player, null);
         }
 
-        nextPlayer();
+        // Only advance to next player if game is not over
+        if (!gameOver) {
+            nextPlayer();
+        }
         return new MovePlayerToTileResult(true, distanceMoved, treasureCollected, gameOver, false);
     }
 

@@ -32,6 +32,7 @@ public class GameTestHelper {
         var turnController = new TurnController(gameTimer, gameLogger);
         var movementManager = new MovementManager();
         var achievementService = new AchievementService();
+        var bonusManager = new BonusManager(turnController, gameLogger);
 
         // Create and return Game with all dependencies
         return new Game(
@@ -39,6 +40,7 @@ public class GameTestHelper {
                 turnController,
                 movementManager,
                 achievementService,
+                bonusManager,
                 gameTimer,
                 aiStrategy,
                 gameLogger,

@@ -65,12 +65,14 @@ public class GameService {
         var turnController = new labyrinth.server.game.services.TurnController(gameTimer, gameLogger);
         var movementManager = new labyrinth.server.game.services.MovementManager();
         var achievementService = new labyrinth.server.game.services.AchievementService();
+        var bonusManager = new labyrinth.server.game.services.BonusManager(turnController, gameLogger);
 
         game = new Game(
                 playerRegistry,
                 turnController,
                 movementManager,
                 achievementService,
+                bonusManager,
                 gameTimer,
                 aiStrategy,
                 gameLogger,
