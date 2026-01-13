@@ -6,6 +6,7 @@ import labyrinth.server.game.models.Player;
 import labyrinth.server.game.models.Tile;
 import labyrinth.server.game.models.TreasureCard;
 import labyrinth.server.game.models.records.GameConfig;
+import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
 import java.util.List;
@@ -24,6 +25,7 @@ import java.util.Map;
 public class GameInitializerService {
 
     private final TreasureBonusDistributionService distributionService;
+    private static final org.slf4j.Logger log = LoggerFactory.getLogger(GameInitializerService.class);
 
     public GameInitializerService(TreasureBonusDistributionService distributionService) {
         this.distributionService = distributionService;
@@ -39,7 +41,7 @@ public class GameInitializerService {
      * @param bonusCount    number of bonuses to create and place
      */
     public void distributeTreasuresAndBonuses(List<TreasureCard> treasureCards, Board board, List<Player> players, int bonusCount) {
-        System.out.println("[TREASURE DEBUG] Distributing " + treasureCards.size() + " treasures and " + bonusCount + " bonuses");
+        log.debug("[TREASURE DEBUG] Distributing {} treasures and {} bonuses", treasureCards.size(), bonusCount);
 
         // Use the distribution service to place treasures and bonuses on the board
         distributionService.distributeAll(board, treasureCards, bonusCount);
@@ -49,7 +51,7 @@ public class GameInitializerService {
         for (TreasureCard card : treasureCards) {
             Player player = players.get(playerToAssignCardsToIndex);
             player.getAssignedTreasureCards().add(card);
-            System.out.println("[TREASURE DEBUG] Assigned '" + card.getTreasureName() + "' to " + player.getUsername());
+            log.debug("[TREASURE DEBUG] Assigned '{}' to {}", card.getTreasureName(), player.getUsername());
 
             playerToAssignCardsToIndex++;
             if (playerToAssignCardsToIndex >= players.size()) {
@@ -59,7 +61,7 @@ public class GameInitializerService {
 
         // Verify distribution
         for (Player p : players) {
-            System.out.println("[TREASURE DEBUG] " + p.getUsername() + " has " + p.getAssignedTreasureCards().size() + " treasures");
+            log.debug("[TREASURE DEBUG] {} has {} treasures", p.getUsername(), p.getAssignedTreasureCards().size());
         }
     }
 

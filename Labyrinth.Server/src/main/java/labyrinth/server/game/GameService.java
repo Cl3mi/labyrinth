@@ -15,9 +15,11 @@ import labyrinth.server.game.models.Player;
 import labyrinth.server.game.models.records.GameConfig;
 import labyrinth.server.game.services.GameInitializerService;
 import labyrinth.server.game.util.GameTimer;
-import labyrinth.server.messaging.events.EventPublisher;
 import labyrinth.server.messaging.MessageService;
+import labyrinth.server.messaging.events.EventPublisher;
 import labyrinth.server.messaging.mapper.GameMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.stereotype.Service;
 
@@ -41,6 +43,8 @@ public class GameService {
     private final GameMapper gameMapper;
 
     private final labyrinth.server.game.ai.SligthlyLessSimpleAiStrategy aiStrategy;
+
+    private static final Logger log = LoggerFactory.getLogger(GameService.class);
 
     public GameService(TreasureCardFactory treasureCardFactory,
                        BoardFactory boardFactory,
@@ -97,18 +101,18 @@ public class GameService {
     private void handleAiMoveResult(labyrinth.server.game.results.MovePlayerToTileResult result) {
         try {
             if (result.treasureCollected()) {
-                System.out.println("[GameService] AI collected a treasure!");
+                log.info("[GameService] AI collected a treasure!");
             }
 
             if (result.gameOver()) {
-                System.out.println("[GameService] AI triggered game over! Publishing GameOverEvent...");
+                log.info("[GameService] AI triggered game over! Publishing GameOverEvent...");
                 rwLock.readLock().lock();
                 try {
                     // Publish end-game achievements
                     for (var award : game.getEndGameAchievements()) {
                         var achievementEvent = new AchievementUnlockedEvent(award.player(), award.achievement());
                         eventPublisher.publishAsync(achievementEvent);
-                        System.out.println("[GameService] Achievement awarded: " + award.player().getUsername() + " - " + award.achievement());
+                        log.info("[GameService] Achievement awarded: {} - {}", award.player().getUsername(), award.achievement());
                     }
 
                     var gameOverEvent = new GameOverEvent(game.getPlayers());
@@ -118,8 +122,7 @@ public class GameService {
                 }
             }
         } catch (Exception e) {
-            System.err.println("[GameService] Error handling AI move result: " + e.getMessage());
-            e.printStackTrace();
+            log.error("[GameService] Error handling AI move result", e);
         }
     }
 
@@ -137,8 +140,7 @@ public class GameService {
                 rwLock.readLock().unlock();
             }
         } catch (Exception e) {
-            System.err.println("Failed to broadcast game state: " + e.getMessage());
-            e.printStackTrace();
+            log.error("Failed to broadcast game state", e);
         }
     }
 
@@ -249,7 +251,7 @@ public class GameService {
         try {
             // If game is finished or in progress, reset to lobby first
             if (game.getRoomState() == RoomState.FINISHED || game.getRoomState() == RoomState.IN_GAME) {
-                System.out.println("[GameService] Game is " + game.getRoomState() + ", resetting to LOBBY before starting new game");
+                log.info("[GameService] Game is {}, resetting to LOBBY before starting new game", game.getRoomState());
                 game.returnToLobby();
             }
 

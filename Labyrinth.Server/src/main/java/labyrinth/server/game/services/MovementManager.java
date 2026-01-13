@@ -5,8 +5,7 @@ import labyrinth.server.game.constants.PointRewards;
 import labyrinth.server.game.models.Player;
 import labyrinth.server.game.models.Tile;
 import labyrinth.server.game.results.TileInteractionResult;
-
-import java.util.logging.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Manages player movement and tile interaction effects.
@@ -16,7 +15,7 @@ import java.util.logging.Logger;
  */
 public class MovementManager implements IMovementManager {
 
-    private static final Logger LOGGER = Logger.getLogger(MovementManager.class.getName());
+    private static final org.slf4j.Logger log = LoggerFactory.getLogger(MovementManager.class);
 
     /**
      * Processes a player stepping onto a tile. Returns what was collected
@@ -65,7 +64,7 @@ public class MovementManager implements IMovementManager {
      */
     private void applyInteractionEffects(Player player, Tile tile, TileInteractionResult result) {
         if (result.collectedTreasure() != null) {
-            LOGGER.info("Player " + player.getUsername() + " collected treasure: " + result.collectedTreasure().getTreasureName());
+            log.info("Player {} collected treasure: {}", player.getUsername(), result.collectedTreasure().getTreasureName());
             result.collectedTreasure().collect();
             player.getStatistics().increaseScore(PointRewards.REWARD_TREASURE);
             player.getStatistics().increaseTreasuresCollected(1);
@@ -73,7 +72,7 @@ public class MovementManager implements IMovementManager {
         }
 
         if (result.collectedBonus() != null) {
-            LOGGER.info("Player " + player.getUsername() + " collected bonus: " + result.collectedBonus());
+            log.info("Player {} collected bonus: {}", player.getUsername(), result.collectedBonus());
             player.getBonuses().add(result.collectedBonus());
             tile.setBonus(null);
         }

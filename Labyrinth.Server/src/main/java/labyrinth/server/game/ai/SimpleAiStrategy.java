@@ -3,6 +3,8 @@ package labyrinth.server.game.ai;
 import labyrinth.server.game.enums.Direction;
 import labyrinth.server.game.models.*;
 import labyrinth.server.game.models.records.Position;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -11,10 +13,11 @@ import java.util.Set;
 public class SimpleAiStrategy implements AiStrategy {
 
     private final java.util.Random random = new java.util.Random();
+    private static final Logger log = LoggerFactory.getLogger(SimpleAiStrategy.class);
 
     @Override
     public void performTurn(Game game, Player realPlayer) {
-        System.out.println("AI performing turn for " + realPlayer.getUsername());
+        log.info("AI performing turn for {}", realPlayer.getUsername());
 
         java.util.concurrent.CompletableFuture.supplyAsync(() -> {
                     TreasureCard targetCard = realPlayer.getAssignedTreasureCards().isEmpty() ? null
@@ -24,8 +27,7 @@ public class SimpleAiStrategy implements AiStrategy {
                 .thenCompose(bestResult -> {
                     // Execute Shift
                     if (bestResult != null) {
-                        System.out.println(
-                                "AI executing shift: " + bestResult.shiftType + " index " + bestResult.shiftIndex);
+                        log.info("AI executing shift: {} index {}", bestResult.shiftType, bestResult.shiftIndex);
                         var shiftResult = switch (bestResult.shiftType) {
                             case UP -> game.shift(bestResult.shiftIndex, Direction.UP, realPlayer);
                             case DOWN -> game.shift(bestResult.shiftIndex, Direction.DOWN, realPlayer);
@@ -44,8 +46,7 @@ public class SimpleAiStrategy implements AiStrategy {
                 .thenAccept(bestResult -> {
                     // Execute Move
                     if (bestResult != null && bestResult.targetPosition != null) {
-                        System.out.println("AI moving to: " + bestResult.targetPosition.row() + "/"
-                                + bestResult.targetPosition.column());
+                        log.info("AI moving to: {}/{}", bestResult.targetPosition.row(), bestResult.targetPosition.column());
                         var moveSuccess = game.movePlayerToTile(bestResult.targetPosition.row(), bestResult.targetPosition.column(),
                                 realPlayer).moveSuccess();
 
@@ -61,7 +62,7 @@ public class SimpleAiStrategy implements AiStrategy {
 
                 })
                 .exceptionally(ex -> {
-                    ex.printStackTrace();
+                    log.error("AI failed to perform turn for player {}", realPlayer.getUsername(), ex);
                     return null;
                 });
     }
@@ -72,7 +73,7 @@ public class SimpleAiStrategy implements AiStrategy {
                 game.shift(0, Direction.DOWN, player);
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("AI failed to perform random shift for player {}", player.getUsername(), e);
         }
     }
 
@@ -182,7 +183,7 @@ public class SimpleAiStrategy implements AiStrategy {
             // No more treasures - target the home tile to win
             goingHome = true;
             targetPosInSim = clonedBoard.getPositionOfTile(clonedMe.getHomeTile());
-            System.out.println("AI " + realPlayer.getUsername() + " - All treasures collected! Targeting home tile at " + targetPosInSim);
+            log.info("AI {} - All treasures collected! Targeting home tile at {}", realPlayer.getUsername(), targetPosInSim);
         }
 
         int score = 0;
@@ -194,7 +195,7 @@ public class SimpleAiStrategy implements AiStrategy {
             Tile targetTile = clonedBoard.getTileAt(targetPosInSim);
             if (reachable.contains(targetTile)) {
                 if (goingHome) {
-                    System.out.println("AI " + realPlayer.getUsername() + " - HOME TILE IS REACHABLE! Score=100, returning home!");
+                    log.info("AI {} - HOME TILE IS REACHABLE! Score=100, returning home!", realPlayer.getUsername());
                 }
                 score = 100; // Can reach treasure or home!
                 minDist = 0;
@@ -212,7 +213,7 @@ public class SimpleAiStrategy implements AiStrategy {
                     }
                 }
                 if (goingHome) {
-                    System.out.println("AI " + realPlayer.getUsername() + " - Moving closer to home. Distance: " + minDist + ", moving to: " + bestPosForOp);
+                    log.info("AI {} - Moving closer to home. Distance: {}, moving to: {}", realPlayer.getUsername(), minDist, bestPosForOp);
                 }
             }
         } else {

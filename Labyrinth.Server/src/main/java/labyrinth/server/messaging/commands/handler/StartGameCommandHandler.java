@@ -8,6 +8,7 @@ import labyrinth.server.game.models.records.GameConfig;
 import labyrinth.server.messaging.MessageService;
 import labyrinth.server.messaging.PlayerSessionRegistry;
 import labyrinth.server.messaging.mapper.GameMapper;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.WebSocketSession;
 
@@ -16,6 +17,8 @@ public class StartGameCommandHandler extends AbstractCommandHandler<StartGameCom
 
     private final MessageService messageService;
     private final GameMapper gameMapper;
+
+    private static final org.slf4j.Logger log = LoggerFactory.getLogger(StartGameCommandHandler.class);
 
     public StartGameCommandHandler(GameService gameService,
                                    PlayerSessionRegistry playerSessionRegistry,
@@ -33,8 +36,8 @@ public class StartGameCommandHandler extends AbstractCommandHandler<StartGameCom
 
     @Override
     public void handle(WebSocketSession session, StartGameCommandPayload payload) throws Exception {
-        System.out.println(">>> START_GAME received from session: " + session.getId());
-        System.out.println(">>> Payload: " + payload);
+        log.info(">>> START_GAME received from session: {}", session.getId());
+        log.info(">>> Payload: {}", payload);
         var player = requireExistingPlayer(session);
         requireAdmin(player);
 
@@ -48,12 +51,12 @@ public class StartGameCommandHandler extends AbstractCommandHandler<StartGameCom
 
         messageService.broadcastToPlayers(gameStateDto);
 
-        System.out.println(">>> About to broadcast GAME_STARTED");
-        System.out.println(">>> GameStateDto type: " + gameStateDto.getType());
+        log.info(">>> About to broadcast GAME_STARTED");
+        log.info(">>> GameStateDto type: {}", gameStateDto.getType());
 
         messageService.broadcastToPlayers(gameStateDto);
 
-        System.out.println(">>> GAME_STARTED broadcast completed");
+        log.info(">>> GAME_STARTED broadcast completed");
     }
 
     private GameConfig createGameConfig(StartGameCommandPayload payload) {
@@ -69,7 +72,7 @@ public class StartGameCommandHandler extends AbstractCommandHandler<StartGameCom
         var totalBonusCount = payload.getTotalBonusCount();
 
         // Extract turnTimeInSeconds from additionalProperties (not in standard Contracts)
-        Integer turnTimeInSeconds = 30; // default
+        var turnTimeInSeconds = 30; // default
         if (payload.getAdditionalProperties() != null && payload.getAdditionalProperties().containsKey("turnTimeInSeconds")) {
             Object value = payload.getAdditionalProperties().get("turnTimeInSeconds");
             if (value instanceof Integer) {
@@ -79,12 +82,12 @@ public class StartGameCommandHandler extends AbstractCommandHandler<StartGameCom
             }
         }
 
-        System.out.println("=== GAME CONFIG ===");
-        System.out.println("Board: " + boardWidth + "x" + boardHeight);
-        System.out.println("Treasures to win: " + treasureCardCount);
-        System.out.println("Game duration: " + gameDurationInSeconds + "s");
-        System.out.println("Turn time: " + turnTimeInSeconds + "s");
-        System.out.println("==================");
+        log.info("=== GAME CONFIG ===");
+        log.info("Board: {}x{}", boardWidth, boardHeight);
+        log.info("Treasures to win: {}", treasureCardCount);
+        log.info("Game duration: {}s", gameDurationInSeconds);
+        log.info("Turn time: {}s", turnTimeInSeconds);
+        log.info("==================");
 
         return new GameConfig(boardWidth, boardHeight,  treasureCardCount, gameDurationInSeconds, totalBonusCount, turnTimeInSeconds);
     }

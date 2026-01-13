@@ -8,6 +8,8 @@ import labyrinth.server.game.GameService;
 import labyrinth.server.messaging.MessageService;
 import labyrinth.server.messaging.PlayerSessionRegistry;
 import labyrinth.server.messaging.mapper.PlayerInfoMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.WebSocketSession;
 
@@ -17,6 +19,8 @@ public class DisconnectCommandHandler extends AbstractCommandHandler<DisconnectC
 
     private final MessageService messageService;
     private final PlayerInfoMapper playerInfoMapper;
+
+    private static final Logger log = LoggerFactory.getLogger(DisconnectCommandHandler.class);
 
     public DisconnectCommandHandler(GameService gameService,
                                     PlayerSessionRegistry playerSessionRegistry,
@@ -40,7 +44,7 @@ public class DisconnectCommandHandler extends AbstractCommandHandler<DisconnectC
         // If the game is in progress or finished, reset it so a new game can be started
         // This handles both: leaving during a game AND leaving after game over
         if (gameService.isGameFinished() || gameService.isGameInProgress()) {
-            System.out.println("[DisconnectCommandHandler] Game is in progress or finished, resetting for new game");
+            log.info("[DisconnectCommandHandler] Game is in progress or finished, resetting for new game");
             gameService.resetForNewGame();
         }
 

@@ -156,7 +156,7 @@ public class Game {
         this.gameStartTime = null;
         this.roomState = RoomState.LOBBY;
 
-        System.out.println("[Game] Game reset to LOBBY state for new game");
+        gameLogger.log(GameLogType.GAME, "Game reset to LOBBY state for new game");
     }
 
     public Player getPlayer(UUID playerId) {
@@ -317,13 +317,15 @@ public class Game {
      */
     private boolean checkAndHandleGameOver(Player player, TreasureCard currentTreasureCard) {
         if (currentTreasureCard == null && player.getCurrentTile() == player.getHomeTile()) {
-            System.out.println("[GAME OVER DEBUG] Player " + player.getUsername() + " triggered game over");
-            System.out.println("[GAME OVER DEBUG] Player has " + player.getAssignedTreasureCards().size() + " assigned treasures");
+            gameLogger.log(GameLogType.GAME_OVER, "Player " + player.getUsername() + " triggered game over", player, null);
+            gameLogger.log(GameLogType.GAME_OVER, "Player has " + player.getAssignedTreasureCards().size() + " assigned treasures", player, null);
+
             for (int i = 0; i < player.getAssignedTreasureCards().size(); i++) {
                 TreasureCard tc = player.getAssignedTreasureCards().get(i);
-                System.out.println("[GAME OVER DEBUG]   Treasure " + i + ": " + tc.getTreasureName() + " collected=" + tc.isCollected());
+                gameLogger.log(GameLogType.GAME_OVER, "Treasure " + i + ": " + tc.getTreasureName() + " collected=" + tc.isCollected(), player, null);
             }
-            System.out.println("[GAME OVER DEBUG] Player reached home tile - game over!");
+
+            gameLogger.log(GameLogType.GAME_OVER, "Player reached home tile - game over!", player, null);
 
             awardEndGameAchievements();
             gameOver();
@@ -345,7 +347,7 @@ public class Game {
         // Increase scores for awarded achievements
         for (var award : endGameAchievements) {
             award.player().getStatistics().increaseScore(50); // Achievement bonus points
-            System.out.println("[ACHIEVEMENT] " + award.player().getUsername() + " earned " + award.achievement());
+            gameLogger.log(GameLogType.ACHIEVEMENT, award.player().getUsername() + " earned " + award.achievement(), award.player(), null);
         }
     }
 
@@ -366,14 +368,13 @@ public class Game {
      * Clears the board and prepares for a new game to be started.
      */
     public void returnToLobby() {
-        System.out.println("[RETURN TO LOBBY] Current state: " + this.roomState);
+        gameLogger.log(GameLogType.RETURN_TO_LOBBY, "Current state: " + this.roomState);
 
         if (this.roomState != RoomState.FINISHED && this.roomState != RoomState.IN_GAME) {
-            System.err.println("[RETURN TO LOBBY ERROR] Cannot return to lobby from state: " + this.roomState);
+            gameLogger.error(GameLogType.RETURN_TO_LOBBY, "Cannot return to lobby from state: " + this.roomState);
             throw new IllegalStateException("Cannot return to lobby from state: " + this.roomState);
         }
-
-        System.out.println("[RETURN TO LOBBY] Resetting game to lobby state");
+        gameLogger.log(GameLogType.RETURN_TO_LOBBY," Resetting game to lobby state");
         this.roomState = RoomState.LOBBY;
         this.board = null;
         this.gameStartTime = null;
@@ -384,7 +385,7 @@ public class Game {
             player.resetForNewGame();
         }
 
-        System.out.println("[RETURN TO LOBBY] Reset complete. Players remaining: " + playerRegistry.getPlayers().size());
+        gameLogger.log(GameLogType.RETURN_TO_LOBBY, "Reset complete. Players remaining: " + playerRegistry.getPlayers().size());
     }
 
     private synchronized void nextPlayer() {
