@@ -2,14 +2,18 @@ package labyrinth.server.game.models;
 
 import labyrinth.server.game.abstractions.IBoardEventListener;
 import labyrinth.server.game.abstractions.IMovementManager;
-import labyrinth.server.game.enums.*;
+import labyrinth.server.game.enums.BoardEventType;
 import labyrinth.server.game.events.BoardEvent;
 import labyrinth.server.game.models.records.Position;
-import labyrinth.server.game.services.MovementManager;
 import lombok.Getter;
 import lombok.Setter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Set;
 
 /**
  * Represents the game board for the Labyrinth game.
@@ -21,7 +25,7 @@ import java.util.*;
 @Getter
 public class Board {
 
-    private static final java.util.logging.Logger LOGGER = java.util.logging.Logger.getLogger(Board.class.getName());
+    private static final Logger log = LoggerFactory.getLogger(Board.class);
     private final int width;
     private final int height;
     private final BiMap<Position, Tile> tileMap;
@@ -236,7 +240,7 @@ public class Board {
         for (int row = 0; row < height; row++) {
             Tile tile = tileMap.getForward(new Position(row, columnIndex));
             if (tile.isFixed() && !freeRoam) {
-                LOGGER.info("Column " + columnIndex + " contains fixed tiles. Cannot shift.");
+                log.info("Column {} contains fixed tiles. Cannot shift.", columnIndex);
                 return true;
             }
         }
@@ -247,7 +251,7 @@ public class Board {
         for (int col = 0; col < width; col++) {
             Tile tile = tileMap.getForward(new Position(rowIndex, col));
             if (tile.isFixed() && !freeRoam) {
-                LOGGER.info("Row " + rowIndex + " contains fixed tiles. Cannot shift.");
+                log.info("Row {} contains fixed tiles. Cannot shift.", rowIndex);
                 return true;
             }
         }
@@ -282,17 +286,17 @@ public class Board {
         Tile targetTile = tileMap.getForward(new Position(targetRow, targetCol));
 
         Position currPos = (currentTile != null) ? getPositionOfTile(currentTile) : null;
-        LOGGER.info("Current position: " + (currPos != null ? currPos.row() + "/" + currPos.column() : "none"));
-        LOGGER.info("Moving " + player.getUsername() + " to " + targetRow + "/" + targetCol);
+        log.info("Current position: {}", currPos != null ? currPos.row() + "/" + currPos.column() : "none");
+        log.info("Moving {} to {}/{}", player.getUsername(), targetRow, targetCol);
 
         if (movementManager.isTileBlockedByPlayer(targetTile, players, player)) {
-            LOGGER.info("Cant move - a player is already on the target tile!");
+            log.info("Cant move - a player is already on the target tile!");
             return -1;
         }
 
         Set<Tile> reachable = getReachableTiles(player);
         if (!reachable.contains(targetTile)) {
-            LOGGER.info("Tile is not reachable!");
+            log.info("Tile is not reachable!");
             return -1;
         }
 
@@ -300,7 +304,7 @@ public class Board {
         var distance = graph.getDistance(currentTile, targetTile);
 
         Position newPos = getPositionOfTile(targetTile);
-        LOGGER.info("Player moved to " + (newPos != null ? newPos : "unknown"));
+        log.info("Player moved to {}", newPos != null ? newPos : "unknown");
 
         return distance;
     }

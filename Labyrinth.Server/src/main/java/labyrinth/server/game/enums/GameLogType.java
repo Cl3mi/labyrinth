@@ -7,5 +7,8 @@ public enum GameLogType {
     MOVE_PLAYER,
     USE_BONUS,
     COLLECT_TREASURE,
-    GAME_OVER
+    GAME_OVER,
+    ACHIEVEMENT,
+    RETURN_TO_LOBBY,
+    GAME
 }

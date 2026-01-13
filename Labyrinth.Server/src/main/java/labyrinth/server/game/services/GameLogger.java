@@ -5,13 +5,14 @@ import labyrinth.server.game.models.Board;
 import labyrinth.server.game.models.Player;
 import labyrinth.server.game.models.Tile;
 import labyrinth.server.game.models.records.GameLogEntry;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.Logger;
 
 /**
  * Handles game action logging and state serialization.
@@ -19,9 +20,17 @@ import java.util.logging.Logger;
  */
 public class GameLogger {
 
-    private static final Logger LOGGER = Logger.getLogger(GameLogger.class.getName());
+    private static final Logger log = LoggerFactory.getLogger(GameLogger.class);
     private final List<GameLogEntry> executionLogs = new ArrayList<>();
 
+
+    public void log(GameLogType type, String message, Player player) {
+        log(type, message, player, null);
+    }
+
+    public void log(GameLogType type, String message) {
+        log(type, message, null, null);
+    }
     /**
      * Logs a game action with metadata.
      *
@@ -38,7 +47,30 @@ public class GameLogger {
                 message,
                 metadata);
         executionLogs.add(entry);
-        LOGGER.info(message);
+        log.info("[{}] {}", type.toString(), message);
+    }
+
+    public void error(GameLogType type, String message) {
+        error(type, message, null, null, null);
+    }
+
+    public void error(GameLogType type, String message, Throwable t) {
+        error(type, message, null, null, t);
+    }
+
+    public void error(GameLogType type, String message, Player player, Throwable t) {
+        error(type, message, player, null, t);
+    }
+
+    public void error(GameLogType type, String message, Player player, Map<String, String> metadata, Throwable t) {
+        var entry = new GameLogEntry(
+                OffsetDateTime.now(),
+                type,
+                player != null ? player.getId().toString() : null,
+                message,
+                metadata);
+        executionLogs.add(entry);
+        log.error("[{}] {}", type.toString(), message, t);
     }
 
     /**

@@ -59,6 +59,8 @@ public class BoardPanel extends JPanel {
     private int size;
     private int arrowSize = 30;
 
+
+
     /**
      * Creates a viewer panel for the given board and list of players.
      */

@@ -6,6 +6,8 @@ import labyrinth.server.game.models.Board;
 import labyrinth.server.game.models.Tile;
 import labyrinth.server.game.models.TreasureCard;
 import labyrinth.server.game.models.records.Position;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -24,8 +26,7 @@ import java.util.Random;
 public class TreasureBonusDistributionService {
 
     private static final Random RANDOM = new Random();
-    private static final java.util.logging.Logger LOGGER =
-            java.util.logging.Logger.getLogger(TreasureBonusDistributionService.class.getName());
+    private static final Logger log = LoggerFactory.getLogger(TreasureBonusDistributionService.class);
 
     private final BonusFactory bonusFactory;
 
@@ -118,7 +119,7 @@ public class TreasureBonusDistributionService {
             Tile tile = board.getTileAt(pos);
             if (tile != null) {
                 tile.setTreasureCard(card);
-                LOGGER.info("Placed treasure '" + card.getTreasureName() + "' at " + pos.row() + "/" + pos.column());
+                log.info("Placed treasure '{}' at {}/{}", card.getTreasureName(), pos.row(), pos.column());
             }
         }
     }
@@ -137,7 +138,7 @@ public class TreasureBonusDistributionService {
             Tile tile = board.getTileAt(pos);
             if (tile != null) {
                 tile.setBonus(bonus);
-                LOGGER.info("Placed bonus " + bonus + " at " + pos.row() + "/" + pos.column());
+                log.info("Placed bonus {} at {}/{}", bonus, pos.row(), pos.column());
             }
         }
     }

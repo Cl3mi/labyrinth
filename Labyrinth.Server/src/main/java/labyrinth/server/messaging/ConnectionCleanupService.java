@@ -7,6 +7,7 @@ import labyrinth.server.game.GameService;
 import labyrinth.server.game.enums.RoomState;
 import labyrinth.server.messaging.mapper.PlayerInfoMapper;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -17,6 +18,8 @@ public class ConnectionCleanupService {
     private final PlayerSessionRegistry playerSessionRegistry;
     private final MessageService messageService;
     private final PlayerInfoMapper playerInfoMapper;
+
+    private static final org.slf4j.Logger log = LoggerFactory.getLogger(ConnectionCleanupService.class);
 
     /**
      * Cleans up players who have been disconnected for more than 30 seconds.
@@ -55,7 +58,7 @@ public class ConnectionCleanupService {
         playerSessionRegistry.getDisconnectedEntries().forEach((playerId, ts) -> {
             // 24 hours = 86400000 milliseconds
             if (now - ts >= 86400000) {
-                System.out.println("[ConnectionCleanupService] Removing expired token for player: " + playerId);
+                log.info("[ConnectionCleanupService] Removing expired token for player: {}", playerId);
 
                 var player = gameService.getPlayer(playerId);
                 if (player != null) {
