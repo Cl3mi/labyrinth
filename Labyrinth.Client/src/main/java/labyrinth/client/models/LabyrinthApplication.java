@@ -158,6 +158,7 @@ public class LabyrinthApplication {
 
         // Game Over Panel
         gameOverPanel = new GameOverPanel(this::exitGameToLobby);
+        gameOverPanel.setOnStartNewRound(this::startNewRound);
         mainPanel.add(gameOverPanel, "gameover");
 
         frame.setContentPane(mainPanel);
@@ -698,6 +699,61 @@ public class LabyrinthApplication {
 
         showLobby();
         System.out.println("[" + PROFILE + "] Returned to lobby");
+    }
+
+    private void startNewRound() {
+        System.out.println("[" + PROFILE + "] startNewRound() - Starting new game");
+
+        // Cleanup game over panel
+        if (gameOverPanel != null) {
+            gameOverPanel.cleanup();
+        }
+
+        // Reset game state flags
+        gameViewShown = false;
+        isGameOver = false;
+        pendingSingleplayerStart = false;
+        isGameOverCleanup = false;
+        exitedToLobby = false;
+
+        // BoardPanel entfernen und zurücksetzen
+        if (boardPanel != null) {
+            mainPanel.remove(boardPanel);
+            boardPanel = null;
+        }
+
+        // Send START_GAME command with default settings
+        if (client != null && client.isOpen()) {
+            try {
+                labyrinth.contracts.models.BoardSize bs = new labyrinth.contracts.models.BoardSize();
+                bs.setRows(7);
+                bs.setCols(7);
+
+                // Use default game settings
+                int treasuresToWin = 4;
+                int gameDurationSeconds = 30 * 60; // 30 minutes
+                int turnTimeSeconds = 30;
+
+                System.out.println("[" + PROFILE + "] Sending START_GAME for new round");
+                client.sendStartGame(bs, treasuresToWin, 0, gameDurationSeconds, turnTimeSeconds);
+            } catch (Exception ex) {
+                ex.printStackTrace();
+                SwingUtilities.invokeLater(() -> {
+                    JOptionPane.showMessageDialog(frame,
+                            "Konnte neues Spiel nicht starten: " + ex.getMessage(),
+                            "Fehler", JOptionPane.ERROR_MESSAGE);
+                    // Fall back to lobby on error
+                    exitGameToLobby();
+                });
+            }
+        } else {
+            SwingUtilities.invokeLater(() -> {
+                JOptionPane.showMessageDialog(frame,
+                        "Keine Verbindung zum Server. Kehre zur Lobby zurück.",
+                        "Verbindungsfehler", JOptionPane.WARNING_MESSAGE);
+                exitGameToLobby();
+            });
+        }
     }
 
     private void showLobby() {

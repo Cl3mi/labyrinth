@@ -2,7 +2,10 @@ package labyrinth.client.ui;
 
 import labyrinth.client.messaging.GameClient;
 import labyrinth.client.ui.Styles.StyledButton;
+import labyrinth.client.ui.Styles.StyledContextMenu;
+import labyrinth.client.ui.Styles.StyledDialog;
 import labyrinth.client.ui.Styles.StyledPlayerCardRenderer;
+import labyrinth.client.ui.Styles.StyledTooltipManager;
 import labyrinth.client.ui.theme.FontManager;
 import labyrinth.client.ui.theme.GameTheme;
 import labyrinth.client.ui.theme.ThemeManager;
@@ -122,8 +125,15 @@ public class MultiplayerLobbyPanel extends JPanel {
         backButton = new StyledButton("Zurück", StyledButton.Style.SECONDARY);
         backButton.setPreferredSize(new Dimension(140, 40));
         backButton.addActionListener(e -> {
-            if (onBackToMenu != null) onBackToMenu.run();
+            boolean confirmed = StyledDialog.showConfirm(this,
+                    "Lobby verlassen?",
+                    "Möchtest du die Lobby wirklich verlassen?");
+            if (confirmed && onBackToMenu != null) {
+                onBackToMenu.run();
+            }
         });
+        StyledTooltipManager.setTooltip(backButton, "Zurück", "Zurück zum Hauptmenü");
+        StyledContextMenu.attachTo(backButton);
 
         JPanel leftPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
         leftPanel.setOpaque(false);
@@ -235,7 +245,7 @@ public class MultiplayerLobbyPanel extends JPanel {
         gbc.gridx = 1; gbc.weightx = 0.6;
         usernameField = createStyledTextField(configUsername);
         usernameField.setEditable(false);
-        usernameField.setToolTipText("Name wird im Hauptmenü festgelegt");
+        StyledTooltipManager.setTooltip(usernameField, "Spielername", "Dein Anzeigename im Spiel (wird im Hauptmenü festgelegt)");
         settingsGrid.add(usernameField, gbc);
 
         // Spielfeldgröße
@@ -254,6 +264,7 @@ public class MultiplayerLobbyPanel extends JPanel {
                 configBoardSize = Integer.parseInt(selected.split(" ")[0]);
             }
         });
+        StyledTooltipManager.setTooltip(boardSizeCombo, "Spielfeldgröße", "Größe des Spielfelds (Standardwert: 7×7)");
         settingsGrid.add(boardSizeCombo, gbc);
 
         // Schätze
@@ -263,6 +274,7 @@ public class MultiplayerLobbyPanel extends JPanel {
         gbc.gridx = 1;
         treasureSpinner = createStyledSpinner(configTreasuresToWin, 1, 24);
         treasureSpinner.addChangeListener(e -> configTreasuresToWin = (Integer) treasureSpinner.getValue());
+        StyledTooltipManager.setTooltip(treasureSpinner, "Schätze", "Anzahl der Schätze, die jeder Spieler sammeln muss");
         settingsGrid.add(treasureSpinner, gbc);
 
         // Bonus-Anzahl
@@ -293,6 +305,7 @@ public class MultiplayerLobbyPanel extends JPanel {
                 configTurnTimeSeconds = Integer.parseInt(selected.split(" ")[0]);
             }
         });
+        StyledTooltipManager.setTooltip(turnTimeCombo, "Runden-Zeit", "Zeitlimit pro Spielzug");
         settingsGrid.add(turnTimeCombo, gbc);
 
         // Spiel-Dauer
@@ -314,6 +327,7 @@ public class MultiplayerLobbyPanel extends JPanel {
                 configGameDurationMinutes = Integer.parseInt(selected.split(" ")[0]);
             }
         });
+        StyledTooltipManager.setTooltip(durationCombo, "Spiel-Dauer", "Maximale Gesamtdauer des Spiels");
         settingsGrid.add(durationCombo, gbc);
 
         // Hinweis
@@ -369,6 +383,12 @@ public class MultiplayerLobbyPanel extends JPanel {
         playerList.setFixedCellHeight(70);
         playerList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 
+        // Add right-click context menu to player list
+        StyledContextMenu.attachToList(playerList, item -> {
+            String playerName = item != null ? item.toString() : "Unbekannter Spieler";
+            return "Spieler: " + playerName;
+        });
+
         JScrollPane scrollPane = new JScrollPane(playerList);
         scrollPane.setOpaque(false);
         scrollPane.getViewport().setOpaque(false);
@@ -388,12 +408,16 @@ public class MultiplayerLobbyPanel extends JPanel {
         cancelReconnectButton.setPreferredSize(new Dimension(220, 45));
         cancelReconnectButton.setVisible(false);
         cancelReconnectButton.addActionListener(e -> onCancelReconnect());
+        StyledTooltipManager.setTooltip(cancelReconnectButton, "Abbrechen", "Wiederverbindungsversuch abbrechen");
+        StyledContextMenu.attachTo(cancelReconnectButton);
         footer.add(cancelReconnectButton);
 
         startButton = new StyledButton("Spiel starten", StyledButton.Style.PRIMARY);
         startButton.setPreferredSize(new Dimension(200, 50));
         startButton.setEnabled(false);
         startButton.addActionListener(e -> onStartGameClicked());
+        StyledTooltipManager.setTooltip(startButton, "Spiel starten", "Startet das Spiel mit den aktuellen Spielern");
+        StyledContextMenu.attachTo(startButton);
         footer.add(startButton);
 
         return footer;
@@ -499,10 +523,10 @@ public class MultiplayerLobbyPanel extends JPanel {
 
 
     private void onCancelReconnect() {
-        int choice = JOptionPane.showConfirmDialog(this,
-                "Wiederverbindung abbrechen und zum Menü zurückkehren?",
-                "Abbrechen bestätigen", JOptionPane.YES_NO_OPTION);
-        if (choice == JOptionPane.YES_OPTION && onBackToMenu != null) {
+        boolean confirmed = StyledDialog.showConfirm(this,
+                "Abbrechen bestätigen",
+                "Wiederverbindung abbrechen und zum Menü zurückkehren?");
+        if (confirmed && onBackToMenu != null) {
             onBackToMenu.run();
         }
     }
@@ -564,6 +588,18 @@ public class MultiplayerLobbyPanel extends JPanel {
     }
 
     private void onStartGameClicked() {
+        int playerCount = lastLobbyState != null && lastLobbyState.getPlayers() != null
+                ? lastLobbyState.getPlayers().length : 0;
+        String message = playerCount > 1
+                ? "Spiel mit " + playerCount + " Spielern starten?"
+                : "Spiel starten? (Leere Plätze werden mit KI-Spielern gefüllt)";
+
+        boolean confirmed = StyledDialog.showConfirm(this, "Spiel starten?", message);
+
+        if (!confirmed) {
+            return;
+        }
+
         startButton.setEnabled(false);
 
         BoardSize bs = new BoardSize();
@@ -576,9 +612,7 @@ public class MultiplayerLobbyPanel extends JPanel {
         } catch (Exception ex) {
             ex.printStackTrace();
             SwingUtilities.invokeLater(() -> {
-                JOptionPane.showMessageDialog(this,
-                        "Konnte Spiel nicht starten: " + ex.getMessage(),
-                        "Fehler", JOptionPane.ERROR_MESSAGE);
+                StyledDialog.showError(this, "Fehler", "Konnte Spiel nicht starten: " + ex.getMessage());
                 updateLobby(lastLobbyState);
             });
         }
