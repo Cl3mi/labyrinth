@@ -120,6 +120,13 @@ public class BoardPanel extends JPanel {
     private final List<Rectangle> bonusButtonBounds = new ArrayList<>();  // Clickable bonus button areas
     private int hoveredBonusIndex = -1;  // Currently hovered bonus button
 
+    // AI toggle button state
+    private Rectangle aiMoveButtonBounds = null;
+    private boolean aiMoveButtonHovered = false;
+    private boolean aiModeEnabled = false;
+    private boolean aiThinking = false;
+    private Runnable onAiToggleRequested;
+
     private static final String EXTRA_KEY = "EXTRA";
 
     public BoardPanel(GameClient client, Board board, Player currentPlayer, List<Player> players) {
@@ -177,6 +184,32 @@ public class BoardPanel extends JPanel {
 
     public void setOnExitGame(Runnable callback) {
         this.onExitGame = callback;
+    }
+
+    /**
+     * Sets the callback for when the AI toggle button is clicked.
+     */
+    public void setOnAiToggleRequested(Runnable callback) {
+        this.onAiToggleRequested = callback;
+    }
+
+    /**
+     * Sets whether AI mode is enabled (toggle state).
+     */
+    public void setAiModeEnabled(boolean enabled) {
+        this.aiModeEnabled = enabled;
+        repaint();
+    }
+
+    /**
+     * Sets whether AI is currently thinking.
+     */
+    public void setAiThinking(boolean thinking) {
+        this.aiThinking = thinking;
+        if (thinking) {
+            inputLocked = true;
+        }
+        repaint();
     }
 
     private JButton createStyledOptionsButton() {
@@ -497,6 +530,9 @@ public class BoardPanel extends JPanel {
                 // Check bonus button clicks first
                 if (handleBonusButtonClick(e.getPoint())) return;
 
+                // Check AI Move button click
+                if (handleAiButtonClick(e.getPoint())) return;
+
                 // Handle active bonus mode clicks
                 if (activeBonusMode != null) {
                     if (handleActiveBonusModeClick(e.getPoint())) return;
@@ -526,6 +562,9 @@ public class BoardPanel extends JPanel {
                         break;
                     }
                 }
+
+                // Track hovered AI button
+                aiMoveButtonHovered = aiMoveButtonBounds != null && aiMoveButtonBounds.contains(e.getPoint());
 
                 repaint();
             }
@@ -725,6 +764,22 @@ public class BoardPanel extends JPanel {
             }
         }
         return false;
+    }
+
+    /**
+     * Handle click on the AI toggle button.
+     * @return true if the AI button was clicked
+     */
+    private boolean handleAiButtonClick(Point p) {
+        if (aiMoveButtonBounds == null || !aiMoveButtonBounds.contains(p)) {
+            return false;
+        }
+        // Toggle is always allowed (even when not your turn or AI is thinking)
+        if (onAiToggleRequested != null) {
+            soundEffects.playMove();
+            onAiToggleRequested.run();
+        }
+        return true;
     }
 
     /**
@@ -1740,6 +1795,10 @@ public class BoardPanel extends JPanel {
         drawDivider(g2, sidebarX + padding, sidebarX + sidebarWidth - padding, currentY);
         currentY += 15;
 
+        // AI Move button - for manual AI assist
+        currentY = drawAiMoveButton(g2, sidebarX, sidebarWidth, padding, currentY);
+        currentY += 10;
+
         // Bonus section - only show if current player has bonuses
         if (currentPlayer != null && !currentPlayer.getAvailableBonuses().isEmpty()) {
             currentY = drawBonusSection(g2, sidebarX, sidebarWidth, padding, currentY);
@@ -1846,6 +1905,82 @@ public class BoardPanel extends JPanel {
         g2.drawString("R/Q/E: Tile drehen", sidebarX + padding, currentY);
         currentY += 15;
         g2.drawString("Tab: Tastaturhilfe", sidebarX + padding, currentY);
+    }
+
+    /**
+     * Draws the AI toggle button.
+     * @return the updated Y position after drawing
+     */
+    private int drawAiMoveButton(Graphics2D g2, int sidebarX, int sidebarWidth, int padding, int currentY) {
+        int buttonWidth = sidebarWidth - 2 * padding - 20;
+        int buttonHeight = 36;
+        int buttonX = sidebarX + padding + 10;
+        int buttonY = currentY;
+
+        // Store bounds for click detection
+        aiMoveButtonBounds = new Rectangle(buttonX, buttonY, buttonWidth, buttonHeight);
+
+        // Determine button state
+        boolean isHovered = aiMoveButtonHovered;
+
+        // Button background - green when enabled, gray when disabled
+        if (aiThinking) {
+            // AI is thinking - pulsing orange effect
+            long time = System.currentTimeMillis();
+            int alpha = (int) (180 + 40 * Math.sin(time / 200.0));
+            g2.setColor(new Color(200, 150, 50, alpha));
+        } else if (aiModeEnabled) {
+            // Enabled - green
+            if (isHovered) {
+                g2.setColor(new Color(60, 180, 80, 220));
+            } else {
+                g2.setColor(new Color(50, 150, 70, 200));
+            }
+        } else {
+            // Disabled - gray/blue
+            if (isHovered) {
+                g2.setColor(new Color(80, 100, 140, 200));
+            } else {
+                g2.setColor(new Color(60, 80, 110, 180));
+            }
+        }
+        g2.fillRoundRect(buttonX, buttonY, buttonWidth, buttonHeight, 10, 10);
+
+        // Button border
+        if (aiThinking) {
+            g2.setColor(new Color(255, 200, 100, 255));
+            g2.setStroke(new BasicStroke(2));
+        } else if (aiModeEnabled) {
+            g2.setColor(new Color(100, 220, 120, 255));
+            g2.setStroke(new BasicStroke(2));
+        } else if (isHovered) {
+            g2.setColor(new Color(120, 150, 200, 200));
+            g2.setStroke(new BasicStroke(2));
+        } else {
+            g2.setColor(new Color(90, 110, 140, 150));
+            g2.setStroke(new BasicStroke(1));
+        }
+        g2.drawRoundRect(buttonX, buttonY, buttonWidth, buttonHeight, 10, 10);
+
+        // Button text
+        g2.setFont(new Font("Arial", Font.BOLD, 14));
+        String buttonText;
+        if (aiThinking) {
+            buttonText = "AI Denkt...";
+            g2.setColor(new Color(255, 220, 100));
+        } else if (aiModeEnabled) {
+            buttonText = "AI - AN";
+            g2.setColor(new Color(220, 255, 220));
+        } else {
+            buttonText = "AI - AUS";
+            g2.setColor(new Color(200, 200, 210));
+        }
+        FontMetrics fm = g2.getFontMetrics();
+        int textX = buttonX + (buttonWidth - fm.stringWidth(buttonText)) / 2;
+        int textY = buttonY + (buttonHeight + fm.getAscent() - fm.getDescent()) / 2;
+        g2.drawString(buttonText, textX, textY);
+
+        return currentY + buttonHeight;
     }
 
     /**

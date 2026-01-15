@@ -111,6 +111,25 @@ public class Player {
         return availableBonuses.contains(type);
     }
 
+    /**
+     * Gets the current target treasure (first uncollected treasure).
+     * Returns null if all treasures have been collected.
+     */
+    public Treasure getCurrentTargetTreasure() {
+        if (remainingTreasureCount <= 0) {
+            return null; // All treasures collected - player should go home
+        }
+        // Find first treasure that hasn't been found yet
+        for (Treasure treasure : assignedTreasureCards) {
+            boolean found = treasuresFound.stream()
+                    .anyMatch(t -> t.getName().equals(treasure.getName()));
+            if (!found) {
+                return treasure;
+            }
+        }
+        return null;
+    }
+
     @Override
     public String toString() {
         return "Player{" +

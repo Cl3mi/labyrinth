@@ -1,5 +1,6 @@
 package labyrinth.client.models;
 
+import labyrinth.client.ai.AiController;
 import labyrinth.client.messaging.ServerClientFactory;
 import labyrinth.client.ui.*;
 import labyrinth.client.ui.theme.ThemeManager;
@@ -42,6 +43,13 @@ public class LabyrinthApplication {
     private String identifierToken;
 
     private ReconnectionManager reconnectionManager;
+    private AiController aiController;
+
+    // Current game state for AI assist button
+    private volatile Board currentBoard;
+    private volatile List<Player> currentPlayers;
+    private volatile labyrinth.contracts.models.CurrentTurnInfo currentTurnInfo;
+
     private volatile boolean isShuttingDown = false;
     private volatile boolean gameViewShown = false;
     private volatile boolean pendingSingleplayerStart = false;
@@ -266,6 +274,9 @@ public class LabyrinthApplication {
 
         reconnectionManager = new ReconnectionManager(client, this);
         lobbyPanel.setClient(client);
+
+        // Initialize AI controller for manual AI assist (button click)
+        aiController = new AiController(client);
 
         registerCallbacks();
 
@@ -546,6 +557,38 @@ public class LabyrinthApplication {
         if (boardPanel == null) {
             boardPanel = new BoardPanel(client, board, currentPlayer, allPlayers);
             boardPanel.setOnExitGame(this::exitGameToLobby);
+
+            // Wire up AI toggle button
+            boardPanel.setOnAiToggleRequested(() -> {
+                if (aiController != null) {
+                    aiController.toggleAiMode();
+                    // If AI was just enabled and we have game state, trigger immediately
+                    if (aiController.isAiModeEnabled() && currentBoard != null && currentPlayers != null && currentTurnInfo != null) {
+                        aiController.onGameStateUpdate(currentBoard, currentPlayers, currentTurnInfo);
+                    }
+                }
+            });
+
+            // Set up AI callbacks for UI feedback
+            if (aiController != null) {
+                // Callback when AI mode is toggled
+                aiController.setOnAiModeChanged(() -> SwingUtilities.invokeLater(() -> {
+                    if (boardPanel != null && aiController != null) {
+                        boardPanel.setAiModeEnabled(aiController.isAiModeEnabled());
+                    }
+                }));
+
+                // Callback when AI starts/stops thinking
+                aiController.setThinkingCallbacks(
+                    () -> SwingUtilities.invokeLater(() -> {
+                        if (boardPanel != null) boardPanel.setAiThinking(true);
+                    }),
+                    () -> SwingUtilities.invokeLater(() -> {
+                        if (boardPanel != null) boardPanel.setAiThinking(false);
+                    })
+                );
+            }
+
             mainPanel.add(boardPanel, "game");
         } else {
             boardPanel.setBoard(board);
@@ -674,6 +717,11 @@ public class LabyrinthApplication {
             this.identifierToken = ack.getIdentifierToken();
             if (reconnectionManager != null) reconnectionManager.reset();
 
+            // Set local player ID for AI controller
+            if (aiController != null) {
+                aiController.setLocalPlayerId(ack.getPlayerId());
+            }
+
             SwingUtilities.invokeLater(() -> {
                 lobbyPanel.setConnected(true);
                 lobbyPanel.setLocalPlayerId(ack.getPlayerId());
@@ -693,12 +741,29 @@ public class LabyrinthApplication {
         client.setOnGameStarted(started -> {
             System.out.println("[" + PROFILE + "] Received GAME_STARTED");
             exitedToLobby = false;  // Reset flag - neues Spiel startet
+
+            // Reset AI mode at game start
+            if (aiController != null) {
+                aiController.setAiModeEnabled(false);
+            }
+
             Board board = BoardFactory.fromContracts(started.getBoard());
             List<Player> players = BoardFactory.convertPlayerStates(started.getPlayers());
             board.setPlayers(players);
             System.out.println(board);
             BoardFactory.applyTurnInfo(board, players, started.getCurrentTurnInfo());
+
+            // Store current state for AI
+            currentBoard = board;
+            currentPlayers = players;
+            currentTurnInfo = started.getCurrentTurnInfo();
+
             showGame(board, started.getGameEndTime(), started.getCurrentTurnInfo());
+
+            // Trigger AI if enabled and it's local player's turn
+            if (aiController != null) {
+                aiController.onGameStateUpdate(board, players, started.getCurrentTurnInfo());
+            }
         });
 
         client.setOnGameStateUpdate(state -> {
@@ -715,7 +780,18 @@ public class LabyrinthApplication {
             board.setPlayers(players);
             System.out.println(board);
             BoardFactory.applyTurnInfo(board, players, state.getCurrentTurnInfo());
+
+            // Store current state for AI
+            currentBoard = board;
+            currentPlayers = players;
+            currentTurnInfo = state.getCurrentTurnInfo();
+
             showGame(board, state.getGameEndTime(), state.getCurrentTurnInfo());
+
+            // Trigger AI if enabled and it's local player's turn
+            if (aiController != null && !isGameOver) {
+                aiController.onGameStateUpdate(board, players, state.getCurrentTurnInfo());
+            }
         });
 
         client.setOnGameOver(gameOver -> {
