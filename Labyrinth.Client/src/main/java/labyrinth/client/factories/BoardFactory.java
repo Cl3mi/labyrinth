@@ -5,12 +5,14 @@ import labyrinth.client.models.Board;
 import labyrinth.client.models.Game;
 import labyrinth.client.models.Player;
 import labyrinth.client.models.Position;
+import labyrinth.contracts.models.BonusType;
 import labyrinth.contracts.models.Coordinates;
 import labyrinth.contracts.models.GameBoard;
 import labyrinth.contracts.models.PlayerState;
 import labyrinth.contracts.models.Tile;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -146,6 +148,14 @@ public class BoardFactory implements IBoardFactory {
                     p.getAssignedTreasureCards().clear();
                     p.getAssignedTreasureCards().add((labyrinth.contracts.models.Treasure) value);
                 }
+            }
+
+            // Available bonuses from server
+            BonusType[] bonuses = s.getAvailableBonuses();
+            if (bonuses != null && bonuses.length > 0) {
+                p.setAvailableBonuses(Arrays.asList(bonuses));
+            } else {
+                p.setAvailableBonuses(List.of());
             }
 
             list.add(p);

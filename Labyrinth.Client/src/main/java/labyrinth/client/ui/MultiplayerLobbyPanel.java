@@ -50,6 +50,7 @@ public class MultiplayerLobbyPanel extends JPanel {
     // Game configuration state
     private int configBoardSize = 7;
     private int configTreasuresToWin = 4;
+    private int configBonusCount = 4;
     private int configTurnTimeSeconds = 30;
     private int configGameDurationMinutes = 30;
     private String configUsername = "Player";
@@ -58,6 +59,7 @@ public class MultiplayerLobbyPanel extends JPanel {
     private JTextField usernameField;
     private JComboBox<String> boardSizeCombo;
     private JSpinner treasureSpinner;
+    private JSpinner bonusSpinner;
     private JComboBox<String> turnTimeCombo;
     private JComboBox<String> durationCombo;
 
@@ -263,8 +265,17 @@ public class MultiplayerLobbyPanel extends JPanel {
         treasureSpinner.addChangeListener(e -> configTreasuresToWin = (Integer) treasureSpinner.getValue());
         settingsGrid.add(treasureSpinner, gbc);
 
-        // Runden-Zeit
+        // Bonus-Anzahl
         gbc.gridx = 0; gbc.gridy = 3;
+        settingsGrid.add(createStyledLabel("Bonus-Anzahl:"), gbc);
+
+        gbc.gridx = 1;
+        bonusSpinner = createStyledSpinner(configBonusCount, 0, 12);
+        bonusSpinner.addChangeListener(e -> configBonusCount = (Integer) bonusSpinner.getValue());
+        settingsGrid.add(bonusSpinner, gbc);
+
+        // Runden-Zeit
+        gbc.gridx = 0; gbc.gridy = 4;
         settingsGrid.add(createStyledLabel("Runden-Zeit:"), gbc);
 
         gbc.gridx = 1;
@@ -285,7 +296,7 @@ public class MultiplayerLobbyPanel extends JPanel {
         settingsGrid.add(turnTimeCombo, gbc);
 
         // Spiel-Dauer
-        gbc.gridx = 0; gbc.gridy = 4;
+        gbc.gridx = 0; gbc.gridy = 5;
         settingsGrid.add(createStyledLabel("Spiel-Dauer:"), gbc);
 
         gbc.gridx = 1;
@@ -306,7 +317,7 @@ public class MultiplayerLobbyPanel extends JPanel {
         settingsGrid.add(durationCombo, gbc);
 
         // Hinweis
-        gbc.gridx = 0; gbc.gridy = 5; gbc.gridwidth = 2;
+        gbc.gridx = 0; gbc.gridy = 6; gbc.gridwidth = 2;
         gbc.insets = new Insets(15, 5, 5, 5);
         JLabel hintLabel = new JLabel("Nur der Admin kann Einstellungen ändern");
         hintLabel.setFont(new Font("SansSerif", Font.ITALIC, 11));
@@ -560,8 +571,8 @@ public class MultiplayerLobbyPanel extends JPanel {
         bs.setCols(configBoardSize);
 
         try {
-            System.out.println("START clicked -> sending START_GAME");
-            client.sendStartGame(bs, configTreasuresToWin, 0, configGameDurationMinutes * 60, configTurnTimeSeconds);
+            System.out.println("START clicked -> sending START_GAME with " + configBonusCount + " bonuses");
+            client.sendStartGame(bs, configTreasuresToWin, configBonusCount, configGameDurationMinutes * 60, configTurnTimeSeconds);
         } catch (Exception ex) {
             ex.printStackTrace();
             SwingUtilities.invokeLater(() -> {

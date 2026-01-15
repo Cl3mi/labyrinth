@@ -1,5 +1,6 @@
 package labyrinth.client.models;
 
+import labyrinth.contracts.models.BonusType;
 import labyrinth.contracts.models.PlayerColor;
 import labyrinth.contracts.models.Tile;
 import labyrinth.contracts.models.Treasure;
@@ -70,6 +71,11 @@ public class Player {
      */
     private boolean isAiControlled = false;
 
+    /**
+     * Available bonuses for this player (from server)
+     */
+    private final List<BonusType> availableBonuses = new ArrayList<>();
+
     public Player(String id, String name) {
         this.id = Objects.requireNonNull(id, "id must not be null");
         this.name = Objects.requireNonNull(name, "name must not be null");
@@ -86,6 +92,23 @@ public class Player {
         this.reachableTiles = (reachableTiles == null)
                 ? null
                 : new HashSet<>(reachableTiles);
+    }
+
+    /**
+     * Updates the available bonuses for this player.
+     */
+    public void setAvailableBonuses(List<BonusType> bonuses) {
+        this.availableBonuses.clear();
+        if (bonuses != null) {
+            this.availableBonuses.addAll(bonuses);
+        }
+    }
+
+    /**
+     * Checks if this player has a specific bonus available.
+     */
+    public boolean hasBonus(BonusType type) {
+        return availableBonuses.contains(type);
     }
 
     @Override

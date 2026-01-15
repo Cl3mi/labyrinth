@@ -394,7 +394,7 @@ public class LabyrinthApplication {
         bs.setCols(mainMenuPanel.getSingleplayerBoardSize());
 
         int treasuresToWin = mainMenuPanel.getSingleplayerTreasures();
-        int totalBonusCount = 0;
+        int totalBonusCount = 4;  // Default: 4 Bonuses im Singleplayer
         int gameDurationSeconds = mainMenuPanel.getSingleplayerGameDuration() * 60;
         int turnTimeSeconds = mainMenuPanel.getSingleplayerTurnTime();
 
@@ -402,6 +402,7 @@ public class LabyrinthApplication {
             System.out.println("SINGLEPLAYER -> sending START_GAME");
             System.out.println("rows=" + bs.getRows() + " cols=" + bs.getCols()
                     + " treasures=" + treasuresToWin
+                    + " bonuses=" + totalBonusCount
                     + " duration=" + gameDurationSeconds + "s"
                     + " turnTime=" + turnTimeSeconds + "s");
             client.sendStartGame(bs, treasuresToWin, totalBonusCount, gameDurationSeconds, turnTimeSeconds);
@@ -803,6 +804,10 @@ public class LabyrinthApplication {
                         handleErrorWithToast(msg);
                     } else {
                         JOptionPane.showMessageDialog(frame, msg, "Fehler", JOptionPane.ERROR_MESSAGE);
+                        // Re-enable start button in lobby after an error
+                        if (lobbyPanel != null) {
+                            lobbyPanel.forceEnableStartButton();
+                        }
                     }
                 }
             });

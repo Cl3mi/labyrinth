@@ -363,6 +363,97 @@ public class GameClient extends WebSocketClient {
         }
     }
 
+    // ===================== BONUS COMMANDS =====================
+
+    /**
+     * Send USE_BEAM command to teleport avatar to target position.
+     * After using this bonus, the player can still make their normal move.
+     */
+    public void sendUseBeam(int targetRow, int targetCol) {
+        try {
+            UseBeamCommandPayload payload = new UseBeamCommandPayload();
+            payload.setType(CommandType.USE_BEAM);
+
+            Coordinates coords = new Coordinates();
+            coords.setRow(targetRow);
+            coords.setColumn(targetCol);
+            payload.setTargetCoordinates(coords);
+
+            String json = mapper.writeValueAsString(payload);
+            System.out.println("sendUseBeam -> " + json);
+            send(json);
+        } catch (Exception e) {
+            e.printStackTrace();
+            if (onErrorMessage != null) {
+                runOnUiThread(() -> onErrorMessage.accept("Failed to send use beam: " + e.getMessage()));
+            }
+        }
+    }
+
+    /**
+     * Send USE_SWAP command to swap positions with another player.
+     * After using this bonus, the player can still make their normal move.
+     */
+    public void sendUseSwap(String targetPlayerId) {
+        try {
+            UseSwapCommandPayload payload = new UseSwapCommandPayload();
+            payload.setType(CommandType.USE_SWAP);
+            payload.setTargetPlayerId(targetPlayerId);
+
+            String json = mapper.writeValueAsString(payload);
+            System.out.println("sendUseSwap -> " + json);
+            send(json);
+        } catch (Exception e) {
+            e.printStackTrace();
+            if (onErrorMessage != null) {
+                runOnUiThread(() -> onErrorMessage.accept("Failed to send use swap: " + e.getMessage()));
+            }
+        }
+    }
+
+    /**
+     * Send USE_PUSH_FIXED command to push a normally fixed row/column.
+     * Cannot push the outermost tiles (avatar start positions).
+     * After using this bonus, the player can still make their normal move.
+     */
+    public void sendUsePushFixed(int rowOrColIndex, Direction direction) {
+        try {
+            UsePushFixedCommandPayload payload = new UsePushFixedCommandPayload();
+            payload.setType(CommandType.USE_PUSH_FIXED);
+            payload.setRowOrColIndex(rowOrColIndex);
+            payload.setDirection(direction);
+
+            String json = mapper.writeValueAsString(payload);
+            System.out.println("sendUsePushFixed -> " + json);
+            send(json);
+        } catch (Exception e) {
+            e.printStackTrace();
+            if (onErrorMessage != null) {
+                runOnUiThread(() -> onErrorMessage.accept("Failed to send use push fixed: " + e.getMessage()));
+            }
+        }
+    }
+
+    /**
+     * Send USE_PUSH_TWICE command to activate double push mode.
+     * After activation, the player can push tiles twice before making their move.
+     */
+    public void sendUsePushTwice() {
+        try {
+            UsePushTwiceCommandPayload payload = new UsePushTwiceCommandPayload();
+            payload.setType(CommandType.USE_PUSH_TWICE);
+
+            String json = mapper.writeValueAsString(payload);
+            System.out.println("sendUsePushTwice -> " + json);
+            send(json);
+        } catch (Exception e) {
+            e.printStackTrace();
+            if (onErrorMessage != null) {
+                runOnUiThread(() -> onErrorMessage.accept("Failed to send use push twice: " + e.getMessage()));
+            }
+        }
+    }
+
     // ===================== CONNECTION MANAGEMENT =====================
 
     /**

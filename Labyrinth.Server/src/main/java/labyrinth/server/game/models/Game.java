@@ -426,14 +426,13 @@ public class Game {
     /**
      * Handles bonus state transitions after a successful board shift.
      * Consumes the PUSH_FIXED bonus if it was active, or allows another push
-     * if PUSH_TWICE bonus is active.
+     * if PUSH_TWICE bonus is still active after consumption.
      */
     private void handleBonusAfterShift() {
-        boolean isPushTwice = activeBonusState.isOfType(BonusTypes.PUSH_TWICE);
-
         activeBonusState = activeBonusState.consume();
 
-        if (isPushTwice) {
+        // Check if PUSH_TWICE is still active (has remaining pushes)
+        if (activeBonusState.isOfType(BonusTypes.PUSH_TWICE)) {
             turnController.setMoveState(MoveState.PLACE_TILE);
         } else {
             turnController.setMoveState(MoveState.MOVE);
@@ -485,7 +484,11 @@ public class Game {
      * @param bonusType the type of bonus to activate
      */
     public void setActiveBonus(BonusTypes bonusType) {
-        this.activeBonusState = new ActiveBonus(bonusType);
+        if (bonusType == BonusTypes.PUSH_TWICE) {
+            this.activeBonusState = new PushTwiceActive();
+        } else {
+            this.activeBonusState = new ActiveBonus(bonusType);
+        }
     }
 
     /**

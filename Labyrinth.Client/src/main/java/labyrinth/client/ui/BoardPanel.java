@@ -6,6 +6,7 @@ import labyrinth.client.messaging.GameClient;
 import labyrinth.client.models.Board;
 import labyrinth.client.models.Player;
 import labyrinth.client.ui.theme.ThemeManager;
+import labyrinth.contracts.models.BonusType;
 import labyrinth.contracts.models.Direction;
 import labyrinth.contracts.models.Tile;
 import labyrinth.contracts.models.Treasure;
@@ -89,6 +90,7 @@ public class BoardPanel extends JPanel {
     private labyrinth.contracts.models.TurnState currentTurnState;
     private final Map<String, BufferedImage> treasureImages = new HashMap<>();
     private final Map<String, BufferedImage> tileImages = new HashMap<>();
+    private BufferedImage bonusBagImage;
 
     /**
      * Reachable Tiles kommen vom Server (optional).
@@ -112,6 +114,11 @@ public class BoardPanel extends JPanel {
 
     // Flag to prevent commands after game is over
     private boolean gameIsOver = false;
+
+    // Bonus system state
+    private BonusType activeBonusMode = null;  // Currently active bonus selection mode
+    private final List<Rectangle> bonusButtonBounds = new ArrayList<>();  // Clickable bonus button areas
+    private int hoveredBonusIndex = -1;  // Currently hovered bonus button
 
     private static final String EXTRA_KEY = "EXTRA";
 
@@ -322,14 +329,22 @@ public class BoardPanel extends JPanel {
         tileImages.put("L", loadImage("/images/tiles/L_tile.png"));
         tileImages.put("T", loadImage("/images/tiles/T_tile.png"));
 
-        System.out.println("📦 Loaded tile images:");
+        // Bonus bag image
+        bonusBagImage = loadImage("/images/tiles/BonusBag.png");
+
+        System.out.println("Loaded tile images:");
         tileImages.forEach((type, img) -> {
             if (img != null) {
-                System.out.println("  ✅ " + type + " tile");
+                System.out.println("  " + type + " tile");
             } else {
-                System.err.println("  ❌ " + type + " tile FEHLT!");
+                System.err.println("  " + type + " tile FEHLT!");
             }
         });
+        if (bonusBagImage != null) {
+            System.out.println("  BonusBag loaded");
+        } else {
+            System.err.println("  BonusBag FEHLT!");
+        }
     }
 
     private void loadPlayerIcons() {
@@ -471,6 +486,22 @@ public class BoardPanel extends JPanel {
                 if (inputLocked) return;
                 if (board == null) return;
 
+                // Right-click to cancel bonus mode
+                if (e.getButton() == MouseEvent.BUTTON3) {
+                    if (activeBonusMode != null) {
+                        cancelBonusMode();
+                    }
+                    return;
+                }
+
+                // Check bonus button clicks first
+                if (handleBonusButtonClick(e.getPoint())) return;
+
+                // Handle active bonus mode clicks
+                if (activeBonusMode != null) {
+                    if (handleActiveBonusModeClick(e.getPoint())) return;
+                }
+
                 if (handleArrowClick(e.getPoint())) return;
                 handleTileClick(e.getPoint());
             }
@@ -486,6 +517,16 @@ public class BoardPanel extends JPanel {
                         break;
                     }
                 }
+
+                // Track hovered bonus button
+                hoveredBonusIndex = -1;
+                for (int i = 0; i < bonusButtonBounds.size(); i++) {
+                    if (bonusButtonBounds.get(i).contains(e.getPoint())) {
+                        hoveredBonusIndex = i;
+                        break;
+                    }
+                }
+
                 repaint();
             }
         });
@@ -579,9 +620,13 @@ public class BoardPanel extends JPanel {
                 }
             }
 
-            // Escape - pause/options
+            // Escape - cancel bonus mode or show options
             case java.awt.event.KeyEvent.VK_ESCAPE -> {
-                showOptionsDialog();
+                if (activeBonusMode != null) {
+                    cancelBonusMode();
+                } else {
+                    showOptionsDialog();
+                }
             }
 
             // Tab - toggle keyboard navigation help
@@ -656,6 +701,333 @@ public class BoardPanel extends JPanel {
                 }
             }
         }
+    }
+
+    // =================================================================================
+    // BONUS HANDLING
+    // =================================================================================
+
+    /**
+     * Handle click on bonus buttons in the sidebar.
+     * @return true if a bonus button was clicked
+     */
+    private boolean handleBonusButtonClick(Point p) {
+        if (currentPlayer == null) return false;
+
+        List<BonusType> bonuses = currentPlayer.getAvailableBonuses();
+        if (bonuses.isEmpty()) return false;
+
+        for (int i = 0; i < bonusButtonBounds.size() && i < bonuses.size(); i++) {
+            if (bonusButtonBounds.get(i).contains(p)) {
+                BonusType clickedBonus = bonuses.get(i);
+                handleBonusActivation(clickedBonus);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Activate a bonus - either immediately send command or enter selection mode.
+     */
+    private void handleBonusActivation(BonusType bonus) {
+        soundEffects.playMove();
+
+        switch (bonus) {
+            case PUSH_TWICE -> {
+                // PUSH_TWICE activates immediately - server handles the double push state
+                client.sendUsePushTwice();
+                toastManager.showInfo("BONUS", "Push Twice aktiviert",
+                        "Du kannst jetzt zweimal hintereinander schieben!");
+                inputLocked = true;
+            }
+            case BEAM -> {
+                // Enter beam selection mode - player clicks on target tile
+                activeBonusMode = BonusType.BEAM;
+                toastManager.showInfo("BONUS", "Beam aktiviert",
+                        "Klicke auf ein beliebiges Feld um dich dorthin zu teleportieren!");
+            }
+            case SWAP -> {
+                // Show player selection dialog for swap
+                showSwapPlayerDialog();
+            }
+            case PUSH_FIXED -> {
+                // Check if there are any valid fixed rows/columns to push
+                if (!hasValidPushFixedTargets()) {
+                    toastManager.showError("BONUS", "Nicht möglich",
+                            "Keine fixierten Reihen/Spalten zum Schieben verfügbar auf diesem Spielfeld!");
+                    return;
+                }
+                // Enter push fixed mode - player clicks on an arrow to push fixed row/column
+                activeBonusMode = BonusType.PUSH_FIXED;
+                toastManager.showInfo("BONUS", "Push Fixed aktiviert",
+                        "Klicke auf einen goldenen Pfeil! (Rechtsklick oder ESC zum Abbrechen)");
+            }
+        }
+        repaint();
+    }
+
+    /**
+     * Handle clicks when a bonus selection mode is active.
+     * @return true if the click was handled by the bonus mode
+     */
+    private boolean handleActiveBonusModeClick(Point p) {
+        if (activeBonusMode == null) return false;
+
+        switch (activeBonusMode) {
+            case BEAM -> {
+                // Check if clicked on a tile
+                for (int row = 0; row < board.getHeight(); row++) {
+                    for (int col = 0; col < board.getWidth(); col++) {
+                        Rectangle tileRect = new Rectangle(xOffset + col * size, yOffset + row * size, size, size);
+                        if (tileRect.contains(p)) {
+                            soundEffects.playMove();
+                            client.sendUseBeam(row, col);
+                            toastManager.showInfo("BEAM", "Teleportiert!",
+                                    "Du wurdest zu Position " + row + "/" + col + " teleportiert.");
+                            activeBonusMode = null;
+                            inputLocked = true;
+                            return true;
+                        }
+                    }
+                }
+            }
+            case PUSH_FIXED -> {
+                // Check if clicked on an arrow button - only fixed arrows are valid for this bonus
+                for (ArrowButton arrow : arrowButtons) {
+                    if (arrow.contains(p)) {
+                        if (!arrow.isFixed) {
+                            toastManager.showError("PUSH_ERROR", "Nicht erlaubt",
+                                    "Waehle einen goldenen Pfeil fuer eine fixierte Reihe/Spalte!");
+                            return true;
+                        }
+
+                        soundEffects.playPush();
+                        client.sendUsePushFixed(arrow.index, arrow.direction);
+                        String rowCol = arrow.isRow ? "Zeile " + arrow.index : "Spalte " + arrow.index;
+                        toastManager.showInfo("PUSH FIXED", "Fixierte Reihe geschoben",
+                                rowCol + " wurde mit dem Bonus geschoben.");
+                        activeBonusMode = null;
+                        inputLocked = true;
+                        return true;
+                    }
+                }
+            }
+            default -> {
+                // Other bonus modes don't need click handling here
+            }
+        }
+
+        // Right-click or ESC to cancel bonus mode
+        return false;
+    }
+
+    /**
+     * Show dialog to select a player for SWAP bonus.
+     */
+    private void showSwapPlayerDialog() {
+        List<Player> allPlayers = (players != null && !players.isEmpty()) ? players :
+                (board != null && board.getPlayers() != null) ? board.getPlayers() : List.of();
+
+        // Filter out current player
+        List<Player> otherPlayers = new ArrayList<>();
+        for (Player p : allPlayers) {
+            if (!p.getId().equals(currentPlayer.getId())) {
+                otherPlayers.add(p);
+            }
+        }
+
+        if (otherPlayers.isEmpty()) {
+            toastManager.showError("SWAP_ERROR", "Kein Ziel", "Keine anderen Spieler zum Tauschen vorhanden!");
+            return;
+        }
+
+        // Create custom styled dialog
+        JDialog dialog = new JDialog(SwingUtilities.getWindowAncestor(this), "Position tauschen", Dialog.ModalityType.APPLICATION_MODAL);
+        dialog.setUndecorated(true);
+        dialog.setBackground(new Color(0, 0, 0, 0));
+
+        JPanel mainPanel = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+                // Semi-transparent dark background with rounded corners
+                g2.setColor(new Color(30, 30, 45, 240));
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 20, 20);
+
+                // Border
+                g2.setColor(new Color(100, 140, 200));
+                g2.setStroke(new BasicStroke(2));
+                g2.drawRoundRect(1, 1, getWidth() - 3, getHeight() - 3, 20, 20);
+
+                g2.dispose();
+            }
+        };
+        mainPanel.setLayout(new BorderLayout(10, 10));
+        mainPanel.setBorder(BorderFactory.createEmptyBorder(20, 25, 20, 25));
+        mainPanel.setOpaque(false);
+
+        // Title
+        JLabel titleLabel = new JLabel("Mit wem tauschen?", SwingConstants.CENTER);
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 18));
+        titleLabel.setForeground(new Color(220, 220, 240));
+        mainPanel.add(titleLabel, BorderLayout.NORTH);
+
+        // Player buttons panel
+        JPanel playersPanel = new JPanel(new GridLayout(0, 1, 0, 10));
+        playersPanel.setOpaque(false);
+
+        for (Player p : otherPlayers) {
+            JButton playerBtn = createStyledPlayerButton(p, dialog);
+            playersPanel.add(playerBtn);
+        }
+
+        JScrollPane scrollPane = new JScrollPane(playersPanel);
+        scrollPane.setOpaque(false);
+        scrollPane.getViewport().setOpaque(false);
+        scrollPane.setBorder(null);
+        scrollPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+        mainPanel.add(scrollPane, BorderLayout.CENTER);
+
+        // Cancel button
+        JButton cancelBtn = new JButton("Abbrechen");
+        cancelBtn.setFont(new Font("Arial", Font.PLAIN, 14));
+        cancelBtn.setForeground(Color.WHITE);
+        cancelBtn.setBackground(new Color(80, 80, 100));
+        cancelBtn.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
+        cancelBtn.setFocusPainted(false);
+        cancelBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        cancelBtn.addActionListener(e -> dialog.dispose());
+        cancelBtn.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                cancelBtn.setBackground(new Color(100, 100, 120));
+            }
+            @Override
+            public void mouseExited(MouseEvent e) {
+                cancelBtn.setBackground(new Color(80, 80, 100));
+            }
+        });
+
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        buttonPanel.setOpaque(false);
+        buttonPanel.add(cancelBtn);
+        mainPanel.add(buttonPanel, BorderLayout.SOUTH);
+
+        dialog.setContentPane(mainPanel);
+        dialog.pack();
+        dialog.setMinimumSize(new Dimension(280, 150));
+        dialog.setLocationRelativeTo(this);
+        dialog.setVisible(true);
+    }
+
+    /**
+     * Create a styled button for player selection in SWAP dialog.
+     */
+    private JButton createStyledPlayerButton(Player player, JDialog dialog) {
+        Color playerColor = getAwtColor(player.getColor());
+        Color hoverColor = playerColor.brighter();
+
+        JButton btn = new JButton() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+                // Background
+                if (getModel().isRollover()) {
+                    g2.setColor(hoverColor);
+                } else {
+                    g2.setColor(playerColor);
+                }
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 12, 12);
+
+                // Player icon circle
+                g2.setColor(Color.WHITE);
+                g2.fillOval(15, (getHeight() - 30) / 2, 30, 30);
+                g2.setColor(playerColor.darker());
+                g2.setStroke(new BasicStroke(2));
+                g2.drawOval(15, (getHeight() - 30) / 2, 30, 30);
+
+                // Player initial
+                g2.setColor(playerColor.darker());
+                g2.setFont(new Font("Arial", Font.BOLD, 16));
+                String initial = player.getName().substring(0, 1).toUpperCase();
+                FontMetrics fm = g2.getFontMetrics();
+                int textX = 15 + (30 - fm.stringWidth(initial)) / 2;
+                int textY = (getHeight() - 30) / 2 + (30 + fm.getAscent() - fm.getDescent()) / 2;
+                g2.drawString(initial, textX, textY);
+
+                // Player name
+                g2.setColor(Color.WHITE);
+                g2.setFont(new Font("Arial", Font.BOLD, 15));
+                g2.drawString(player.getName(), 55, getHeight() / 2 + 5);
+
+                // Position info
+                if (player.getCurrentPosition() != null) {
+                    g2.setFont(new Font("Arial", Font.PLAIN, 11));
+                    g2.setColor(new Color(255, 255, 255, 180));
+                    String posText = "Position: " + player.getCurrentPosition().getRow() + "/" + player.getCurrentPosition().getColumn();
+                    g2.drawString(posText, getWidth() - 100, getHeight() / 2 + 5);
+                }
+
+                g2.dispose();
+            }
+        };
+
+        btn.setPreferredSize(new Dimension(250, 50));
+        btn.setBorderPainted(false);
+        btn.setContentAreaFilled(false);
+        btn.setFocusPainted(false);
+        btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+
+        btn.addActionListener(e -> {
+            dialog.dispose();
+            soundEffects.playMove();
+            client.sendUseSwap(player.getId());
+            toastManager.showInfo("SWAP", "Position getauscht",
+                    "Du hast die Position mit " + player.getName() + " getauscht!");
+            inputLocked = true;
+        });
+
+        return btn;
+    }
+
+    /**
+     * Cancel active bonus mode (e.g., when pressing ESC)
+     */
+    public void cancelBonusMode() {
+        if (activeBonusMode != null) {
+            toastManager.showInfo("ABGEBROCHEN", "Bonus abgebrochen",
+                    activeBonusMode.getValue() + " Bonus wurde abgebrochen.");
+            activeBonusMode = null;
+            repaint();
+        }
+    }
+
+    /**
+     * Check if there are any valid fixed rows/columns that can be pushed with PUSH_FIXED bonus.
+     * Valid targets are rows/columns with even index (fixed tiles) that are NOT on the edge.
+     */
+    private boolean hasValidPushFixedTargets() {
+        if (board == null) return false;
+
+        int rows = board.getHeight();
+        int cols = board.getWidth();
+
+        // Check for valid fixed rows (even index, not edge)
+        for (int row = 2; row < rows - 1; row += 2) {
+            return true; // Found at least one valid row
+        }
+
+        // Check for valid fixed columns (even index, not edge)
+        for (int col = 2; col < cols - 1; col += 2) {
+            return true; // Found at least one valid column
+        }
+
+        return false;
     }
 
     // =================================================================================
@@ -868,10 +1240,46 @@ public class BoardPanel extends JPanel {
                 drawTreasureOnTile(g2, tile.getTreasure(), cx, cy);
             }
 
+            // Bonus zeichnen (wenn vorhanden und kein Treasure)
+            if (tile.getBonus() != null && tile.getTreasure() == null) {
+                int cx = x + size / 2;
+                int cy = y + size / 2;
+                drawBonusOnTile(g2, tile.getBonus(), cx, cy);
+            }
+
             // Koordinaten nur bei gültigen row/col
             if (row >= 0 && col >= 0) {
                 drawCoordinates(g2, x, y, row, col);
             }
+        }
+    }
+
+    private void drawBonusOnTile(Graphics2D g2, BonusType bonus, int centerX, int centerY) {
+        if (bonus == null) return;
+
+        int imgSize = (int) (size * 0.5);  // 50% der Tile-Groesse
+        int imgX = centerX - imgSize / 2;
+        int imgY = centerY - imgSize / 2;
+
+        if (bonusBagImage != null) {
+            // Zeichne das BonusBag-Bild
+            g2.drawImage(bonusBagImage, imgX, imgY, imgSize, imgSize, null);
+        } else {
+            // Fallback: Farbiger Kreis mit Text
+            g2.setColor(new Color(255, 215, 0, 200));  // Gold
+            g2.fillOval(imgX, imgY, imgSize, imgSize);
+            g2.setColor(Color.BLACK);
+            g2.setFont(new Font("Arial", Font.BOLD, imgSize / 3));
+            String label = switch (bonus) {
+                case BEAM -> "T";
+                case SWAP -> "S";
+                case PUSH_FIXED -> "F";
+                case PUSH_TWICE -> "2";
+            };
+            FontMetrics fm = g2.getFontMetrics();
+            int textX = centerX - fm.stringWidth(label) / 2;
+            int textY = centerY + fm.getAscent() / 3;
+            g2.drawString(label, textX, textY);
         }
     }
 
@@ -1095,54 +1503,81 @@ public class BoardPanel extends JPanel {
 
         int rows = board.getHeight();
         int cols = board.getWidth();
+        boolean pushFixedActive = activeBonusMode == BonusType.PUSH_FIXED;
 
         for (int row = 0; row < rows; row++) {
-            if (row % 2 == 0) continue;
+            // Normal: nur ungerade Reihen (1, 3, 5) sind schiebbar
+            // Push Fixed: alle Reihen außer den äußersten (0 und rows-1)
+            boolean isNormalPushable = row % 2 == 1;
+            boolean isPushFixedPushable = pushFixedActive && row > 0 && row < rows - 1;
+
+            if (!isNormalPushable && !isPushFixedPushable) continue;
 
             int y = yOffset + row * size + (size - arrowSize) / 2;
+            boolean isFixedRow = row % 2 == 0; // gerade Indices sind fixierte Reihen
 
             Rectangle leftBounds = new Rectangle(xOffset - arrowSize - ARROW_MARGIN, y, arrowSize, arrowSize);
-            ArrowButton leftArrow = new ArrowButton(leftBounds, Direction.RIGHT, row, true);
+            ArrowButton leftArrow = new ArrowButton(leftBounds, Direction.RIGHT, row, true, isFixedRow);
             arrowButtons.add(leftArrow);
             drawArrowButton(g2, leftArrow);
 
             Rectangle rightBounds = new Rectangle(xOffset + cols * size + ARROW_MARGIN, y, arrowSize, arrowSize);
-            ArrowButton rightArrow = new ArrowButton(rightBounds, Direction.LEFT, row, true);
+            ArrowButton rightArrow = new ArrowButton(rightBounds, Direction.LEFT, row, true, isFixedRow);
             arrowButtons.add(rightArrow);
             drawArrowButton(g2, rightArrow);
         }
 
         for (int col = 0; col < cols; col++) {
-            if (col % 2 == 0) continue;
+            // Normal: nur ungerade Spalten (1, 3, 5) sind schiebbar
+            // Push Fixed: alle Spalten außer den äußersten (0 und cols-1)
+            boolean isNormalPushable = col % 2 == 1;
+            boolean isPushFixedPushable = pushFixedActive && col > 0 && col < cols - 1;
+
+            if (!isNormalPushable && !isPushFixedPushable) continue;
 
             int x = xOffset + col * size + (size - arrowSize) / 2;
+            boolean isFixedCol = col % 2 == 0; // gerade Indices sind fixierte Spalten
 
             Rectangle upBounds = new Rectangle(x, yOffset - arrowSize - ARROW_MARGIN, arrowSize, arrowSize);
-            ArrowButton upArrow = new ArrowButton(upBounds, Direction.DOWN, col, false);
+            ArrowButton upArrow = new ArrowButton(upBounds, Direction.DOWN, col, false, isFixedCol);
             arrowButtons.add(upArrow);
             drawArrowButton(g2, upArrow);
 
             Rectangle downBounds = new Rectangle(x, yOffset + rows * size + ARROW_MARGIN, arrowSize, arrowSize);
-            ArrowButton downArrow = new ArrowButton(downBounds, Direction.UP, col, false);
+            ArrowButton downArrow = new ArrowButton(downBounds, Direction.UP, col, false, isFixedCol);
             arrowButtons.add(downArrow);
             drawArrowButton(g2, downArrow);
         }
     }
 
+    private static final Color ARROW_COLOR_FIXED = new Color(200, 140, 50);       // Gold für fixierte Reihen
+    private static final Color ARROW_COLOR_FIXED_HOVER = new Color(230, 170, 80); // Helles Gold bei Hover
+
     private void drawArrowButton(Graphics2D g2, ArrowButton arrow) {
-        if (arrow == hoveredArrow) {
-            g2.setColor(ARROW_COLOR_HOVER);
+        Color baseColor;
+        Color hoverColor;
+
+        if (arrow.isFixed) {
+            baseColor = ARROW_COLOR_FIXED;
+            hoverColor = ARROW_COLOR_FIXED_HOVER;
         } else {
-            g2.setColor(ARROW_COLOR);
+            baseColor = ARROW_COLOR;
+            hoverColor = ARROW_COLOR_HOVER;
         }
 
+        Color currentColor = (arrow == hoveredArrow) ? hoverColor : baseColor;
+
+        // Shadow
+        g2.setColor(currentColor);
         g2.fillRoundRect(arrow.bounds.x + 2, arrow.bounds.y + 2, arrow.bounds.width, arrow.bounds.height, 8, 8);
         g2.setColor(new Color(20, 20, 40, 180));
         g2.drawRoundRect(arrow.bounds.x + 2, arrow.bounds.y + 2, arrow.bounds.width, arrow.bounds.height, 8, 8);
 
-        g2.setColor(arrow == hoveredArrow ? ARROW_COLOR_HOVER : ARROW_COLOR);
+        // Main button
+        g2.setColor(currentColor);
         g2.fillRoundRect(arrow.bounds.x, arrow.bounds.y, arrow.bounds.width, arrow.bounds.height, 8, 8);
 
+        // Arrow icon
         g2.setColor(Color.WHITE);
         g2.fill(arrow.arrowShape);
     }
@@ -1305,6 +1740,15 @@ public class BoardPanel extends JPanel {
         drawDivider(g2, sidebarX + padding, sidebarX + sidebarWidth - padding, currentY);
         currentY += 15;
 
+        // Bonus section - only show if current player has bonuses
+        if (currentPlayer != null && !currentPlayer.getAvailableBonuses().isEmpty()) {
+            currentY = drawBonusSection(g2, sidebarX, sidebarWidth, padding, currentY);
+
+            // Divider after bonuses
+            drawDivider(g2, sidebarX + padding, sidebarX + sidebarWidth - padding, currentY);
+            currentY += 15;
+        }
+
         // Players section
         drawSectionHeader(g2, "SPIELER", sidebarX + padding, currentY);
         currentY += 25;
@@ -1405,8 +1849,112 @@ public class BoardPanel extends JPanel {
     }
 
     /**
-     * Draws a large overlay showing the current target treasure at the top of the screen
+     * Draws the bonus section with clickable bonus buttons.
+     * @return the updated Y position after drawing
      */
+    private int drawBonusSection(Graphics2D g2, int sidebarX, int sidebarWidth, int padding, int currentY) {
+        drawSectionHeader(g2, "BONI", sidebarX + padding, currentY);
+        currentY += 25;
+
+        List<BonusType> bonuses = currentPlayer.getAvailableBonuses();
+        bonusButtonBounds.clear();
+
+        int buttonWidth = sidebarWidth - 2 * padding - 20;
+        int buttonHeight = 40;
+        int buttonSpacing = 8;
+
+        for (int i = 0; i < bonuses.size(); i++) {
+            BonusType bonus = bonuses.get(i);
+
+            int buttonX = sidebarX + padding + 10;
+            int buttonY = currentY;
+
+            Rectangle bounds = new Rectangle(buttonX, buttonY, buttonWidth, buttonHeight);
+            bonusButtonBounds.add(bounds);
+
+            // Determine button state
+            boolean isHovered = (i == hoveredBonusIndex);
+            boolean isActive = (bonus == activeBonusMode);
+
+            // Button background
+            if (isActive) {
+                // Active bonus mode - glowing effect
+                g2.setColor(new Color(100, 200, 100, 200));
+            } else if (isHovered) {
+                // Hovered
+                g2.setColor(new Color(80, 120, 180, 200));
+            } else {
+                // Normal
+                g2.setColor(new Color(60, 60, 80, 200));
+            }
+            g2.fillRoundRect(buttonX, buttonY, buttonWidth, buttonHeight, 10, 10);
+
+            // Button border
+            if (isActive) {
+                g2.setColor(new Color(150, 255, 150, 255));
+                g2.setStroke(new BasicStroke(2));
+            } else if (isHovered) {
+                g2.setColor(new Color(120, 180, 230, 200));
+                g2.setStroke(new BasicStroke(2));
+            } else {
+                g2.setColor(new Color(100, 100, 120, 150));
+                g2.setStroke(new BasicStroke(1));
+            }
+            g2.drawRoundRect(buttonX, buttonY, buttonWidth, buttonHeight, 10, 10);
+
+            // Bonus icon and name
+            String bonusName = getBonusDisplayName(bonus);
+            String bonusIcon = getBonusIcon(bonus);
+
+            g2.setFont(new Font("Arial", Font.BOLD, 14));
+            g2.setColor(isActive ? new Color(220, 255, 220) : new Color(255, 255, 255));
+            g2.drawString(bonusIcon + " " + bonusName, buttonX + 10, buttonY + 26);
+
+            currentY += buttonHeight + buttonSpacing;
+        }
+
+        // Show hint if a bonus mode is active
+        if (activeBonusMode != null) {
+            g2.setFont(new Font("Arial", Font.ITALIC, 10));
+            g2.setColor(new Color(150, 255, 150));
+            String hint = switch (activeBonusMode) {
+                case BEAM -> "Klicke auf ein Zielfeld...";
+                case PUSH_FIXED -> "Klicke auf einen Pfeil...";
+                default -> "";
+            };
+            if (!hint.isEmpty()) {
+                g2.drawString(hint, sidebarX + padding + 10, currentY);
+                currentY += 15;
+            }
+        }
+
+        return currentY;
+    }
+
+    /**
+     * Get display name for a bonus type.
+     */
+    private String getBonusDisplayName(BonusType bonus) {
+        return switch (bonus) {
+            case BEAM -> "Teleportieren";
+            case SWAP -> "Tauschen";
+            case PUSH_FIXED -> "Fixiert schieben";
+            case PUSH_TWICE -> "Doppelt schieben";
+        };
+    }
+
+    /**
+     * Get icon/emoji for a bonus type.
+     */
+    private String getBonusIcon(BonusType bonus) {
+        return switch (bonus) {
+            case BEAM -> "[T]";     // Teleport
+            case SWAP -> "[S]";     // Swap
+            case PUSH_FIXED -> "[F]"; // Fixed push
+            case PUSH_TWICE -> "[2]"; // Double push
+        };
+    }
+
     /**
      * Draws a golden highlight on the target treasure tile
      */
@@ -1596,13 +2144,15 @@ public class BoardPanel extends JPanel {
         Direction direction;
         int index;
         boolean isRow;
+        boolean isFixed; // true wenn es eine fixierte Reihe/Spalte ist (nur mit Push Fixed schiebbar)
         Path2D.Double arrowShape;
 
-        ArrowButton(Rectangle bounds, Direction direction, int index, boolean isRow) {
+        ArrowButton(Rectangle bounds, Direction direction, int index, boolean isRow, boolean isFixed) {
             this.bounds = bounds;
             this.direction = direction;
             this.index = index;
             this.isRow = isRow;
+            this.isFixed = isFixed;
             this.arrowShape = createArrowShape(bounds, direction);
         }
 
