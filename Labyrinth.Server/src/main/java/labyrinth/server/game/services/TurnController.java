@@ -8,6 +8,8 @@ import labyrinth.server.game.enums.RoomState;
 import labyrinth.server.game.models.Board;
 import labyrinth.server.game.models.Player;
 import labyrinth.server.game.models.records.GameConfig;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.function.Consumer;
@@ -18,6 +20,8 @@ import java.util.function.Consumer;
  * turn they are in.
  */
 public class TurnController implements ITurnController {
+
+    private static final Logger log = LoggerFactory.getLogger(TurnController.class);
 
     private int currentPlayerIndex = 0;
     private MoveState currentMoveState = MoveState.PLACE_TILE;
@@ -104,6 +108,8 @@ public class TurnController implements ITurnController {
             aiTurnExecutor.accept(nextPlayer);
         } else {
             turnTimer.start(gameConfig.turnTimeInSeconds(), () -> {
+                log.warn("[TurnController] Turn timer exceeded for player: {}. Advancing to next player.", nextPlayer.getUsername());
+                gameLogger.log(GameLogType.NEXT_TURN, "Turn timer exceeded - auto-advancing", nextPlayer, null);
                 advanceToNextPlayer(players, roomState, gameConfig, aiTurnExecutor);
             });
         }
