@@ -96,9 +96,9 @@ public class GameService {
             var hasHumanPlayer = game.getPlayers().stream()
                     .anyMatch(p -> !p.isAiActive());
 
-            if (!hasHumanPlayer && game.getRoomState() != RoomState.LOBBY) {
+            if (!hasHumanPlayer) {
                 log.info("No human players left, resetting game to LOBBY");
-                game.returnToLobby();
+                game.resetAndReturnToLobby();
             }
 
             publishEvent(new PlayerLeftEvent());
@@ -157,12 +157,6 @@ public class GameService {
     public void startGame(GameConfig gameConfig) {
         rwLock.writeLock().lock();
         try {
-            // If game is finished or in progress, reset to lobby first
-            if (game.getRoomState() == RoomState.FINISHED || game.getRoomState() == RoomState.IN_GAME) {
-                log.info("Game is {}, resetting to LOBBY before starting new game", game.getRoomState());
-                game.returnToLobby();
-            }
-
             int playersCount = 4;
 
             var board = boardFactory.createBoard(gameConfig.boardWidth(), gameConfig.boardHeight());
@@ -216,7 +210,7 @@ public class GameService {
 
                 var players = getPlayers();
 
-                game.returnToLobby();
+                game.resetAndReturnToLobby();
                 publishEvent(new GameOverEvent(players));
             }
 
@@ -335,6 +329,6 @@ public class GameService {
             return;
         }
 
-        eventPublisher.publishAsync(event);
+        eventPublisher.publish(event);
     }
 }

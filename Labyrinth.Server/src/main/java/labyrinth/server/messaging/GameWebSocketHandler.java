@@ -9,7 +9,6 @@ import labyrinth.server.game.GameService;
 import labyrinth.server.game.enums.RoomState;
 import labyrinth.server.messaging.commands.CommandMessageDispatcher;
 import labyrinth.server.messaging.commands.CommandMessageParser;
-import labyrinth.server.messaging.mapper.PlayerInfoMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Component;
@@ -29,7 +28,6 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
     private final PlayerSessionRegistry playerSessionRegistry;
     private final MessageService messageService;
     private final GameService gameService;
-    private final PlayerInfoMapper playerInfoMapper;
 
 
     @Override
@@ -50,7 +48,11 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
         UUID playerId = playerSessionRegistry.getPlayerId(session);
         if (playerId != null && gameService.getGameState() == RoomState.LOBBY) {
             var player = gameService.getPlayer(playerId);
-            gameService.leave(player);
+
+            if(player != null) {
+                gameService.leave(player);
+            }
+
             playerSessionRegistry.removePlayer(playerId);
         }
         else {

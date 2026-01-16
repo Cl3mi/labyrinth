@@ -347,26 +347,21 @@ public class Game {
      * Resets the game back to lobby state after game completion.
      * Clears the board and prepares for a new game to be started.
      */
-    public void returnToLobby() {
+    public void resetAndReturnToLobby() {
         gameLogger.log(GameLogType.RETURN_TO_LOBBY, "Current state: " + this.roomState);
-
-        if (this.roomState != RoomState.FINISHED && this.roomState != RoomState.IN_GAME) {
-            gameLogger.error(GameLogType.RETURN_TO_LOBBY, "Cannot return to lobby from state: " + this.roomState);
-            throw new IllegalStateException("Cannot return to lobby from state: " + this.roomState);
-        }
         gameLogger.log(GameLogType.RETURN_TO_LOBBY," Resetting game to lobby state");
+
         this.roomState = RoomState.LOBBY;
         this.board = null;
         this.gameStartTime = null;
         turnController.reset();
 
-        for(Player aiPlayer : playerRegistry.getPlayersInternal()) {
-            playerRegistry.removePlayer(aiPlayer);
-        }
-
-        // Reset player stats and treasures for new game
-        for (Player player : playerRegistry.getPlayersInternal()) {
-            player.resetForNewGame();
+        for(Player player : playerRegistry.getPlayers()) {
+            if(player.isAiActive()) {
+                playerRegistry.removePlayer(player);
+            } else {
+                player.resetForNewGame();
+            }
         }
 
         gameLogger.log(GameLogType.RETURN_TO_LOBBY, "Reset complete. Players remaining: " + playerRegistry.getPlayers().size());
