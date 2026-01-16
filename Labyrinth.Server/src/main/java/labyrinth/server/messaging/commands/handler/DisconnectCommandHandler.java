@@ -55,7 +55,13 @@ public class DisconnectCommandHandler extends AbstractCommandHandler<DisconnectC
         }
 
         // Remove the player from the game
-        gameService.leave(player);
+        var leaveResult = gameService.leave(player);
+
+        // If only bots remain in the lobby, remove all bots and reset the game
+        if (leaveResult.shouldShutdown() && gameService.getRoomState() == labyrinth.server.game.enums.RoomState.LOBBY) {
+            log.info("[DisconnectCommandHandler] Only bots remain in lobby, removing all bots and resetting game");
+            gameService.resetForNewGame();
+        }
 
         // Broadcast updated lobby state
         var lobbyState = new LobbyStateEventPayload();

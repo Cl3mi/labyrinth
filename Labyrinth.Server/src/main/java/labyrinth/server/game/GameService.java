@@ -153,10 +153,10 @@ public class GameService {
         }
     }
 
-    public void leave(Player player) {
+    public labyrinth.server.game.results.LeaveResult leave(Player player) {
         rwLock.writeLock().lock();
         try {
-            game.leave(player);
+            return game.leave(player);
         } finally {
             rwLock.writeLock().unlock();
         }
