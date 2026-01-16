@@ -52,23 +52,18 @@ public class MovePawnCommandHandler extends AbstractCommandHandler<MovePawnComma
             throw new ActionErrorException("Cannot move pawn to the specified coordinates.", ErrorCode.INVALID_MOVE);
         }
 
-        // 1. Always broadcast game state after move, including the final winning state
         gameService.withGameReadLock(game -> {
             var gameState = gameMapper.toGameStateDto(game);
             messageService.broadcastToPlayers(gameState);
             return null;
         });
 
-        // 2. If game is over, publish achievements and GameOverEvent synchronously
-        // This ensures correct event order: GameState -> GameOver -> LobbyState
         if (result.gameOver()) {
-            // Publish end-game achievements
             for (var award : gameService.getEndGameAchievements()) {
                 var achievementEvent = new AchievementUnlockedEvent(award.player(), award.achievement());
                 eventPublisher.publishAsync(achievementEvent);
             }
 
-            // Publish GameOverEvent (listener will send GameOver + LobbyState events)
             var gameOverEvent = new GameOverEvent(gameService.getPlayers());
             eventPublisher.publishAsync(gameOverEvent);
         }
