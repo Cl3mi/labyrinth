@@ -3,8 +3,11 @@ package labyrinth.server.messaging.commands.handler;
 import labyrinth.contracts.models.*;
 import labyrinth.server.exceptions.ActionErrorException;
 import labyrinth.server.game.GameService;
+import labyrinth.server.game.enums.RoomState;
 import labyrinth.server.messaging.MessageService;
 import labyrinth.server.messaging.PlayerSessionRegistry;
+import labyrinth.server.messaging.mapper.GameMapper;
+import labyrinth.server.messaging.mapper.PlayerInfoMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -18,15 +21,21 @@ import java.util.UUID;
 public class ConnectCommandHandler extends AbstractCommandHandler<ConnectCommandPayload> {
 
     private final MessageService messageService;
+    private final PlayerInfoMapper playerInfoMapper;
+    private final GameMapper gameMapper;
     private static final Logger log = LoggerFactory.getLogger(ConnectCommandHandler.class);
 
     public ConnectCommandHandler(GameService gameService,
                                  PlayerSessionRegistry playerSessionRegistry,
-                                 MessageService messageService) {
+                                 MessageService messageService,
+                                 PlayerInfoMapper playerInfoMapper,
+                                 GameMapper gameMapper) {
 
         super(gameService, playerSessionRegistry);
 
         this.messageService = messageService;
+        this.playerInfoMapper = playerInfoMapper;
+        this.gameMapper = gameMapper;
     }
 
     @Override
@@ -40,34 +49,35 @@ public class ConnectCommandHandler extends AbstractCommandHandler<ConnectCommand
             throw new ActionErrorException("Session is already connected", ErrorCode.GENERAL);
         }
 
-        if (payload.getIdentifierToken() != null) {
-            Optional<UUID> maybeToken = parseIdentifierToken(payload.getIdentifierToken());
+        Optional<UUID> maybeToken = parseIdentifierToken(payload.getIdentifierToken());
 
-            if (maybeToken.isPresent()) {
-                handleReconnectWithToken(session, maybeToken.get(), payload);
-            } else {
-                if (payload.getUsername() == null || payload.getUsername().isBlank()) {
-                    throw new ActionErrorException("Username not given", ErrorCode.GENERAL);
-                }
-
-                connectNewPlayer(session, payload.getUsername());
-            }
-
-            return;
+        if (maybeToken.isPresent()) {
+            handleReconnection(session, maybeToken.get(), payload);
+        } else {
+            connectNewPlayer(session, payload.getUsername());
         }
 
-        connectNewPlayer(session, payload.getUsername());
+        if(gameService.getGameState() == RoomState.LOBBY) {
+            broadcastLobbyState();
+        } else {
+            broadcastGameStateUpdateEvent();
+        }
     }
 
     private Optional<UUID> parseIdentifierToken(String tokenStr) {
         try {
+
+            if(tokenStr == null || tokenStr.isBlank()) {
+                return Optional.empty();
+            }
+
             return Optional.of(UUID.fromString(tokenStr));
         } catch (IllegalArgumentException ex) {
             return Optional.empty();
         }
     }
 
-    private void handleReconnectWithToken(WebSocketSession session, UUID identifierToken, ConnectCommandPayload payload) throws ActionErrorException {
+    private void handleReconnection(WebSocketSession session, UUID identifierToken, ConnectCommandPayload payload) throws ActionErrorException {
         var playerId = playerSessionRegistry.getPlayerIdByIdentifierToken(identifierToken);
 
         if (playerId == null) {
@@ -113,5 +123,24 @@ public class ConnectCommandHandler extends AbstractCommandHandler<ConnectCommand
         ackPayload.setPlayerId(playerId.toString());
         ackPayload.setIdentifierToken(identifierToken.toString());
         return ackPayload;
+    }
+
+
+    private void broadcastLobbyState() {
+        var players = gameService.getPlayers()
+                .stream()
+                .map(playerInfoMapper::toDto)
+                .toArray(PlayerInfo[]::new);
+
+        var lobbyStateUpdated = new LobbyStateEventPayload();
+        lobbyStateUpdated.setType(EventType.LOBBY_STATE);
+        lobbyStateUpdated.setPlayers(players);
+
+        messageService.broadcastToPlayers(lobbyStateUpdated);
+    }
+
+    private void broadcastGameStateUpdateEvent() {
+        var gameState = gameService.withGameReadLock(gameMapper::toGameStateDto);
+        messageService.broadcastToPlayers(gameState);
     }
 }

@@ -96,7 +96,7 @@ public class GameService {
             var hasHumanPlayer = game.getPlayers().stream()
                     .anyMatch(p -> !p.isAiActive());
 
-            if (!hasHumanPlayer) {
+            if (!hasHumanPlayer && game.getRoomState() != RoomState.LOBBY) {
                 log.info("No human players left, resetting game to LOBBY");
                 game.returnToLobby();
             }
@@ -209,7 +209,10 @@ public class GameService {
                     publishEvent(achievementEvent);
                 }
 
-                publishEvent(new GameOverEvent(getPlayers()));
+                var players = getPlayers();
+
+                game.returnToLobby();
+                publishEvent(new GameOverEvent(players));
             }
 
             return true;
