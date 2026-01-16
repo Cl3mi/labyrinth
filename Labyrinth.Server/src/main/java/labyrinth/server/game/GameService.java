@@ -173,6 +173,11 @@ public class GameService {
             game.startGame(gameConfig, treasureCards, board);
 
             publishEvent(new GameStartedEvent());
+
+            for(var player : game.getPlayers()) {
+                var treasureCardEvent = new NextTreasureCardEvent(player, player.getCurrentTreasureCard());
+                publishEvent(treasureCardEvent);
+            }
         } finally {
             rwLock.writeLock().unlock();
         }

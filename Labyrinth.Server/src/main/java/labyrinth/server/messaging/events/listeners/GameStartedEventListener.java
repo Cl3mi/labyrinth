@@ -32,4 +32,11 @@ public class GameStartedEventListener {
             log.error("Error while handling GameStartedEvent", ex);
         }
     }
+
+    private void broadcastGameState() {
+        var gameState = gameService.withGameReadLock(gameMapper::toGameStateDto);
+        gameState.setType(EventType.GAME_STARTED);
+
+        messageService.broadcastToPlayers(gameState);
+    }
 }

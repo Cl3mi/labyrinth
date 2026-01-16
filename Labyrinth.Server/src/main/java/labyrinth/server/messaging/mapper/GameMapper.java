@@ -55,19 +55,6 @@ public class GameMapper {
             playerState.setHomePosition(homeTilePosition);
             playerState.setAvailableBonuses(bonus);
 
-            // Map current treasure card (first uncollected one) to additionalProperties
-            // (not in standard Contracts)
-            var currentTreasureCard = player.getAssignedTreasureCards()
-                    .stream()
-                    .filter(x -> !x.isCollected())
-                    .findFirst()
-                    .orElse(null);
-            if (currentTreasureCard != null) {
-                var additionalProps = new java.util.HashMap<String, Object>();
-                additionalProps.put("currentTreasureCard", treasureMapper.toDto(currentTreasureCard));
-                playerState.setAdditionalProperties(additionalProps);
-            }
-
             // TODO: playerState.setAchievements();
 
             playerStates.add(playerState);

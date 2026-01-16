@@ -1,7 +1,6 @@
 package labyrinth.server.messaging.events.listeners;
 
 import labyrinth.server.game.GameService;
-import labyrinth.server.game.events.NextTreasureCardEvent;
 import labyrinth.server.messaging.MessageService;
 import labyrinth.server.messaging.mapper.GameMapper;
 import lombok.RequiredArgsConstructor;
@@ -20,7 +19,7 @@ public class NextPlayerEventListener {
     private final GameMapper gameMapper;
 
     @EventListener
-    public void onEvent(NextTreasureCardEvent ignoredEvent) {
+    public void onEvent(NextPlayerEventListener ignoredEvent) {
         try {
 
             var gameState = gameService.withGameReadLock(gameMapper::toGameStateDto);
