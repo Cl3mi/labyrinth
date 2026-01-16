@@ -8,6 +8,7 @@ import labyrinth.server.game.enums.RoomState;
 import labyrinth.server.game.models.Board;
 import labyrinth.server.game.models.Player;
 import labyrinth.server.game.models.records.GameConfig;
+import lombok.Getter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -24,8 +25,23 @@ public class TurnController implements ITurnController {
 
     private static final Logger log = LoggerFactory.getLogger(TurnController.class);
 
+    /**
+     * -- GETTER --
+     *  Gets the current player index.
+     */
+    @Getter
     private int currentPlayerIndex = 0;
+    /**
+     * -- GETTER --
+     *  Gets the current move state.
+     */
+    @Getter
     private MoveState currentMoveState = MoveState.PLACE_TILE;
+    /**
+     * -- GETTER --
+     *  Checks if a bonus has been used this turn.
+     */
+    @Getter
     private boolean bonusUsedThisTurn = false;
 
     private final IGameTimer turnTimer;
@@ -51,31 +67,10 @@ public class TurnController implements ITurnController {
     }
 
     /**
-     * Gets the current player index.
-     */
-    public int getCurrentPlayerIndex() {
-        return currentPlayerIndex;
-    }
-
-    /**
-     * Gets the current move state.
-     */
-    public MoveState getCurrentMoveState() {
-        return currentMoveState;
-    }
-
-    /**
      * Sets the move state.
      */
     public void setMoveState(MoveState moveState) {
         this.currentMoveState = moveState;
-    }
-
-    /**
-     * Checks if a bonus has been used this turn.
-     */
-    public boolean isBonusUsedThisTurn() {
-        return bonusUsedThisTurn;
     }
 
     /**

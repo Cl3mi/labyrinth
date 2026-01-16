@@ -19,7 +19,7 @@ import java.util.ArrayList;
 public class Testing {
     private static GameService game;
 
-    static void main(String[] args) {
+    static void main() {
         ThreadPoolTaskScheduler scheduler = new ThreadPoolTaskScheduler();
         scheduler.setPoolSize(1);
         scheduler.initialize();
