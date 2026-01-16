@@ -277,29 +277,20 @@ public class GameService {
         }
     }
 
-    public boolean movePlayerToTile(int row, int col, Player player) {
+    public labyrinth.server.game.results.MovePlayerToTileResult movePlayerToTile(int row, int col, Player player) {
         rwLock.writeLock().lock();
         try {
             var result = game.movePlayerToTile(row, col, player);
-            boolean moveSuccess = result.moveSuccess();
 
             if (result.treasureCollected()) {
                 var treasureCardEvent = new NextTreasureCardEvent(player, player.getCurrentTreasureCard());
                 eventPublisher.publishAsync(treasureCardEvent);
             }
 
-            if (result.gameOver()) {
-                // Publish end-game achievements
-                for (var award : game.getEndGameAchievements()) {
-                    var achievementEvent = new AchievementUnlockedEvent(award.player(), award.achievement());
-                    eventPublisher.publishAsync(achievementEvent);
-                }
+            // Note: GameOverEvent publishing moved to MovePawnCommandHandler
+            // to ensure correct event ordering: GameState -> GameOver -> LobbyState
 
-                var gameOverEvent = new GameOverEvent(game.getPlayers());
-                eventPublisher.publishAsync(gameOverEvent);
-            }
-
-            return moveSuccess;
+            return result;
         } finally {
             rwLock.writeLock().unlock();
         }
@@ -371,6 +362,15 @@ public class GameService {
             game.useBonus(BonusTypes.PUSH_FIXED);
         } finally {
             rwLock.writeLock().unlock();
+        }
+    }
+
+    public java.util.List<labyrinth.server.game.services.AchievementService.AchievementAward> getEndGameAchievements() {
+        rwLock.readLock().lock();
+        try {
+            return game.getEndGameAchievements();
+        } finally {
+            rwLock.readLock().unlock();
         }
     }
 

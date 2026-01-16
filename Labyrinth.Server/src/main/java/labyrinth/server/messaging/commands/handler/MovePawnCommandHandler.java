@@ -5,8 +5,11 @@ import labyrinth.contracts.models.ErrorCode;
 import labyrinth.contracts.models.MovePawnCommandPayload;
 import labyrinth.server.exceptions.ActionErrorException;
 import labyrinth.server.game.GameService;
+import labyrinth.server.game.events.AchievementUnlockedEvent;
+import labyrinth.server.game.events.GameOverEvent;
 import labyrinth.server.messaging.MessageService;
 import labyrinth.server.messaging.PlayerSessionRegistry;
+import labyrinth.server.messaging.events.EventPublisher;
 import labyrinth.server.messaging.mapper.GameMapper;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.WebSocketSession;
@@ -16,16 +19,19 @@ public class MovePawnCommandHandler extends AbstractCommandHandler<MovePawnComma
 
     private final MessageService messageService;
     private final GameMapper gameMapper;
+    private final EventPublisher eventPublisher;
 
     public MovePawnCommandHandler(GameService gameService,
                                   PlayerSessionRegistry playerSessionRegistry,
                                   MessageService messageService,
-                                  GameMapper gameMapper) {
+                                  GameMapper gameMapper,
+                                  EventPublisher eventPublisher) {
 
         super(gameService, playerSessionRegistry);
 
         this.messageService = messageService;
         this.gameMapper = gameMapper;
+        this.eventPublisher = eventPublisher;
     }
 
     @Override
@@ -40,20 +46,31 @@ public class MovePawnCommandHandler extends AbstractCommandHandler<MovePawnComma
         requirePlayerIsCurrent(player);
 
         var coordinates = payload.getTargetCoordinates();
-        var moveSuccessful = gameService.movePlayerToTile(coordinates.getRow(), coordinates.getColumn(), player);
+        var result = gameService.movePlayerToTile(coordinates.getRow(), coordinates.getColumn(), player);
 
-        if (!moveSuccessful) {
+        if (!result.moveSuccess()) {
             throw new ActionErrorException("Cannot move pawn to the specified coordinates.", ErrorCode.INVALID_MOVE);
         }
 
-        // Only broadcast game state if game is still in progress
-        // (if player won, GameOverEvent listener handles the broadcast)
+        // 1. Always broadcast game state after move, including the final winning state
         gameService.withGameReadLock(game -> {
-            if (game.getRoomState() == labyrinth.server.game.enums.RoomState.IN_GAME) {
-                var gameState = gameMapper.toGameStateDto(game);
-                messageService.broadcastToPlayers(gameState);
-            }
+            var gameState = gameMapper.toGameStateDto(game);
+            messageService.broadcastToPlayers(gameState);
             return null;
         });
+
+        // 2. If game is over, publish achievements and GameOverEvent synchronously
+        // This ensures correct event order: GameState -> GameOver -> LobbyState
+        if (result.gameOver()) {
+            // Publish end-game achievements
+            for (var award : gameService.getEndGameAchievements()) {
+                var achievementEvent = new AchievementUnlockedEvent(award.player(), award.achievement());
+                eventPublisher.publishAsync(achievementEvent);
+            }
+
+            // Publish GameOverEvent (listener will send GameOver + LobbyState events)
+            var gameOverEvent = new GameOverEvent(gameService.getPlayers());
+            eventPublisher.publishAsync(gameOverEvent);
+        }
     }
 }
