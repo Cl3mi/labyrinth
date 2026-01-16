@@ -288,7 +288,7 @@ public class GameService {
         }
     }
 
-    public void usePushFixedBonus(Player player) {
+    public void usePushFixedBonus() {
         rwLock.writeLock().lock();
         try {
             game.useBonus(BonusTypes.PUSH_FIXED);

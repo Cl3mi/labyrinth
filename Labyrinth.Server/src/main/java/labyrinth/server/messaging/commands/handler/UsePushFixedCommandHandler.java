@@ -32,7 +32,7 @@ public class UsePushFixedCommandHandler extends AbstractCommandHandler<UsePushFi
         var player = requireExistingPlayer(session);
         requirePlayerIsCurrent(player);
 
-        gameService.usePushFixedBonus(player);
+        gameService.usePushFixedBonus();
 
         var direction = directionMapper.toModel(payload.getDirection());
         var shiftSuccessful = gameService.shift(payload.getRowOrColIndex(), direction, player);
