@@ -3,7 +3,6 @@ package labyrinth.server.game.services;
 import labyrinth.contracts.models.PlayerColor;
 import labyrinth.server.game.abstractions.IPlayerRegistry;
 import labyrinth.server.game.models.Player;
-import labyrinth.server.game.results.LeaveResult;
 
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
@@ -13,7 +12,7 @@ import java.util.UUID;
 /**
  * Manages the lifecycle and state of players in a game.
  * Handles player registration, removal, admin assignment, and AI player management.
- *
+ * <p>
  * Responsibilities:
  * - Player join/leave operations
  * - Admin role assignment and reassignment
@@ -36,7 +35,7 @@ public class PlayerRegistry implements IPlayerRegistry {
      *
      * @param username the username of the player joining
      * @return the newly created player
-     * @throws IllegalStateException if the registry is full
+     * @throws IllegalStateException    if the registry is full
      * @throws IllegalArgumentException if username is already taken
      */
     public Player addPlayer(String username) {
@@ -64,23 +63,17 @@ public class PlayerRegistry implements IPlayerRegistry {
      * Removes a player from the registry and handles admin reassignment if necessary.
      *
      * @param player the player to remove
-     * @return result containing removal status, new admin (if reassigned), and shutdown flag
      */
-    public LeaveResult removePlayer(Player player) {
+    public void removePlayer(Player player) {
         boolean wasRemoved = players.removeIf(p -> p.getId().equals(player.getId()));
 
         if (!wasRemoved) {
-            return new LeaveResult(false, null, false);
+            return;
         }
 
-        Player newAdmin = null;
         if (player.isAdmin()) {
-            newAdmin = reassignAdmin();
+            reassignAdmin();
         }
-
-        boolean shouldShutdown = players.stream().noneMatch(p -> !p.isAiActive());
-
-        return new LeaveResult(true, newAdmin, shouldShutdown);
     }
 
     /**
@@ -162,24 +155,18 @@ public class PlayerRegistry implements IPlayerRegistry {
         players.add(player);
     }
 
-    private Player reassignAdmin() {
+    private void reassignAdmin() {
         // Find first non-AI player to become new admin
         var nextAdmin = players.stream()
                 .filter(p -> !p.isAiActive())
                 .findFirst();
 
-        if (nextAdmin.isPresent()) {
-            nextAdmin.get().setAdmin(true);
-            return nextAdmin.get();
-        }
+        nextAdmin.ifPresent(player -> player.setAdmin(true));
 
         // If no human players, fallback to first AI player
         if (!players.isEmpty()) {
-            players.get(0).setAdmin(true);
-            return players.get(0);
+            players.getFirst().setAdmin(true);
         }
-
-        return null;
     }
 
     private boolean isUsernameAvailable(String username) {

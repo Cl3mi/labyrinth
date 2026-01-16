@@ -14,7 +14,6 @@ import java.util.UUID;
 @Component
 public class UseSwapCommandHandler extends AbstractCommandHandler<UseSwapCommandPayload> {
 
-
     public UseSwapCommandHandler(GameService gameService,
                                  PlayerSessionRegistry playerSessionRegistry) {
         super(gameService, playerSessionRegistry);

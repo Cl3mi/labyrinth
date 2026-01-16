@@ -13,16 +13,13 @@ import org.springframework.web.socket.WebSocketSession;
 @Component
 public class PushTileCommandHandler extends AbstractCommandHandler<PushTileCommandPayload> {
 
-
     private final DirectionMapper directionMapper;
-
 
     public PushTileCommandHandler(GameService gameService,
                                   PlayerSessionRegistry playerSessionRegistry,
                                   DirectionMapper directionMapper) {
 
         super(gameService, playerSessionRegistry);
-
         this.directionMapper = directionMapper;
     }
 

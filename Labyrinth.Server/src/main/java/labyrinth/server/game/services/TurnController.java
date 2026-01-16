@@ -11,6 +11,7 @@ import labyrinth.server.game.models.records.GameConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.function.Consumer;
 
@@ -181,6 +182,7 @@ public class TurnController implements ITurnController {
         currentPlayerIndex = 0;
         currentMoveState = MoveState.PLACE_TILE;
         bonusUsedThisTurn = false;
+        stopTimer();
     }
 
     /**
@@ -193,7 +195,7 @@ public class TurnController implements ITurnController {
     /**
      * Gets the turn timer's expiration time.
      */
-    public java.time.OffsetDateTime getTurnEndTime() {
+    public OffsetDateTime getTurnEndTime() {
         return turnTimer.getExpirationTime();
     }
 }

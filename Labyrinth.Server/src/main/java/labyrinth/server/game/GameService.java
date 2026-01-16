@@ -13,7 +13,6 @@ import labyrinth.server.game.models.Game;
 import labyrinth.server.game.models.Player;
 import labyrinth.server.game.models.records.GameConfig;
 import labyrinth.server.game.models.records.Position;
-import labyrinth.server.game.results.LeaveResult;
 import labyrinth.server.game.services.*;
 import labyrinth.server.game.util.GameTimer;
 import labyrinth.server.messaging.events.EventPublisher;
@@ -78,10 +77,6 @@ public class GameService {
         turnController.setOnNextPlayer(player ->
                 publishEvent(new NextPlayerEvent(player))
         );
-
-        game.setOnPlayerMoved(player ->
-                publishEvent(new PlayerMovedEvent())
-        );
     }
 
     public Player join(String username) {
@@ -93,23 +88,20 @@ public class GameService {
         }
     }
 
-    public LeaveResult leave(Player player) {
+    public void leave(Player player) {
         rwLock.writeLock().lock();
         try {
-            return game.leave(player);
-        } finally {
-            rwLock.writeLock().unlock();
-        }
-    }
+            game.leave(player);
 
-    /**
-     * Resets the game to LOBBY state, allowing a new game to be started.
-     * Should be called when a finished game needs to be cleaned up.
-     */
-    public void resetForNewGame() {
-        rwLock.writeLock().lock();
-        try {
-            game.resetForNewGame();
+            var hasHumanPlayer = game.getPlayers().stream()
+                    .anyMatch(p -> !p.isAiActive());
+
+            if (!hasHumanPlayer) {
+                log.info("No human players left, resetting game to LOBBY");
+                game.returnToLobby();
+            }
+
+            publishEvent(new PlayerLeftEvent());
         } finally {
             rwLock.writeLock().unlock();
         }
@@ -191,7 +183,7 @@ public class GameService {
         try {
             // If game is finished or in progress, reset to lobby first
             if (game.getRoomState() == RoomState.FINISHED || game.getRoomState() == RoomState.IN_GAME) {
-                log.info("[GameService] Game is {}, resetting to LOBBY before starting new game", game.getRoomState());
+                log.info("Game is {}, resetting to LOBBY before starting new game", game.getRoomState());
                 game.returnToLobby();
             }
 
@@ -203,6 +195,8 @@ public class GameService {
             var treasureCards = treasureCardFactory.createTreasureCards(totalTreasures, playersCount);
 
             game.startGame(gameConfig, treasureCards, board);
+
+            publishEvent(new GameStartedEvent());
         } finally {
             rwLock.writeLock().unlock();
         }
@@ -225,6 +219,8 @@ public class GameService {
             if (!result.moveSuccess()) {
                 return false;
             }
+
+            publishEvent(new PlayerMovedEvent());
 
             if (result.treasureCollected()) {
                 var treasureCardEvent = new NextTreasureCardEvent(player, player.getCurrentTreasureCard());

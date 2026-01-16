@@ -6,7 +6,6 @@ import labyrinth.server.game.constants.PointRewards;
 import labyrinth.server.game.enums.*;
 import labyrinth.server.game.models.records.GameConfig;
 import labyrinth.server.game.models.records.Position;
-import labyrinth.server.game.results.LeaveResult;
 import labyrinth.server.game.results.MovePlayerToTileResult;
 import labyrinth.server.game.results.ShiftResult;
 import labyrinth.server.game.services.AchievementService;
@@ -21,7 +20,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
-import java.util.function.Consumer;
 
 /**
  * Represents a game room for the Labyrinth game.
@@ -61,8 +59,6 @@ public class Game {
     @Setter(AccessLevel.PRIVATE)
     @Getter(AccessLevel.NONE)
     private OffsetDateTime gameStartTime;
-
-    private Consumer<Player> onPlayerMoved;
 
     private final AiStrategy aiStrategy;
 
@@ -138,28 +134,8 @@ public class Game {
         return playerRegistry.addPlayer(username);
     }
 
-    public LeaveResult leave(Player player) {
-        return playerRegistry.removePlayer(player);
-    }
-
-    /**
-     * Resets the game to LOBBY state, clearing all players and game data.
-     * This allows starting a new game after the previous one has finished.
-     */
-    public void resetForNewGame() {
-        if (nextTurnTimer != null) {
-            nextTurnTimer.stop();
-        }
-
-        playerRegistry.clear();
-        this.board = null;
-        this.gameConfig = GameConfig.getDefault();
-        this.activeBonusState = NoBonusActive.getInstance();
-        turnController.reset();
-        this.gameStartTime = null;
-        this.roomState = RoomState.LOBBY;
-
-        gameLogger.log(GameLogType.GAME, "Game reset to LOBBY state for new game");
+    public void leave(Player player) {
+        playerRegistry.removePlayer(player);
     }
 
     public Player getPlayer(UUID playerId) {
@@ -182,6 +158,7 @@ public class Game {
         playerRegistry.fillWithAiPlayers();
 
         this.gameConfig = Objects.requireNonNullElseGet(gameConfig, GameConfig::getDefault);
+        this.activeBonusState = NoBonusActive.getInstance();
 
         List<Player> players = playerRegistry.getPlayersInternal();
         gameInitializer.distributeTreasuresAndBonuses(treasureCards, board, players, this.gameConfig.totalBonusCount());
@@ -268,8 +245,6 @@ public class Game {
         if (distanceMoved == -1) {
             return new MovePlayerToTileResult(false, distanceMoved, false, false, false);
         }
-
-        onPlayerMoved.accept(player);
 
         logPlayerMove(row, col, distanceMoved, player);
         updatePlayerStatisticsAfterMove(player, distanceMoved);
@@ -384,6 +359,10 @@ public class Game {
         this.board = null;
         this.gameStartTime = null;
         turnController.reset();
+
+        for(Player aiPlayer : playerRegistry.getPlayersInternal()) {
+            playerRegistry.removePlayer(aiPlayer);
+        }
 
         // Reset player stats and treasures for new game
         for (Player player : playerRegistry.getPlayersInternal()) {
