@@ -1,6 +1,7 @@
 package labyrinth.server.game.services;
 
 import labyrinth.server.game.abstractions.IGameTimer;
+import labyrinth.server.game.ai.AiStrategy;
 import labyrinth.server.game.enums.RoomState;
 import labyrinth.server.game.models.Board;
 import labyrinth.server.game.models.Game;
@@ -9,6 +10,7 @@ import labyrinth.server.game.models.TreasureCard;
 import labyrinth.server.game.models.records.GameConfig;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mock;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -29,9 +31,13 @@ class GameStartTest {
     private Board board;
     private List<TreasureCard> treasureCards;
 
+    @Mock
+    private AiStrategy aiStrategy;
+
+
     @BeforeEach
     void setUp() {
-        game = createGame(mock(IGameTimer.class), new SimpleAiStrategy(), new GameLogger());
+        game = createGame(mock(IGameTimer.class), aiStrategy, new GameLogger());
         gameConfig = GameConfig.getDefault();
         board = new labyrinth.server.game.factories.BoardFactory().createBoard(7, 7);
         treasureCards = new ArrayList<>();
@@ -166,13 +172,13 @@ class GameStartTest {
 
         // Assert - verify cards are distributed in round-robin (0,1,2,3,4,5... to P1,P2,AI1,AI2,P1,P2...)
         List<Player> players = game.getPlayers();
-        assertEquals(0, players.get(0).getAssignedTreasureCards().get(0).getId(),
+        assertEquals(0, players.get(0).getAssignedTreasureCards().getFirst().getId(),
                 "Player 1 should get first card");
-        assertEquals(1, players.get(1).getAssignedTreasureCards().get(0).getId(),
+        assertEquals(1, players.get(1).getAssignedTreasureCards().getFirst().getId(),
                 "Player 2 should get second card");
-        assertEquals(2, players.get(2).getAssignedTreasureCards().get(0).getId(),
+        assertEquals(2, players.get(2).getAssignedTreasureCards().getFirst().getId(),
                 "AI Player 1 should get third card");
-        assertEquals(3, players.get(3).getAssignedTreasureCards().get(0).getId(),
+        assertEquals(3, players.get(3).getAssignedTreasureCards().getFirst().getId(),
                 "AI Player 2 should get fourth card");
         assertEquals(4, players.get(0).getAssignedTreasureCards().get(1).getId(),
                 "Player 1 should get fifth card");

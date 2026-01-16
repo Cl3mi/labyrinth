@@ -28,7 +28,6 @@ public interface IPlayerRegistry {
      * Removes a player from the registry and handles admin reassignment if necessary.
      *
      * @param player the player to remove
-     * @return result containing removal status, new admin (if reassigned), and shutdown flag
      */
     void removePlayer(Player player);
 
@@ -68,17 +67,4 @@ public interface IPlayerRegistry {
      * @return true if at max capacity
      */
     boolean isFull();
-
-    /**
-     * Clears all players from the registry.
-     * Used when resetting for a new game.
-     */
-    void clear();
-
-    /**
-     * Gets the maximum number of players allowed.
-     *
-     * @return max players
-     */
-    int getMaxPlayers();
 }

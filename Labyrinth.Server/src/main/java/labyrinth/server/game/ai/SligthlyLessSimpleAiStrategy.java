@@ -222,7 +222,7 @@ public class SligthlyLessSimpleAiStrategy implements AiStrategy {
 
         Set<Tile> reachable = clonedBoard.getReachableTiles(clonedMe);
 
-        Position targetPos = null;
+        Position targetPos;
         boolean goingHome = false;
         if (targetCard != null) {
             targetPos = findTreasurePosition(clonedBoard, targetCard);
