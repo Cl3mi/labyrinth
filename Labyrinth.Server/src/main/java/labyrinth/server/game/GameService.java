@@ -287,9 +287,6 @@ public class GameService {
                 eventPublisher.publishAsync(treasureCardEvent);
             }
 
-            // Note: GameOverEvent publishing moved to MovePawnCommandHandler
-            // to ensure correct event ordering: GameState -> GameOver -> LobbyState
-
             return result;
         } finally {
             rwLock.writeLock().unlock();
