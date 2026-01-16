@@ -24,14 +24,12 @@ public class MovementManager implements IMovementManager {
      *
      * @param player the player moving onto the tile
      * @param tile   the tile being stepped on
-     * @return the result of the interaction
      */
-    public TileInteractionResult processPlayerStepOnTile(Player player, Tile tile) {
+    public void processPlayerStepOnTile(Player player, Tile tile) {
         TileInteractionResult result = checkTileForCollectibles(player, tile);
 
         applyInteractionEffects(player, tile, result);
 
-        return result;
     }
 
     /**

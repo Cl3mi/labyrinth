@@ -23,9 +23,8 @@ public interface IMovementManager {
      *
      * @param player the player moving onto the tile
      * @param tile   the tile being stepped on
-     * @return the result of the interaction
      */
-    TileInteractionResult processPlayerStepOnTile(Player player, Tile tile);
+    void processPlayerStepOnTile(Player player, Tile tile);
 
     /**
      * Checks what collectibles are available on the tile for this player.

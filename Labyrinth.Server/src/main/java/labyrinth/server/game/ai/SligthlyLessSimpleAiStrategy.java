@@ -16,8 +16,6 @@ import java.util.concurrent.CompletableFuture;
 
 public class SligthlyLessSimpleAiStrategy implements AiStrategy {
 
-    private final int SLEEP_TIME = 150;
-
     private static final org.slf4j.Logger log = LoggerFactory.getLogger(SligthlyLessSimpleAiStrategy.class);
     private final java.util.Random random = new java.util.Random();
 
@@ -51,12 +49,13 @@ public class SligthlyLessSimpleAiStrategy implements AiStrategy {
         SimulationResult result = findBestMove(player, targetCard);
         log.info("AI {} - Simulation result: {}", player.getUsername(), result != null ? "FOUND" : "NULL");
 
-        sleep(SLEEP_TIME);
+        int sleepTime = 150;
+        sleep(sleepTime);
 
         boolean shiftSuccess = executeShift(player, result);
         log.info("AI {} - Shift success: {}", player.getUsername(), shiftSuccess);
 
-        sleep(SLEEP_TIME);
+        sleep(sleepTime);
 
         executeMove(player, result);
         log.info("AI {} - Move completed", player.getUsername());
@@ -283,19 +282,7 @@ public class SligthlyLessSimpleAiStrategy implements AiStrategy {
     private record ShiftOp(ShiftType type, int index) {}
     private enum ShiftType { UP, DOWN, LEFT, RIGHT }
 
-    private static class SimulationResult {
-        ShiftType shiftType;
-        int shiftIndex;
-        int score;
-        int distanceToTarget;
-        Position targetPosition;
-
-        SimulationResult(ShiftType t, int i, int s, int d, Position p) {
-            this.shiftType = t;
-            this.shiftIndex = i;
-            this.score = s;
-            this.distanceToTarget = d;
-            this.targetPosition = p;
-        }
+    private record SimulationResult(ShiftType shiftType, int shiftIndex, int score, int distanceToTarget,
+                                    Position targetPosition) {
     }
 }
