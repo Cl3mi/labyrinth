@@ -1,11 +1,14 @@
 package labyrinth.server.game.models;
 
+import lombok.Getter;
+
 import java.util.Objects;
 
 /**
  * Represents a treasure card in the Labyrinth game.
  * Each card corresponds to a specific treasure that a player must collect.
  */
+@Getter
 public class TreasureCard {
 
     private final int id;
@@ -27,22 +30,6 @@ public class TreasureCard {
         this.collected = false;
     }
 
-    public int getId() {
-        return id;
-    }
-
-    public String getTreasureName() {
-        return treasureName;
-    }
-
-    public String getTreasureImagePath() {
-        return treasureImagePath;
-    }
-
-    public boolean isCollected() {
-        return collected;
-    }
-
     /**
      * Marks the card as collected by the player.
      */
@@ -62,8 +49,7 @@ public class TreasureCard {
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (!(o instanceof TreasureCard)) return false;
-        TreasureCard that = (TreasureCard) o;
+        if (!(o instanceof TreasureCard that)) return false;
         return Objects.equals(id, that.id);
     }
 

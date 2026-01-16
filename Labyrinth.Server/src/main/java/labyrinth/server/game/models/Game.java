@@ -6,7 +6,6 @@ import labyrinth.server.game.constants.PointRewards;
 import labyrinth.server.game.enums.*;
 import labyrinth.server.game.models.records.GameConfig;
 import labyrinth.server.game.models.records.Position;
-import labyrinth.server.game.results.LeaveResult;
 import labyrinth.server.game.results.MovePlayerToTileResult;
 import labyrinth.server.game.results.ShiftResult;
 import labyrinth.server.game.services.AchievementService;
@@ -61,7 +60,7 @@ public class Game {
     @Getter(AccessLevel.NONE)
     private OffsetDateTime gameStartTime;
 
-    private final labyrinth.server.game.ai.AiStrategy aiStrategy;
+    private final AiStrategy aiStrategy;
 
     private final labyrinth.server.game.services.GameLogger gameLogger;
 
@@ -135,28 +134,8 @@ public class Game {
         return playerRegistry.addPlayer(username);
     }
 
-    public LeaveResult leave(Player player) {
-        return playerRegistry.removePlayer(player);
-    }
-
-    /**
-     * Resets the game to LOBBY state, clearing all players and game data.
-     * This allows starting a new game after the previous one has finished.
-     */
-    public void resetForNewGame() {
-        if (nextTurnTimer != null) {
-            nextTurnTimer.stop();
-        }
-
-        playerRegistry.clear();
-        this.board = null;
-        this.gameConfig = GameConfig.getDefault();
-        this.activeBonusState = NoBonusActive.getInstance();
-        turnController.reset();
-        this.gameStartTime = null;
-        this.roomState = RoomState.LOBBY;
-
-        gameLogger.log(GameLogType.GAME, "Game reset to LOBBY state for new game");
+    public void leave(Player player) {
+        playerRegistry.removePlayer(player);
     }
 
     public Player getPlayer(UUID playerId) {
@@ -179,6 +158,7 @@ public class Game {
         playerRegistry.fillWithAiPlayers();
 
         this.gameConfig = Objects.requireNonNullElseGet(gameConfig, GameConfig::getDefault);
+        this.activeBonusState = NoBonusActive.getInstance();
 
         List<Player> players = playerRegistry.getPlayersInternal();
         gameInitializer.distributeTreasuresAndBonuses(treasureCards, board, players, this.gameConfig.totalBonusCount());
@@ -189,7 +169,7 @@ public class Game {
         this.board.setPlayers(players);
 
         if (getCurrentPlayer().shouldMoveBePerformedByAi()) {
-            this.aiStrategy.performTurn(this, getCurrentPlayer());
+            this.aiStrategy.performTurn(getCurrentPlayer());
         }
 
         gameStartTime = OffsetDateTime.now();
@@ -367,22 +347,21 @@ public class Game {
      * Resets the game back to lobby state after game completion.
      * Clears the board and prepares for a new game to be started.
      */
-    public void returnToLobby() {
+    public void resetAndReturnToLobby() {
         gameLogger.log(GameLogType.RETURN_TO_LOBBY, "Current state: " + this.roomState);
-
-        if (this.roomState != RoomState.FINISHED && this.roomState != RoomState.IN_GAME) {
-            gameLogger.error(GameLogType.RETURN_TO_LOBBY, "Cannot return to lobby from state: " + this.roomState);
-            throw new IllegalStateException("Cannot return to lobby from state: " + this.roomState);
-        }
         gameLogger.log(GameLogType.RETURN_TO_LOBBY," Resetting game to lobby state");
+
         this.roomState = RoomState.LOBBY;
         this.board = null;
         this.gameStartTime = null;
         turnController.reset();
 
-        // Reset player stats and treasures for new game
-        for (Player player : playerRegistry.getPlayersInternal()) {
-            player.resetForNewGame();
+        for(Player player : playerRegistry.getPlayers()) {
+            if(player.isAiActive()) {
+                playerRegistry.removePlayer(player);
+            } else {
+                player.resetForNewGame();
+            }
         }
 
         gameLogger.log(GameLogType.RETURN_TO_LOBBY, "Reset complete. Players remaining: " + playerRegistry.getPlayers().size());
@@ -393,7 +372,7 @@ public class Game {
                             playerRegistry.getPlayersInternal(),
                             roomState,
                             gameConfig,
-                      player -> aiStrategy.performTurn(this, player));
+                aiStrategy::performTurn);
     }
 
     private void guardFor(MoveState moveState) {
@@ -412,7 +391,7 @@ public class Game {
         return playerRegistry.getPlayers();
     }
 
-    public int getMAX_PLAYERS() {
+    public int getMaxPlayers() {
         return MAX_PLAYERS;
     }
 
@@ -540,4 +519,5 @@ public class Game {
     public OffsetDateTime getTurnEndTime() {
         return nextTurnTimer.getExpirationTime();
     }
+
 }

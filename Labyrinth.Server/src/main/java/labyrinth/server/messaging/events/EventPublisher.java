@@ -5,7 +5,6 @@ import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -15,9 +14,7 @@ public class EventPublisher  {
     private static final Logger log = LoggerFactory.getLogger(EventPublisher.class);
     private final ApplicationEventPublisher applicationEventPublisher;
 
-
-    @Async
-    public void publishAsync(IEvent IEvent) {
+    public void publish(IEvent IEvent) {
         try {
             applicationEventPublisher.publishEvent(IEvent);
         } catch (Exception ex) {

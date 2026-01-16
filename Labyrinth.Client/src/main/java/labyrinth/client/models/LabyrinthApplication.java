@@ -7,6 +7,7 @@ import labyrinth.client.ui.theme.ThemeManager;
 import labyrinth.client.factories.BoardFactory;
 import labyrinth.client.messaging.GameClient;
 import labyrinth.client.messaging.ReconnectionManager;
+import labyrinth.contracts.models.Treasure;
 import labyrinth.managementclient.model.GameServer;
 
 import javax.swing.*;
@@ -14,6 +15,7 @@ import java.awt.*;
 import java.net.URI;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.prefs.Preferences;
 
@@ -314,11 +316,20 @@ public class LabyrinthApplication {
         });
 
         client.setOnNextTreasure(nextTreasure -> {
-            System.out.println("[" + PROFILE + "] Next treasure: " + nextTreasure.getTreasure());
+            var treasure = nextTreasure.getTreasure();
+
+            if (treasure == null) {
+                System.out.println("[" + PROFILE + "] Next treasure is null");
+                return;
+            }
+
+            System.out.println("[" + PROFILE + "] Next treasure: " + treasure);
             SwingUtilities.invokeLater(() -> {
-                if (boardPanel != null && nextTreasure.getTreasure() != null) {
-                    String treasureName = nextTreasure.getTreasure().getName();
-                    boardPanel.showInfoToast("NEXT_TREASURE", "🎯 Neues Ziel!", "Finde: " + treasureName);
+                var player = resolveLocalPlayer(currentPlayers);
+                player.setCurrentTargetTreasure(treasure);
+
+                if (boardPanel != null) {
+                    boardPanel.showInfoToast("NEXT_TREASURE", "🎯 Neues Ziel!", "Finde: " + treasure.getName());
                 }
             });
         });
@@ -775,8 +786,21 @@ public class LabyrinthApplication {
                 return;
             }
 
+
+
+            Optional<Treasure> currentPlayerNextTreasure = Optional.empty();
+            var currentPlayer = resolveLocalPlayer(currentPlayers);
+            if(currentPlayer != null) {
+                currentPlayerNextTreasure = Optional.ofNullable(currentPlayer.getCurrentTargetTreasure());
+            }
+
             Board board = BoardFactory.fromContracts(state.getBoard());
             List<Player> players = BoardFactory.convertPlayerStates(state.getPlayers());
+            currentPlayer = resolveLocalPlayer(players);
+            if(currentPlayer != null && currentPlayerNextTreasure.isPresent()) {
+                currentPlayer.setCurrentTargetTreasure(currentPlayerNextTreasure.get());
+            }
+
             board.setPlayers(players);
             System.out.println(board);
             BoardFactory.applyTurnInfo(board, players, state.getCurrentTurnInfo());

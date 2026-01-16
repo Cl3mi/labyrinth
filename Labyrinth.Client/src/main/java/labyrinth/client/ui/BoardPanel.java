@@ -1343,9 +1343,8 @@ public class BoardPanel extends JPanel {
 
         // Check if this is the current player's target treasure
         boolean isCurrentTarget = false;
-        if (currentPlayer != null && currentPlayer.getAssignedTreasureCards() != null
-                && !currentPlayer.getAssignedTreasureCards().isEmpty()) {
-            Treasure currentTarget = currentPlayer.getAssignedTreasureCards().get(0);
+        if (currentPlayer != null) {
+            Treasure currentTarget = currentPlayer.getCurrentTargetTreasure();
             isCurrentTarget = currentTarget != null && currentTarget.getName() != null
                     && currentTarget.getName().equals(treasure.getName());
         }
@@ -1822,8 +1821,7 @@ public class BoardPanel extends JPanel {
         }
 
         // Current player's treasure cards at the bottom
-        if (currentPlayer != null && currentPlayer.getAssignedTreasureCards() != null &&
-                !currentPlayer.getAssignedTreasureCards().isEmpty()) {
+        if (currentPlayer != null && currentPlayer.getCurrentTargetTreasure() != null) {
 
             currentY += 10;
             drawDivider(g2, sidebarX + padding, sidebarX + sidebarWidth - padding, currentY);
@@ -1833,7 +1831,7 @@ public class BoardPanel extends JPanel {
             currentY += 22;
 
             // Draw CURRENT TARGET treasure prominently
-            Treasure currentTarget = currentPlayer.getAssignedTreasureCards().get(0);
+            Treasure currentTarget = currentPlayer.getCurrentTargetTreasure();
 
             // Current target box with pulsing effect
             long time = System.currentTimeMillis();
@@ -1876,21 +1874,22 @@ public class BoardPanel extends JPanel {
             currentY += boxHeight - 5;
 
             // Draw remaining treasure cards (if any)
-            if (currentPlayer.getAssignedTreasureCards().size() > 1) {
-                currentY += 10;
-                g2.setFont(new Font("Arial", Font.ITALIC, 11));
-                g2.setColor(new Color(180, 180, 200));
-                g2.drawString("Weitere Ziele:", sidebarX + padding + 10, currentY);
-                currentY += 18;
-
-                for (int i = 1; i < currentPlayer.getAssignedTreasureCards().size(); i++) {
-                    Treasure card = currentPlayer.getAssignedTreasureCards().get(i);
-                    g2.setFont(new Font("Arial", Font.PLAIN, 11));
-                    g2.setColor(new Color(200, 200, 220));
-                    g2.drawString("  • " + card.getName(), sidebarX + padding + 10, currentY);
-                    currentY += 16;
-                }
-            }
+            //TODO KT
+//            if (currentPlayer.getAssignedTreasureCards().size() > 1) {
+//                currentY += 10;
+//                g2.setFont(new Font("Arial", Font.ITALIC, 11));
+//                g2.setColor(new Color(180, 180, 200));
+//                g2.drawString("Weitere Ziele:", sidebarX + padding + 10, currentY);
+//                currentY += 18;
+//
+//                for (int i = 1; i < currentPlayer.getAssignedTreasureCards().size(); i++) {
+//                    Treasure card = currentPlayer.getAssignedTreasureCards().get(i);
+//                    g2.setFont(new Font("Arial", Font.PLAIN, 11));
+//                    g2.setColor(new Color(200, 200, 220));
+//                    g2.drawString("  • " + card.getName(), sidebarX + padding + 10, currentY);
+//                    currentY += 16;
+//                }
+//            }
         }
 
         // Add keyboard hints at the bottom
@@ -2094,12 +2093,11 @@ public class BoardPanel extends JPanel {
      * Draws a golden highlight on the target treasure tile
      */
     private void drawCurrentTargetOverlay(Graphics2D g2) {
-        if (currentPlayer == null || currentPlayer.getAssignedTreasureCards() == null
-                || currentPlayer.getAssignedTreasureCards().isEmpty()) {
+        if (currentPlayer == null || currentPlayer.getCurrentTargetTreasure() == null) {
             return;
         }
 
-        Treasure currentTarget = currentPlayer.getAssignedTreasureCards().get(0);
+        Treasure currentTarget = currentPlayer.getCurrentTargetTreasure();
 
         // Find the position of the target treasure on the board
         int targetRow = -1;
@@ -2109,8 +2107,7 @@ public class BoardPanel extends JPanel {
             for (int col = 0; col < board.getWidth(); col++) {
                 Tile tile = board.getTiles()[row][col];
                 if (tile != null && tile.getTreasure() != null
-                        && tile.getTreasure().getName() != null
-                        && tile.getTreasure().getName().equals(currentTarget.getName())) {
+                        && tile.getTreasure().getId() == currentTarget.getId()) {
                     targetRow = row;
                     targetCol = col;
                     break;
@@ -2457,10 +2454,8 @@ public class BoardPanel extends JPanel {
         }
 
         // Check if target treasure has changed and show toast
-        if (currentPlayer != null && currentPlayer.getAssignedTreasureCards() != null
-                && !currentPlayer.getAssignedTreasureCards().isEmpty()) {
-
-            Treasure currentTarget = currentPlayer.getAssignedTreasureCards().get(0);
+        if (currentPlayer != null && currentPlayer.getCurrentTargetTreasure() != null) {
+            Treasure currentTarget = currentPlayer.getCurrentTargetTreasure();
             String currentTargetName = currentTarget.getName();
 
             if (lastTargetTreasureName == null || !lastTargetTreasureName.equals(currentTargetName)) {

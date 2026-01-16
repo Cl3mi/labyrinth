@@ -57,7 +57,7 @@ public class BoardPanel extends JPanel {
     private int xOffset;
     private int yOffset;
     private int size;
-    private int arrowSize = 30;
+    private final int arrowSize = 30;
 
 
 
@@ -160,11 +160,7 @@ public class BoardPanel extends JPanel {
     private boolean handleArrowClick(Point p) {
         for (ArrowButton arrow : arrowButtons) {
             if (arrow.contains(p)) {
-                if (arrow.isRow) {
-                    game.shift(arrow.index, arrow.direction, currentPlayer);
-                } else {
-                    game.shift(arrow.index, arrow.direction, currentPlayer);
-                }
+                game.shift(arrow.index, arrow.direction, currentPlayer);
                 updateReachableTilesAndRepaint();
                 return true;
             }
@@ -208,7 +204,7 @@ public class BoardPanel extends JPanel {
      * Handles the completion of a pending bonus activation after the user has clicked on a tile.
      */
     private void handlePendingBonusActivation(int row, int col) {
-        boolean success = false;
+        boolean success;
 
         try {
             if (pendingBonusActivation == BonusTypes.BEAM) {

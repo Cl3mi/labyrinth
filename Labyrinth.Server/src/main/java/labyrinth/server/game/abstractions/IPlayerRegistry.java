@@ -1,7 +1,6 @@
 package labyrinth.server.game.abstractions;
 
 import labyrinth.server.game.models.Player;
-import labyrinth.server.game.results.LeaveResult;
 
 import java.util.List;
 import java.util.UUID;
@@ -29,9 +28,8 @@ public interface IPlayerRegistry {
      * Removes a player from the registry and handles admin reassignment if necessary.
      *
      * @param player the player to remove
-     * @return result containing removal status, new admin (if reassigned), and shutdown flag
      */
-    LeaveResult removePlayer(Player player);
+    void removePlayer(Player player);
 
     /**
      * Fills the registry with AI players up to maxPlayers.
@@ -69,17 +67,4 @@ public interface IPlayerRegistry {
      * @return true if at max capacity
      */
     boolean isFull();
-
-    /**
-     * Clears all players from the registry.
-     * Used when resetting for a new game.
-     */
-    void clear();
-
-    /**
-     * Gets the maximum number of players allowed.
-     *
-     * @return max players
-     */
-    int getMaxPlayers();
 }

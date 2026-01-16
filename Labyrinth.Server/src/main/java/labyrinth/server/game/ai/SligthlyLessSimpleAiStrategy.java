@@ -1,119 +1,97 @@
 package labyrinth.server.game.ai;
 
+import labyrinth.server.game.GameService;
 import labyrinth.server.game.enums.Direction;
-import labyrinth.server.game.models.*;
+import labyrinth.server.game.models.Board;
+import labyrinth.server.game.models.Player;
+import labyrinth.server.game.models.Tile;
+import labyrinth.server.game.models.TreasureCard;
 import labyrinth.server.game.models.records.Position;
-import labyrinth.server.game.results.MovePlayerToTileResult;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Consumer;
 
 public class SligthlyLessSimpleAiStrategy implements AiStrategy {
 
     private static final org.slf4j.Logger log = LoggerFactory.getLogger(SligthlyLessSimpleAiStrategy.class);
     private final java.util.Random random = new java.util.Random();
 
-    // Callback to broadcast game state after AI moves
-    private Runnable broadcastCallback = null;
 
-    // Callback to handle move results (game over, treasure collected, etc.)
-    private Consumer<MovePlayerToTileResult> moveResultCallback = null;
-
-    @Override
-    public void setBroadcastCallback(Runnable callback) {
-        this.broadcastCallback = callback;
+    private final GameService game;
+    public SligthlyLessSimpleAiStrategy(GameService gameService) {
+        this.game = gameService;
     }
 
     @Override
-    public void setMoveResultCallback(Consumer<MovePlayerToTileResult> callback) {
-        this.moveResultCallback = callback;
-    }
+    public void performTurn(Player realPlayer) {
+        log.debug("=== AI START: {} ===", realPlayer.getUsername());
 
-    @Override
-    public void performTurn(Game game, Player realPlayer) {
-        log.debug("=== AI START: " + realPlayer.getUsername() + " ===");
-
-        // Führe den gesamten Zug in einem einzigen async Thread aus
         CompletableFuture.runAsync(() -> {
             try {
-                executeTurnSynchronously(game, realPlayer);
+                executeTurnSynchronously(realPlayer);
             } catch (Exception e) {
                 log.error("AI ERROR for {}", realPlayer.getUsername(), e);
             }
         });
     }
 
-    /**
-     * Führt den gesamten Zug synchron aus (in einem separaten Thread)
-     */
-    private void executeTurnSynchronously(Game game, Player player) {
+
+    private void executeTurnSynchronously(Player player) {
         log.info("AI {} - Starting turn execution", player.getUsername());
-        
-        
-        // 1. Berechne den besten Zug
+
         TreasureCard targetCard = player.getCurrentTreasureCard();
 
         log.info("AI {} - Target treasure: {}", player.getUsername(), targetCard != null ? targetCard.getTreasureName() : "NONE (ALL TREASURES COLLECTED - GOING HOME)");
 
-        SimulationResult result = findBestMove(game, player, targetCard);
+        SimulationResult result = findBestMove(player, targetCard);
         log.info("AI {} - Simulation result: {}", player.getUsername(), result != null ? "FOUND" : "NULL");
 
-        // 2. Kurze Pause (damit es natürlicher aussieht)
-        sleep(150);
+        int sleepTime = 150;
+        sleep(sleepTime);
 
-        // 3. Führe Shift aus
-        boolean shiftSuccess = executeShift(game, player, result);
+        boolean shiftSuccess = executeShift(player, result);
         log.info("AI {} - Shift success: {}", player.getUsername(), shiftSuccess);
 
-        // 4. Broadcast nach Shift
-        broadcast();
+        sleep(sleepTime);
 
-        // 5. Kurze Pause
-        sleep(150);
-
-        // 6. Führe Move aus
-        executeMove(game, player, result);
+        executeMove(player, result);
         log.info("AI {} - Move completed", player.getUsername());
-
-        // 7. Broadcast nach Move
-        broadcast();
 
         log.info("=== AI END: {} ===", player.getUsername());
     }
 
-    private boolean executeShift(Game game, Player player, SimulationResult result) {
+    private boolean executeShift(Player player, SimulationResult result) {
         if (result == null) {
             log.info("AI {} - No result, forcing random shift", player.getUsername());
-            return forceRandomShift(game, player);
+            return forceRandomShift(player);
         }
 
         log.info("AI {} - Executing shift: {} at index {}", player.getUsername(), result.shiftType, result.shiftIndex);
 
         try {
-            var shiftResult = switch (result.shiftType) {
+            var shiftSucceeded = switch (result.shiftType) {
                 case UP    -> game.shift(result.shiftIndex, Direction.UP, player);
                 case DOWN  -> game.shift(result.shiftIndex, Direction.DOWN, player);
                 case LEFT  -> game.shift(result.shiftIndex, Direction.LEFT, player);
                 case RIGHT -> game.shift(result.shiftIndex, Direction.RIGHT, player);
             };
 
-            if (!shiftResult.shiftSuccess()) {
+            if (!shiftSucceeded) {
                 log.info("AI {} - Planned shift failed, forcing random", player.getUsername());
-                return forceRandomShift(game, player);
+                return forceRandomShift(player);
             }
 
             return true;
         } catch (Exception e) {
             log.error("AI {} - Shift exception", player.getUsername(), e);
-            return forceRandomShift(game, player);
+            return forceRandomShift(player);
         }
     }
 
-    private void executeMove(Game game, Player player, SimulationResult result) {
+    private void executeMove(Player player, SimulationResult result) {
         Position current = game.getCurrentPositionOfPlayer(player);
         log.info("AI {} - Current position: {}/{}", player.getUsername(), current.row(), current.column());
 
@@ -124,56 +102,29 @@ public class SligthlyLessSimpleAiStrategy implements AiStrategy {
         log.info("AI {} - Target position: {}/{}", player.getUsername(), targetPosition.row(), targetPosition.column());
 
         try {
-            MovePlayerToTileResult moveResult = game.movePlayerToTile(
+            var moveSucceeded = game.movePlayerToTile(
                     targetPosition.row(),
                     targetPosition.column(),
                     player
             );
 
-            if (!moveResult.moveSuccess()) {
+            if (!moveSucceeded) {
                 log.info("AI {} - Move failed, staying at current", player.getUsername());
                 game.movePlayerToTile(current.row(), current.column(), player);
-            } else {
-                // Notify about the move result (treasure collected, game over, etc.)
-                if (moveResultCallback != null) {
-                    log.info("AI " + player.getUsername() + " - Notifying move result: gameOver=" + moveResult.gameOver() + ", treasureCollected=" + moveResult.treasureCollected());
-                    moveResultCallback.accept(moveResult);
-                }
             }
         } catch (Exception e) {
-            // Wenn das Spiel beendet ist (z.B. weil wir gerade gewonnen haben), ist das OK
             if (e.getMessage() != null && e.getMessage().contains("FINISHED")) {
                 log.info("AI {} - Game has ended (player may have won!)", player.getUsername());
-                // Wichtig: Trotzdem das GameOver-Event triggern!
-                if (moveResultCallback != null) {
-                    log.info("AI {} - Triggering GameOver event manually", player.getUsername());
-                    // Erstelle ein "Dummy" MoveResult das gameOver=true signalisiert
-                    moveResultCallback.accept(new MovePlayerToTileResult(true, 0, true, true, false));
-                }
+
             } else {
                 
                 log.error("AI {} - Move exception", player.getUsername(), e);
                 try {
                     game.movePlayerToTile(current.row(), current.column(), player);
                 } catch (Exception e2) {
-                    // Ignorieren - Spiel ist wahrscheinlich beendet
                     log.error("AI {} - Cannot make fallback move (game likely ended)", player.getUsername(), e2);
                 }
             }
-        }
-    }
-
-    private void broadcast() {
-        if (broadcastCallback != null) {
-            try {
-                log.info("AI - Broadcasting game state...");
-                broadcastCallback.run();
-                log.info("AI - Broadcast completed");
-            } catch (Exception e) {
-                log.error("AI - Broadcast failed: ", e);
-            }
-        } else {
-            log.info("AI - No broadcast callback set!");
         }
     }
 
@@ -185,15 +136,15 @@ public class SligthlyLessSimpleAiStrategy implements AiStrategy {
         }
     }
 
-    private boolean forceRandomShift(Game game, Player player) {
+    private boolean forceRandomShift(Player player) {
         int[] indices = {1, 3, 5};
         Direction[] directions = {Direction.RIGHT, Direction.DOWN, Direction.LEFT, Direction.UP};
 
         for (int index : indices) {
             for (Direction dir : directions) {
                 try {
-                    var result = game.shift(index, dir, player);
-                    if (result.shiftSuccess()) {
+                    var shiftSucceeded = game.shift(index, dir, player);
+                    if (shiftSucceeded) {
                         log.info("AI {} - Random shift succeeded: {} at {}", player.getUsername(), dir, index);
                         return true;
                     }
@@ -206,7 +157,7 @@ public class SligthlyLessSimpleAiStrategy implements AiStrategy {
 
     // === SIMULATION LOGIC ===
 
-    private SimulationResult findBestMove(Game game, Player realPlayer, TreasureCard targetCard) {
+    private SimulationResult findBestMove(Player realPlayer, TreasureCard targetCard) {
         Board realBoard = game.getBoard();
         SimulationResult bestResult = null;
         List<ShiftOp> ops = new ArrayList<>();
@@ -229,7 +180,7 @@ public class SligthlyLessSimpleAiStrategy implements AiStrategy {
 
         // Evaluate each candidate
         for (ShiftOp op : ops) {
-            SimulationResult res = simulate(game, realPlayer, targetCard, op);
+            SimulationResult res = simulate(realPlayer, targetCard, op);
             if (res != null && (bestResult == null || compareResults(res, bestResult) > 0)) {
                 bestResult = res;
             }
@@ -251,7 +202,7 @@ public class SligthlyLessSimpleAiStrategy implements AiStrategy {
         return Integer.compare(b.distanceToTarget, a.distanceToTarget);
     }
 
-    private SimulationResult simulate(Game game, Player realPlayer, TreasureCard targetCard, ShiftOp op) {
+    private SimulationResult simulate(Player realPlayer, TreasureCard targetCard, ShiftOp op) {
         Board clonedBoard = game.getBoard().copy();
 
         Player clonedMe = clonedBoard.getPlayers().stream()
@@ -270,7 +221,7 @@ public class SligthlyLessSimpleAiStrategy implements AiStrategy {
 
         Set<Tile> reachable = clonedBoard.getReachableTiles(clonedMe);
 
-        Position targetPos = null;
+        Position targetPos;
         boolean goingHome = false;
         if (targetCard != null) {
             targetPos = findTreasurePosition(clonedBoard, targetCard);
@@ -331,19 +282,7 @@ public class SligthlyLessSimpleAiStrategy implements AiStrategy {
     private record ShiftOp(ShiftType type, int index) {}
     private enum ShiftType { UP, DOWN, LEFT, RIGHT }
 
-    private static class SimulationResult {
-        ShiftType shiftType;
-        int shiftIndex;
-        int score;
-        int distanceToTarget;
-        Position targetPosition;
-
-        SimulationResult(ShiftType t, int i, int s, int d, Position p) {
-            this.shiftType = t;
-            this.shiftIndex = i;
-            this.score = s;
-            this.distanceToTarget = d;
-            this.targetPosition = p;
-        }
+    private record SimulationResult(ShiftType shiftType, int shiftIndex, int score, int distanceToTarget,
+                                    Position targetPosition) {
     }
 }

@@ -14,7 +14,7 @@ public class PlayerStatistics {
     private int tilesPushed;
     private int treasuresCollected;
 
-    private List<Achievement> collectedAchievements = new ArrayList<>();
+    private final List<Achievement> collectedAchievements = new ArrayList<>();
 
     public void increaseScore(int amount) {
         this.score += amount;

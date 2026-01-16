@@ -1,7 +1,7 @@
 package labyrinth.server.game.services;
 
 import labyrinth.server.game.abstractions.IGameTimer;
-import labyrinth.server.game.ai.SimpleAiStrategy;
+import labyrinth.server.game.ai.AiStrategy;
 import labyrinth.server.game.enums.BonusTypes;
 import labyrinth.server.game.enums.Direction;
 import labyrinth.server.game.enums.MoveState;
@@ -13,13 +13,14 @@ import labyrinth.server.game.models.TreasureCard;
 import labyrinth.server.game.models.records.GameConfig;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mock;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.IntStream;
 
-import static org.junit.jupiter.api.Assertions.*;
 import static labyrinth.server.game.GameTestHelper.createGame;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
 
 /**
@@ -31,13 +32,16 @@ class ShiftBonusHandlingTest {
     private Game game;
     private Player player;
 
+    @Mock
+    private AiStrategy aiStrategy;
+
     @BeforeEach
     void setUp() {
         var bonusFactory = new BonusFactory();
         var distributionService = new TreasureBonusDistributionService(bonusFactory);
         var gameInitializer = new GameInitializerService(distributionService);
 
-        game = createGame(mock(IGameTimer.class), new SimpleAiStrategy(), new GameLogger(), gameInitializer);
+        game = createGame(mock(IGameTimer.class), aiStrategy, new GameLogger(), gameInitializer);
         player = game.join("TestPlayer");
         game.join("Player2");
 

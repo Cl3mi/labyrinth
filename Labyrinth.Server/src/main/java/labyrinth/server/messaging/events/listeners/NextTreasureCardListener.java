@@ -29,8 +29,9 @@ public class NextTreasureCardListener {
             payload.setTreasure(treasureMapper.toDto(event.treasureCard()));
 
             messageService.sendToPlayer(playerId, payload);
+            log.info("NextTreasureCardEventPayload send after NextTreasureCardEvent");
         } catch (Exception ex) {
-            log.error("Error while handling NextTreasureCardEvent", ex);
+            log.error("Error while sending NextTreasureCardEvent", ex);
         }
     }
 }

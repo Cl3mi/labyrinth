@@ -1,7 +1,7 @@
 package labyrinth.server.game.logging;
 
 import labyrinth.server.game.abstractions.IGameTimer;
-import labyrinth.server.game.ai.SimpleAiStrategy;
+import labyrinth.server.game.ai.AiStrategy;
 import labyrinth.server.game.enums.Direction;
 import labyrinth.server.game.enums.GameLogType;
 import labyrinth.server.game.models.Board;
@@ -12,21 +12,25 @@ import labyrinth.server.game.models.records.GameConfig;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mock;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.IntStream;
 
-import static org.mockito.Mockito.mock;
 import static labyrinth.server.game.GameTestHelper.createGame;
+import static org.mockito.Mockito.mock;
 
 class GameLoggingTest {
 
     private Game game;
 
+    @Mock
+    private AiStrategy aiStrategy;
+
     @BeforeEach
     void setUp() {
-        game = createGame(mock(IGameTimer.class), new SimpleAiStrategy(),
+        game = createGame(mock(IGameTimer.class), aiStrategy,
                 new labyrinth.server.game.services.GameLogger());
     }
 

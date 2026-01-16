@@ -1,7 +1,5 @@
 package labyrinth.server.game;
 
-import labyrinth.server.game.abstractions.IGameTimer;
-import labyrinth.server.game.ai.SimpleAiStrategy;
 import labyrinth.server.game.enums.BonusTypes;
 import labyrinth.server.game.enums.Direction;
 import labyrinth.server.game.factories.BoardFactory;
@@ -11,7 +9,6 @@ import labyrinth.server.game.models.Game;
 import labyrinth.server.game.models.records.GameConfig;
 import labyrinth.server.game.services.GameInitializerService;
 import labyrinth.server.game.services.TreasureBonusDistributionService;
-import labyrinth.server.game.util.GameTimer;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 
 import javax.swing.*;
@@ -20,38 +17,22 @@ import java.awt.event.ActionListener;
 import java.util.ArrayList;
 
 public class Testing {
-    private static Game game;
+    private static GameService game;
 
-    public static void main(String[] args) {
+    static void main() {
         ThreadPoolTaskScheduler scheduler = new ThreadPoolTaskScheduler();
         scheduler.setPoolSize(1);
         scheduler.initialize();
 
-        IGameTimer gameTimer = new GameTimer(scheduler);
-        var gameLogger = new labyrinth.server.game.services.GameLogger();
         var bonusFactory = new BonusFactory();
         var distributionService = new TreasureBonusDistributionService(bonusFactory);
         var gameInitializer = new GameInitializerService(distributionService);
 
-        // Create service instances (Phase 1 & 2 refactoring)
-        var playerRegistry = new labyrinth.server.game.services.PlayerRegistry(4);
-        var turnController = new labyrinth.server.game.services.TurnController(gameTimer, gameLogger);
-        var movementManager = new labyrinth.server.game.services.MovementManager();
-        var achievementService = new labyrinth.server.game.services.AchievementService();
-        var bonusManager = new labyrinth.server.game.services.BonusManager(turnController, gameLogger);
+        var treasureCardFactory = new TreasureCardFactory();
+        var boardFactory = new BoardFactory();
 
-        // Create Game with interface-based dependencies
-        game = new Game(
-                playerRegistry,
-                turnController,
-                movementManager,
-                achievementService,
-                bonusManager,
-                gameTimer,
-                new SimpleAiStrategy(),
-                gameLogger,
-                gameInitializer
-        );
+        game = new GameService(treasureCardFactory, boardFactory, null, scheduler, gameInitializer);
+
         simulateGameStart();
         // simulateGameMoves(1000);
     }
@@ -65,21 +46,12 @@ public class Testing {
         game.join("Charlie");
         game.join("Dover");
 
-        // Request to start the game is sent
-        var treasureCardFactory = new TreasureCardFactory();
-        var boardFactory = new BoardFactory();
 
         var gameConfig = new GameConfig(7, 7, 24, 1800, 5, 30);
-        var board = boardFactory.createBoard(gameConfig.boardWidth(), gameConfig.boardHeight());
-        var cards = treasureCardFactory.createTreasureCards(gameConfig.treasureCardCount(), game.getPlayers().size());
 
         var p2 = game.getPlayers().get(1);
-
         var p1 = game.getPlayers().get(0);
-
-
         var p3 = game.getPlayers().get(2);
-
         var p4 = game.getPlayers().get(3);
 
         p1.getBonuses().add(BonusTypes.BEAM);
@@ -87,15 +59,15 @@ public class Testing {
         p1.getBonuses().add(BonusTypes.PUSH_FIXED);
         p1.getBonuses().add(BonusTypes.SWAP);
 
-         game.toggleAiForPlayer(p1);
-         game.toggleAiForPlayer(p2);
-         game.toggleAiForPlayer(p3);
-         game.toggleAiForPlayer(p4);
+        game.toggleAiForPlayer(p1);
+        game.toggleAiForPlayer(p2);
+        game.toggleAiForPlayer(p3);
+        game.toggleAiForPlayer(p4);
 
-        game.startGame(gameConfig, cards, board);
+        game.startGame(gameConfig);
 
         // Open Debug Viewer
-        LabyrinthViewer.viewSwing(game);
+        LabyrinthViewer.viewSwing(game.getGame());
 
         int delay = 500;
         ActionListener taskPerformer = new ActionListener() {

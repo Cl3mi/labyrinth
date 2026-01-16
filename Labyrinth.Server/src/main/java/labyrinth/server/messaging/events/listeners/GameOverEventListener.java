@@ -59,14 +59,13 @@ public class GameOverEventListener {
                 int currentScore = p.getStatistics().getScore();
                 int currentTreasures = p.getStatistics().getTreasuresCollected();
 
-                if (actualPosition > 1 &&
-                    currentScore == previousScore &&
-                    currentTreasures == previousTreasures) {
-                } else {
+                if (actualPosition <= 1 ||
+                        currentScore != previousScore ||
+                        currentTreasures != previousTreasures) {
                     rank = actualPosition;
                 }
 
-                if(rank == 1) {
+                if (rank == 1) {
                     payload.setWinnerId(p.getId().toString());
                 }
 

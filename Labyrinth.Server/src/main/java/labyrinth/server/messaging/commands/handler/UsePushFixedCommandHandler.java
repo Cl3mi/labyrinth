@@ -5,10 +5,8 @@ import labyrinth.contracts.models.ErrorCode;
 import labyrinth.contracts.models.UsePushFixedCommandPayload;
 import labyrinth.server.exceptions.ActionErrorException;
 import labyrinth.server.game.GameService;
-import labyrinth.server.messaging.MessageService;
 import labyrinth.server.messaging.PlayerSessionRegistry;
 import labyrinth.server.messaging.mapper.DirectionMapper;
-import labyrinth.server.messaging.mapper.GameMapper;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.WebSocketSession;
 
@@ -16,18 +14,12 @@ import org.springframework.web.socket.WebSocketSession;
 public class UsePushFixedCommandHandler extends AbstractCommandHandler<UsePushFixedCommandPayload> {
 
     private final DirectionMapper directionMapper;
-    private final GameMapper gameMapper;
-    private final MessageService messageService;
 
     public UsePushFixedCommandHandler(GameService gameService,
                                       PlayerSessionRegistry playerSessionRegistry,
-                                      DirectionMapper directionMapper,
-                                      GameMapper gameMapper,
-                                      MessageService messageService) {
+                                      DirectionMapper directionMapper) {
         super(gameService, playerSessionRegistry);
         this.directionMapper = directionMapper;
-        this.gameMapper = gameMapper;
-        this.messageService = messageService;
     }
 
     @Override
@@ -40,7 +32,7 @@ public class UsePushFixedCommandHandler extends AbstractCommandHandler<UsePushFi
         var player = requireExistingPlayer(session);
         requirePlayerIsCurrent(player);
 
-        gameService.usePushFixedBonus(player);
+        gameService.usePushFixedBonus();
 
         var direction = directionMapper.toModel(payload.getDirection());
         var shiftSuccessful = gameService.shift(payload.getRowOrColIndex(), direction, player);
@@ -48,9 +40,5 @@ public class UsePushFixedCommandHandler extends AbstractCommandHandler<UsePushFi
         if (!shiftSuccessful) {
             throw new ActionErrorException("Cannot push tile with the specified parameters.", ErrorCode.INVALID_PUSH);
         }
-
-        var gameState = gameService.withGameReadLock(gameMapper::toGameStateDto);
-        messageService.broadcastToPlayers(gameState);
-
     }
 }

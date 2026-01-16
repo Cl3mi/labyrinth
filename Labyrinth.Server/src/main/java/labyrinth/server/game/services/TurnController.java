@@ -8,9 +8,11 @@ import labyrinth.server.game.enums.RoomState;
 import labyrinth.server.game.models.Board;
 import labyrinth.server.game.models.Player;
 import labyrinth.server.game.models.records.GameConfig;
+import lombok.Getter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.function.Consumer;
 
@@ -23,16 +25,38 @@ public class TurnController implements ITurnController {
 
     private static final Logger log = LoggerFactory.getLogger(TurnController.class);
 
+    /**
+     * -- GETTER --
+     *  Gets the current player index.
+     */
+    @Getter
     private int currentPlayerIndex = 0;
+    /**
+     * -- GETTER --
+     *  Gets the current move state.
+     */
+    @Getter
     private MoveState currentMoveState = MoveState.PLACE_TILE;
+    /**
+     * -- GETTER --
+     *  Checks if a bonus has been used this turn.
+     */
+    @Getter
     private boolean bonusUsedThisTurn = false;
 
     private final IGameTimer turnTimer;
     private final GameLogger gameLogger;
 
-    public TurnController(IGameTimer turnTimer, GameLogger gameLogger) {
+    private Consumer<Player> onNextPlayerCallback;
+
+    public TurnController(IGameTimer turnTimer,
+                          GameLogger gameLogger) {
         this.turnTimer = turnTimer;
         this.gameLogger = gameLogger;
+    }
+
+    public void setOnNextPlayer(Consumer<Player> callback) {
+        this.onNextPlayerCallback = callback;
     }
 
     /**
@@ -43,31 +67,10 @@ public class TurnController implements ITurnController {
     }
 
     /**
-     * Gets the current player index.
-     */
-    public int getCurrentPlayerIndex() {
-        return currentPlayerIndex;
-    }
-
-    /**
-     * Gets the current move state.
-     */
-    public MoveState getCurrentMoveState() {
-        return currentMoveState;
-    }
-
-    /**
      * Sets the move state.
      */
     public void setMoveState(MoveState moveState) {
         this.currentMoveState = moveState;
-    }
-
-    /**
-     * Checks if a bonus has been used this turn.
-     */
-    public boolean isBonusUsedThisTurn() {
-        return bonusUsedThisTurn;
     }
 
     /**
@@ -103,6 +106,8 @@ public class TurnController implements ITurnController {
         gameLogger.log(GameLogType.NEXT_TURN, "New Player to move: " + nextPlayer.getUsername(), nextPlayer, null);
         currentMoveState = MoveState.PLACE_TILE;
         bonusUsedThisTurn = false;
+
+        onNextPlayerCallback.accept(nextPlayer);
 
         if (nextPlayer.shouldMoveBePerformedByAi()) {
             aiTurnExecutor.accept(nextPlayer);
@@ -172,6 +177,7 @@ public class TurnController implements ITurnController {
         currentPlayerIndex = 0;
         currentMoveState = MoveState.PLACE_TILE;
         bonusUsedThisTurn = false;
+        stopTimer();
     }
 
     /**
@@ -184,7 +190,7 @@ public class TurnController implements ITurnController {
     /**
      * Gets the turn timer's expiration time.
      */
-    public java.time.OffsetDateTime getTurnEndTime() {
+    public OffsetDateTime getTurnEndTime() {
         return turnTimer.getExpirationTime();
     }
 }

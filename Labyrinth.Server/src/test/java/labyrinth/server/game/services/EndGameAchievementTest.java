@@ -1,10 +1,8 @@
 package labyrinth.server.game.services;
 
 import labyrinth.server.game.abstractions.IGameTimer;
-import labyrinth.server.game.ai.SimpleAiStrategy;
+import labyrinth.server.game.ai.AiStrategy;
 import labyrinth.server.game.enums.Achievement;
-import labyrinth.server.game.enums.Direction;
-import labyrinth.server.game.enums.RoomState;
 import labyrinth.server.game.models.Board;
 import labyrinth.server.game.models.Game;
 import labyrinth.server.game.models.Player;
@@ -12,13 +10,15 @@ import labyrinth.server.game.models.TreasureCard;
 import labyrinth.server.game.models.records.GameConfig;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mock;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.IntStream;
 
-import static org.junit.jupiter.api.Assertions.*;
 import static labyrinth.server.game.GameTestHelper.createGame;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 
 /**
@@ -33,9 +33,12 @@ class EndGameAchievementTest {
     private Board board;
     private List<TreasureCard> treasureCards;
 
+    @Mock
+    private AiStrategy aiStrategy;
+
     @BeforeEach
     void setUp() {
-        game = createGame(mock(IGameTimer.class), new SimpleAiStrategy(), new GameLogger());
+        game = createGame(mock(IGameTimer.class), aiStrategy, new GameLogger());
         gameConfig = GameConfig.getDefault();
         board = new labyrinth.server.game.factories.BoardFactory().createBoard(7, 7);
         treasureCards = new ArrayList<>();

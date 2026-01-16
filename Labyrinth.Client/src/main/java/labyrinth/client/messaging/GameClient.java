@@ -30,6 +30,7 @@ public class GameClient extends WebSocketClient {
     @Setter private Consumer<NextTreasureCardEventPayload> onNextTreasure;
     @Setter private Consumer<PlayerUpdatedEventPayload> onPlayerUpdated;
 
+
     // einzig vorhandenes State-Payload
     @Setter private Consumer<GameStateEventPayload> onGameStateUpdate;
 

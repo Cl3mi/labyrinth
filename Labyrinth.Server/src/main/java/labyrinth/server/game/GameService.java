@@ -1,23 +1,23 @@
 package labyrinth.server.game;
 
+import labyrinth.server.game.ai.SligthlyLessSimpleAiStrategy;
 import labyrinth.server.game.constants.PointRewards;
 import labyrinth.server.game.enums.BonusTypes;
 import labyrinth.server.game.enums.Direction;
 import labyrinth.server.game.enums.RoomState;
-import labyrinth.server.game.events.AchievementUnlockedEvent;
-import labyrinth.server.game.events.GameOverEvent;
-import labyrinth.server.game.events.NextTreasureCardEvent;
+import labyrinth.server.game.events.*;
 import labyrinth.server.game.factories.BoardFactory;
 import labyrinth.server.game.factories.TreasureCardFactory;
 import labyrinth.server.game.models.Board;
 import labyrinth.server.game.models.Game;
 import labyrinth.server.game.models.Player;
 import labyrinth.server.game.models.records.GameConfig;
-import labyrinth.server.game.services.GameInitializerService;
+import labyrinth.server.game.models.records.Position;
+import labyrinth.server.game.services.*;
 import labyrinth.server.game.util.GameTimer;
-import labyrinth.server.messaging.MessageService;
 import labyrinth.server.messaging.events.EventPublisher;
-import labyrinth.server.messaging.mapper.GameMapper;
+import labyrinth.server.messaging.events.abstractions.IEvent;
+import lombok.Getter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.TaskScheduler;
@@ -32,6 +32,7 @@ import java.util.function.Function;
 @Service
 public class GameService {
 
+    @Getter
     private final Game game;
     private final ReadWriteLock rwLock = new ReentrantReadWriteLock();
 
@@ -39,37 +40,27 @@ public class GameService {
     private final BoardFactory boardFactory;
     private final EventPublisher eventPublisher;
 
-    private final MessageService messageService;
-    private final GameMapper gameMapper;
-
-    private final labyrinth.server.game.ai.SligthlyLessSimpleAiStrategy aiStrategy;
-
     private static final Logger log = LoggerFactory.getLogger(GameService.class);
 
     public GameService(TreasureCardFactory treasureCardFactory,
                        BoardFactory boardFactory,
                        EventPublisher eventPublisher,
                        TaskScheduler scheduler,
-                       MessageService messageService,
-                       GameMapper gameMapper,
                        GameInitializerService gameInitializer) {
 
         this.treasureCardFactory = treasureCardFactory;
         this.boardFactory = boardFactory;
         this.eventPublisher = eventPublisher;
-        this.messageService = messageService;
-        this.gameMapper = gameMapper;
 
         var gameTimer = new GameTimer(scheduler);
-        var gameLogger = new labyrinth.server.game.services.GameLogger();
+        var gameLogger = new GameLogger();
 
-        this.aiStrategy = new labyrinth.server.game.ai.SligthlyLessSimpleAiStrategy();
-
-        var playerRegistry = new labyrinth.server.game.services.PlayerRegistry(4);
-        var turnController = new labyrinth.server.game.services.TurnController(gameTimer, gameLogger);
-        var movementManager = new labyrinth.server.game.services.MovementManager();
-        var achievementService = new labyrinth.server.game.services.AchievementService();
-        var bonusManager = new labyrinth.server.game.services.BonusManager(turnController, gameLogger);
+        var aiStrategy = new SligthlyLessSimpleAiStrategy(this);
+        var playerRegistry = new PlayerRegistry(4);
+        var turnController = new TurnController(gameTimer, gameLogger);
+        var movementManager = new MovementManager();
+        var achievementService = new AchievementService();
+        var bonusManager = new BonusManager(turnController, gameLogger);
 
         game = new Game(
                 playerRegistry,
@@ -83,65 +74,9 @@ public class GameService {
                 gameInitializer
         );
 
-        aiStrategy.setBroadcastCallback(new Runnable() {
-            @Override
-            public void run() {
-                broadcastGameStateInternal();
-            }
-        });
-
-        aiStrategy.setMoveResultCallback(moveResult -> {
-            handleAiMoveResult(moveResult);
-        });
-    }
-
-    /**
-     * Handles the result of an AI move, publishing appropriate events.
-     */
-    private void handleAiMoveResult(labyrinth.server.game.results.MovePlayerToTileResult result) {
-        try {
-            if (result.treasureCollected()) {
-                log.info("[GameService] AI collected a treasure!");
-            }
-
-            if (result.gameOver()) {
-                log.info("[GameService] AI triggered game over! Publishing GameOverEvent...");
-                rwLock.readLock().lock();
-                try {
-                    // Publish end-game achievements
-                    for (var award : game.getEndGameAchievements()) {
-                        var achievementEvent = new AchievementUnlockedEvent(award.player(), award.achievement());
-                        eventPublisher.publishAsync(achievementEvent);
-                        log.info("[GameService] Achievement awarded: {} - {}", award.player().getUsername(), award.achievement());
-                    }
-
-                    var gameOverEvent = new GameOverEvent(game.getPlayers());
-                    eventPublisher.publishAsync(gameOverEvent);
-                } finally {
-                    rwLock.readLock().unlock();
-                }
-            }
-        } catch (Exception e) {
-            log.error("[GameService] Error handling AI move result", e);
-        }
-    }
-
-    /**
-     * Broadcasts the current game state to all connected players.
-     * Used internally by AI after making moves.
-     */
-    private void broadcastGameStateInternal() {
-        try {
-            rwLock.readLock().lock();
-            try {
-                var gameState = gameMapper.toGameStateDto(game);
-                messageService.broadcastToPlayers(gameState);
-            } finally {
-                rwLock.readLock().unlock();
-            }
-        } catch (Exception e) {
-            log.error("Failed to broadcast game state", e);
-        }
+        turnController.setOnNextPlayer(player ->
+                publishEvent(new NextPlayerEvent(player))
+        );
     }
 
     public Player join(String username) {
@@ -153,54 +88,27 @@ public class GameService {
         }
     }
 
-    public labyrinth.server.game.results.LeaveResult leave(Player player) {
+    public void leave(Player player) {
         rwLock.writeLock().lock();
         try {
-            return game.leave(player);
+            game.leave(player);
+
+            var hasHumanPlayer = game.getPlayers().stream()
+                    .anyMatch(p -> !p.isAiActive());
+
+            if (!hasHumanPlayer) {
+                log.info("No human players left, resetting game to LOBBY");
+                game.resetAndReturnToLobby();
+            }
+
+            publishEvent(new PlayerLeftEvent());
         } finally {
             rwLock.writeLock().unlock();
-        }
-    }
-
-    /**
-     * Resets the game to LOBBY state, allowing a new game to be started.
-     * Should be called when a finished game needs to be cleaned up.
-     */
-    public void resetForNewGame() {
-        rwLock.writeLock().lock();
-        try {
-            game.resetForNewGame();
-        } finally {
-            rwLock.writeLock().unlock();
-        }
-    }
-
-    /**
-     * Checks if the game is in FINISHED state.
-     */
-    public boolean isGameFinished() {
-        rwLock.readLock().lock();
-        try {
-            return game.getRoomState() == RoomState.FINISHED;
-        } finally {
-            rwLock.readLock().unlock();
-        }
-    }
-
-    /**
-     * Checks if the game is in IN_GAME state (actively playing).
-     */
-    public boolean isGameInProgress() {
-        rwLock.readLock().lock();
-        try {
-            return game.getRoomState() == RoomState.IN_GAME;
-        } finally {
-            rwLock.readLock().unlock();
         }
     }
 
     public int getMaxPlayers() {
-        return game.getMAX_PLAYERS();
+        return game.getMaxPlayers();
     }
 
     public List<Player> getPlayers() {
@@ -249,12 +157,6 @@ public class GameService {
     public void startGame(GameConfig gameConfig) {
         rwLock.writeLock().lock();
         try {
-            // If game is finished or in progress, reset to lobby first
-            if (game.getRoomState() == RoomState.FINISHED || game.getRoomState() == RoomState.IN_GAME) {
-                log.info("[GameService] Game is {}, resetting to LOBBY before starting new game", game.getRoomState());
-                game.returnToLobby();
-            }
-
             int playersCount = 4;
 
             var board = boardFactory.createBoard(gameConfig.boardWidth(), gameConfig.boardHeight());
@@ -263,6 +165,13 @@ public class GameService {
             var treasureCards = treasureCardFactory.createTreasureCards(totalTreasures, playersCount);
 
             game.startGame(gameConfig, treasureCards, board);
+
+            publishEvent(new GameStartedEvent());
+
+            for(var player : game.getPlayers()) {
+                var treasureCardEvent = new NextTreasureCardEvent(player, player.getCurrentTreasureCard());
+                publishEvent(treasureCardEvent);
+            }
         } finally {
             rwLock.writeLock().unlock();
         }
@@ -277,17 +186,35 @@ public class GameService {
         }
     }
 
-    public labyrinth.server.game.results.MovePlayerToTileResult movePlayerToTile(int row, int col, Player player) {
+    public boolean movePlayerToTile(int row, int col, Player player) {
         rwLock.writeLock().lock();
         try {
             var result = game.movePlayerToTile(row, col, player);
 
-            if (result.treasureCollected()) {
-                var treasureCardEvent = new NextTreasureCardEvent(player, player.getCurrentTreasureCard());
-                eventPublisher.publishAsync(treasureCardEvent);
+            if (!result.moveSuccess()) {
+                return false;
             }
 
-            return result;
+            publishEvent(new PlayerMovedEvent());
+
+            if (result.treasureCollected()) {
+                var treasureCardEvent = new NextTreasureCardEvent(player, player.getCurrentTreasureCard());
+                publishEvent(treasureCardEvent);
+            }
+
+            if (result.gameOver()) {
+                for (var award : game.getEndGameAchievements()) {
+                    var achievementEvent = new AchievementUnlockedEvent(award.player(), award.achievement());
+                    publishEvent(achievementEvent);
+                }
+
+                var players = getPlayers();
+
+                game.resetAndReturnToLobby();
+                publishEvent(new GameOverEvent(players));
+            }
+
+            return true;
         } finally {
             rwLock.writeLock().unlock();
         }
@@ -297,6 +224,7 @@ public class GameService {
         rwLock.writeLock().lock();
         try {
             game.rotateExtraTileClockwise(player);
+            publishEvent(new ExtraTileRotatedEvent());
         } finally {
             rwLock.writeLock().unlock();
         }
@@ -306,7 +234,13 @@ public class GameService {
         rwLock.writeLock().lock();
         try {
             var pushResult = game.shift(index, direction, player);
+
+            if (pushResult.shiftSuccess()) {
+                publishEvent(new BoardShiftedEvent());
+            }
+
             return pushResult.shiftSuccess();
+
         } finally {
             rwLock.writeLock().unlock();
         }
@@ -316,6 +250,7 @@ public class GameService {
         rwLock.writeLock().lock();
         try {
             game.toggleAiForPlayer(player);
+            publishEvent(new AiToggledEvent(player));
         } finally {
             rwLock.writeLock().unlock();
         }
@@ -324,52 +259,56 @@ public class GameService {
     public void useBeamBonus(int row, int col, Player player) {
         rwLock.writeLock().lock();
         try {
-            var useSuccessfull = game.useBonus(BonusTypes.BEAM, row, col);
+            var success = game.useBonus(BonusTypes.BEAM, row, col);
 
-            if (useSuccessfull) {
+            if (success) {
                 player.getStatistics().increaseScore(PointRewards.REWARD_SHIFT_TILE);
+                publishEvent(new BonusUsedEvent());
             }
-
         } finally {
             rwLock.writeLock().unlock();
         }
     }
 
-    public void useSwapBonus(Player currentPlayer, Player targetPlayer) {
+    public void useSwapBonus(Player targetPlayer) {
         rwLock.writeLock().lock();
         try {
             game.useBonus(BonusTypes.SWAP, targetPlayer);
+            publishEvent(new BonusUsedEvent());
         } finally {
             rwLock.writeLock().unlock();
         }
     }
 
-    public void usePushTwiceBonus(Player player) {
+    public void usePushTwiceBonus() {
         rwLock.writeLock().lock();
         try {
             game.useBonus(BonusTypes.PUSH_TWICE);
+            publishEvent(new BonusUsedEvent());
         } finally {
             rwLock.writeLock().unlock();
         }
     }
 
-    public void usePushFixedBonus(Player player) {
+    public void usePushFixedBonus() {
         rwLock.writeLock().lock();
         try {
             game.useBonus(BonusTypes.PUSH_FIXED);
+            publishEvent(new BonusUsedEvent());
         } finally {
             rwLock.writeLock().unlock();
         }
     }
 
-    public java.util.List<labyrinth.server.game.services.AchievementService.AchievementAward> getEndGameAchievements() {
+    public Position getCurrentPositionOfPlayer(Player player) {
         rwLock.readLock().lock();
         try {
-            return game.getEndGameAchievements();
+            return game.getCurrentPositionOfPlayer(player);
         } finally {
             rwLock.readLock().unlock();
         }
     }
+
 
     // Generic helper: run a function under the Game read-lock. Keeps locking
     // centralized
@@ -381,5 +320,15 @@ public class GameService {
         } finally {
             rwLock.readLock().unlock();
         }
+    }
+
+
+    private void publishEvent(IEvent event) {
+        if (eventPublisher == null) {
+            log.warn("EventPublisher is not initialized. Cannot publish event: {}", event.getClass().getSimpleName());
+            return;
+        }
+
+        eventPublisher.publish(event);
     }
 }

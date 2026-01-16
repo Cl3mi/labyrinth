@@ -6,7 +6,7 @@ import labyrinth.server.game.enums.MoveState;
 import labyrinth.server.game.models.Game;
 import labyrinth.server.game.models.Player;
 import labyrinth.server.game.models.Tile;
-import labyrinth.server.game.models.records.Position;
+
 
 public class BeamBonusEffect implements IBonusEffect {
     @Override

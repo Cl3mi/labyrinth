@@ -10,10 +10,9 @@ import labyrinth.server.game.models.Tile;
 public class SwapBonusEffect implements IBonusEffect {
     @Override
     public boolean apply(Game game, Player player, Object... args) {
-        if (args.length < 1 || !(args[0] instanceof Player)) {
+        if (args.length < 1 || !(args[0] instanceof Player targetPlayer)) {
             throw new IllegalArgumentException("SwapBonus requires targetPlayer argument");
         }
-        Player targetPlayer = (Player) args[0];
 
         if (!player.useBonus(BonusTypes.SWAP)) {
             return false;

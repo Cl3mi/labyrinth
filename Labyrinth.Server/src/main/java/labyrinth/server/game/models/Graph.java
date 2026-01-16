@@ -1,11 +1,11 @@
 package labyrinth.server.game.models;
 
-import java.util.*;
-
 import labyrinth.server.game.abstractions.IBoardEventListener;
-import labyrinth.server.game.enums.*;
+import labyrinth.server.game.enums.Direction;
 import labyrinth.server.game.events.BoardEvent;
 import labyrinth.server.game.models.records.Position;
+
+import java.util.*;
 
 /**
  * Represents the connectivity graph of the Labyrinth board.
@@ -129,49 +129,6 @@ public class Graph implements IBoardEventListener {
         return -1;
     }
 
-    /**
-     * Finds the shortest path from start to target using BFS.
-     *
-     * @param start  starting tile
-     * @param target target tile
-     * @return list of tiles forming the path, or empty list if no path exists
-     */
-    public List<Tile> findPath(Tile start, Tile target) {
-        Map<Tile, Tile> parentMap = new HashMap<>();
-        Queue<Tile> queue = new ArrayDeque<>();
-        Set<Tile> visited = new HashSet<>();
-
-        queue.add(start);
-        visited.add(start);
-        parentMap.put(start, null);
-
-        while (!queue.isEmpty()) {
-            Tile current = queue.poll();
-            if (current.equals(target)) {
-                break;
-            }
-            for (Tile neighbor : getNeighbors(current)) {
-                if (!visited.contains(neighbor)) {
-                    visited.add(neighbor);
-                    parentMap.put(neighbor, current);
-                    queue.add(neighbor);
-                }
-            }
-        }
-
-        // Reconstruct path
-        List<Tile> path = new ArrayList<>();
-        Tile current = target;
-        while (current != null && parentMap.containsKey(current)) {
-            path.add(current);
-            current = parentMap.get(current);
-        }
-        Collections.reverse(path);
-        if (path.isEmpty() || !path.get(0).equals(start)) {
-            return Collections.emptyList(); // no path found
-        }
-        return path;
-    }
 
     @Override
     public void onBoardEvent(BoardEvent event) {

@@ -1,6 +1,7 @@
 package labyrinth.server.game.models;
 
 import labyrinth.server.game.enums.BonusTypes;
+import lombok.Getter;
 
 import java.util.Optional;
 
@@ -8,8 +9,13 @@ import java.util.Optional;
  * Represents the PUSH_TWICE bonus state with remaining push count.
  * This state tracks how many pushes remain (starts at 2, decrements on each consume).
  */
+@Getter
 public final class PushTwiceActive implements BonusState {
 
+    /**
+     * -- GETTER --
+     *  Gets the number of remaining pushes.
+     */
     private final int remainingPushes;
 
     /**
@@ -49,15 +55,6 @@ public final class PushTwiceActive implements BonusState {
             return NoBonusActive.getInstance();
         }
         return new PushTwiceActive(remainingPushes - 1);
-    }
-
-    /**
-     * Gets the number of remaining pushes.
-     *
-     * @return the remaining push count
-     */
-    public int getRemainingPushes() {
-        return remainingPushes;
     }
 
     @Override

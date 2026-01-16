@@ -5,9 +5,7 @@ import labyrinth.server.game.enums.Achievement;
 import labyrinth.server.game.models.Player;
 
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
-import java.util.Optional;
 
 /**
  * Service responsible for checking and awarding achievements to players.

@@ -1,8 +1,6 @@
 package labyrinth.client.factories;
 
-import labyrinth.client.abstractions.IBoardFactory;
 import labyrinth.client.models.Board;
-import labyrinth.client.models.Game;
 import labyrinth.client.models.Player;
 import labyrinth.client.models.Position;
 import labyrinth.contracts.models.BonusType;
@@ -21,17 +19,9 @@ import java.util.List;
  * - Board kommt vollständig vom Server (GameBoard)
  * - spareTile (ExtraTile) wird aus GameBoard übernommen
  */
-public class BoardFactory implements IBoardFactory {
+public class BoardFactory  {
 
-    @Override
-    public Board createBoardForGame(Game game) {
-        throw new UnsupportedOperationException(
-                "BoardFactory.createBoardForGame(Game) wird nicht mehr verwendet. " +
-                        "Das Board kommt vollständig vom Server (GameBoard)."
-        );
-    }
-
-    // =================================================================================
+        // =================================================================================
     // Mapping: GameBoard (Contracts) -> Board (Client)
     // =================================================================================
 
@@ -128,26 +118,6 @@ public class BoardFactory implements IBoardFactory {
             // Remaining treasure count
             if (s.getRemainingTreasureCount() != null) {
                 p.setRemainingTreasureCount(s.getRemainingTreasureCount());
-            }
-
-            // Current treasure card (the one they need to find) from additionalProperties
-            // (not in standard Contracts)
-            if (s.getAdditionalProperties() != null && s.getAdditionalProperties().containsKey("currentTreasureCard")) {
-                Object value = s.getAdditionalProperties().get("currentTreasureCard");
-                // Jackson deserializes nested objects as LinkedHashMap, need to convert
-                if (value instanceof java.util.Map) {
-                    try {
-                        com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
-                        labyrinth.contracts.models.Treasure treasure = mapper.convertValue(value, labyrinth.contracts.models.Treasure.class);
-                        p.getAssignedTreasureCards().clear();
-                        p.getAssignedTreasureCards().add(treasure);
-                    } catch (Exception e) {
-                        System.err.println("Failed to convert currentTreasureCard from additionalProperties: " + e.getMessage());
-                    }
-                } else if (value instanceof labyrinth.contracts.models.Treasure) {
-                    p.getAssignedTreasureCards().clear();
-                    p.getAssignedTreasureCards().add((labyrinth.contracts.models.Treasure) value);
-                }
             }
 
             // Available bonuses from server
