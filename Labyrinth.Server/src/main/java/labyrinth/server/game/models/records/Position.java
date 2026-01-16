@@ -31,8 +31,8 @@ public record Position(int row, int column) {
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (!(o instanceof Position position)) return false;
-        return row == position.row && column == position.column;
+        if (!(o instanceof Position(int row1, int column1))) return false;
+        return row == row1 && column == column1;
     }
 
     @Override

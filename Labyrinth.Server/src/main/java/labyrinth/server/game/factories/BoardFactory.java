@@ -1,7 +1,6 @@
 package labyrinth.server.game.factories;
 
 
-import labyrinth.server.game.enums.BonusTypes;
 import labyrinth.server.game.enums.Direction;
 import labyrinth.server.game.models.BiMap;
 import labyrinth.server.game.models.Board;
@@ -10,7 +9,9 @@ import labyrinth.server.game.models.records.Position;
 import labyrinth.server.game.util.TileShapes;
 import org.springframework.stereotype.Component;
 
-import java.util.*;
+import java.util.EnumSet;
+import java.util.Random;
+import java.util.Set;
 
 @Component
 public class BoardFactory {

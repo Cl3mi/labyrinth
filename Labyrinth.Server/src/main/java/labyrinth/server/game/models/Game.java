@@ -396,7 +396,7 @@ public class Game {
         return playerRegistry.getPlayers();
     }
 
-    public int getMAX_PLAYERS() {
+    public int getMaxPlayers() {
         return MAX_PLAYERS;
     }
 

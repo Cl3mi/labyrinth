@@ -36,7 +36,7 @@ public class GameLogger {
      *
      * @param type     the type of game action
      * @param message  human-readable description
-     * @param player   the player involved (may be null for game-level events)
+     * @param player   the player involved (can be null for game-level events)
      * @param metadata additional key-value data for replay
      */
     public void log(GameLogType type, String message, Player player, Map<String, String> metadata) {

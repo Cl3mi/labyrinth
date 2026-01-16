@@ -1,6 +1,9 @@
 package labyrinth.server.messaging;
 
-import labyrinth.contracts.models.*;
+import labyrinth.contracts.models.ActionErrorEventPayload;
+import labyrinth.contracts.models.ErrorCode;
+import labyrinth.contracts.models.EventType;
+import labyrinth.contracts.models.ServerInfoPayload;
 import labyrinth.server.exceptions.ActionErrorException;
 import labyrinth.server.game.GameService;
 import labyrinth.server.game.enums.RoomState;
@@ -48,26 +51,11 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
         if (playerId != null && gameService.getGameState() == RoomState.LOBBY) {
             var player = gameService.getPlayer(playerId);
             gameService.leave(player);
-
-            broadcastLobbyState();
             playerSessionRegistry.removePlayer(playerId);
         }
         else {
             playerSessionRegistry.markDisconnected(session);
         }
-    }
-
-    private void broadcastLobbyState() {
-        var players = gameService.getPlayers()
-                .stream()
-                .map(playerInfoMapper::toDto)
-                .toArray(PlayerInfo[]::new);
-
-        var lobbyStateUpdated = new LobbyStateEventPayload();
-        lobbyStateUpdated.setType(EventType.LOBBY_STATE);
-        lobbyStateUpdated.setPlayers(players);
-
-        messageService.broadcastToPlayers(lobbyStateUpdated);
     }
 
     @Override

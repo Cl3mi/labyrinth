@@ -208,7 +208,7 @@ public class BoardPanel extends JPanel {
      * Handles the completion of a pending bonus activation after the user has clicked on a tile.
      */
     private void handlePendingBonusActivation(int row, int col) {
-        boolean success = false;
+        boolean success;
 
         try {
             if (pendingBonusActivation == BonusTypes.BEAM) {

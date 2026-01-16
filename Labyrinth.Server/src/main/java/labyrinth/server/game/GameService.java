@@ -108,7 +108,7 @@ public class GameService {
     }
 
     public int getMaxPlayers() {
-        return game.getMAX_PLAYERS();
+        return game.getMaxPlayers();
     }
 
     public List<Player> getPlayers() {
