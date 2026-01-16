@@ -17,7 +17,6 @@ import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 
 @Component
@@ -37,18 +36,15 @@ public class GameOverEventListener {
 
             var ranking = new ArrayList<RankingEntry>();
 
-            // Sort by score (descending), then by treasures collected (descending), then by steps taken (ascending)
             List<Player> sortedPlayers = event.players().stream()
                     .sorted((p1, p2) -> {
-                        // Compare by score descending (higher score = better rank)
+
                         int scoreCompare = Integer.compare(p2.getStatistics().getScore(), p1.getStatistics().getScore());
                         if (scoreCompare != 0) return scoreCompare;
 
-                        // If scores are equal, compare by treasures descending (more treasures = better rank)
                         int treasuresCompare = Integer.compare(p2.getStatistics().getTreasuresCollected(), p1.getStatistics().getTreasuresCollected());
                         if (treasuresCompare != 0) return treasuresCompare;
 
-                        // If treasures are equal, compare by steps ascending (fewer steps = better rank)
                         return Integer.compare(p1.getStatistics().getStepsTaken(), p2.getStatistics().getStepsTaken());
                     })
                     .toList();
@@ -57,19 +53,16 @@ public class GameOverEventListener {
             var rank = 1;
             int previousScore = -1;
             int previousTreasures = -1;
-            int actualPosition = 1;  // Track actual position in list for rank calculation
+            int actualPosition = 1;
 
             for (Player p : sortedPlayers) {
                 int currentScore = p.getStatistics().getScore();
                 int currentTreasures = p.getStatistics().getTreasuresCollected();
 
-                // If score and treasures are the same as previous player, keep the same rank
                 if (actualPosition > 1 &&
                     currentScore == previousScore &&
                     currentTreasures == previousTreasures) {
-                    // Same rank as previous player (tie)
                 } else {
-                    // Different score/treasures, update rank to current position
                     rank = actualPosition;
                 }
 
@@ -89,8 +82,6 @@ public class GameOverEventListener {
             payload.setRanking(ranking.toArray(RankingEntry[]::new));
             messageService.broadcastToPlayers(payload);
 
-
-            // Broadcast updated lobby state (without bots, with correct admin)
             var lobbyStateUpdated = new LobbyStateEventPayload();
             lobbyStateUpdated.setType(EventType.LOBBY_STATE);
             lobbyStateUpdated.setPlayers(gameService.getPlayers()
@@ -103,6 +94,4 @@ public class GameOverEventListener {
             log.error("Error while handling GameOverEvent", ex);
         }
     }
-
-
 }

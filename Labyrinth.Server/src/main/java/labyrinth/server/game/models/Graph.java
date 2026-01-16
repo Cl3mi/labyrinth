@@ -243,6 +243,5 @@ public class Graph implements IBoardEventListener {
                 }
             }
         }
-        System.out.println("Graph initialized");
     }
 }
