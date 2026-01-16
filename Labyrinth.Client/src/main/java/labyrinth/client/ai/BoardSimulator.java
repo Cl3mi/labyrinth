@@ -101,7 +101,7 @@ public class BoardSimulator {
             for (int c = 0; c < width; c++) {
                 Tile tile = boardTiles[r][c];
                 if (tile.getTreasure() != null &&
-                    tile.getTreasure().getName().equals(currentTarget.getName())) {
+                    tile.getTreasure().getId() == currentTarget.getId()) {
                     return new Position(r, c);
                 }
             }

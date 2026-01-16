@@ -20,11 +20,6 @@ public class Player {
     private final String id;
     private final String name;
 
-    /**
-     * Schätze, die diesem Spieler zugewiesen sind (Zielkarten).
-     * Du kannst diese Liste später aus PlayerState/TreasureCard-Logik befüllen.
-     */
-    private final List<Treasure> assignedTreasureCards = new ArrayList<>();
 
     /**
      * Aktuelle Position auf dem Brett (Zeile/Spalte im Client).
@@ -72,6 +67,14 @@ public class Player {
     private boolean isAiControlled = false;
 
     /**
+     * -- GETTER --
+     *  Gets the current target treasure (first uncollected treasure).
+     *  Returns null if all treasures have been collected.
+     */
+    private Treasure currentTargetTreasure;
+
+
+    /**
      * Available bonuses for this player (from server)
      */
     private final List<BonusType> availableBonuses = new ArrayList<>();
@@ -111,25 +114,6 @@ public class Player {
         return availableBonuses.contains(type);
     }
 
-    /**
-     * Gets the current target treasure (first uncollected treasure).
-     * Returns null if all treasures have been collected.
-     */
-    public Treasure getCurrentTargetTreasure() {
-        if (remainingTreasureCount <= 0) {
-            return null; // All treasures collected - player should go home
-        }
-        // Find first treasure that hasn't been found yet
-        for (Treasure treasure : assignedTreasureCards) {
-            boolean found = treasuresFound.stream()
-                    .anyMatch(t -> t.getName().equals(treasure.getName()));
-            if (!found) {
-                return treasure;
-            }
-        }
-        return null;
-    }
-
     @Override
     public String toString() {
         return "Player{" +
@@ -137,7 +121,6 @@ public class Player {
                 ", name='" + name + '\'' +
                 ", currentPosition=" + currentPosition +
                 ", homePosition=" + homePosition +
-                ", treasures=" + assignedTreasureCards +
                 '}';
     }
 }
