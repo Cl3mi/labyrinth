@@ -1,5 +1,6 @@
 package labyrinth.server.game.ai;
 
+import labyrinth.server.game.abstractions.IGameTimer;
 import labyrinth.server.game.enums.Direction;
 import labyrinth.server.game.models.*;
 import labyrinth.server.game.models.records.GameConfig;
@@ -7,11 +8,13 @@ import labyrinth.server.game.models.records.Position;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import java.util.*;
-import static org.mockito.Mockito.mock;
+import java.util.ArrayList;
+import java.util.EnumSet;
+import java.util.List;
+import java.util.Set;
+
 import static labyrinth.server.game.GameTestHelper.createGame;
-import labyrinth.server.game.abstractions.IGameTimer;
-import labyrinth.server.game.ai.SimpleAiStrategy;
+import static org.mockito.Mockito.mock;
 
 class AiLogicTest {
 

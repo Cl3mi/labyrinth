@@ -12,9 +12,13 @@ import labyrinth.server.game.models.Board;
 import labyrinth.server.game.models.Game;
 import labyrinth.server.game.models.Player;
 import labyrinth.server.game.models.records.GameConfig;
+import labyrinth.server.game.models.records.Position;
+import labyrinth.server.game.results.LeaveResult;
 import labyrinth.server.game.services.*;
 import labyrinth.server.game.util.GameTimer;
 import labyrinth.server.messaging.events.EventPublisher;
+import labyrinth.server.messaging.events.abstractions.IEvent;
+import lombok.Getter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.TaskScheduler;
@@ -29,6 +33,7 @@ import java.util.function.Function;
 @Service
 public class GameService {
 
+    @Getter
     private final Game game;
     private final ReadWriteLock rwLock = new ReentrantReadWriteLock();
 
@@ -48,12 +53,10 @@ public class GameService {
         this.boardFactory = boardFactory;
         this.eventPublisher = eventPublisher;
 
-
         var gameTimer = new GameTimer(scheduler);
-        var gameLogger = new labyrinth.server.game.services.GameLogger();
+        var gameLogger = new GameLogger();
 
-        var aiStrategy = new SligthlyLessSimpleAiStrategy();
-
+        var aiStrategy = new SligthlyLessSimpleAiStrategy(this);
         var playerRegistry = new PlayerRegistry(4);
         var turnController = new TurnController(gameTimer, gameLogger);
         var movementManager = new MovementManager();
@@ -73,11 +76,11 @@ public class GameService {
         );
 
         turnController.setOnNextPlayer(player ->
-                eventPublisher.publishAsync(new NextPlayerEvent(player))
+                publishEvent(new NextPlayerEvent(player))
         );
 
         game.setOnPlayerMoved(player ->
-                eventPublisher.publishAsync(new PlayerMovedEvent())
+                publishEvent(new PlayerMovedEvent())
         );
     }
 
@@ -90,7 +93,7 @@ public class GameService {
         }
     }
 
-    public labyrinth.server.game.results.LeaveResult leave(Player player) {
+    public LeaveResult leave(Player player) {
         rwLock.writeLock().lock();
         try {
             return game.leave(player);
@@ -225,16 +228,16 @@ public class GameService {
 
             if (result.treasureCollected()) {
                 var treasureCardEvent = new NextTreasureCardEvent(player, player.getCurrentTreasureCard());
-                eventPublisher.publishAsync(treasureCardEvent);
+                publishEvent(treasureCardEvent);
             }
 
             if (result.gameOver()) {
                 for (var award : game.getEndGameAchievements()) {
                     var achievementEvent = new AchievementUnlockedEvent(award.player(), award.achievement());
-                    eventPublisher.publishAsync(achievementEvent);
+                    publishEvent(achievementEvent);
                 }
 
-                eventPublisher.publishAsync(new GameOverEvent(getPlayers()));
+                publishEvent(new GameOverEvent(getPlayers()));
             }
 
             return true;
@@ -247,7 +250,7 @@ public class GameService {
         rwLock.writeLock().lock();
         try {
             game.rotateExtraTileClockwise(player);
-            eventPublisher.publishAsync(new ExtraTileRotatedEvent());
+            publishEvent(new ExtraTileRotatedEvent());
         } finally {
             rwLock.writeLock().unlock();
         }
@@ -259,7 +262,7 @@ public class GameService {
             var pushResult = game.shift(index, direction, player);
 
             if (pushResult.shiftSuccess()) {
-                eventPublisher.publishAsync(new BoardShiftedEvent());
+                publishEvent(new BoardShiftedEvent());
             }
 
             return pushResult.shiftSuccess();
@@ -273,7 +276,7 @@ public class GameService {
         rwLock.writeLock().lock();
         try {
             game.toggleAiForPlayer(player);
-            eventPublisher.publishAsync(new AiToggledEvent(player));
+            publishEvent(new AiToggledEvent(player));
         } finally {
             rwLock.writeLock().unlock();
         }
@@ -286,7 +289,7 @@ public class GameService {
 
             if (success) {
                 player.getStatistics().increaseScore(PointRewards.REWARD_SHIFT_TILE);
-                eventPublisher.publishAsync(new BonusUsedEvent());
+                publishEvent(new BonusUsedEvent());
             }
         } finally {
             rwLock.writeLock().unlock();
@@ -297,7 +300,7 @@ public class GameService {
         rwLock.writeLock().lock();
         try {
             game.useBonus(BonusTypes.SWAP, targetPlayer);
-            eventPublisher.publishAsync(new BonusUsedEvent());
+            publishEvent(new BonusUsedEvent());
         } finally {
             rwLock.writeLock().unlock();
         }
@@ -307,7 +310,7 @@ public class GameService {
         rwLock.writeLock().lock();
         try {
             game.useBonus(BonusTypes.PUSH_TWICE);
-            eventPublisher.publishAsync(new BonusUsedEvent());
+            publishEvent(new BonusUsedEvent());
         } finally {
             rwLock.writeLock().unlock();
         }
@@ -317,9 +320,18 @@ public class GameService {
         rwLock.writeLock().lock();
         try {
             game.useBonus(BonusTypes.PUSH_FIXED);
-            eventPublisher.publishAsync(new BonusUsedEvent());
+            publishEvent(new BonusUsedEvent());
         } finally {
             rwLock.writeLock().unlock();
+        }
+    }
+
+    public Position getCurrentPositionOfPlayer(Player player) {
+        rwLock.readLock().lock();
+        try {
+            return game.getCurrentPositionOfPlayer(player);
+        } finally {
+            rwLock.readLock().unlock();
         }
     }
 
@@ -334,5 +346,15 @@ public class GameService {
         } finally {
             rwLock.readLock().unlock();
         }
+    }
+
+
+    private void publishEvent(IEvent event) {
+        if (eventPublisher == null) {
+            log.warn("EventPublisher is not initialized. Cannot publish event: {}", event.getClass().getSimpleName());
+            return;
+        }
+
+        eventPublisher.publishAsync(event);
     }
 }

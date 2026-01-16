@@ -1,7 +1,6 @@
 package labyrinth.server.game.services;
 
 import labyrinth.server.game.abstractions.IGameTimer;
-import labyrinth.server.game.ai.SimpleAiStrategy;
 import labyrinth.server.game.enums.BonusTypes;
 import labyrinth.server.game.enums.Direction;
 import labyrinth.server.game.enums.MoveState;
@@ -18,8 +17,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.IntStream;
 
-import static org.junit.jupiter.api.Assertions.*;
 import static labyrinth.server.game.GameTestHelper.createGame;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
 
 /**

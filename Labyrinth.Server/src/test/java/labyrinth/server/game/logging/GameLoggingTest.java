@@ -1,7 +1,6 @@
 package labyrinth.server.game.logging;
 
 import labyrinth.server.game.abstractions.IGameTimer;
-import labyrinth.server.game.ai.SimpleAiStrategy;
 import labyrinth.server.game.enums.Direction;
 import labyrinth.server.game.enums.GameLogType;
 import labyrinth.server.game.models.Board;
@@ -17,8 +16,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.IntStream;
 
-import static org.mockito.Mockito.mock;
 import static labyrinth.server.game.GameTestHelper.createGame;
+import static org.mockito.Mockito.mock;
 
 class GameLoggingTest {
 

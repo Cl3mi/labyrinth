@@ -192,7 +192,7 @@ public class Game {
         this.board.setPlayers(players);
 
         if (getCurrentPlayer().shouldMoveBePerformedByAi()) {
-            this.aiStrategy.performTurn(this, getCurrentPlayer());
+            this.aiStrategy.performTurn(getCurrentPlayer());
         }
 
         gameStartTime = OffsetDateTime.now();
@@ -398,7 +398,7 @@ public class Game {
                             playerRegistry.getPlayersInternal(),
                             roomState,
                             gameConfig,
-                      player -> aiStrategy.performTurn(this, player));
+                aiStrategy::performTurn);
     }
 
     private void guardFor(MoveState moveState) {
