@@ -121,7 +121,7 @@ public class ConnectCommandHandler extends AbstractCommandHandler<ConnectCommand
         }
     }
 
-    private  ConnectAckEventPayload createAckPayload(UUID playerId, UUID identifierToken) {
+    private ConnectAckEventPayload createAckPayload(UUID playerId, UUID identifierToken) {
         var ackPayload = new ConnectAckEventPayload();
         ackPayload.setType(EventType.CONNECT_ACK);
         ackPayload.setPlayerId(playerId.toString());

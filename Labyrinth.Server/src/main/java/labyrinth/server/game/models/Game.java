@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.function.Consumer;
 
 /**
  * Represents a game room for the Labyrinth game.
@@ -61,7 +62,9 @@ public class Game {
     @Getter(AccessLevel.NONE)
     private OffsetDateTime gameStartTime;
 
-    private final labyrinth.server.game.ai.AiStrategy aiStrategy;
+    private Consumer<Player> onPlayerMoved;
+
+    private final AiStrategy aiStrategy;
 
     private final labyrinth.server.game.services.GameLogger gameLogger;
 
@@ -265,6 +268,8 @@ public class Game {
         if (distanceMoved == -1) {
             return new MovePlayerToTileResult(false, distanceMoved, false, false, false);
         }
+
+        onPlayerMoved.accept(player);
 
         logPlayerMove(row, col, distanceMoved, player);
         updatePlayerStatisticsAfterMove(player, distanceMoved);
@@ -540,4 +545,5 @@ public class Game {
     public OffsetDateTime getTurnEndTime() {
         return nextTurnTimer.getExpirationTime();
     }
+
 }

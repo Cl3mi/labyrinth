@@ -30,9 +30,16 @@ public class TurnController implements ITurnController {
     private final IGameTimer turnTimer;
     private final GameLogger gameLogger;
 
-    public TurnController(IGameTimer turnTimer, GameLogger gameLogger) {
+    private Consumer<Player> onNextPlayerCallback;
+
+    public TurnController(IGameTimer turnTimer,
+                          GameLogger gameLogger) {
         this.turnTimer = turnTimer;
         this.gameLogger = gameLogger;
+    }
+
+    public void setOnNextPlayer(Consumer<Player> callback) {
+        this.onNextPlayerCallback = callback;
     }
 
     /**
@@ -103,6 +110,8 @@ public class TurnController implements ITurnController {
         gameLogger.log(GameLogType.NEXT_TURN, "New Player to move: " + nextPlayer.getUsername(), nextPlayer, null);
         currentMoveState = MoveState.PLACE_TILE;
         bonusUsedThisTurn = false;
+
+        onNextPlayerCallback.accept(nextPlayer);
 
         if (nextPlayer.shouldMoveBePerformedByAi()) {
             aiTurnExecutor.accept(nextPlayer);

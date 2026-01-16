@@ -10,28 +10,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Consumer;
 
 public class SligthlyLessSimpleAiStrategy implements AiStrategy {
 
     private static final org.slf4j.Logger log = LoggerFactory.getLogger(SligthlyLessSimpleAiStrategy.class);
     private final java.util.Random random = new java.util.Random();
 
-    // Callback to broadcast game state after AI moves
-    private Runnable broadcastCallback = null;
 
-    // Callback to handle move results (game over, treasure collected, etc.)
-    private Consumer<MovePlayerToTileResult> moveResultCallback = null;
-
-    @Override
-    public void setBroadcastCallback(Runnable callback) {
-        this.broadcastCallback = callback;
-    }
-
-    @Override
-    public void setMoveResultCallback(Consumer<MovePlayerToTileResult> callback) {
-        this.moveResultCallback = callback;
-    }
 
     @Override
     public void performTurn(Game game, Player realPlayer) {
@@ -69,9 +54,6 @@ public class SligthlyLessSimpleAiStrategy implements AiStrategy {
         boolean shiftSuccess = executeShift(game, player, result);
         log.info("AI {} - Shift success: {}", player.getUsername(), shiftSuccess);
 
-        // 4. Broadcast nach Shift
-        broadcast();
-
         // 5. Kurze Pause
         sleep(150);
 
@@ -79,8 +61,6 @@ public class SligthlyLessSimpleAiStrategy implements AiStrategy {
         executeMove(game, player, result);
         log.info("AI {} - Move completed", player.getUsername());
 
-        // 7. Broadcast nach Move
-        broadcast();
 
         log.info("=== AI END: {} ===", player.getUsername());
     }
@@ -133,23 +113,12 @@ public class SligthlyLessSimpleAiStrategy implements AiStrategy {
             if (!moveResult.moveSuccess()) {
                 log.info("AI {} - Move failed, staying at current", player.getUsername());
                 game.movePlayerToTile(current.row(), current.column(), player);
-            } else {
-                // Notify about the move result (treasure collected, game over, etc.)
-                if (moveResultCallback != null) {
-                    log.info("AI " + player.getUsername() + " - Notifying move result: gameOver=" + moveResult.gameOver() + ", treasureCollected=" + moveResult.treasureCollected());
-                    moveResultCallback.accept(moveResult);
-                }
             }
         } catch (Exception e) {
             // Wenn das Spiel beendet ist (z.B. weil wir gerade gewonnen haben), ist das OK
             if (e.getMessage() != null && e.getMessage().contains("FINISHED")) {
                 log.info("AI {} - Game has ended (player may have won!)", player.getUsername());
-                // Wichtig: Trotzdem das GameOver-Event triggern!
-                if (moveResultCallback != null) {
-                    log.info("AI {} - Triggering GameOver event manually", player.getUsername());
-                    // Erstelle ein "Dummy" MoveResult das gameOver=true signalisiert
-                    moveResultCallback.accept(new MovePlayerToTileResult(true, 0, true, true, false));
-                }
+
             } else {
                 
                 log.error("AI {} - Move exception", player.getUsername(), e);
@@ -160,20 +129,6 @@ public class SligthlyLessSimpleAiStrategy implements AiStrategy {
                     log.error("AI {} - Cannot make fallback move (game likely ended)", player.getUsername(), e2);
                 }
             }
-        }
-    }
-
-    private void broadcast() {
-        if (broadcastCallback != null) {
-            try {
-                log.info("AI - Broadcasting game state...");
-                broadcastCallback.run();
-                log.info("AI - Broadcast completed");
-            } catch (Exception e) {
-                log.error("AI - Broadcast failed: ", e);
-            }
-        } else {
-            log.info("AI - No broadcast callback set!");
         }
     }
 
