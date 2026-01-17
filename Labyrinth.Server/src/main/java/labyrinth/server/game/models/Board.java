@@ -159,6 +159,9 @@ public class Board {
         tileMap.put(new Position(0, columnIndex), extraTile);
         adjustPlayersOnPushedOutTile(pushedOut);
         extraTile = bottom;
+        if (fixedBonusActive) {
+            recalculateFixedTiles();
+        }
         notifyListeners(BoardEventType.COLUMN_SHIFTED, columnIndex);
         return true;
     }
@@ -182,6 +185,9 @@ public class Board {
         tileMap.put(new Position(height - 1, columnIndex), extraTile);
         adjustPlayersOnPushedOutTile(pushedOut);
         extraTile = top;
+        if (fixedBonusActive) {
+            recalculateFixedTiles();
+        }
         notifyListeners(BoardEventType.COLUMN_SHIFTED, columnIndex);
         return true;
     }
@@ -207,6 +213,9 @@ public class Board {
         tileMap.put(new Position(rowIndex, width - 1), extraTile);
         adjustPlayersOnPushedOutTile(pushedOut);
         extraTile = first;
+        if (fixedBonusActive) {
+            recalculateFixedTiles();
+        }
         notifyListeners(BoardEventType.ROW_SHIFTED, rowIndex);
         return true;
     }
@@ -232,6 +241,9 @@ public class Board {
         tileMap.put(new Position(rowIndex, 0), extraTile);
         adjustPlayersOnPushedOutTile(pushedOut);
         extraTile = last;
+        if (fixedBonusActive) {
+            recalculateFixedTiles();
+        }
         notifyListeners(BoardEventType.ROW_SHIFTED, rowIndex);
         return true;
     }
@@ -256,6 +268,23 @@ public class Board {
             }
         }
         return false;
+    }
+
+    /**
+     * Recalculates the isFixed flag for all tiles based on their current position.
+     * A tile is fixed if it is at an even row AND even column.
+     * Also ensures the extra tile is never fixed.
+     */
+    public void recalculateFixedTiles() {
+        for (int row = 0; row < height; row++) {
+            for (int col = 0; col < width; col++) {
+                Tile tile = tileMap.getForward(new Position(row, col));
+                boolean shouldBeFixed = (row % 2 == 0) && (col % 2 == 0);
+                tile.setIsFixed(shouldBeFixed);
+            }
+        }
+        
+        extraTile.setIsFixed(false);
     }
 
     /**
