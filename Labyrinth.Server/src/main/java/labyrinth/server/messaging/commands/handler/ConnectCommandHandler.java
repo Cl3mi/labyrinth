@@ -97,6 +97,9 @@ public class ConnectCommandHandler extends AbstractCommandHandler<ConnectCommand
             throw new ActionErrorException("Player session has expired", ErrorCode.PLAYER_NOT_FOUND);
         }
 
+        // Clear disconnected flag on successful reconnection
+        player.setDisconnected(false);
+
         registerAndAcknowledge(playerId, identifierToken, session);
     }
 

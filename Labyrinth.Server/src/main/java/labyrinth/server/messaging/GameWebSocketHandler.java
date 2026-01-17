@@ -57,6 +57,13 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
         }
         else {
             playerSessionRegistry.markDisconnected(session);
+
+            if (playerId != null) {
+                var player = gameService.getPlayer(playerId);
+                if (player != null) {
+                    player.setDisconnected(true);
+                }
+            }
         }
     }
 

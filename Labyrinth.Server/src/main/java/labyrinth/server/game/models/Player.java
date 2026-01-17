@@ -24,6 +24,7 @@ public class Player {
     private OffsetDateTime joinDate;
 
     private boolean isAiActive;
+    private boolean isDisconnected;
     private boolean isAdmin;
     private PlayerColor color;
     private PlayerStatistics statistics;
@@ -78,9 +79,12 @@ public class Player {
         return null;
     }
 
-    // TODO: we need to change this to disconnected
+    /**
+     * Determines if AI should perform moves for this player.
+     * Returns true if the player is an AI bot OR if they are temporarily disconnected.
+     */
     public boolean shouldMoveBePerformedByAi(){
-        return isAiActive;
+        return isAiActive || isDisconnected;
     }
     /**
      * Resets the player's state for a new game.
