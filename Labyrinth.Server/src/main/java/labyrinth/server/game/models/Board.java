@@ -283,7 +283,7 @@ public class Board {
                 tile.setIsFixed(shouldBeFixed);
             }
         }
-        
+
         extraTile.setIsFixed(false);
     }
 
