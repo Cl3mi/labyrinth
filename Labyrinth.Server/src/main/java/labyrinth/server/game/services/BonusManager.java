@@ -6,6 +6,7 @@ import labyrinth.server.game.bonuses.*;
 import labyrinth.server.game.constants.PointRewards;
 import labyrinth.server.game.enums.BonusTypes;
 import labyrinth.server.game.enums.GameLogType;
+import labyrinth.server.game.enums.MoveState;
 import labyrinth.server.game.models.Game;
 import labyrinth.server.game.models.Player;
 
@@ -51,27 +52,25 @@ public class BonusManager implements IBonusManager {
 
     @Override
     public boolean useBonus(BonusTypes type, Game game, Player player, Object... args) {
-        // Validate bonus strategy exists
         if (!bonusEffects.containsKey(type)) {
             throw new IllegalArgumentException("No strategy found for bonus type: " + type);
         }
 
-        // Check if a bonus has already been used this turn
         if (turnController.isBonusUsedThisTurn()) {
             throw new IllegalStateException("Only one bonus can be used per turn");
         }
 
-        // Apply the bonus effect
+        if (turnController.getCurrentMoveState() != MoveState.PLACE_TILE) {
+            throw new IllegalStateException("Bonuses can only be used before pushing a tile");
+        }
+
         boolean result = bonusEffects.get(type).apply(game, player, args);
 
         if (result) {
-            // Mark that a bonus has been used this turn
             turnController.markBonusUsed();
 
-            // Award points for using bonus
             player.getStatistics().increaseScore(PointRewards.REWARD_BONUS_USED);
 
-            // Log bonus usage
             Map<String, String> meta = new HashMap<>();
             meta.put("bonusType", type.toString());
             gameLogger.log(GameLogType.USE_BONUS, "Player used bonus " + type, player, meta);
