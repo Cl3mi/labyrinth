@@ -22,7 +22,8 @@ public class ConnectionCleanupService {
     private static final org.slf4j.Logger log = LoggerFactory.getLogger(ConnectionCleanupService.class);
 
     /**
-     * Cleans up players who have been disconnected for more than 30 seconds.
+     * Handles players who have been disconnected for more than 30 seconds.
+     * After 30 seconds, the player permanently becomes AI-controlled.
      * Runs every second.
      */
     @Scheduled(fixedRate = 1000)
@@ -31,18 +32,21 @@ public class ConnectionCleanupService {
 
         playerSessionRegistry.getDisconnectedEntries().forEach((playerId, ts) -> {
             if (now - ts >= 30_000) {
-
                 var player = gameService.getPlayer(playerId);
                 if (player != null) {
-                    gameService.leave(player);
-
-                    // Broadcast updated lobby state to remaining players
                     if (gameService.getGameState() == RoomState.LOBBY) {
+                        gameService.leave(player);
                         broadcastLobbyState();
+                        playerSessionRegistry.removePlayer(playerId);
+                    } else {
+                        log.info("[ConnectionCleanupService] Player {} has been disconnected for 30s, permanently converting to AI", player.getUsername());
+                        player.setAiActive(true);
+                        player.setDisconnected(false);
+                        playerSessionRegistry.removePlayer(playerId);
                     }
+                } else {
+                    playerSessionRegistry.removePlayer(playerId);
                 }
-
-                playerSessionRegistry.removePlayer(playerId);
             }
         });
     }

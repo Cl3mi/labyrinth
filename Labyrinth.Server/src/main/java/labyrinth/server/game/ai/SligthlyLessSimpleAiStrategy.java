@@ -49,7 +49,7 @@ public class SligthlyLessSimpleAiStrategy implements AiStrategy {
         SimulationResult result = findBestMove(player, targetCard);
         log.info("AI {} - Simulation result: {}", player.getUsername(), result != null ? "FOUND" : "NULL");
 
-        int sleepTime = 150;
+        int sleepTime = 1500;
         sleep(sleepTime);
 
         boolean shiftSuccess = executeShift(player, result);
