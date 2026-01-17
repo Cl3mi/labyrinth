@@ -128,10 +128,6 @@ public class PlayerRegistry implements IPlayerRegistry {
         return players.size() >= maxPlayers;
     }
 
-
-
-    // ========== Private Helper Methods ==========
-
     private void addAiPlayer() {
         Player player = new Player(UUID.randomUUID(), "Bot " + (players.size() + 1));
         player.setColor(getNextColor());
@@ -141,14 +137,12 @@ public class PlayerRegistry implements IPlayerRegistry {
     }
 
     private void reassignAdmin() {
-        // Find first non-AI player to become new admin
         var nextAdmin = players.stream()
                 .filter(p -> !p.isAiActive())
                 .findFirst();
 
         nextAdmin.ifPresent(player -> player.setAdmin(true));
 
-        // If no human players, fallback to first AI player
         if (!players.isEmpty()) {
             players.getFirst().setAdmin(true);
         }

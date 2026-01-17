@@ -43,10 +43,8 @@ public class GameInitializerService {
     public void distributeTreasuresAndBonuses(List<TreasureCard> treasureCards, Board board, List<Player> players, int bonusCount) {
         log.debug("[TREASURE DEBUG] Distributing {} treasures and {} bonuses", treasureCards.size(), bonusCount);
 
-        // Use the distribution service to place treasures and bonuses on the board
         distributionService.distributeAll(board, treasureCards, bonusCount);
 
-        // Assign treasure cards to players in round-robin fashion
         var playerToAssignCardsToIndex = 0;
         for (TreasureCard card : treasureCards) {
             Player player = players.get(playerToAssignCardsToIndex);
@@ -59,7 +57,6 @@ public class GameInitializerService {
             }
         }
 
-        // Verify distribution
         for (Player p : players) {
             log.debug("[TREASURE DEBUG] {} has {} treasures", p.getUsername(), p.getAssignedTreasureCards().size());
         }
