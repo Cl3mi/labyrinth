@@ -5,6 +5,9 @@ import labyrinth.client.audio.SoundEffects;
 import labyrinth.client.messaging.GameClient;
 import labyrinth.client.models.Board;
 import labyrinth.client.models.Player;
+import labyrinth.client.ui.Styles.StyledContextMenu;
+import labyrinth.client.ui.Styles.StyledDialog;
+import labyrinth.client.ui.Styles.StyledTooltipManager;
 import labyrinth.client.ui.theme.ThemeManager;
 import labyrinth.contracts.models.BonusType;
 import labyrinth.contracts.models.Direction;
@@ -258,7 +261,6 @@ public class BoardPanel extends JPanel {
                 g2.dispose();
             }
         };
-        btn.setToolTipText("Optionen (ESC)");
         btn.setBounds(10, 10, 45, 40);
         btn.setOpaque(false);
         btn.setContentAreaFilled(false);
@@ -266,6 +268,8 @@ public class BoardPanel extends JPanel {
         btn.setFocusPainted(false);
         btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
         btn.addActionListener(e -> showOptionsDialog());
+        StyledTooltipManager.setTooltip(btn, "Optionen", "Einstellungen öffnen (Esc/P)");
+        StyledContextMenu.attachTo(btn);
         return btn;
     }
 
@@ -668,8 +672,13 @@ public class BoardPanel extends JPanel {
                 }
             }
 
-            // Tab - toggle keyboard navigation help
-            case java.awt.event.KeyEvent.VK_TAB -> {
+            // P - pause/options
+            case java.awt.event.KeyEvent.VK_P -> {
+                showOptionsDialog();
+            }
+
+            // Tab or H - toggle keyboard navigation help
+            case java.awt.event.KeyEvent.VK_TAB, java.awt.event.KeyEvent.VK_H -> {
                 showKeyboardHelp();
             }
         }
@@ -685,8 +694,8 @@ public class BoardPanel extends JPanel {
             R / E: Extra-Tile im Uhrzeigersinn drehen
             Q: Extra-Tile gegen Uhrzeigersinn drehen
 
-            Esc: Optionen/Pause
-            Tab: Diese Hilfe anzeigen
+            P / Esc: Optionen/Pause
+            H / Tab: Diese Hilfe anzeigen
             """;
 
         toastManager.showInfo("HELP", "Tastatur-Hilfe", helpText);
@@ -2697,12 +2706,10 @@ public class BoardPanel extends JPanel {
         // Exit Button
         JButton exitButton = createStyledDialogButton("🚪 Spiel beenden", new Color(120, 50, 50), new Color(180, 80, 80));
         exitButton.addActionListener(e -> {
-            int choice = JOptionPane.showConfirmDialog(dialog,
-                    "Möchtest du das Spiel wirklich beenden?\nDein Fortschritt geht verloren.",
+            boolean confirmed = StyledDialog.showConfirm(dialog,
                     "Spiel beenden?",
-                    JOptionPane.YES_NO_OPTION,
-                    JOptionPane.WARNING_MESSAGE);
-            if (choice == JOptionPane.YES_OPTION) {
+                    "Möchtest du das Spiel wirklich beenden?\nDein Fortschritt geht verloren.");
+            if (confirmed) {
                 dialog.dispose();
                 if (onExitGame != null) {
                     onExitGame.run();

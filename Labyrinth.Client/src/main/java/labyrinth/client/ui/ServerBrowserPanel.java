@@ -1,6 +1,8 @@
 package labyrinth.client.ui;
 
 import labyrinth.client.ui.Styles.StyledButton;
+import labyrinth.client.ui.Styles.StyledContextMenu;
+import labyrinth.client.ui.Styles.StyledTooltipManager;
 import labyrinth.client.ui.theme.GameTheme;
 import labyrinth.client.ui.theme.ThemeManager;
 import labyrinth.managementclient.api.ServersApi;
@@ -67,6 +69,8 @@ public class ServerBrowserPanel extends JPanel {
             onLeaveServerBrowser();
             if (onBackToMenu != null) onBackToMenu.run();
         });
+        StyledTooltipManager.setTooltip(backBtn, "Zurück", "Zurück zum Hauptmenü");
+        StyledContextMenu.attachTo(backBtn);
         JPanel leftPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
         leftPanel.setOpaque(false);
         leftPanel.add(backBtn);
@@ -112,13 +116,40 @@ public class ServerBrowserPanel extends JPanel {
         serverList.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
+                if (e.getButton() == MouseEvent.BUTTON1) { // Only left-click triggers selection
+                    int idx = serverList.locationToIndex(e.getPoint());
+                    if (idx >= 0) {
+                        GameServer gs = serverListModel.getElementAt(idx);
+
+                        if (onServerSelected != null) {
+                            onServerSelected.accept(gs);
+                        }
+                    }
+                }
+            }
+
+            @Override
+            public void mousePressed(MouseEvent e) {
+                if (e.isPopupTrigger()) {
+                    showServerContextMenu(e);
+                }
+            }
+
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                if (e.isPopupTrigger()) {
+                    showServerContextMenu(e);
+                }
+            }
+
+            private void showServerContextMenu(MouseEvent e) {
                 int idx = serverList.locationToIndex(e.getPoint());
                 if (idx >= 0) {
+                    serverList.setSelectedIndex(idx);
                     GameServer gs = serverListModel.getElementAt(idx);
-
-                    if (onServerSelected != null) {
-                        onServerSelected.accept(gs);
-                    }
+                    String tooltip = "Server: " + gs.getName() + "\nSpieler: " + gs.getCurrentPlayerCount() + "/" + gs.getMaxPlayers();
+                    StyledContextMenu menu = new StyledContextMenu(serverList, tooltip);
+                    menu.show(e.getComponent(), e.getX(), e.getY());
                 }
             }
         });

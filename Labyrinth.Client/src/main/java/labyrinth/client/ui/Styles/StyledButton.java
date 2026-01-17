@@ -10,6 +10,8 @@ import labyrinth.client.ui.theme.GameTheme;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
+import java.awt.event.FocusAdapter;
+import java.awt.event.FocusEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.geom.RoundRectangle2D;
@@ -20,6 +22,7 @@ public class StyledButton extends JButton {
     private final Style style;
     private float hoverProgress = 0f;
     private boolean isHovered = false;
+    private boolean isFocused = false;
 
     public StyledButton(String text, Style style) {
         super(text);
@@ -31,6 +34,7 @@ public class StyledButton extends JButton {
         setBorderPainted(false);
         setContentAreaFilled(false);
         setCursor(new Cursor(Cursor.HAND_CURSOR));
+        setFocusable(true);
 
         Timer animTimer = new Timer(16, e -> {
             if (isHovered && hoverProgress < 1f) {
@@ -48,6 +52,19 @@ public class StyledButton extends JButton {
             public void mouseEntered(MouseEvent e) { isHovered = true; }
             @Override
             public void mouseExited(MouseEvent e) { isHovered = false; }
+        });
+
+        addFocusListener(new FocusAdapter() {
+            @Override
+            public void focusGained(FocusEvent e) {
+                isFocused = true;
+                repaint();
+            }
+            @Override
+            public void focusLost(FocusEvent e) {
+                isFocused = false;
+                repaint();
+            }
         });
     }
 
@@ -97,6 +114,19 @@ public class StyledButton extends JButton {
         g2.setColor(borderColor);
         g2.setStroke(new BasicStroke(2f));
         g2.draw(new RoundRectangle2D.Float(1, 1, w - 3, h - 3, arc, arc));
+
+        // Focus indicator - glowing outline
+        if (isFocused && isEnabled()) {
+            Color focusColor = GameTheme.Colors.ACCENT_GOLD;
+            // Outer glow
+            g2.setColor(new Color(focusColor.getRed(), focusColor.getGreen(), focusColor.getBlue(), 80));
+            g2.setStroke(new BasicStroke(4f));
+            g2.draw(new RoundRectangle2D.Float(-1, -1, w + 1, h + 1, arc + 4, arc + 4));
+            // Inner bright ring
+            g2.setColor(new Color(focusColor.getRed(), focusColor.getGreen(), focusColor.getBlue(), 200));
+            g2.setStroke(new BasicStroke(2f));
+            g2.draw(new RoundRectangle2D.Float(0, 0, w - 1, h - 1, arc + 2, arc + 2));
+        }
 
         // Text
         g2.setFont(getFont());

@@ -1,6 +1,7 @@
 package labyrinth.client.ui;
 
 import labyrinth.client.audio.AudioPlayer;
+import labyrinth.client.ui.Styles.StyledDialog;
 import labyrinth.client.ui.theme.FontManager;
 import labyrinth.client.ui.theme.GameTheme;
 import labyrinth.client.ui.theme.ThemeManager;
@@ -586,13 +587,11 @@ public class OptionsPanel extends JPanel {
     }
 
     private void resetToDefaults() {
-        int choice = JOptionPane.showConfirmDialog(this,
-                "Alle Einstellungen auf Standardwerte zurücksetzen?",
+        boolean confirmed = StyledDialog.showConfirm(this,
                 "Zurücksetzen bestätigen",
-                JOptionPane.YES_NO_OPTION,
-                JOptionPane.WARNING_MESSAGE);
+                "Alle Einstellungen auf Standardwerte zurücksetzen?");
 
-        if (choice == JOptionPane.YES_OPTION) {
+        if (confirmed) {
             musicVolume = 50;
             sfxVolume = 70;
             serverUrl = DEFAULT_SERVER_URL;

@@ -1,11 +1,17 @@
 package labyrinth.client.ui;
 
 import labyrinth.client.audio.AudioPlayer;
+import labyrinth.client.ui.Styles.StyledButton;
+import labyrinth.client.ui.Styles.StyledContextMenu;
+import labyrinth.client.ui.Styles.StyledTooltipManager;
+import labyrinth.client.ui.theme.FontManager;
+import labyrinth.client.ui.theme.GameTheme;
 import labyrinth.client.ui.theme.ThemeManager;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
+import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.geom.RoundRectangle2D;
@@ -41,21 +47,64 @@ public class MainMenuPanel extends JPanel {
 
     /**
      * Zeigt einen einfachen Dialog zur Eingabe des Spielernamens für Multiplayer.
+     * Mit Focus Trap (abgedunkelter Hintergrund).
      */
     public void showMultiplayerUsernameDialog(Consumer<String> onUsernameEntered) {
-        JDialog dialog = new JDialog((Frame) SwingUtilities.getWindowAncestor(this), "Mehrspieler - Spielername", true);
-        dialog.setSize(400, 200);
-        dialog.setLocationRelativeTo(this);
-        dialog.setResizable(false);
+        Window ownerWindow = SwingUtilities.getWindowAncestor(this);
+        JDialog dialog = new JDialog(ownerWindow, "Mehrspieler - Spielername", Dialog.ModalityType.APPLICATION_MODAL);
+        dialog.setUndecorated(true);
+        dialog.setBackground(new Color(0, 0, 0, 0));
 
-        JPanel mainPanel = new JPanel(new BorderLayout(10, 15));
-        mainPanel.setBorder(BorderFactory.createEmptyBorder(20, 25, 20, 25));
-        mainPanel.setBackground(new Color(45, 42, 38));
+        // Setup glass pane overlay (focus trap with darkened background)
+        JPanel glassPane = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                g.setColor(new Color(0, 0, 0, 180));
+                g.fillRect(0, 0, getWidth(), getHeight());
+            }
+        };
+        glassPane.setOpaque(false);
+        glassPane.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mousePressed(MouseEvent e) {
+                e.consume(); // Block clicks outside dialog
+            }
+        });
+        if (ownerWindow instanceof JFrame jFrame) {
+            jFrame.setGlassPane(glassPane);
+            glassPane.setVisible(true);
+        }
+
+        // Create styled content panel
+        JPanel mainPanel = new JPanel(new BorderLayout(10, 15)) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+                // Shadow
+                g2.setColor(new Color(0, 0, 0, 100));
+                g2.fill(new RoundRectangle2D.Float(6, 6, getWidth() - 6, getHeight() - 6, 15, 15));
+
+                // Background
+                g2.setColor(ThemeManager.getInstance().getSurfacePrimary());
+                g2.fill(new RoundRectangle2D.Float(0, 0, getWidth() - 6, getHeight() - 6, 15, 15));
+
+                // Border
+                g2.setColor(GameTheme.Colors.ACCENT_GOLD);
+                g2.setStroke(new BasicStroke(2f));
+                g2.draw(new RoundRectangle2D.Float(1, 1, getWidth() - 8, getHeight() - 8, 15, 15));
+
+                g2.dispose();
+            }
+        };
+        mainPanel.setOpaque(false);
+        mainPanel.setBorder(BorderFactory.createEmptyBorder(25, 30, 25, 30));
 
         // Titel
         JLabel titleLabel = new JLabel("Gib deinen Spielernamen ein", SwingConstants.CENTER);
-        titleLabel.setFont(new Font("Serif", Font.BOLD, 18));
-        titleLabel.setForeground(PRIMARY_GOLD_LIGHT);
+        titleLabel.setFont(FontManager.getMediumDisplay());
+        titleLabel.setForeground(GameTheme.Colors.ACCENT_GOLD);
         mainPanel.add(titleLabel, BorderLayout.NORTH);
 
         // Username Eingabe - zentriertes Panel
@@ -75,15 +124,16 @@ public class MainMenuPanel extends JPanel {
         gbc.gridx = 1;
         gbc.weightx = 0.7;
         JTextField usernameField = new JTextField(multiplayerUsername, 15);
-        usernameField.setFont(new Font("Arial", Font.PLAIN, 14));
-        usernameField.setBackground(new Color(70, 65, 58));
-        usernameField.setForeground(new Color(255, 248, 230));
-        usernameField.setCaretColor(new Color(255, 248, 230));
+        usernameField.setFont(FontManager.getMediumUI());
+        usernameField.setBackground(ThemeManager.getInstance().getSurfaceSecondary());
+        usernameField.setForeground(ThemeManager.getInstance().getTextPrimary());
+        usernameField.setCaretColor(ThemeManager.getInstance().getTextPrimary());
         usernameField.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(100, 85, 60), 1),
+                BorderFactory.createLineBorder(GameTheme.Colors.ACCENT_COPPER, 1),
                 BorderFactory.createEmptyBorder(8, 10, 8, 10)
         ));
-        usernameField.setPreferredSize(new Dimension(200, 35));
+        usernameField.setPreferredSize(new Dimension(200, 40));
+        StyledTooltipManager.setTooltip(usernameField, "Spielername", "Dein Anzeigename im Multiplayer-Spiel");
         inputPanel.add(usernameField, gbc);
 
         mainPanel.add(inputPanel, BorderLayout.CENTER);
@@ -92,28 +142,26 @@ public class MainMenuPanel extends JPanel {
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 0));
         buttonPanel.setOpaque(false);
 
-        JButton cancelButton = new JButton("Abbrechen");
-        cancelButton.setPreferredSize(new Dimension(110, 38));
-        cancelButton.setFont(new Font("SansSerif", Font.BOLD, 13));
-        cancelButton.addActionListener(e -> dialog.dispose());
+        StyledButton cancelButton = new StyledButton("Abbrechen", StyledButton.Style.SECONDARY);
+        cancelButton.setPreferredSize(new Dimension(130, 42));
+        cancelButton.addActionListener(e -> {
+            glassPane.setVisible(false);
+            dialog.dispose();
+        });
+        StyledTooltipManager.setTooltip(cancelButton, "Abbrechen", "Zurück zur Serverauswahl");
+        StyledContextMenu.attachTo(cancelButton);
 
-        JButton joinButton = new JButton("Beitreten");
-        joinButton.setPreferredSize(new Dimension(110, 38));
-        joinButton.setFont(new Font("SansSerif", Font.BOLD, 13));
-        joinButton.setBackground(new Color(80, 120, 80));
-        joinButton.setForeground(Color.WHITE);
+        StyledButton joinButton = new StyledButton("Beitreten", StyledButton.Style.PRIMARY);
+        joinButton.setPreferredSize(new Dimension(130, 42));
         joinButton.addActionListener(e -> {
             String enteredUsername = usernameField.getText().trim();
             if (enteredUsername.isEmpty()) {
-                JOptionPane.showMessageDialog(dialog,
-                        "Bitte geben Sie einen Spielernamen ein.",
-                        "Spielername erforderlich",
-                        JOptionPane.WARNING_MESSAGE);
                 usernameField.requestFocus();
                 return;
             }
             multiplayerUsername = enteredUsername;
 
+            glassPane.setVisible(false);
             dialog.dispose();
 
             // Callback aufrufen um zur Lobby zu wechseln
@@ -121,6 +169,8 @@ public class MainMenuPanel extends JPanel {
                 onUsernameEntered.accept(enteredUsername);
             }
         });
+        StyledTooltipManager.setTooltip(joinButton, "Beitreten", "Mit eingegebenem Namen dem Spiel beitreten");
+        StyledContextMenu.attachTo(joinButton);
 
         buttonPanel.add(cancelButton);
         buttonPanel.add(joinButton);
@@ -129,6 +179,16 @@ public class MainMenuPanel extends JPanel {
         // Enter-Taste soll auch "Beitreten" auslösen
         usernameField.addActionListener(e -> joinButton.doClick());
 
+        // Escape schließt den Dialog
+        dialog.getRootPane().registerKeyboardAction(
+                e -> {
+                    glassPane.setVisible(false);
+                    dialog.dispose();
+                },
+                KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0),
+                JComponent.WHEN_IN_FOCUSED_WINDOW
+        );
+
         // Fokus auf das Textfeld setzen
         dialog.addWindowListener(new java.awt.event.WindowAdapter() {
             @Override
@@ -136,9 +196,15 @@ public class MainMenuPanel extends JPanel {
                 usernameField.requestFocusInWindow();
                 usernameField.selectAll();
             }
+            @Override
+            public void windowClosed(java.awt.event.WindowEvent e) {
+                glassPane.setVisible(false);
+            }
         });
 
         dialog.setContentPane(mainPanel);
+        dialog.setSize(420, 200);
+        dialog.setLocationRelativeTo(ownerWindow);
         dialog.setVisible(true);
     }
 
@@ -431,6 +497,8 @@ public class MainMenuPanel extends JPanel {
         MenuButton multiplayerBtn = new MenuButton("Spiel starten", "Spiele alleine gegen KI oder online mit Freunden");
         multiplayerBtn.addActionListener(e -> onMultiplayerClicked.run());
         multiplayerBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
+        StyledTooltipManager.setTooltip(multiplayerBtn, "Spiel starten", "Spiele alleine gegen KI oder online mit Freunden");
+        StyledContextMenu.attachTo(multiplayerBtn);
         panel.add(multiplayerBtn);
 
         panel.add(Box.createVerticalStrut(12));
@@ -441,6 +509,8 @@ public class MainMenuPanel extends JPanel {
             if (onOptionsClicked != null) onOptionsClicked.run();
         });
         optionsBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
+        StyledTooltipManager.setTooltip(optionsBtn, "Einstellungen", "Grafik, Audio und Spieloptionen anpassen");
+        StyledContextMenu.attachTo(optionsBtn);
         panel.add(optionsBtn);
 
         panel.add(Box.createVerticalStrut(20));
@@ -455,6 +525,8 @@ public class MainMenuPanel extends JPanel {
             }
         });
         exitBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
+        StyledTooltipManager.setTooltip(exitBtn, "Beenden", "Spiel verlassen und Anwendung schließen");
+        StyledContextMenu.attachTo(exitBtn);
         panel.add(exitBtn);
 
         return panel;
@@ -623,6 +695,7 @@ public class MainMenuPanel extends JPanel {
         private float hoverProgress = 0f;
         private final Timer animationTimer;
         private boolean isHovered = false;
+        private boolean isFocused = false;
 
         public MenuButton(String text, String subtitle) {
             super(text);
@@ -634,6 +707,7 @@ public class MainMenuPanel extends JPanel {
             setBorderPainted(false);
             setContentAreaFilled(false);
             setCursor(new Cursor(Cursor.HAND_CURSOR));
+            setFocusable(true);
 
             // Flexible Größe - skaliert mit dem Layout
             setPreferredSize(new Dimension(320, 70));
@@ -660,6 +734,19 @@ public class MainMenuPanel extends JPanel {
                 @Override
                 public void mouseExited(MouseEvent e) {
                     isHovered = false;
+                }
+            });
+
+            addFocusListener(new java.awt.event.FocusAdapter() {
+                @Override
+                public void focusGained(java.awt.event.FocusEvent e) {
+                    isFocused = true;
+                    repaint();
+                }
+                @Override
+                public void focusLost(java.awt.event.FocusEvent e) {
+                    isFocused = false;
+                    repaint();
                 }
             });
         }
@@ -690,6 +777,18 @@ public class MainMenuPanel extends JPanel {
             g2.setColor(borderColor);
             g2.setStroke(new BasicStroke(2f + hoverProgress * 0.5f));
             g2.draw(new RoundRectangle2D.Float(2, 2, w - 5, h - 5, arc, arc));
+
+            // Focus indicator - glowing outline
+            if (isFocused) {
+                // Outer glow
+                g2.setColor(new Color(255, 215, 0, 80));
+                g2.setStroke(new BasicStroke(4f));
+                g2.draw(new RoundRectangle2D.Float(0, 0, w - 1, h - 1, arc + 4, arc + 4));
+                // Inner bright ring
+                g2.setColor(new Color(255, 215, 0, 200));
+                g2.setStroke(new BasicStroke(2f));
+                g2.draw(new RoundRectangle2D.Float(1, 1, w - 3, h - 3, arc + 2, arc + 2));
+            }
 
             // Glanz
             g2.setColor(new Color(255, 255, 255, (int) (15 + 20 * hoverProgress)));
@@ -737,6 +836,7 @@ public class MainMenuPanel extends JPanel {
 
     private class ExitButton extends JButton {
         private boolean isHovered = false;
+        private boolean isFocused = false;
 
         public ExitButton(String text) {
             super(text);
@@ -746,6 +846,7 @@ public class MainMenuPanel extends JPanel {
             setBorderPainted(false);
             setContentAreaFilled(false);
             setCursor(new Cursor(Cursor.HAND_CURSOR));
+            setFocusable(true);
             setPreferredSize(new Dimension(130, 38));
             setMaximumSize(new Dimension(150, 45));
             setMinimumSize(new Dimension(100, 32));
@@ -760,6 +861,19 @@ public class MainMenuPanel extends JPanel {
                 @Override
                 public void mouseExited(MouseEvent e) {
                     isHovered = false;
+                    repaint();
+                }
+            });
+
+            addFocusListener(new java.awt.event.FocusAdapter() {
+                @Override
+                public void focusGained(java.awt.event.FocusEvent e) {
+                    isFocused = true;
+                    repaint();
+                }
+                @Override
+                public void focusLost(java.awt.event.FocusEvent e) {
+                    isFocused = false;
                     repaint();
                 }
             });
@@ -790,6 +904,18 @@ public class MainMenuPanel extends JPanel {
                 g2.setStroke(new BasicStroke(1.5f));
                 g2.drawRoundRect(1, 1, w - 2, h - 2, 8, 8);
                 g2.setColor(new Color(200, 130, 130));
+            }
+
+            // Focus indicator - glowing outline
+            if (isFocused) {
+                // Outer glow (red-tinted for exit button)
+                g2.setColor(new Color(255, 100, 100, 80));
+                g2.setStroke(new BasicStroke(4f));
+                g2.drawRoundRect(-1, -1, w + 1, h + 1, 12, 12);
+                // Inner bright ring
+                g2.setColor(new Color(255, 150, 150, 200));
+                g2.setStroke(new BasicStroke(2f));
+                g2.drawRoundRect(0, 0, w - 1, h - 1, 10, 10);
             }
 
             g2.setFont(getFont());
