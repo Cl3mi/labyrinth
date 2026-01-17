@@ -1,9 +1,9 @@
 package labyrinth.client.ui;
 
+import labyrinth.client.messaging.ServerClientFactory.SimpleServersApi;
 import labyrinth.client.ui.Styles.StyledButton;
 import labyrinth.client.ui.theme.GameTheme;
 import labyrinth.client.ui.theme.ThemeManager;
-import labyrinth.managementclient.api.ServersApi;
 import labyrinth.managementclient.model.GameServer;
 import lombok.Setter;
 import org.jspecify.annotations.NonNull;
@@ -28,7 +28,7 @@ public class ServerBrowserPanel extends JPanel {
     private Runnable onBackToMenu;
     private Image backgroundImage;
 
-    private final ServersApi serversApi;
+    private final SimpleServersApi serversApi;
 
     private final DefaultListModel<GameServer> serverListModel = new DefaultListModel<>();
     private final JList<GameServer> serverList;
@@ -42,7 +42,7 @@ public class ServerBrowserPanel extends JPanel {
     @Setter
     private Consumer<GameServer> onServerSelected;
 
-    public ServerBrowserPanel(ServersApi serversApi) {
+    public ServerBrowserPanel(SimpleServersApi serversApi) {
         this.serversApi = serversApi;
 
         loadBackgroundImage();
@@ -208,9 +208,12 @@ public class ServerBrowserPanel extends JPanel {
 
         poller.scheduleAtFixedRate(() -> {
             try {
+                System.out.println("[ServerBrowser] Fetching servers...");
                 List<GameServer> servers = serversApi.listServers();
+                System.out.println("[ServerBrowser] Received " + (servers != null ? servers.size() : "null") + " servers");
                 updateServerList(servers);
             } catch (Exception ex) {
+                System.err.println("[ServerBrowser] Error fetching servers: " + ex.getMessage());
                 ex.printStackTrace();
                 SwingUtilities.invokeLater(() -> statusLabel.setText("Fehler beim Laden"));
             }

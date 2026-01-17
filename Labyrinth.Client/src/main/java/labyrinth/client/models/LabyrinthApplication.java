@@ -213,14 +213,19 @@ public class LabyrinthApplication {
     }
 
     private void showServerBrowser() {
+        // Altes Panel stoppen und entfernen
+        if (serverBrowserPanel != null) {
+            serverBrowserPanel.onLeaveServerBrowser();
+            mainPanel.remove(serverBrowserPanel);
+        }
+
         // ServerBrowserPanel mit aktueller URL neu erstellen
         var serversApi = ServerClientFactory.create(OptionsPanel.loadServerUrlFromPreferences());
         serverBrowserPanel = new ServerBrowserPanel(serversApi);
         serverBrowserPanel.setOnBackToMenu(this::showMainMenu);
         serverBrowserPanel.setOnServerSelected(this::setUsername);
 
-        // Altes Panel entfernen, neues hinzufügen
-        mainPanel.remove(serverBrowserPanel); // Falls vorhanden
+        // Neues Panel hinzufügen
         mainPanel.add(serverBrowserPanel, "serverbrowser");
 
         CardLayout cl = (CardLayout) mainPanel.getLayout();

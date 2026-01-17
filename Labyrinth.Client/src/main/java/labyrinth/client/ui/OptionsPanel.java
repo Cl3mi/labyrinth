@@ -118,7 +118,7 @@ public class OptionsPanel extends JPanel {
     private void loadSettings() {
         musicVolume = PREFS.getInt(PREF_MUSIC_VOLUME, 50);
         sfxVolume = PREFS.getInt(PREF_SFX_VOLUME, 70);
-        serverUrl = PREFS.get(PREF_SERVER_URL, "ws://localhost:8082/game");
+        serverUrl = PREFS.get(PREF_SERVER_URL, DEFAULT_SERVER_URL);
         darkTheme = ThemeManager.getInstance().isDarkMode(); // Use ThemeManager as source of truth
         windowSizeIndex = PREFS.getInt(PREF_WINDOW_SIZE, 1); // Default: 1400x900
     }
