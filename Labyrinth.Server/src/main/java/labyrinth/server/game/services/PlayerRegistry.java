@@ -132,6 +132,7 @@ public class PlayerRegistry implements IPlayerRegistry {
         Player player = new Player(UUID.randomUUID(), "Bot " + (players.size() + 1));
         player.setColor(getNextColor());
         player.setAiActive(true);
+        player.setDisconnected(true);
         player.setJoinDate(OffsetDateTime.now());
         players.add(player);
     }
