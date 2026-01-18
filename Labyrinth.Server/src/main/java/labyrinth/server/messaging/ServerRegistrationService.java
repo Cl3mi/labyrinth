@@ -35,9 +35,6 @@ public class ServerRegistrationService {
     @Value("${server.publichost:localhost}")
     private String publicHost;
 
-    @Value("${server.wsendpoint:/game}")
-    private String wsEndpoint;
-
     @Value("${server.port:8080}")
     private int serverPort;
 
@@ -62,7 +59,7 @@ public class ServerRegistrationService {
         }
 
         try {
-            String fullUri = String.format("ws://%s:%d%s", publicHost, serverPort, wsEndpoint);
+            String fullUri = String.format("ws://%s:%d", publicHost, serverPort);
 
             var gameServerRegistration = new GameServerRegistration();
             gameServerRegistration.setMaxPlayers(gameService.getMaxPlayers());
