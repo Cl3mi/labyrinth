@@ -7,6 +7,7 @@ import labyrinth.client.ui.theme.ThemeManager;
 import labyrinth.client.factories.BoardFactory;
 import labyrinth.client.messaging.GameClient;
 import labyrinth.client.messaging.ReconnectionManager;
+import labyrinth.client.util.UriHelper;
 import labyrinth.contracts.models.Treasure;
 import labyrinth.managementclient.model.GameServer;
 
@@ -266,7 +267,9 @@ public class LabyrinthApplication {
             }
         }
 
-        var client = new GameClient(URI.create(gameServer.getUri()));
+        var serverUri = UriHelper.getGameUri(gameServer.getUri());
+        var client = new GameClient(serverUri);
+
         setupClient(client);
 
         CardLayout cl = (CardLayout) mainPanel.getLayout();
