@@ -674,36 +674,30 @@ public class LabyrinthApplication {
             boardPanel = null;
         }
 
-        // Lobby-Panel aktualisieren
-        SwingUtilities.invokeLater(() -> {
-            if (client != null && client.isOpen()) {
-                // PlayerId aus gespeicherten Preferences laden
-                String savedPlayerId = ClientIdentityStore.loadPlayerId();
-                if (savedPlayerId != null) {
-                    lobbyPanel.setLocalPlayerId(savedPlayerId);
-                    System.out.println("[" + PROFILE + "] Set localPlayerId in lobby: " + savedPlayerId);
+        // Disconnect from server and reconnect to reset game state
+        if (client != null && client.isOpen()) {
+            System.out.println("[" + PROFILE + "] Disconnecting to reset game state...");
+            client.disconnectCleanly();
+
+            // Reconnect after a short delay
+            new Thread(() -> {
+                try {
+                    Thread.sleep(500);
+                    SwingUtilities.invokeLater(() -> {
+                        System.out.println("[" + PROFILE + "] Reconnecting to server...");
+                        connectToServer();
+                    });
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
                 }
-
-                // Username setzen
-                if (username != null) {
-                    lobbyPanel.setLocalUsername(username);
-                    System.out.println("[" + PROFILE + "] Set localUsername in lobby: " + username);
-                }
-
-                lobbyPanel.setConnected(true);
-                lobbyPanel.setStatusText("Verbunden - Bereit fuer neues Spiel", new Color(100, 200, 100));
-
-                // Start-Button manuell aktivieren wenn Admin
-                lobbyPanel.forceEnableStartButton();
-                System.out.println("[" + PROFILE + "] Lobby ready, start button force-enabled");
-
-                // Reset exitedToLobby flag so new GAME_STARTED events are processed
-                // (but keep blocking GAME_STATE_UPDATE until GAME_STARTED arrives)
-            } else {
+            }).start();
+        } else {
+            // Not connected - just show lobby
+            SwingUtilities.invokeLater(() -> {
                 lobbyPanel.setConnected(false);
                 lobbyPanel.setStatusText("Nicht verbunden", new Color(170, 120, 0));
-            }
-        });
+            });
+        }
 
         showLobby();
         System.out.println("[" + PROFILE + "] Returned to lobby");

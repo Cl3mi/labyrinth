@@ -448,6 +448,9 @@ public class BoardPanel extends JPanel {
 
         Graphics2D g = (Graphics2D) g2.create();
         try {
+            g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
+            g.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+            g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
             Shape oldClip = g.getClip();
             g.setClip(new Rectangle(x, y, size, size));
 
@@ -1150,6 +1153,8 @@ public class BoardPanel extends JPanel {
         Graphics2D g2 = (Graphics2D) g.create();
         try {
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
+            g2.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
 
             calculateLayoutMetrics();
             drawYourTurnBoardHighlight(g2); // Draw glowing border when it's your turn
@@ -1675,18 +1680,33 @@ public class BoardPanel extends JPanel {
             }
 
             if (icon != null) {
+                // Calculate dimensions preserving aspect ratio
+                int imgW = icon.getWidth();
+                int imgH = icon.getHeight();
+                int drawW, drawH;
+                if (imgW >= imgH) {
+                    // Landscape: fit to width
+                    drawW = iconSize;
+                    drawH = (int) (iconSize * ((double) imgH / imgW));
+                } else {
+                    // Portrait: fit to height
+                    drawH = iconSize;
+                    drawW = (int) (iconSize * ((double) imgW / imgH));
+                }
+
                 g2.drawImage(icon,
-                        px - iconSize / 2,
-                        py - iconSize / 2,
-                        iconSize,
-                        iconSize,
+                        px - drawW / 2,
+                        py - drawH / 2,
+                        drawW,
+                        drawH,
                         null);
 
                 // Draw border around local player icon
                 if (isLocalPlayer) {
                     g2.setColor(new Color(0, 200, 255, 200));
                     g2.setStroke(new BasicStroke(3));
-                    g2.drawOval(px - iconSize / 2 - 2, py - iconSize / 2 - 2, iconSize + 4, iconSize + 4);
+                    int borderSize = Math.max(drawW, drawH);
+                    g2.drawOval(px - borderSize / 2 - 2, py - borderSize / 2 - 2, borderSize + 4, borderSize + 4);
                 }
             } else {
                 g2.setColor(PLAYER_COLORS[i % PLAYER_COLORS.length]);
@@ -1798,7 +1818,7 @@ public class BoardPanel extends JPanel {
 
         // Label über dem Tile
         g2.setFont(new Font("Arial", Font.BOLD, 14));
-        g2.setColor(Color.BLACK);
+        g2.setColor(ThemeManager.getInstance().getTextLight());
         g2.drawString("Schiebekarte", x, y - 8);
 
         Tile extraTile = board.getExtraTile();
@@ -2342,7 +2362,21 @@ public class BoardPanel extends JPanel {
         if (playerIndex < playerIcons.size() && playerIcons.get(playerIndex) != null) {
             BufferedImage icon = playerIcons.get(playerIndex);
             int iconSize = 32;
-            g2.drawImage(icon, x + padding, y + padding, iconSize, iconSize, null);
+            // Calculate dimensions preserving aspect ratio
+            int imgW = icon.getWidth();
+            int imgH = icon.getHeight();
+            int drawW, drawH;
+            if (imgW >= imgH) {
+                drawW = iconSize;
+                drawH = (int) (iconSize * ((double) imgH / imgW));
+            } else {
+                drawH = iconSize;
+                drawW = (int) (iconSize * ((double) imgW / imgH));
+            }
+            // Center the icon in the allocated space
+            int offsetX = (iconSize - drawW) / 2;
+            int offsetY = (iconSize - drawH) / 2;
+            g2.drawImage(icon, x + 2 + offsetX, y + padding + offsetY, drawW, drawH, null);
         } else {
             // Fallback: Color indicator circle
             if (player.getColor() != null) {
