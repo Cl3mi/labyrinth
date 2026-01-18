@@ -10,6 +10,8 @@ import labyrinth.server.game.enums.RoomState;
 import labyrinth.server.messaging.commands.CommandMessageDispatcher;
 import labyrinth.server.messaging.commands.CommandMessageParser;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
@@ -28,6 +30,8 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
     private final PlayerSessionRegistry playerSessionRegistry;
     private final MessageService messageService;
     private final GameService gameService;
+
+    private static final Logger log = LoggerFactory.getLogger(GameWebSocketHandler.class);
 
 
     @Override
@@ -81,6 +85,8 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
 
             messageService.sendToSession(session, actionError);
         } catch (Exception ex) {
+            log.error("Error handling WebSocket message", ex);
+
             var actionError = new ActionErrorEventPayload();
             actionError.setType(EventType.ACTION_ERROR);
             actionError.setMessage(ex.getMessage());
