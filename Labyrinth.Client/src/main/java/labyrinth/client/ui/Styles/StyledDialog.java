@@ -16,8 +16,8 @@ import java.awt.geom.RoundRectangle2D;
  */
 public class StyledDialog extends JDialog {
 
-    private static final int DIALOG_WIDTH = 420;
-    private static final int DIALOG_MIN_HEIGHT = 180;
+    private static final int DIALOG_WIDTH = 480;
+    private static final int DIALOG_MIN_HEIGHT = 220;
     private static final int PADDING = 25;
     private static final int ARC = 15;
     private static final Color OVERLAY_COLOR = new Color(0, 0, 0, 180);
@@ -80,9 +80,9 @@ public class StyledDialog extends JDialog {
     }
 
     public enum MessageType {
-        INFO("ℹ", GameTheme.Colors.ACCENT_GOLD),
-        WARNING("⚠", new Color(241, 196, 15)),
-        ERROR("✕", new Color(231, 76, 60));
+        INFO("", GameTheme.Colors.ACCENT_GOLD),       // ASCII fallback
+        WARNING("!", new Color(241, 196, 15)),         // ASCII fallback
+        ERROR("X", new Color(231, 76, 60));            // ASCII fallback
 
         final String icon;
         final Color color;

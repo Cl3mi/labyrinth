@@ -28,6 +28,7 @@ public class AiController {
     private String localPlayerId;
     private final AtomicBoolean aiTurnInProgress = new AtomicBoolean(false);
     private final AtomicBoolean aiModeEnabled = new AtomicBoolean(false);
+    private final AtomicBoolean stopped = new AtomicBoolean(false);
 
     // Callback for UI feedback
     private Runnable onAiThinkingStart;
@@ -100,34 +101,123 @@ public class AiController {
     }
 
     /**
+     * Stops the AI controller completely.
+     * Called when game ends to prevent the AI from continuing to send moves.
+     */
+    public void stop() {
+        System.out.println("[AI Controller] STOPPING - game ended");
+        stopped.set(true);
+        aiModeEnabled.set(false);
+        aiTurnInProgress.set(false);
+
+        // Clear stored state to prevent re-triggering
+        latestBoard = null;
+        latestPlayers = null;
+        latestTurnInfo = null;
+
+        if (onAiModeChanged != null) {
+            SwingUtilities.invokeLater(onAiModeChanged);
+        }
+    }
+
+    /**
+     * Resets the stopped flag. Called when starting a new game.
+     */
+    public void reset() {
+        System.out.println("[AI Controller] RESET - ready for new game");
+        stopped.set(false);
+    }
+
+    // Store latest state for re-triggering
+    private volatile Board latestBoard;
+    private volatile List<Player> latestPlayers;
+    private volatile CurrentTurnInfo latestTurnInfo;
+
+    /**
      * Called when game state is updated.
      * If AI mode is enabled and it's the local player's turn, triggers AI automatically.
      */
     public void onGameStateUpdate(Board board, List<Player> players, CurrentTurnInfo turnInfo) {
+        // Check if stopped (game ended)
+        if (stopped.get()) {
+            System.out.println("[AI Controller] Ignoring state update - AI is stopped");
+            return;
+        }
+
+        // Always store latest state
+        this.latestBoard = board;
+        this.latestPlayers = players;
+        this.latestTurnInfo = turnInfo;
+
         if (!aiModeEnabled.get()) {
             return; // AI mode not enabled
         }
 
         if (board == null || players == null || turnInfo == null) {
+            System.out.println("[AI Controller] Skipping - null state");
             return;
         }
 
         // Check if it's the local player's turn
-        if (!localPlayerId.equals(turnInfo.getCurrentPlayerId())) {
+        if (localPlayerId == null || !localPlayerId.equals(turnInfo.getCurrentPlayerId())) {
+            System.out.println("[AI Controller] Not my turn. Local: " + localPlayerId + ", Current: " + turnInfo.getCurrentPlayerId());
             return;
         }
 
         // Find the local player
         Player localPlayer = findPlayerById(localPlayerId, players);
         if (localPlayer == null) {
+            System.out.println("[AI Controller] Local player not found in players list");
             return;
         }
 
         // Trigger AI if not already in progress
         if (aiTurnInProgress.compareAndSet(false, true)) {
-            System.out.println("[AI Controller] Auto-triggering AI for: " + localPlayer.getName());
+            System.out.println("[AI Controller] Auto-triggering AI for: " + localPlayer.getName() + " (State: " + turnInfo.getState() + ")");
             executeAiTurn(board, localPlayer, turnInfo.getState() == TurnState.WAITING_FOR_PUSH);
+        } else {
+            System.out.println("[AI Controller] AI already in progress, skipping");
         }
+    }
+
+    /**
+     * Re-triggers AI with latest stored state.
+     * Called after AI completes a move to check if it's still our turn.
+     */
+    private void retriggerIfStillMyTurn() {
+        // Check if stopped (game ended) or AI mode disabled
+        if (stopped.get() || !aiModeEnabled.get()) return;
+
+        // Small delay to let server state update arrive
+        executor.submit(() -> {
+            try {
+                Thread.sleep(500);
+            } catch (InterruptedException e) {
+                return;
+            }
+
+            // Re-check stopped flag after sleep (game may have ended while waiting)
+            if (stopped.get()) {
+                System.out.println("[AI Controller] Re-trigger cancelled - AI is stopped");
+                return;
+            }
+
+            Board board = latestBoard;
+            List<Player> players = latestPlayers;
+            CurrentTurnInfo turnInfo = latestTurnInfo;
+
+            if (board == null || players == null || turnInfo == null) return;
+            if (localPlayerId == null || !localPlayerId.equals(turnInfo.getCurrentPlayerId())) return;
+
+            Player localPlayer = findPlayerById(localPlayerId, players);
+            if (localPlayer == null) return;
+
+            // Check if we need to do something (still our turn, e.g., need to move after push)
+            if (aiTurnInProgress.compareAndSet(false, true)) {
+                System.out.println("[AI Controller] Re-triggering AI - still my turn (State: " + turnInfo.getState() + ")");
+                executeAiTurn(board, localPlayer, turnInfo.getState() == TurnState.WAITING_FOR_PUSH);
+            }
+        });
     }
 
     /**
@@ -140,20 +230,34 @@ public class AiController {
     private void executeAiTurn(Board board, Player player, boolean needsShift) {
         executor.submit(() -> {
             try {
+                // Check if stopped before starting
+                if (stopped.get()) {
+                    System.out.println("[AI] Turn cancelled - AI is stopped");
+                    return;
+                }
+
                 // Notify UI that AI is thinking
                 notifyThinkingStart();
 
-                System.out.println("[AI] Starting turn for: " + player.getName());
+                System.out.println("[AI] Starting turn for: " + player.getName() + " (needsShift: " + needsShift + ")");
 
                 if (needsShift) {
                     // Phase 1: Compute and execute shift
                     executeShiftPhase(board, player);
 
-                    // Wait for server to process
-                    Thread.sleep(300);
+                    // Wait for server to process and send new state
+                    Thread.sleep(400);
+
+                    // After shift, we need to move - but server will send new state
+                    // Set flag to false so new state update can trigger move
+                    aiTurnInProgress.set(false);
+                    notifyThinkingEnd();
+
+                    System.out.println("[AI] Shift done, waiting for server state update for move phase");
+                    return; // Let onGameStateUpdate handle the move phase
                 }
 
-                // Phase 2: Execute move
+                // Phase 2: Execute move (only if no shift needed, i.e., already in WAITING_FOR_MOVE state)
                 executeMovePhase(board, player);
 
                 System.out.println("[AI] Turn completed for: " + player.getName());
@@ -164,6 +268,9 @@ public class AiController {
             } finally {
                 aiTurnInProgress.set(false);
                 notifyThinkingEnd();
+
+                // Check if it's still our turn (e.g., game might loop back to us)
+                retriggerIfStillMyTurn();
             }
         });
     }
@@ -198,18 +305,47 @@ public class AiController {
     }
 
     private void executeMovePhase(Board board, Player player) throws InterruptedException {
-        // Recompute best move after shift (board state has changed)
-        AiDecision decision = strategy.computeBestMove(board, player);
-        Position targetPos = decision != null ? decision.targetPosition() : player.getCurrentPosition();
+        // Use BoardSimulator to find reachable positions from current state (no shift simulation)
+        BoardSimulator sim = new BoardSimulator(board, player);
+        java.util.Set<Position> reachable = sim.getReachablePositions();
+        Position targetPos = sim.getTargetPosition(); // Treasure or home
 
-        if (targetPos == null) {
-            targetPos = player.getCurrentPosition();
+        System.out.println("[AI] Move phase: " + reachable.size() + " reachable positions, target: " +
+                (targetPos != null ? targetPos.getRow() + "/" + targetPos.getColumn() : "none"));
+
+        // Find the best position to move to
+        Position bestMove = null;
+
+        if (targetPos != null && reachable.contains(targetPos)) {
+            // Target is directly reachable!
+            bestMove = targetPos;
+            System.out.println("[AI] Target is directly reachable!");
+        } else if (targetPos != null) {
+            // Find closest reachable position to target
+            int minDist = Integer.MAX_VALUE;
+            for (Position rPos : reachable) {
+                int dist = Math.abs(rPos.getRow() - targetPos.getRow()) +
+                        Math.abs(rPos.getColumn() - targetPos.getColumn());
+                if (dist < minDist) {
+                    minDist = dist;
+                    bestMove = rPos;
+                }
+            }
+            if (bestMove != null) {
+                System.out.println("[AI] Moving closer to target, distance: " + minDist);
+            }
+        }
+
+        // Fallback: stay in place if no better option
+        if (bestMove == null) {
+            bestMove = player.getCurrentPosition();
+            System.out.println("[AI] No better move found, staying in place");
         }
 
         Thread.sleep(150);
 
-        System.out.println("[AI] Moving to " + targetPos.getRow() + "/" + targetPos.getColumn());
-        client.sendMovePawn(targetPos.getRow(), targetPos.getColumn());
+        System.out.println("[AI] Moving to " + bestMove.getRow() + "/" + bestMove.getColumn());
+        client.sendMovePawn(bestMove.getRow(), bestMove.getColumn());
     }
 
     private Player findPlayerById(String playerId, List<Player> players) {

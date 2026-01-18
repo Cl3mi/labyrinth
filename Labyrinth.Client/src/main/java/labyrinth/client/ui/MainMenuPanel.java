@@ -203,7 +203,7 @@ public class MainMenuPanel extends JPanel {
         });
 
         dialog.setContentPane(mainPanel);
-        dialog.setSize(420, 200);
+        dialog.setSize(520, 220);  // Größer für bessere Lesbarkeit
         dialog.setLocationRelativeTo(ownerWindow);
         dialog.setVisible(true);
     }
@@ -211,7 +211,7 @@ public class MainMenuPanel extends JPanel {
     private JLabel createDialogLabel(String text) {
         JLabel label = new JLabel(text);
         label.setFont(new Font("Arial", Font.BOLD, 14));
-        label.setForeground(new Color(220, 210, 190));
+        label.setForeground(ThemeManager.getInstance().getTextPrimary());
         return label;
     }
 

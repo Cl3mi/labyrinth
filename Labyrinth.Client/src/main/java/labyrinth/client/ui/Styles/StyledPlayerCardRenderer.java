@@ -17,11 +17,12 @@ public class StyledPlayerCardRenderer extends JPanel implements ListCellRenderer
     private final JLabel badgeLabel;
     private final JPanel avatarPanel;
 
+    // Brighter player colors for better visibility in dark theme
     private static final Color[] PLAYER_COLORS = {
-            new Color(200, 70, 70),
-            new Color(70, 160, 70),
-            new Color(70, 130, 200),
-            new Color(200, 180, 70)
+            new Color(220, 90, 90),    // Bright red
+            new Color(90, 200, 90),    // Bright green
+            new Color(100, 160, 230),  // Bright blue
+            new Color(240, 210, 80)    // Bright yellow
     };
 
     public StyledPlayerCardRenderer() {
@@ -88,12 +89,12 @@ public class StyledPlayerCardRenderer extends JPanel implements ListCellRenderer
         nameLabel.setText(cleanName);
         nameLabel.setForeground(isOffline ? GameTheme.Colors.TEXT_MUTED : GameTheme.Colors.TEXT_LIGHT);
 
-        statusLabel.setText(isOffline ? "● Offline" : "● Bereit");
+        statusLabel.setText(isOffline ? "- Offline" : "- Bereit");
         statusLabel.setForeground(isOffline ? new Color(180, 100, 100) : new Color(100, 180, 100));
 
         StringBuilder badges = new StringBuilder("<html><div style='text-align:right'>");
-        if (isAdmin) badges.append("<span style='color:#FFD700'>★ Admin</span><br>");
-        if (isYou) badges.append("<span style='color:#90EE90'>● Du</span>");
+        if (isAdmin) badges.append("<span style='color:#FFD700'>[Admin]</span><br>");
+        if (isYou) badges.append("<span style='color:#90EE90'>[Du]</span>");
         badges.append("</div></html>");
         badgeLabel.setText(badges.toString());
 
@@ -105,11 +106,13 @@ public class StyledPlayerCardRenderer extends JPanel implements ListCellRenderer
         Graphics2D g2 = (Graphics2D) g.create();
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-        g2.setColor(new Color(50, 45, 40, 180));
+        // Slightly brighter background for better visibility
+        g2.setColor(new Color(60, 55, 50, 200));
         g2.fill(new RoundRectangle2D.Float(0, 0, getWidth(), getHeight(), 10, 10));
 
-        g2.setColor(new Color(80, 70, 55, 100));
-        g2.setStroke(new BasicStroke(1));
+        // Brighter border
+        g2.setColor(new Color(120, 100, 80, 150));
+        g2.setStroke(new BasicStroke(1.5f));
         g2.draw(new RoundRectangle2D.Float(0, 0, getWidth() - 1, getHeight() - 1, 10, 10));
 
         g2.dispose();

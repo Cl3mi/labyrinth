@@ -31,16 +31,17 @@ public final class ThemeManager {
     private static final Color DARK_CARD_BORDER = new Color(100, 85, 60);
 
     // ==================== LIGHT THEME COLORS ====================
-    private static final Color LIGHT_BACKGROUND_PRIMARY = new Color(240, 235, 225);
-    private static final Color LIGHT_BACKGROUND_SECONDARY = new Color(225, 218, 205);
-    private static final Color LIGHT_SURFACE_PRIMARY = new Color(255, 250, 240);
-    private static final Color LIGHT_SURFACE_SECONDARY = new Color(245, 238, 225);
-    private static final Color LIGHT_TEXT_PRIMARY = new Color(45, 40, 35);
-    private static final Color LIGHT_TEXT_MUTED = new Color(100, 90, 80);
-    private static final Color LIGHT_STONE = new Color(200, 190, 175);
-    private static final Color LIGHT_STONE_MEDIUM = new Color(180, 170, 155);
-    private static final Color LIGHT_CARD_BG = new Color(255, 252, 245, 240);
-    private static final Color LIGHT_CARD_BORDER = new Color(180, 165, 140);
+    // Using similar dark/earthy tones as buttons for consistency
+    private static final Color LIGHT_BACKGROUND_PRIMARY = new Color(225, 218, 205);
+    private static final Color LIGHT_BACKGROUND_SECONDARY = new Color(210, 200, 185);
+    private static final Color LIGHT_SURFACE_PRIMARY = new Color(65, 58, 48);         // Dark like buttons (STONE_DARK style)
+    private static final Color LIGHT_SURFACE_SECONDARY = new Color(85, 75, 62);       // Dark like buttons (STONE_MEDIUM style)
+    private static final Color LIGHT_TEXT_PRIMARY = new Color(245, 240, 230);         // Light text on dark surfaces
+    private static final Color LIGHT_TEXT_MUTED = new Color(180, 170, 155);
+    private static final Color LIGHT_STONE = new Color(55, 50, 45);
+    private static final Color LIGHT_STONE_MEDIUM = new Color(75, 68, 58);
+    private static final Color LIGHT_CARD_BG = new Color(55, 50, 45, 230);            // Dark card like buttons
+    private static final Color LIGHT_CARD_BORDER = new Color(120, 105, 80);
 
     // ==================== SHARED ACCENT COLORS ====================
     private static final Color ACCENT_GOLD = new Color(212, 175, 55);
@@ -176,13 +177,13 @@ public final class ThemeManager {
      * Dark mode: Orange, Light mode: Dark brown
      */
     public Color getSubtitleColor() {
-        return darkMode ? new Color(255, 153, 0) : new Color(48, 30, 11);
+        return darkMode ? new Color(46, 68, 246) : new Color(255, 153, 0);
     }
 
     /**
      * Returns the background image path for the current theme.
      */
     public String getBackgroundImagePath() {
-        return darkMode ? "/images/ui/BackgroundLight.png" : "/images/ui/BackgroundDark.png";
+        return darkMode ? "/images/ui/BackgroundDark.png" : "/images/ui/BackgroundLight.png";
     }
 }

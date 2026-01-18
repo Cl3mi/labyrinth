@@ -27,7 +27,7 @@ public class GameOverPanel extends JPanel {
     private final JTable leaderboardTable;
     private final DefaultTableModel tableModel;
     private final JButton backToLobbyButton;
-    private final JButton startNewRoundButton;
+    // private final JButton startNewRoundButton;  // Auskommentiert - noch nicht genehmigt
     private final JScrollPane scrollPane;
     private final JPanel achievementsPanel;
 
@@ -37,6 +37,9 @@ public class GameOverPanel extends JPanel {
 
     // Track achievements per player
     private final Map<String, List<String>> playerAchievements = new HashMap<>();
+
+    // Player ID to Name mapping (set before updateGameOver is called)
+    private final Map<String, String> playerIdToName = new HashMap<>();
 
     // Callback for starting a new round
     private Runnable onStartNewRound;
@@ -87,7 +90,7 @@ public class GameOverPanel extends JPanel {
         titleLabel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 60));
 
         // Trophy icon with bright golden glow background for visibility
-        JLabel trophyLabel = new JLabel("🏆", SwingConstants.CENTER) {
+        JLabel trophyLabel = new JLabel("[#1]", SwingConstants.CENTER) {
             @Override
             protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g;
@@ -343,7 +346,8 @@ public class GameOverPanel extends JPanel {
         StyledTooltipManager.setTooltip(backToLobbyButton, "Zurück zur Lobby", "Kehre zur Lobby zurück, um ein neues Spiel zu konfigurieren");
         StyledContextMenu.attachTo(backToLobbyButton);
 
-        // ===== Start New Round Button =====
+        // ===== Start New Round Button ===== (Auskommentiert - noch nicht genehmigt)
+        /*
         startNewRoundButton = new JButton("Neue Runde starten") {
             private boolean isFocused = false;
             {
@@ -430,6 +434,7 @@ public class GameOverPanel extends JPanel {
         StyledContextMenu.attachTo(startNewRoundButton);
 
         footer.add(startNewRoundButton);
+        */
         footer.add(backToLobbyButton);
 
         // ===== Achievements Panel =====
@@ -490,10 +495,10 @@ public class GameOverPanel extends JPanel {
         animationTimer = new Timer(150, e -> {
             animationFrame++;
             if (animationFrame % 2 == 0) {
-                winnerLabel.setText("⚔ " + winnerNameFinal + " gewinnt! ⚔");
+                winnerLabel.setText(">> " + winnerNameFinal + " gewinnt! <<");
                 winnerLabel.setForeground(GameTheme.Colors.ACCENT_GOLD);
             } else {
-                winnerLabel.setText("⚔ " + winnerNameFinal + " gewinnt! ⚔");
+                winnerLabel.setText(">> " + winnerNameFinal + " gewinnt! <<");
                 winnerLabel.setForeground(ThemeEffects.blendColors(
                         GameTheme.Colors.ACCENT_GOLD,
                         GameTheme.Colors.TEXT_PRIMARY,
@@ -519,7 +524,7 @@ public class GameOverPanel extends JPanel {
                     default -> entry.getRank() + ".";
                 };
 
-                int treasuresCollected = entry.getStats() != null ?
+                int treasuresCollected = entry.getStats() != null && entry.getStats().getTreasuresCollected() != null ?
                         entry.getStats().getTreasuresCollected() : 0;
                 int stepsTaken = entry.getStats() != null && entry.getStats().getStepsTaken() != null ?
                         entry.getStats().getStepsTaken() : 0;
@@ -587,16 +592,25 @@ public class GameOverPanel extends JPanel {
     }
 
     /**
-     * Extract playerName from additionalProperties (not in standard Contracts)
+     * Get player name - first from our ID-to-name map, then from additionalProperties, then fallback to ID
      */
     private String getPlayerName(RankingEntry entry) {
+        String playerId = entry.getPlayerId();
+
+        // First check our locally stored player names
+        if (playerIdToName.containsKey(playerId)) {
+            return playerIdToName.get(playerId);
+        }
+
+        // Fallback: Check additionalProperties for playerName
         if (entry.getAdditionalProperties() != null && entry.getAdditionalProperties().containsKey("playerName")) {
             Object value = entry.getAdditionalProperties().get("playerName");
             if (value instanceof String) {
                 return (String) value;
             }
         }
-        return entry.getPlayerId(); // Fallback to player ID if name not available
+
+        return playerId; // Fallback to player ID if name not available
     }
 
     private void loadBackgroundImage() {
@@ -659,7 +673,6 @@ public class GameOverPanel extends JPanel {
      */
     public void addAchievement(String playerId, String achievementName) {
         playerAchievements.computeIfAbsent(playerId, k -> new ArrayList<>()).add(achievementName);
-        System.out.println("[GameOverPanel] Added achievement " + achievementName + " for player " + playerId);
     }
 
     /**
@@ -781,5 +794,16 @@ public class GameOverPanel extends JPanel {
      */
     public void setOnStartNewRound(Runnable callback) {
         this.onStartNewRound = callback;
+    }
+
+    /**
+     * Set the player ID to name mapping.
+     * Call this before updateGameOver to ensure player names are displayed correctly.
+     */
+    public void setPlayerNames(Map<String, String> idToNameMap) {
+        this.playerIdToName.clear();
+        if (idToNameMap != null) {
+            this.playerIdToName.putAll(idToNameMap);
+        }
     }
 }

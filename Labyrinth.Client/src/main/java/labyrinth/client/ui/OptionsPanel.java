@@ -627,7 +627,7 @@ public class OptionsPanel extends JPanel {
         toastPanel.setOpaque(false);
         toastPanel.setBorder(new EmptyBorder(12, 20, 12, 20));
 
-        JLabel toastLabel = new JLabel("✓ Einstellungen gespeichert");
+        JLabel toastLabel = new JLabel("[OK] Einstellungen gespeichert");
         toastLabel.setFont(new Font("SansSerif", Font.BOLD, 14));
         toastLabel.setForeground(Color.WHITE);
         toastPanel.add(toastLabel);

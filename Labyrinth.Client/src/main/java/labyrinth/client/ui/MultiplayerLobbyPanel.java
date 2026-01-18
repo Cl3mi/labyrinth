@@ -476,10 +476,10 @@ public class MultiplayerLobbyPanel extends JPanel {
     public void setConnected(boolean connected) {
         SwingUtilities.invokeLater(() -> {
             if (connected) {
-                connectionLabel.setText("✓ Verbunden mit Server");
+                connectionLabel.setText("[OK] Verbunden mit Server");
                 connectionLabel.setForeground(new Color(100, 200, 100));
             } else {
-                connectionLabel.setText("✗ Nicht verbunden");
+                connectionLabel.setText("[X] Nicht verbunden");
                 connectionLabel.setForeground(new Color(200, 100, 100));
                 startButton.setEnabled(false);
             }
@@ -583,6 +583,7 @@ public class MultiplayerLobbyPanel extends JPanel {
         if (usernameField != null) usernameField.setEnabled(enabled);
         if (boardSizeCombo != null) boardSizeCombo.setEnabled(enabled);
         if (treasureSpinner != null) treasureSpinner.setEnabled(enabled);
+        if (bonusSpinner != null) bonusSpinner.setEnabled(enabled);
         if (turnTimeCombo != null) turnTimeCombo.setEnabled(enabled);
         if (durationCombo != null) durationCombo.setEnabled(enabled);
     }
