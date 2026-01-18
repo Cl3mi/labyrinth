@@ -258,7 +258,7 @@ public class AiController {
                 }
 
                 // Phase 2: Execute move (only if no shift needed, i.e., already in WAITING_FOR_MOVE state)
-                executeMovePhase(board, player);
+                executeMovePhase(board, player, latestPlayers);
 
                 System.out.println("[AI] Turn completed for: " + player.getName());
 
@@ -304,24 +304,39 @@ public class AiController {
         client.sendPushTile(decision.shift().index(), decision.shift().direction());
     }
 
-    private void executeMovePhase(Board board, Player player) throws InterruptedException {
+    private void executeMovePhase(Board board, Player player, List<Player> allPlayers) throws InterruptedException {
         // Use BoardSimulator to find reachable positions from current state (no shift simulation)
         BoardSimulator sim = new BoardSimulator(board, player);
         java.util.Set<Position> reachable = sim.getReachablePositions();
         Position targetPos = sim.getTargetPosition(); // Treasure or home
 
-        System.out.println("[AI] Move phase: " + reachable.size() + " reachable positions, target: " +
+        // Remove positions occupied by other players (can't move there)
+        java.util.Set<Position> blockedPositions = new java.util.HashSet<>();
+        if (allPlayers != null) {
+            for (Player p : allPlayers) {
+                if (!p.getId().equals(player.getId()) && p.getCurrentPosition() != null) {
+                    blockedPositions.add(p.getCurrentPosition());
+                }
+            }
+        }
+        reachable.removeAll(blockedPositions);
+
+        System.out.println("[AI] Move phase: " + reachable.size() + " reachable positions (excl. " +
+                blockedPositions.size() + " blocked), target: " +
                 (targetPos != null ? targetPos.getRow() + "/" + targetPos.getColumn() : "none"));
 
         // Find the best position to move to
         Position bestMove = null;
 
         if (targetPos != null && reachable.contains(targetPos)) {
-            // Target is directly reachable!
+            // Target is directly reachable and not blocked!
             bestMove = targetPos;
             System.out.println("[AI] Target is directly reachable!");
         } else if (targetPos != null) {
-            // Find closest reachable position to target
+            // Target blocked or not reachable - find closest reachable position to target
+            if (blockedPositions.contains(targetPos)) {
+                System.out.println("[AI] Target is blocked by another player!");
+            }
             int minDist = Integer.MAX_VALUE;
             for (Position rPos : reachable) {
                 int dist = Math.abs(rPos.getRow() - targetPos.getRow()) +
