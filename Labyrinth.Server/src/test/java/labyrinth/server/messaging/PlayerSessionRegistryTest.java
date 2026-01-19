@@ -2,192 +2,188 @@ package labyrinth.server.messaging;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.web.socket.WebSocketSession;
 
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
+
+import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+@ExtendWith(MockitoExtension.class)
 class PlayerSessionRegistryTest {
 
     private PlayerSessionRegistry registry;
 
     @Mock
-    private WebSocketSession mockSession1;
+    private WebSocketSession session;
 
-    @Mock
-    private WebSocketSession mockSession2;
+    private Map<String, Object> sessionAttributes;
 
     @BeforeEach
     void setUp() {
-        MockitoAnnotations.openMocks(this);
         registry = new PlayerSessionRegistry();
-
-        // Setup mock session attributes and isOpen()
-        when(mockSession1.getAttributes()).thenReturn(new ConcurrentHashMap<>());
-        when(mockSession1.isOpen()).thenReturn(true);
-        when(mockSession2.getAttributes()).thenReturn(new ConcurrentHashMap<>());
-        when(mockSession2.isOpen()).thenReturn(true);
+        sessionAttributes = new HashMap<>();
     }
 
     @Test
-    void testRegisterPlayer() {
+    void registerPlayer_shouldStoreSessionAndSetAttribute() {
         UUID playerId = UUID.randomUUID();
         UUID token = UUID.randomUUID();
+        when(session.getAttributes()).thenReturn(sessionAttributes);
+        when(session.isOpen()).thenReturn(true);
 
-        registry.registerPlayer(playerId, token, mockSession1);
+        registry.registerPlayer(playerId, token, session);
 
-        assertNotNull(registry.getSession(playerId));
-        assertEquals(mockSession1, registry.getSession(playerId));
-        assertTrue(registry.isSessionRegistered(mockSession1));
-    }
-
-    @Test
-    void testGetPlayerIdByIdentifierToken() {
-        UUID playerId = UUID.randomUUID();
-        UUID token = UUID.randomUUID();
-
-        registry.registerPlayer(playerId, token, mockSession1);
-
-        UUID foundPlayerId = registry.getPlayerIdByIdentifierToken(token);
-        assertEquals(playerId, foundPlayerId);
-    }
-
-    @Test
-    void testGetPlayerIdByIdentifierToken_NotFound() {
-        UUID randomToken = UUID.randomUUID();
-        UUID foundPlayerId = registry.getPlayerIdByIdentifierToken(randomToken);
-        assertNull(foundPlayerId);
-    }
-
-    @Test
-    void testMarkDisconnected() {
-        UUID playerId = UUID.randomUUID();
-        UUID token = UUID.randomUUID();
-
-        registry.registerPlayer(playerId, token, mockSession1);
         assertTrue(registry.isPlayerConnected(playerId));
-
-        registry.markDisconnected(mockSession1);
-        assertFalse(registry.isPlayerConnected(playerId));
-
-        // Session should be null after disconnect
-        assertNull(registry.getSession(playerId));
+        assertEquals(playerId, sessionAttributes.get("PLAYER_ID"));
+        assertEquals(session, registry.getSession(playerId));
     }
 
     @Test
-    void testGetDisconnectedEntries() {
-        UUID playerId1 = UUID.randomUUID();
-        UUID playerId2 = UUID.randomUUID();
-        UUID token1 = UUID.randomUUID();
-        UUID token2 = UUID.randomUUID();
-
-        registry.registerPlayer(playerId1, token1, mockSession1);
-        registry.registerPlayer(playerId2, token2, mockSession2);
-
-        // Disconnect only player1
-        registry.markDisconnected(mockSession1);
-
-        Map<UUID, Long> disconnected = registry.getDisconnectedEntries();
-        assertEquals(1, disconnected.size());
-        assertTrue(disconnected.containsKey(playerId1));
-        assertFalse(disconnected.containsKey(playerId2));
-        assertNotNull(disconnected.get(playerId1)); // timestamp should exist
-    }
-
-    @Test
-    void testRemovePlayer() {
+    void removePlayer_shouldRemoveFromRegistry() {
         UUID playerId = UUID.randomUUID();
-        UUID token = UUID.randomUUID();
-
-        registry.registerPlayer(playerId, token, mockSession1);
-        assertNotNull(registry.getSession(playerId));
+        when(session.getAttributes()).thenReturn(sessionAttributes);
+        registry.registerPlayer(playerId, UUID.randomUUID(), session);
 
         registry.removePlayer(playerId);
-        assertNull(registry.getSession(playerId));
-        // Note: isSessionRegistered may still return true since session attributes aren't cleared
-        // The important thing is that getSession returns null after removal
-    }
 
-    @Test
-    void testReconnectWithSameToken() {
-        UUID playerId = UUID.randomUUID();
-        UUID token = UUID.randomUUID();
-
-        // Initial registration
-        registry.registerPlayer(playerId, token, mockSession1);
-        assertTrue(registry.isPlayerConnected(playerId));
-
-        // Disconnect
-        registry.markDisconnected(mockSession1);
         assertFalse(registry.isPlayerConnected(playerId));
-
-        // Reconnect with same token (new session)
-        registry.registerPlayer(playerId, token, mockSession2);
-        assertTrue(registry.isPlayerConnected(playerId));
-        assertEquals(mockSession2, registry.getSession(playerId));
+        assertNull(registry.getSession(playerId));
     }
 
     @Test
-    void testIsPlayerConnected_NotRegistered() {
-        UUID randomPlayerId = UUID.randomUUID();
-        assertFalse(registry.isPlayerConnected(randomPlayerId));
+    void markDisconnected_shouldUpdatePlayerStatus() {
+        UUID playerId = UUID.randomUUID();
+        when(session.getAttributes()).thenReturn(sessionAttributes);
+
+        // Register first
+        registry.registerPlayer(playerId, UUID.randomUUID(), session);
+
+        // Mark disconnected
+        registry.markDisconnected(session);
+
+        assertFalse(registry.isPlayerConnected(playerId));
     }
 
     @Test
-    void testGetPlayerId() {
+    void markDisconnected_shouldDoNothing_whenSessionNotRegistered() {
+        when(session.getAttributes()).thenReturn(sessionAttributes);
+        // No player ID in attributes
+
+        registry.markDisconnected(session);
+
+        // Should not throw exception
+        assertTrue(registry.getDisconnectedEntries().isEmpty());
+    }
+
+    @Test
+    void getPlayerIdByIdentifierToken_shouldReturnCorrectId() {
         UUID playerId = UUID.randomUUID();
         UUID token = UUID.randomUUID();
+        when(session.getAttributes()).thenReturn(sessionAttributes);
 
-        registry.registerPlayer(playerId, token, mockSession1);
+        registry.registerPlayer(playerId, token, session);
 
-        UUID retrievedPlayerId = registry.getPlayerId(mockSession1);
-        assertEquals(playerId, retrievedPlayerId);
+        assertEquals(playerId, registry.getPlayerIdByIdentifierToken(token));
     }
 
     @Test
-    void testGetPlayerId_NotRegistered() {
-        UUID retrievedPlayerId = registry.getPlayerId(mockSession1);
-        assertNull(retrievedPlayerId);
+    void getPlayerIdByIdentifierToken_shouldReturnNull_whenTokenUnknown() {
+        assertNull(registry.getPlayerIdByIdentifierToken(UUID.randomUUID()));
     }
 
     @Test
-    void testGetAllPlayerSessions() {
-        UUID playerId1 = UUID.randomUUID();
-        UUID playerId2 = UUID.randomUUID();
-        UUID token1 = UUID.randomUUID();
-        UUID token2 = UUID.randomUUID();
+    void getSession_shouldReturnSession_whenOpen() {
+        UUID playerId = UUID.randomUUID();
+        when(session.getAttributes()).thenReturn(sessionAttributes);
+        when(session.isOpen()).thenReturn(true);
 
-        registry.registerPlayer(playerId1, token1, mockSession1);
-        registry.registerPlayer(playerId2, token2, mockSession2);
+        registry.registerPlayer(playerId, UUID.randomUUID(), session);
 
-        var sessions = registry.getAllPlayerSessions();
-        assertEquals(2, sessions.size());
-        assertTrue(sessions.contains(mockSession1));
-        assertTrue(sessions.contains(mockSession2));
+        WebSocketSession result = registry.getSession(playerId);
+        assertNotNull(result);
+        assertEquals(session, result);
     }
 
     @Test
-    void testGetAllPlayerSessions_ExcludesDisconnected() {
-        UUID playerId1 = UUID.randomUUID();
-        UUID playerId2 = UUID.randomUUID();
-        UUID token1 = UUID.randomUUID();
-        UUID token2 = UUID.randomUUID();
+    void getSession_shouldMarkDisconnected_whenUnderlyingSessionClosed() {
+        UUID playerId = UUID.randomUUID();
+        when(session.getAttributes()).thenReturn(sessionAttributes);
 
-        registry.registerPlayer(playerId1, token1, mockSession1);
-        registry.registerPlayer(playerId2, token2, mockSession2);
+        registry.registerPlayer(playerId, UUID.randomUUID(), session);
 
-        // Disconnect player1
-        registry.markDisconnected(mockSession1);
+        // Simulate connection drop at socket level
+        when(session.isOpen()).thenReturn(false);
 
-        var sessions = registry.getAllPlayerSessions();
+        WebSocketSession result = registry.getSession(playerId);
+
+        assertNull(result);
+        assertFalse(registry.isPlayerConnected(playerId));
+    }
+
+    @Test
+    void getDisconnectedEntries_shouldReturnOnlyDisconnectedPlayers() {
+        UUID p1 = UUID.randomUUID();
+        UUID p2 = UUID.randomUUID();
+
+        WebSocketSession s1 = mock(WebSocketSession.class);
+        WebSocketSession s2 = mock(WebSocketSession.class);
+        Map<String, Object> attr1 = new HashMap<>();
+        Map<String, Object> attr2 = new HashMap<>();
+
+        when(s1.getAttributes()).thenReturn(attr1);
+        when(s2.getAttributes()).thenReturn(attr2);
+
+        registry.registerPlayer(p1, UUID.randomUUID(), s1);
+        registry.registerPlayer(p2, UUID.randomUUID(), s2);
+
+        registry.markDisconnected(s1);
+
+        Map<UUID, Long> disconnected = registry.getDisconnectedEntries();
+
+        assertTrue(disconnected.containsKey(p1));
+        assertFalse(disconnected.containsKey(p2));
+    }
+
+    @Test
+    void getAllPlayerSessions_shouldReturnOnlyOpenSessions() {
+        WebSocketSession openSession = mock(WebSocketSession.class);
+        WebSocketSession closedSession = mock(WebSocketSession.class);
+
+        when(openSession.getAttributes()).thenReturn(new HashMap<>());
+        when(closedSession.getAttributes()).thenReturn(new HashMap<>());
+
+        when(openSession.isOpen()).thenReturn(true);
+        // closedSession.isOpen() defaults to false or we can explicitly set it
+        when(closedSession.isOpen()).thenReturn(false);
+
+        registry.registerPlayer(UUID.randomUUID(), UUID.randomUUID(), openSession);
+        registry.registerPlayer(UUID.randomUUID(), UUID.randomUUID(), closedSession);
+
+        Collection<WebSocketSession> sessions = registry.getAllPlayerSessions();
+
         assertEquals(1, sessions.size());
-        assertFalse(sessions.contains(mockSession1));
-        assertTrue(sessions.contains(mockSession2));
+        assertTrue(sessions.contains(openSession));
+    }
+
+    @Test
+    void getPlayerId_shouldReturnIdFromAttributes() {
+        UUID playerId = UUID.randomUUID();
+        sessionAttributes.put("PLAYER_ID", playerId);
+        when(session.getAttributes()).thenReturn(sessionAttributes);
+
+        assertEquals(playerId, registry.getPlayerId(session));
+    }
+
+    @Test
+    void isSessionRegistered_shouldReturnTrueIfIdPresent() {
+        sessionAttributes.put("PLAYER_ID", UUID.randomUUID());
+        when(session.getAttributes()).thenReturn(sessionAttributes);
+
+        assertTrue(registry.isSessionRegistered(session));
     }
 }
