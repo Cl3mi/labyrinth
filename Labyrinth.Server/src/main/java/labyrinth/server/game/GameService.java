@@ -1,5 +1,6 @@
 package labyrinth.server.game;
 
+import labyrinth.contracts.models.PlayerUpdatedEventPayload;
 import labyrinth.server.game.ai.SligthlyLessSimpleAiStrategy;
 import labyrinth.server.game.constants.PointRewards;
 import labyrinth.server.game.enums.BonusTypes;
@@ -247,11 +248,23 @@ public class GameService {
         }
     }
 
+    public void enableAiAndMarkDisconnected(Player player) {
+        rwLock.writeLock().lock();
+        try {
+            game.enableAiAndMarkDisconnected(player);
+            publishEvent(new PlayerUpdatedEvent(player));
+        } finally {
+            rwLock.writeLock().unlock();
+        }
+    }
+
+
+
     public void toggleAiForPlayer(Player player) {
         rwLock.writeLock().lock();
         try {
             game.toggleAiForPlayer(player);
-            publishEvent(new AiToggledEvent(player));
+            publishEvent(new PlayerUpdatedEvent(player));
         } finally {
             rwLock.writeLock().unlock();
         }

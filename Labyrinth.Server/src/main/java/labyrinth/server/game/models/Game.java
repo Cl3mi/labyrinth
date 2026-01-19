@@ -232,6 +232,11 @@ public class Game {
         player.setAiActive(!player.isAiActive());
     }
 
+    public void enableAiAndMarkDisconnected(Player player) {
+        player.setAiActive(true);
+        player.setDisconnected(true);
+    }
+
     public MovePlayerToTileResult movePlayerToTile(int row, int col, Player player) {
         guardFor(RoomState.IN_GAME);
         guardFor(MoveState.MOVE);

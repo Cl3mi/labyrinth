@@ -119,15 +119,6 @@ public class PlayerRegistry implements IPlayerRegistry {
         return players.size() >= maxPlayers;
     }
 
-    private void addAiPlayer() {
-        Player player = new Player(UUID.randomUUID(), "Bot " + (players.size() + 1));
-        player.setColor(getNextColor());
-        player.setAiActive(true);
-        player.setDisconnected(true);
-        player.setJoinDate(OffsetDateTime.now());
-        players.add(player);
-    }
-
     private void reassignAdmin() {
         var nextAdmin = players.stream()
                 .filter(p -> !p.isAiActive())
