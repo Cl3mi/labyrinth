@@ -151,11 +151,9 @@ public class Game {
             throw new IllegalStateException("Cannot start a game that is in progress or finished!");
         }
 
-        if (playerRegistry.getPlayers().isEmpty()) {
-            throw new IllegalStateException("At least 1 player is required to start the game");
+        if (playerRegistry.getPlayers().size() < 2) {
+            throw new IllegalStateException("At least 2 player are required to start the game");
         }
-
-        playerRegistry.fillWithAiPlayers();
 
         this.gameConfig = Objects.requireNonNullElseGet(gameConfig, GameConfig::getDefault);
         this.activeBonusState = NoBonusActive.getInstance();

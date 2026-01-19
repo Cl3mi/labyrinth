@@ -76,15 +76,6 @@ public class PlayerRegistry implements IPlayerRegistry {
         }
     }
 
-    /**
-     * Fills the registry with AI players up to maxPlayers.
-     * Called before creating treasure cards to ensure correct player count.
-     */
-    public void fillWithAiPlayers() {
-        while (players.size() < maxPlayers) {
-            addAiPlayer();
-        }
-    }
 
     /**
      * Retrieves a player by their unique ID.
