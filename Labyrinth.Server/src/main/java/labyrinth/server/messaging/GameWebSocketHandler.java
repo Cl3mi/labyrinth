@@ -50,6 +50,8 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
     @Override
     public void afterConnectionClosed(@NonNull WebSocketSession session, @NonNull CloseStatus status) {
         UUID playerId = playerSessionRegistry.getPlayerId(session);
+
+
         if (playerId != null && gameService.getGameState() == RoomState.LOBBY) {
             var player = gameService.getPlayer(playerId);
 
@@ -64,9 +66,7 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
 
             if (playerId != null) {
                 var player = gameService.getPlayer(playerId);
-                if (player != null) {
-                    player.setDisconnected(true);
-                }
+                gameService.enableAiAndMarkDisconnected(player);
             }
         }
     }

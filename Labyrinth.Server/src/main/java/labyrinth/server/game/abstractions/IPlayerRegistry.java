@@ -31,11 +31,6 @@ public interface IPlayerRegistry {
      */
     void removePlayer(Player player);
 
-    /**
-     * Fills the registry with AI players up to maxPlayers.
-     * Called before creating treasure cards to ensure correct player count.
-     */
-    void fillWithAiPlayers();
 
     /**
      * Retrieves a player by their unique ID.
@@ -67,4 +62,17 @@ public interface IPlayerRegistry {
      * @return true if at max capacity
      */
     boolean isFull();
+
+    /**
+     * Checks if the registry has a human player.
+     *
+     * @return true if there is at least one human player
+     */
+    boolean anyPlayerActive();
+
+    /**
+     * Reassigns admin to the next player
+     *
+     */
+    void reassignAdmin();
 }

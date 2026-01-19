@@ -76,15 +76,6 @@ public class PlayerRegistry implements IPlayerRegistry {
         }
     }
 
-    /**
-     * Fills the registry with AI players up to maxPlayers.
-     * Called before creating treasure cards to ensure correct player count.
-     */
-    public void fillWithAiPlayers() {
-        while (players.size() < maxPlayers) {
-            addAiPlayer();
-        }
-    }
 
     /**
      * Retrieves a player by their unique ID.
@@ -128,16 +119,7 @@ public class PlayerRegistry implements IPlayerRegistry {
         return players.size() >= maxPlayers;
     }
 
-    private void addAiPlayer() {
-        Player player = new Player(UUID.randomUUID(), "Bot " + (players.size() + 1));
-        player.setColor(getNextColor());
-        player.setAiActive(true);
-        player.setDisconnected(true);
-        player.setJoinDate(OffsetDateTime.now());
-        players.add(player);
-    }
-
-    private void reassignAdmin() {
+    public void reassignAdmin() {
         var nextAdmin = players.stream()
                 .filter(p -> !p.isAiActive())
                 .findFirst();
@@ -148,6 +130,13 @@ public class PlayerRegistry implements IPlayerRegistry {
             players.getFirst().setAdmin(true);
         }
     }
+
+    public boolean anyPlayerActive() {
+
+        return players.stream()
+                .anyMatch(p -> !p.isAiActive() || !p.isDisconnected());
+    }
+
 
     private boolean isUsernameAvailable(String username) {
         return players.stream()
@@ -164,4 +153,6 @@ public class PlayerRegistry implements IPlayerRegistry {
         }
         throw new IllegalStateException("No available colors left");
     }
+
+
 }
