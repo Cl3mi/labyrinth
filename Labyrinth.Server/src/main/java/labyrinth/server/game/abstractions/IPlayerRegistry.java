@@ -62,4 +62,17 @@ public interface IPlayerRegistry {
      * @return true if at max capacity
      */
     boolean isFull();
+
+    /**
+     * Checks if the registry has a human player.
+     *
+     * @return true if there is at least one human player
+     */
+    boolean anyPlayerActive();
+
+    /**
+     * Reassigns admin to the next player
+     *
+     */
+    void reassignAdmin();
 }

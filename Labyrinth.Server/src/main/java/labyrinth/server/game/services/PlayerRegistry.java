@@ -119,7 +119,7 @@ public class PlayerRegistry implements IPlayerRegistry {
         return players.size() >= maxPlayers;
     }
 
-    private void reassignAdmin() {
+    public void reassignAdmin() {
         var nextAdmin = players.stream()
                 .filter(p -> !p.isAiActive())
                 .findFirst();
@@ -130,6 +130,13 @@ public class PlayerRegistry implements IPlayerRegistry {
             players.getFirst().setAdmin(true);
         }
     }
+
+    public boolean anyPlayerActive() {
+
+        return players.stream()
+                .anyMatch(p -> !p.isAiActive() || !p.isDisconnected());
+    }
+
 
     private boolean isUsernameAvailable(String username) {
         return players.stream()
@@ -146,4 +153,6 @@ public class PlayerRegistry implements IPlayerRegistry {
         }
         throw new IllegalStateException("No available colors left");
     }
+
+
 }

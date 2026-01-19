@@ -1,10 +1,10 @@
 package labyrinth.server.game;
 
-import labyrinth.contracts.models.PlayerUpdatedEventPayload;
 import labyrinth.server.game.ai.SligthlyLessSimpleAiStrategy;
 import labyrinth.server.game.constants.PointRewards;
 import labyrinth.server.game.enums.BonusTypes;
 import labyrinth.server.game.enums.Direction;
+import labyrinth.server.game.enums.MoveState;
 import labyrinth.server.game.enums.RoomState;
 import labyrinth.server.game.events.*;
 import labyrinth.server.game.factories.BoardFactory;
@@ -94,10 +94,7 @@ public class GameService {
         try {
             game.leave(player);
 
-            var hasHumanPlayer = game.getPlayers().stream()
-                    .anyMatch(p -> !p.isAiActive());
-
-            if (!hasHumanPlayer) {
+            if (!game.anyPlayerActive()) {
                 log.info("No human players left, resetting game to LOBBY");
                 game.resetAndReturnToLobby();
             }
@@ -252,7 +249,20 @@ public class GameService {
         rwLock.writeLock().lock();
         try {
             game.enableAiAndMarkDisconnected(player);
-            publishEvent(new PlayerUpdatedEvent(player));
+
+            if (!game.anyPlayerActive()) {
+                log.info("No human players left, resetting game to LOBBY");
+                game.resetAndReturnToLobby();
+            }
+            else {
+                publishEvent(new PlayerUpdatedEvent(player));
+
+                if(getCurrentPlayer() == player) {
+                    game.performAiTurn(player);
+                }
+            }
+
+
         } finally {
             rwLock.writeLock().unlock();
         }
@@ -344,5 +354,9 @@ public class GameService {
         }
 
         eventPublisher.publish(event);
+    }
+
+    public MoveState getCurrentMoveState() {
+        return game.getCurrentMoveState();
     }
 }
