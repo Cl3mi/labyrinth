@@ -34,6 +34,9 @@ public class GameTestHelper {
         var achievementService = new AchievementService();
         var bonusManager = new BonusManager(turnController, gameLogger);
 
+        // Set a no-op callback to prevent NullPointerException in tests
+        turnController.setOnNextPlayer(player -> {});
+
         // Create and return Game with all dependencies
         return new Game(
                 playerRegistry,
