@@ -59,6 +59,10 @@ public class TreasureCardFactory {
         for(Map.Entry<Integer, String> treasure : shuffledTreasures) {
             String imagePath = "/images/treasures/" + treasure.getValue().toLowerCase() + ".png";
             cards.add(new TreasureCard(treasure.getKey(), treasure.getValue(), imagePath));
+
+            if(cards.size() >= treasureCardCount) {
+                break;
+            }
         }
 
         return cards;
