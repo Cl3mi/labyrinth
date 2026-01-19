@@ -50,19 +50,19 @@ public class MultiplayerLobbyPanel extends JPanel {
     // Letzter Lobby-State
     private volatile LobbyStateEventPayload lastLobbyState;
 
-    // Game configuration state
+    // Game configuration state (defaults from AsyncAPI spec)
     private int configBoardSize = 7;
-    private int configTreasuresToWin = 4;
-    private int configBonusCount = 4;
+    private int configTreasuresToWin = 6;  // 24 total / 4 players = 6 per player
+    private int configBonusCount = 0;
     private int configTurnTimeSeconds = 30;
-    private int configGameDurationMinutes = 30;
+    private int configGameDurationMinutes = 60;  // AsyncAPI default: 3600s = 60 min
     private String configUsername = "Player";
 
     // UI Components für Settings
     private JTextField usernameField;
     private JComboBox<String> boardSizeCombo;
-    private JSpinner treasureSpinner;
-    private JSpinner bonusSpinner;
+    private JComboBox<String> treasureCombo;
+    private JComboBox<String> bonusCombo;
     private JComboBox<String> turnTimeCombo;
     private JComboBox<String> durationCombo;
 
@@ -272,19 +272,38 @@ public class MultiplayerLobbyPanel extends JPanel {
         settingsGrid.add(createStyledLabel("Schätze pro Spieler:"), gbc);
 
         gbc.gridx = 1;
-        treasureSpinner = createStyledSpinner(configTreasuresToWin, 1, 24);
-        treasureSpinner.addChangeListener(e -> configTreasuresToWin = (Integer) treasureSpinner.getValue());
-        StyledTooltipManager.setTooltip(treasureSpinner, "Schätze", "Anzahl der Schätze, die jeder Spieler sammeln muss");
-        settingsGrid.add(treasureSpinner, gbc);
+        treasureCombo = createStyledComboBox();
+        for (int i = 1; i <= 24; i++) {
+            treasureCombo.addItem(String.valueOf(i));
+        }
+        treasureCombo.setSelectedItem(String.valueOf(configTreasuresToWin));
+        treasureCombo.addActionListener(e -> {
+            String selected = (String) treasureCombo.getSelectedItem();
+            if (selected != null) {
+                configTreasuresToWin = Integer.parseInt(selected);
+            }
+        });
+        StyledTooltipManager.setTooltip(treasureCombo, "Schätze", "Anzahl der Schätze, die jeder Spieler sammeln muss");
+        settingsGrid.add(treasureCombo, gbc);
 
         // Bonus-Anzahl
         gbc.gridx = 0; gbc.gridy = 3;
         settingsGrid.add(createStyledLabel("Bonus-Anzahl:"), gbc);
 
         gbc.gridx = 1;
-        bonusSpinner = createStyledSpinner(configBonusCount, 0, 12);
-        bonusSpinner.addChangeListener(e -> configBonusCount = (Integer) bonusSpinner.getValue());
-        settingsGrid.add(bonusSpinner, gbc);
+        bonusCombo = createStyledComboBox();
+        for (int i = 0; i <= 20; i++) {
+            bonusCombo.addItem(String.valueOf(i));
+        }
+        bonusCombo.setSelectedItem(String.valueOf(configBonusCount));
+        bonusCombo.addActionListener(e -> {
+            String selected = (String) bonusCombo.getSelectedItem();
+            if (selected != null) {
+                configBonusCount = Integer.parseInt(selected);
+            }
+        });
+        StyledTooltipManager.setTooltip(bonusCombo, "Bonus", "Gesamtanzahl der Boni im Spiel");
+        settingsGrid.add(bonusCombo, gbc);
 
         // Runden-Zeit
         gbc.gridx = 0; gbc.gridy = 4;
@@ -320,7 +339,7 @@ public class MultiplayerLobbyPanel extends JPanel {
         durationCombo.addItem("45 Minuten");
         durationCombo.addItem("60 Minuten");
         durationCombo.addItem("90 Minuten");
-        durationCombo.setSelectedItem("30 Minuten");
+        durationCombo.setSelectedItem("60 Minuten");
         durationCombo.addActionListener(e -> {
             String selected = (String) durationCombo.getSelectedItem();
             if (selected != null) {
@@ -440,15 +459,21 @@ public class MultiplayerLobbyPanel extends JPanel {
         combo.setBackground(GameTheme.Colors.STONE_MEDIUM);
         combo.setForeground(GameTheme.Colors.TEXT_LIGHT);
         combo.setPreferredSize(new Dimension(150, 30));
-        return combo;
-    }
 
-    private JSpinner createStyledSpinner(int value, int min, int max) {
-        SpinnerModel model = new SpinnerNumberModel(value, min, max, 1);
-        JSpinner spinner = new JSpinner(model);
-        spinner.setFont(new Font("SansSerif", Font.PLAIN, 13));
-        spinner.setPreferredSize(new Dimension(150, 30));
-        return spinner;
+        // Custom Renderer für plattformübergreifende Konsistenz (Mac/Linux)
+        combo.setRenderer(new DefaultListCellRenderer() {
+            @Override
+            public Component getListCellRendererComponent(JList<?> list, Object value,
+                    int index, boolean isSelected, boolean cellHasFocus) {
+                super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+                setBackground(isSelected ? GameTheme.Colors.PRIMARY_GOLD_DARK : GameTheme.Colors.STONE_MEDIUM);
+                setForeground(GameTheme.Colors.TEXT_LIGHT);
+                setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
+                return this;
+            }
+        });
+
+        return combo;
     }
 
     private JTextField createStyledTextField(String defaultText) {
@@ -476,10 +501,10 @@ public class MultiplayerLobbyPanel extends JPanel {
     public void setConnected(boolean connected) {
         SwingUtilities.invokeLater(() -> {
             if (connected) {
-                connectionLabel.setText("✓ Verbunden mit Server");
+                connectionLabel.setText("[OK] Verbunden mit Server");
                 connectionLabel.setForeground(new Color(100, 200, 100));
             } else {
-                connectionLabel.setText("✗ Nicht verbunden");
+                connectionLabel.setText("[X] Nicht verbunden");
                 connectionLabel.setForeground(new Color(200, 100, 100));
                 startButton.setEnabled(false);
             }
@@ -582,7 +607,8 @@ public class MultiplayerLobbyPanel extends JPanel {
     private void enableSettingsPanel(boolean enabled) {
         if (usernameField != null) usernameField.setEnabled(enabled);
         if (boardSizeCombo != null) boardSizeCombo.setEnabled(enabled);
-        if (treasureSpinner != null) treasureSpinner.setEnabled(enabled);
+        if (treasureCombo != null) treasureCombo.setEnabled(enabled);
+        if (bonusCombo != null) bonusCombo.setEnabled(enabled);
         if (turnTimeCombo != null) turnTimeCombo.setEnabled(enabled);
         if (durationCombo != null) durationCombo.setEnabled(enabled);
     }
@@ -638,6 +664,8 @@ public class MultiplayerLobbyPanel extends JPanel {
     protected void paintComponent(Graphics g) {
         Graphics2D g2 = (Graphics2D) g.create();
         g2.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+        g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
+        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
         int w = getWidth();
         int h = getHeight();

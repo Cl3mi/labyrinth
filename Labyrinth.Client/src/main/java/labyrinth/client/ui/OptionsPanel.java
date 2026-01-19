@@ -627,7 +627,7 @@ public class OptionsPanel extends JPanel {
         toastPanel.setOpaque(false);
         toastPanel.setBorder(new EmptyBorder(12, 20, 12, 20));
 
-        JLabel toastLabel = new JLabel("✓ Einstellungen gespeichert");
+        JLabel toastLabel = new JLabel("[OK] Einstellungen gespeichert");
         toastLabel.setFont(new Font("SansSerif", Font.BOLD, 14));
         toastLabel.setForeground(Color.WHITE);
         toastPanel.add(toastLabel);
@@ -724,6 +724,8 @@ public class OptionsPanel extends JPanel {
     protected void paintComponent(Graphics g) {
         Graphics2D g2 = (Graphics2D) g.create();
         g2.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+        g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
+        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
         int w = getWidth();
         int h = getHeight();

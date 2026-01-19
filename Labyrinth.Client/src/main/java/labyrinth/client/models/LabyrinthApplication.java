@@ -15,7 +15,9 @@ import javax.swing.*;
 import java.awt.*;
 import java.net.URI;
 import java.nio.file.Path;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.prefs.Preferences;
@@ -314,7 +316,7 @@ public class LabyrinthApplication {
                     String achievementName = achievement.getAchievement() != null
                             ? achievement.getAchievement().toString() : "UNKNOWN";
                     String displayName = formatAchievementName(achievementName);
-                    boardPanel.showSuccessToast("ACHIEVEMENT", "🏆 Erfolg freigeschaltet!", displayName);
+                    boardPanel.showSuccessToast("ACHIEVEMENT", "Erfolg freigeschaltet!", displayName);
                 }
             });
         });
@@ -333,7 +335,7 @@ public class LabyrinthApplication {
                 player.setCurrentTargetTreasure(treasure);
 
                 if (boardPanel != null) {
-                    boardPanel.showInfoToast("NEXT_TREASURE", "🎯 Neues Ziel!", "Finde: " + treasure.getName());
+                    boardPanel.showInfoToast("NEXT_TREASURE", "Neues Ziel!", "Finde: " + treasure.getName());
                 }
             });
         });
@@ -672,33 +674,30 @@ public class LabyrinthApplication {
             boardPanel = null;
         }
 
-        // Lobby-Panel aktualisieren
-        SwingUtilities.invokeLater(() -> {
-            if (client != null && client.isOpen()) {
-                // PlayerId aus gespeicherten Preferences laden
-                String savedPlayerId = ClientIdentityStore.loadPlayerId();
-                if (savedPlayerId != null) {
-                    lobbyPanel.setLocalPlayerId(savedPlayerId);
-                    System.out.println("[" + PROFILE + "] Set localPlayerId in lobby: " + savedPlayerId);
+        // Disconnect from server and reconnect to reset game state
+        if (client != null && client.isOpen()) {
+            System.out.println("[" + PROFILE + "] Disconnecting to reset game state...");
+            client.disconnectCleanly();
+
+            // Reconnect after a short delay
+            new Thread(() -> {
+                try {
+                    Thread.sleep(500);
+                    SwingUtilities.invokeLater(() -> {
+                        System.out.println("[" + PROFILE + "] Reconnecting to server...");
+                        connectToServer();
+                    });
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
                 }
-
-                // Username setzen
-                if (username != null) {
-                    lobbyPanel.setLocalUsername(username);
-                    System.out.println("[" + PROFILE + "] Set localUsername in lobby: " + username);
-                }
-
-                lobbyPanel.setConnected(true);
-                lobbyPanel.setStatusText("✓ Verbunden - Bereit für neues Spiel", new Color(100, 200, 100));
-
-                // Start-Button manuell aktivieren wenn Admin
-                lobbyPanel.forceEnableStartButton();
-                System.out.println("[" + PROFILE + "] Lobby ready, start button force-enabled");
-            } else {
+            }).start();
+        } else {
+            // Not connected - just show lobby
+            SwingUtilities.invokeLater(() -> {
                 lobbyPanel.setConnected(false);
                 lobbyPanel.setStatusText("Nicht verbunden", new Color(170, 120, 0));
-            }
-        });
+            });
+        }
 
         showLobby();
         System.out.println("[" + PROFILE + "] Returned to lobby");
@@ -712,12 +711,12 @@ public class LabyrinthApplication {
             gameOverPanel.cleanup();
         }
 
-        // Reset game state flags
+        // Reset game state flags BEFORE sending start command
         gameViewShown = false;
         isGameOver = false;
         pendingSingleplayerStart = false;
         isGameOverCleanup = false;
-        exitedToLobby = false;
+        exitedToLobby = false;  // Allow GAME_STARTED event to be processed
 
         // BoardPanel entfernen und zurücksetzen
         if (boardPanel != null) {
@@ -732,13 +731,14 @@ public class LabyrinthApplication {
                 bs.setRows(7);
                 bs.setCols(7);
 
-                // Use default game settings
+                // Use default game settings with bonuses
                 int treasuresToWin = 4;
+                int bonusCount = 4;  // Include bonuses in new round
                 int gameDurationSeconds = 30 * 60; // 30 minutes
                 int turnTimeSeconds = 30;
 
-                System.out.println("[" + PROFILE + "] Sending START_GAME for new round");
-                client.sendStartGame(bs, treasuresToWin, 0, gameDurationSeconds, turnTimeSeconds);
+                System.out.println("[" + PROFILE + "] Sending START_GAME for new round with " + bonusCount + " bonuses");
+                client.sendStartGame(bs, treasuresToWin, bonusCount, gameDurationSeconds, turnTimeSeconds);
             } catch (Exception ex) {
                 ex.printStackTrace();
                 SwingUtilities.invokeLater(() -> {
@@ -812,8 +812,9 @@ public class LabyrinthApplication {
             System.out.println("[" + PROFILE + "] Received GAME_STARTED");
             exitedToLobby = false;  // Reset flag - neues Spiel startet
 
-            // Reset AI mode at game start
+            // Reset AI controller for new game (clears stopped flag and disables AI mode)
             if (aiController != null) {
+                aiController.reset();
                 aiController.setAiModeEnabled(false);
             }
 
@@ -883,16 +884,18 @@ public class LabyrinthApplication {
             // Sofort Flag setzen um weitere GAME_STATE_UPDATE Events zu ignorieren
             isGameOver = true;
 
-            // DEBUG: Zeige ein Popup um zu verifizieren, dass das Event ankommt
-            // (Kann später entfernt werden)
-            // SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(frame, "GAME_OVER empfangen! Winner: " + gameOver.getWinnerId(), "DEBUG", JOptionPane.INFORMATION_MESSAGE));
+            // WICHTIG: AI Controller sofort stoppen um Endlosschleifen zu verhindern
+            if (aiController != null) {
+                aiController.stop();
+            }
 
-            // Token löschen, da der Server das Spiel zurücksetzt und der Token ungültig wird
-            ClientIdentityStore.clearToken();
+            // WICHTIG: Token NICHT löschen! Die Verbindung bleibt offen und der Spieler
+            // ist noch auf dem Server bekannt. Token nur löschen wenn wirklich disconnected wird.
+            // ClientIdentityStore.clearToken();  // REMOVED - causes player not recognized issue
 
-            // Lokale Flags zurücksetzen, damit beim nächsten Start wieder sauber reconnect/login läuft
-            loginSent = false;
-            connectAckReceived = false;
+            // Flags NICHT zurücksetzen - die Verbindung ist noch aktiv!
+            // loginSent = false;           // REMOVED
+            // connectAckReceived = false;  // REMOVED
             pendingSingleplayerStart = false;
 
             // Flag setzen um ReconnectionManager zu blockieren
@@ -913,6 +916,18 @@ public class LabyrinthApplication {
                         mainPanel.remove(boardPanel);
                         boardPanel = null;
                         System.out.println("[" + PROFILE + "] BoardPanel removed");
+                    }
+
+                    // Build player ID to name mapping from current players
+                    if (currentPlayers != null) {
+                        Map<String, String> playerNames = new HashMap<>();
+                        for (Player p : currentPlayers) {
+                            if (p.getId() != null && p.getName() != null) {
+                                playerNames.put(p.getId(), p.getName());
+                            }
+                        }
+                        gameOverPanel.setPlayerNames(playerNames);
+                        System.out.println("[" + PROFILE + "] Set player names for GameOverPanel: " + playerNames);
                     }
 
                     // GameOverPanel aktualisieren und anzeigen

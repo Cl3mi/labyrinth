@@ -36,7 +36,6 @@ public class BoardPanel extends JPanel {
 
     private JButton optionsButton;
 
-    private static final int CARD_PANEL_WIDTH = 40;
     private static final int PANEL_PADDING = 20;
     private static final int ARROW_MARGIN = 5;
 
@@ -449,6 +448,9 @@ public class BoardPanel extends JPanel {
 
         Graphics2D g = (Graphics2D) g2.create();
         try {
+            g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
+            g.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+            g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
             Shape oldClip = g.getClip();
             g.setClip(new Rectangle(x, y, size, size));
 
@@ -765,6 +767,30 @@ public class BoardPanel extends JPanel {
         List<BonusType> bonuses = currentPlayer.getAvailableBonuses();
         if (bonuses.isEmpty()) return false;
 
+        // Check if it's the local player's turn
+        if (!isLocalPlayerTurn()) {
+            for (int i = 0; i < bonusButtonBounds.size() && i < bonuses.size(); i++) {
+                if (bonusButtonBounds.get(i).contains(p)) {
+                    toastManager.showWarning("NOT_TURN", "Nicht an der Reihe",
+                            "Du kannst Boni nur während deines Zuges verwenden!");
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        // Check if we're in WAITING_FOR_MOVE state (tile already pushed)
+        if (currentTurnState == labyrinth.contracts.models.TurnState.WAITING_FOR_MOVE) {
+            for (int i = 0; i < bonusButtonBounds.size() && i < bonuses.size(); i++) {
+                if (bonusButtonBounds.get(i).contains(p)) {
+                    toastManager.showWarning("BONUS_AFTER_PUSH", "Bonus nicht mehr verfügbar",
+                            "Boni können nur VOR dem Schieben verwendet werden!");
+                    return true;
+                }
+            }
+            return false;
+        }
+
         for (int i = 0; i < bonusButtonBounds.size() && i < bonuses.size(); i++) {
             if (bonusButtonBounds.get(i).contains(p)) {
                 BonusType clickedBonus = bonuses.get(i);
@@ -773,6 +799,23 @@ public class BoardPanel extends JPanel {
             }
         }
         return false;
+    }
+
+    /**
+     * Check if it's the local player's turn.
+     */
+    private boolean isLocalPlayerTurn() {
+        if (board == null || currentPlayer == null || players == null || players.isEmpty()) {
+            return false;
+        }
+        int currentIdx = board.getCurrentPlayerIndex();
+        if (currentIdx < 0 || currentIdx >= players.size()) {
+            return false;
+        }
+        Player currentTurnPlayer = players.get(currentIdx);
+        return currentTurnPlayer != null &&
+               currentTurnPlayer.getId() != null &&
+               currentTurnPlayer.getId().equals(currentPlayer.getId());
     }
 
     /**
@@ -1110,24 +1153,101 @@ public class BoardPanel extends JPanel {
         Graphics2D g2 = (Graphics2D) g.create();
         try {
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
+            g2.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
 
             calculateLayoutMetrics();
+            drawYourTurnBoardHighlight(g2); // Draw glowing border when it's your turn
             drawBoardGrid(g2);
             createAndDrawArrowButtons(g2);
             drawExtraTile(g2);
             drawSidebar(g2);
-            drawCurrentTargetOverlay(g2); // NEW: Draw target treasure overlay
+            drawCurrentTargetOverlay(g2);
+            drawYourTurnBanner(g2); // Draw "Your Turn" banner
         } finally {
             g2.dispose();
         }
     }
 
+    /**
+     * Draw a "DEIN ZUG" indicator in the sidebar area when it's the local player's turn.
+     * Positioned to not obstruct the game board.
+     */
+    private void drawYourTurnBanner(Graphics2D g2) {
+        if (!isLocalPlayerTurn()) return;
+
+        long time = System.currentTimeMillis();
+        int pulseAlpha = 180 + (int) (75 * Math.sin(time / 250.0));
+
+        // Smaller banner below the options button (which is at 10,10 with size 45x40)
+        int bannerWidth = 350;
+        int bannerHeight = 26;
+        int bannerX = 10;
+        int bannerY = 60; // Below options button
+
+        // Glowing background
+        g2.setColor(new Color(0, 180, 80, Math.min(pulseAlpha - 30, 150)));
+        g2.fillRoundRect(bannerX - 2, bannerY - 2, bannerWidth + 4, bannerHeight + 4, 10, 10);
+
+        // Main background
+        GradientPaint gradient = new GradientPaint(
+                bannerX, bannerY, new Color(30, 160, 60, pulseAlpha),
+                bannerX, bannerY + bannerHeight, new Color(20, 120, 40, pulseAlpha)
+        );
+        g2.setPaint(gradient);
+        g2.fillRoundRect(bannerX, bannerY, bannerWidth, bannerHeight, 8, 8);
+
+        // Border
+        g2.setColor(new Color(100, 255, 150, pulseAlpha));
+        g2.setStroke(new BasicStroke(1.5f));
+        g2.drawRoundRect(bannerX, bannerY, bannerWidth, bannerHeight, 8, 8);
+
+        // Text
+        g2.setFont(new Font("SansSerif", Font.BOLD, 12));
+        g2.setColor(Color.WHITE);
+        String text = "DEIN ZUG";
+        FontMetrics fm = g2.getFontMetrics();
+        int textX = bannerX + (bannerWidth - fm.stringWidth(text)) / 2;
+        int textY = bannerY + (bannerHeight + fm.getAscent() - fm.getDescent()) / 2;
+        g2.drawString(text, textX, textY);
+    }
+
+    /**
+     * Draw a glowing border around the board when it's the local player's turn.
+     */
+    private void drawYourTurnBoardHighlight(Graphics2D g2) {
+        if (!isLocalPlayerTurn()) return;
+
+        long time = System.currentTimeMillis();
+        int pulseAlpha = 80 + (int) (40 * Math.sin(time / 400.0));
+
+        // Calculate board bounds
+        int boardX = xOffset - 10;
+        int boardY = yOffset - 10;
+        int boardWidth = board.getWidth() * size + 20;
+        int boardHeight = board.getHeight() * size + 20;
+
+        // Outer glow
+        g2.setColor(new Color(50, 200, 100, pulseAlpha / 2));
+        g2.setStroke(new BasicStroke(8));
+        g2.drawRoundRect(boardX - 4, boardY - 4, boardWidth + 8, boardHeight + 8, 20, 20);
+
+        // Inner glow
+        g2.setColor(new Color(100, 255, 150, pulseAlpha));
+        g2.setStroke(new BasicStroke(4));
+        g2.drawRoundRect(boardX, boardY, boardWidth, boardHeight, 15, 15);
+    }
+
     private void calculateLayoutMetrics() {
-        int w = getWidth() - 2 * arrowSize - PANEL_PADDING - CARD_PANEL_WIDTH;
+        // Calculate responsive sidebar width (same formula as in drawSidebar)
+        int sidebarWidth = Math.max(280, Math.min(350, getWidth() / 5));
+
+        int w = getWidth() - 2 * arrowSize - PANEL_PADDING - sidebarWidth;
         int h = getHeight() - 2 * arrowSize - PANEL_PADDING;
         size = Math.min(w / board.getWidth(), h / board.getHeight());
 
-        xOffset = CARD_PANEL_WIDTH + (getWidth() - size * board.getWidth()) / 2;
+        // Center the board in the remaining space after sidebar
+        xOffset = sidebarWidth + (getWidth() - sidebarWidth - size * board.getWidth()) / 2;
         yOffset = (getHeight() - size * board.getHeight()) / 2;
     }
 
@@ -1533,15 +1653,61 @@ public class BoardPanel extends JPanel {
             int px = baseX + positions[idx * 2];
             int py = baseY + positions[idx * 2 + 1];
 
+            // Check if this is the local player
+            boolean isLocalPlayer = currentPlayer != null &&
+                    i < players.size() &&
+                    players.get(i) != null &&
+                    players.get(i).getId() != null &&
+                    players.get(i).getId().equals(currentPlayer.getId());
+
             BufferedImage icon = (i < playerIcons.size()) ? playerIcons.get(i) : null;
+            int iconSize = count > 1 ? (int) (size * 0.25) : (int) (size * 0.4);
+
+            // Draw glowing highlight around local player (similar to target treasure)
+            if (isLocalPlayer) {
+                long time = System.currentTimeMillis();
+                // Make glow radius larger than icon size to fully surround the avatar
+                int glowRadius = iconSize / 2 + 12 + (int) (4 * Math.sin(time / 300.0));
+                int glowAlpha = 120 + (int) (60 * Math.sin(time / 300.0));
+
+                // Outer glow - cyan/blue for player (larger)
+                g2.setColor(new Color(0, 200, 255, Math.min(glowAlpha / 2, 80)));
+                g2.fillOval(px - glowRadius - 4, py - glowRadius - 4, (glowRadius + 4) * 2, (glowRadius + 4) * 2);
+
+                // Inner glow (surrounds avatar fully)
+                g2.setColor(new Color(100, 220, 255, Math.min(glowAlpha, 120)));
+                g2.fillOval(px - glowRadius, py - glowRadius, glowRadius * 2, glowRadius * 2);
+            }
+
             if (icon != null) {
-                int iconSize = count > 1 ? (int) (size * 0.25) : (int) (size * 0.4);
+                // Calculate dimensions preserving aspect ratio
+                int imgW = icon.getWidth();
+                int imgH = icon.getHeight();
+                int drawW, drawH;
+                if (imgW >= imgH) {
+                    // Landscape: fit to width
+                    drawW = iconSize;
+                    drawH = (int) (iconSize * ((double) imgH / imgW));
+                } else {
+                    // Portrait: fit to height
+                    drawH = iconSize;
+                    drawW = (int) (iconSize * ((double) imgW / imgH));
+                }
+
                 g2.drawImage(icon,
-                        px - iconSize / 2,
-                        py - iconSize / 2,
-                        iconSize,
-                        iconSize,
+                        px - drawW / 2,
+                        py - drawH / 2,
+                        drawW,
+                        drawH,
                         null);
+
+                // Draw border around local player icon
+                if (isLocalPlayer) {
+                    g2.setColor(new Color(0, 200, 255, 200));
+                    g2.setStroke(new BasicStroke(3));
+                    int borderSize = Math.max(drawW, drawH);
+                    g2.drawOval(px - borderSize / 2 - 2, py - borderSize / 2 - 2, borderSize + 4, borderSize + 4);
+                }
             } else {
                 g2.setColor(PLAYER_COLORS[i % PLAYER_COLORS.length]);
                 Font oldFont = g2.getFont();
@@ -1652,7 +1818,7 @@ public class BoardPanel extends JPanel {
 
         // Label über dem Tile
         g2.setFont(new Font("Arial", Font.BOLD, 14));
-        g2.setColor(Color.BLACK);
+        g2.setColor(ThemeManager.getInstance().getTextLight());
         g2.drawString("Schiebekarte", x, y - 8);
 
         Tile extraTile = board.getExtraTile();
@@ -1700,7 +1866,8 @@ public class BoardPanel extends JPanel {
     }
 
     private void drawSidebar(Graphics2D g2) {
-        int sidebarWidth = 300;
+        // Responsive sidebar width - minimum 280, maximum 350, scales with window
+        int sidebarWidth = Math.max(280, Math.min(350, getWidth() / 5));
         int sidebarX = 10;
         int sidebarY = 60;
         int padding = 15;
@@ -1805,16 +1972,16 @@ public class BoardPanel extends JPanel {
 
         // AI Move button - for manual AI assist
         currentY = drawAiMoveButton(g2, sidebarX, sidebarWidth, padding, currentY);
-        currentY += 10;
+        currentY += 15;
 
         // Bonus section - only show if current player has bonuses
         if (currentPlayer != null && !currentPlayer.getAvailableBonuses().isEmpty()) {
             currentY = drawBonusSection(g2, sidebarX, sidebarWidth, padding, currentY);
-
-            // Divider after bonuses
-            drawDivider(g2, sidebarX + padding, sidebarX + sidebarWidth - padding, currentY);
-            currentY += 15;
         }
+
+        // Divider before players section
+        drawDivider(g2, sidebarX + padding, sidebarX + sidebarWidth - padding, currentY);
+        currentY += 20;
 
         // Players section
         drawSectionHeader(g2, "SPIELER", sidebarX + padding, currentY);
@@ -2195,7 +2362,21 @@ public class BoardPanel extends JPanel {
         if (playerIndex < playerIcons.size() && playerIcons.get(playerIndex) != null) {
             BufferedImage icon = playerIcons.get(playerIndex);
             int iconSize = 32;
-            g2.drawImage(icon, x + padding, y + padding, iconSize, iconSize, null);
+            // Calculate dimensions preserving aspect ratio
+            int imgW = icon.getWidth();
+            int imgH = icon.getHeight();
+            int drawW, drawH;
+            if (imgW >= imgH) {
+                drawW = iconSize;
+                drawH = (int) (iconSize * ((double) imgH / imgW));
+            } else {
+                drawH = iconSize;
+                drawW = (int) (iconSize * ((double) imgW / imgH));
+            }
+            // Center the icon in the allocated space
+            int offsetX = (iconSize - drawW) / 2;
+            int offsetY = (iconSize - drawH) / 2;
+            g2.drawImage(icon, x + 2 + offsetX, y + padding + offsetY, drawW, drawH, null);
         } else {
             // Fallback: Color indicator circle
             if (player.getColor() != null) {
@@ -2232,7 +2413,7 @@ public class BoardPanel extends JPanel {
 
         if (player.isAdmin()) {
             g2.setColor(new Color(255, 215, 0));
-            g2.drawString("★", x + width - padding - 5, currentY);
+            g2.drawString("*", x + width - padding - 5, currentY);  // Admin marker
         }
 
         currentY += 20;
@@ -2738,7 +2919,7 @@ public class BoardPanel extends JPanel {
         mainPanel.add(buttonPanel, BorderLayout.SOUTH);
 
         dialog.setContentPane(mainPanel);
-        dialog.setSize(420, 380);
+        dialog.setSize(580, 400);
         dialog.setLocationRelativeTo(this);
         dialog.setVisible(true);
     }
@@ -2804,7 +2985,7 @@ public class BoardPanel extends JPanel {
                 g2.dispose();
             }
         };
-        btn.setPreferredSize(new Dimension(130, 35));
+        btn.setPreferredSize(new Dimension(170, 38));
         btn.setOpaque(false);
         btn.setContentAreaFilled(false);
         btn.setBorderPainted(false);

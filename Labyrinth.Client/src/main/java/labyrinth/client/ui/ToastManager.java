@@ -12,10 +12,10 @@ import java.util.List;
 public class ToastManager {
 
     public enum ToastType {
-        INFO("I", new Color(52, 152, 219), "ℹ"),      // Blue
-        SUCCESS("S", new Color(46, 204, 113), "✓"),   // Green
-        WARNING("W", new Color(241, 196, 15), "⚠"),   // Yellow
-        ERROR("E", new Color(231, 76, 60), "✕");      // Red
+        INFO("I", new Color(52, 152, 219), "[i]"),      // Blue - ASCII fallback
+        SUCCESS("S", new Color(46, 204, 113), "[OK]"),  // Green - ASCII fallback
+        WARNING("W", new Color(241, 196, 15), "[!]"),   // Yellow - ASCII fallback
+        ERROR("E", new Color(231, 76, 60), "[X]");      // Red - ASCII fallback
 
         public final String prefix;
         public final Color color;
@@ -55,8 +55,8 @@ public class ToastManager {
     private final List<Toast> activeToasts = new ArrayList<>();
     private final Timer updateTimer;
 
-    private static final int TOAST_WIDTH = 250;
-    private static final int TOAST_HEIGHT = 80;
+    private static final int TOAST_WIDTH = 320;
+    private static final int TOAST_HEIGHT = 90;
     private static final int TOAST_SPACING = 10;
     private static final int TOAST_MARGIN = 20;
 
@@ -129,7 +129,7 @@ public class ToastManager {
         leftPanel.setOpaque(false);
 
         JLabel iconLabel = new JLabel(toast.type.icon);
-        iconLabel.setFont(new Font("Arial", Font.BOLD, 24));
+        iconLabel.setFont(new Font("SansSerif", Font.BOLD, 16));
         iconLabel.setForeground(toast.type.color);
         leftPanel.add(iconLabel, BorderLayout.WEST);
 
@@ -149,8 +149,8 @@ public class ToastManager {
         titleLabel.setForeground(Color.WHITE);
         centerPanel.add(titleLabel, BorderLayout.NORTH);
 
-        JLabel messageLabel = new JLabel("<html><body style='width: 250px'>" + toast.message + "</body></html>");
-        messageLabel.setFont(new Font("Arial", Font.PLAIN, 11));
+        JLabel messageLabel = new JLabel("<html><body style='width: 280px'>" + toast.message + "</body></html>");
+        messageLabel.setFont(new Font("SansSerif", Font.PLAIN, 12));
         messageLabel.setForeground(new Color(200, 200, 220));
         centerPanel.add(messageLabel, BorderLayout.CENTER);
 

@@ -210,8 +210,9 @@ public class GameService {
 
                 var players = getPlayers();
 
-                game.resetAndReturnToLobby();
+                // IMPORTANT: Publish GameOverEvent BEFORE reset, otherwise player statistics are cleared
                 publishEvent(new GameOverEvent(players));
+                game.resetAndReturnToLobby();
             }
 
             return true;
