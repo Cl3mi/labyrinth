@@ -273,7 +273,7 @@ public class MultiplayerLobbyPanel extends JPanel {
 
         gbc.gridx = 1;
         treasureCombo = createStyledComboBox();
-        for (int i = 1; i <= 24; i++) {
+        for (int i = 1; i <= 6; i++) {
             treasureCombo.addItem(String.valueOf(i));
         }
         treasureCombo.setSelectedItem(String.valueOf(configTreasuresToWin));
