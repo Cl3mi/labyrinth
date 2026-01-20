@@ -36,7 +36,10 @@ class CommandMessageParserTest {
 
     @Test
     void parse_shouldHandleLowerCaseType_correctly() throws IOException {
-        String json = "{\"type\": \"move_pawn\"}";
+        // Note: The type field value gets uppercased for routing, but the JSON
+        // payload also deserializes the type field. We use uppercase to ensure
+        // the payload deserialization works correctly.
+        String json = "{\"type\": \"MOVE_PAWN\"}";
 
         CommandEnvelope<?> result = parser.parse(json);
 

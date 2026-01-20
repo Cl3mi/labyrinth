@@ -47,13 +47,16 @@ class GameOverConditionTest {
     void gameOver_shouldNotTrigger_whenPlayerCollectsAllTreasuresButNotAtHomeTile() {
         // Arrange
         game.join("Player1");
+        game.join("Player2");
         game.startGame(gameConfig, treasureCards, board);
 
         Player player = game.getCurrentPlayer();
 
-        // Manually collect the player's treasure by marking it as collected
+        // Manually collect all player's treasures by marking them as collected
         // This simulates the player having collected all treasures
-        player.getCurrentTreasureCard().collect();
+        while (player.getCurrentTreasureCard() != null) {
+            player.getCurrentTreasureCard().collect();
+        }
 
         // Verify player has collected all treasures
         assertNull(player.getCurrentTreasureCard(), "Player should have no more treasures");
@@ -82,6 +85,7 @@ class GameOverConditionTest {
     void gameOver_shouldTrigger_whenPlayerReachesHomeTileAfterCollectingAllTreasures() {
         // Arrange
         game.join("Player1");
+        game.join("Player2");
         game.startGame(gameConfig, treasureCards, board);
 
         Player player = game.getCurrentPlayer();
@@ -103,17 +107,17 @@ class GameOverConditionTest {
             game.movePlayerToTile(targetPos.row(), targetPos.column(), player);
         }
 
-        // Now manually mark player's treasure as collected AFTER moving away from home
-        player.getCurrentTreasureCard().collect();
+        // Now manually mark all player's treasures as collected AFTER moving away from home
+        while (player.getCurrentTreasureCard() != null) {
+            player.getCurrentTreasureCard().collect();
+        }
         assertNull(player.getCurrentTreasureCard(), "Player should have no more treasures");
 
-        // Advance to next turn (player 1's turn again after 3 other players)
-        for (int i = 0; i < 3; i++) {
-            Player currentPlayer = game.getCurrentPlayer();
-            game.shift(1, Direction.DOWN, currentPlayer);
-            var pos = game.getCurrentPositionOfPlayer(currentPlayer);
-            game.movePlayerToTile(pos.row(), pos.column(), currentPlayer);
-        }
+        // Advance to next turn (player 1's turn again after 1 other player)
+        Player currentPlayer = game.getCurrentPlayer();
+        game.shift(1, Direction.DOWN, currentPlayer);
+        var pos = game.getCurrentPositionOfPlayer(currentPlayer);
+        game.movePlayerToTile(pos.row(), pos.column(), currentPlayer);
 
         // Now it's player 1's turn and they have all treasures - try to reach home
         assertEquals(player, game.getCurrentPlayer(), "Should be Player1's turn");
@@ -143,6 +147,7 @@ class GameOverConditionTest {
     void gameOver_shouldNotTrigger_whenPlayerAtHomeTileButHasNotCollectedAllTreasures() {
         // Arrange
         game.join("Player1");
+        game.join("Player2");
         game.startGame(gameConfig, treasureCards, board);
 
         Player player = game.getCurrentPlayer();

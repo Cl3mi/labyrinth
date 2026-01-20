@@ -64,6 +64,7 @@ class GameIntegrationTest {
         void shouldTransitionToInGameOnStart() {
             // Arrange
             game.join("Player1");
+            game.join("Player2");
 
             // Act
             game.startGame(gameConfig, treasureCards, board);
@@ -76,6 +77,7 @@ class GameIntegrationTest {
         void shouldThrowExceptionWhenStartingGameTwice() {
             // Arrange
             game.join("Player1");
+            game.join("Player2");
             game.startGame(gameConfig, treasureCards, board);
 
             // Act & Assert
@@ -88,32 +90,24 @@ class GameIntegrationTest {
         void shouldThrowExceptionWhenJoiningDuringGame() {
             // Arrange
             game.join("Player1");
+            game.join("Player2");
             game.startGame(gameConfig, treasureCards, board);
 
             // Act & Assert
             assertThrows(IllegalStateException.class, () ->
-                    game.join("Player2")
+                    game.join("Player3")
             );
         }
 
         @Test
-        void shouldThrowExceptionWhenStartingWithNoPlayers() {
+        void shouldThrowExceptionWhenStartingWithLessThanTwoPlayers() {
+            // Arrange
+            game.join("Player1");
+
             // Act & Assert
             assertThrows(IllegalStateException.class, () ->
                     game.startGame(gameConfig, treasureCards, board)
             );
-        }
-
-        @Test
-        void shouldFillWithAiPlayersOnStart() {
-            // Arrange
-            game.join("HumanPlayer");
-
-            // Act
-            game.startGame(gameConfig, treasureCards, board);
-
-            // Assert
-            assertEquals(4, game.getPlayers().size());
         }
     }
 
@@ -162,6 +156,7 @@ class GameIntegrationTest {
         @BeforeEach
         void startGame() {
             game.join("Player1");
+            game.join("Player2");
             game.startGame(gameConfig, treasureCards, board);
         }
 
@@ -214,6 +209,7 @@ class GameIntegrationTest {
         @BeforeEach
         void startGame() {
             game.join("Player1");
+            game.join("Player2");
             game.startGame(gameConfig, treasureCards, board);
         }
 
@@ -297,6 +293,7 @@ class GameIntegrationTest {
         @BeforeEach
         void startGameAndShift() {
             game.join("Player1");
+            game.join("Player2");
             game.startGame(gameConfig, treasureCards, board);
             // Shift to get into MOVE state
             Player player = game.getCurrentPlayer();
@@ -349,6 +346,7 @@ class GameIntegrationTest {
         @BeforeEach
         void startGame() {
             game.join("Player1");
+            game.join("Player2");
             game.startGame(gameConfig, treasureCards, board);
         }
 
@@ -423,6 +421,7 @@ class GameIntegrationTest {
         @BeforeEach
         void startAndFinishGame() {
             game.join("Player1");
+            game.join("Player2");
             game.startGame(gameConfig, treasureCards, board);
         }
 
@@ -442,24 +441,6 @@ class GameIntegrationTest {
 
             // Assert
             assertNull(game.getBoard());
-        }
-
-        @Test
-        void shouldRemoveAiPlayers() {
-            // Arrange
-            int aiCount = (int) game.getPlayers().stream()
-                    .filter(Player::isAiActive)
-                    .count();
-            assertTrue(aiCount > 0, "Should have AI players");
-
-            // Act
-            game.resetAndReturnToLobby();
-
-            // Assert
-            long remainingAi = game.getPlayers().stream()
-                    .filter(Player::isAiActive)
-                    .count();
-            assertEquals(0, remainingAi);
         }
 
         @Test
@@ -523,6 +504,7 @@ class GameIntegrationTest {
         void shouldLogGameEvents() {
             // Arrange
             game.join("Player1");
+            game.join("Player2");
 
             // Act
             game.startGame(gameConfig, treasureCards, board);
@@ -540,6 +522,7 @@ class GameIntegrationTest {
         @BeforeEach
         void startGame() {
             game.join("Player1");
+            game.join("Player2");
             game.startGame(gameConfig, treasureCards, board);
         }
 

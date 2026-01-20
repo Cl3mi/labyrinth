@@ -109,25 +109,21 @@ class GameStartTest {
         }, "Should require at least 1 player to start");
     }
 
-    // AI Player Tests
+    // Player Count Tests
 
     @Test
-    void startGame_shouldFillRoomWithAiPlayers_whenLessThan4Players() {
+    void startGame_shouldRequireAtLeastTwoPlayers() {
         // Arrange
         game.join("Player1");
-        game.join("Player2");
 
-        // Act
-        game.startGame(gameConfig, treasureCards, board);
-
-        // Assert
-        assertEquals(4, game.getPlayers().size(), "Should fill room to 4 players with AI");
-        long aiPlayers = game.getPlayers().stream().filter(Player::isAiActive).count();
-        assertEquals(2, aiPlayers, "Should have added 2 AI players");
+        // Act & Assert
+        assertThrows(IllegalStateException.class, () -> {
+            game.startGame(gameConfig, treasureCards, board);
+        }, "Should require at least 2 players to start");
     }
 
     @Test
-    void startGame_shouldNotAddAiPlayers_whenRoomIsFull() {
+    void startGame_shouldWorkWithFourPlayers() {
         // Arrange
         game.join("Player1");
         game.join("Player2");
@@ -140,7 +136,7 @@ class GameStartTest {
         // Assert
         assertEquals(4, game.getPlayers().size(), "Should have exactly 4 players");
         long aiPlayers = game.getPlayers().stream().filter(Player::isAiActive).count();
-        assertEquals(0, aiPlayers, "Should not have added any AI players");
+        assertEquals(0, aiPlayers, "Should not have any AI players");
     }
 
     // Treasure Card Distribution Tests
@@ -156,8 +152,8 @@ class GameStartTest {
 
         // Assert
         for (Player player : game.getPlayers()) {
-            assertEquals(6, player.getAssignedTreasureCards().size(),
-                    "Each of 4 players should get 6 treasure cards (24/4)");
+            assertEquals(12, player.getAssignedTreasureCards().size(),
+                    "Each of 2 players should get 12 treasure cards (24/2)");
         }
     }
 
@@ -170,18 +166,16 @@ class GameStartTest {
         // Act
         game.startGame(gameConfig, treasureCards, board);
 
-        // Assert - verify cards are distributed in round-robin (0,1,2,3,4,5... to P1,P2,AI1,AI2,P1,P2...)
+        // Assert - verify cards are distributed in round-robin (0,1,2,3... to P1,P2,P1,P2...)
         List<Player> players = game.getPlayers();
         assertEquals(0, players.get(0).getAssignedTreasureCards().getFirst().getId(),
                 "Player 1 should get first card");
         assertEquals(1, players.get(1).getAssignedTreasureCards().getFirst().getId(),
                 "Player 2 should get second card");
-        assertEquals(2, players.get(2).getAssignedTreasureCards().getFirst().getId(),
-                "AI Player 1 should get third card");
-        assertEquals(3, players.get(3).getAssignedTreasureCards().getFirst().getId(),
-                "AI Player 2 should get fourth card");
-        assertEquals(4, players.get(0).getAssignedTreasureCards().get(1).getId(),
-                "Player 1 should get fifth card");
+        assertEquals(2, players.get(0).getAssignedTreasureCards().get(1).getId(),
+                "Player 1 should get third card");
+        assertEquals(3, players.get(1).getAssignedTreasureCards().get(1).getId(),
+                "Player 2 should get fourth card");
     }
 
     @Test
@@ -255,17 +249,11 @@ class GameStartTest {
         List<Player> players = game.getPlayers();
         var pos0 = game.getCurrentPositionOfPlayer(players.get(0));
         var pos1 = game.getCurrentPositionOfPlayer(players.get(1));
-        var pos2 = game.getCurrentPositionOfPlayer(players.get(2));
-        var pos3 = game.getCurrentPositionOfPlayer(players.get(3));
 
         assertTrue(game.getBoard().isCornerCoordinate(pos0.row(), pos0.column()),
                 "Player 0 should be at a corner");
         assertTrue(game.getBoard().isCornerCoordinate(pos1.row(), pos1.column()),
                 "Player 1 should be at a corner");
-        assertTrue(game.getBoard().isCornerCoordinate(pos2.row(), pos2.column()),
-                "Player 2 should be at a corner");
-        assertTrue(game.getBoard().isCornerCoordinate(pos3.row(), pos3.column()),
-                "Player 3 should be at a corner");
     }
 
     // Game Configuration Tests
@@ -274,6 +262,7 @@ class GameStartTest {
     void startGame_shouldUseDefaultConfig_whenConfigIsNull() {
         // Arrange
         game.join("Player1");
+        game.join("Player2");
 
         // Act
         game.startGame(null, treasureCards, board);
@@ -286,6 +275,7 @@ class GameStartTest {
     void startGame_shouldUseProvidedConfig() {
         // Arrange
         game.join("Player1");
+        game.join("Player2");
         GameConfig customConfig = new GameConfig(7, 7, 20, 3600, 10, 60);
 
         // Act

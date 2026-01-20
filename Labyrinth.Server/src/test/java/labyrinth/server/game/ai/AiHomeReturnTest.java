@@ -38,16 +38,17 @@ class AiHomeReturnTest {
         }
 
         game.join("TestPlayer");
+        Player aiPlayer = game.join("AiPlayer");
+        aiPlayer.setAiActive(true);
         game.startGame(gameConfig, treasureCards, board);
 
-        Player aiPlayer = game.getPlayers().stream()
-                .filter(Player::isAiActive)
-                .findFirst()
-                .orElse(null);
+        assertNotNull(aiPlayer, "Should have an AI player");
+        assertTrue(aiPlayer.isAiActive(), "Player should be AI");
 
-        assertNotNull(aiPlayer, "Should have at least one AI player");
-
-        aiPlayer.getCurrentTreasureCard().collect();
+        // Collect all treasure cards assigned to this player
+        while (aiPlayer.getCurrentTreasureCard() != null) {
+            aiPlayer.getCurrentTreasureCard().collect();
+        }
         assertNull(aiPlayer.getCurrentTreasureCard(), "AI should have no more treasures");
 
         Position homeTilePos = board.getPositionOfTile(aiPlayer.getHomeTile());
@@ -89,10 +90,13 @@ class AiHomeReturnTest {
         }
 
         Player player = game.join("TestPlayer");
+        game.join("Player2");
         game.startGame(gameConfig, treasureCards, board);
 
         // Collect all treasures
-        player.getCurrentTreasureCard().collect();
+        while (player.getCurrentTreasureCard() != null) {
+            player.getCurrentTreasureCard().collect();
+        }
         assertNull(player.getCurrentTreasureCard());
 
         // Verify game is still running when player has all treasures but isn't home

@@ -72,7 +72,7 @@ class AiLogicTest {
     }
 
     @Test
-    void testGameFillsWithAiPlayers() {
+    void testGameStartsWithTwoPlayers() {
         AiStrategy aiStrategy = mock(AiStrategy.class);
         Game game = createGame(mock(IGameTimer.class), aiStrategy, new GameLogger());
 
@@ -88,11 +88,11 @@ class AiLogicTest {
         Board board = new BoardFactory().createBoard(7, 7);
         game.startGame(config, cards, board);
 
-        // Game should fill with AI players to 4 total
-        Assertions.assertEquals(4, game.getPlayers().size(), "Game should have 4 players");
+        // Game should have exactly the players that joined
+        Assertions.assertEquals(2, game.getPlayers().size(), "Game should have 2 players");
 
         long aiCount = game.getPlayers().stream().filter(Player::isAiActive).count();
-        Assertions.assertEquals(2, aiCount, "Should have 2 AI players added");
+        Assertions.assertEquals(0, aiCount, "Should have no AI players (none were added)");
 
         System.out.println("Players in game:");
         for (Player p : game.getPlayers()) {

@@ -57,11 +57,9 @@ class EndGameAchievementTest {
         Player player1 = players.get(0);
         Player player2 = players.get(1);
 
-        // Simulate player1 pushing more tiles than others
+        // Simulate player1 pushing more tiles than player2
         player1.getStatistics().increaseTilesPushed(10);
         player2.getStatistics().increaseTilesPushed(5);
-        players.get(2).getStatistics().increaseTilesPushed(3);
-        players.get(3).getStatistics().increaseTilesPushed(2);
 
         // Simulate some steps for all players
         for (Player p : players) {
@@ -91,13 +89,12 @@ class EndGameAchievementTest {
         game.startGame(gameConfig, treasureCards, board);
 
         List<Player> players = game.getPlayers();
+        Player player1 = players.get(0);
         Player player2 = players.get(1);
 
-        // Simulate player2 taking more steps than others
-        players.get(0).getStatistics().increaseStepsTaken(100);
+        // Simulate player2 taking more steps than player1
+        player1.getStatistics().increaseStepsTaken(100);
         player2.getStatistics().increaseStepsTaken(200); // Most steps
-        players.get(2).getStatistics().increaseStepsTaken(80);
-        players.get(3).getStatistics().increaseStepsTaken(50);
 
         // Simulate some pushes for all players
         for (Player p : players) {
@@ -128,17 +125,13 @@ class EndGameAchievementTest {
 
         List<Player> players = game.getPlayers();
 
-        // Create a tie for PUSHER
+        // Create a tie for PUSHER between both players
         players.get(0).getStatistics().increaseTilesPushed(10);
         players.get(1).getStatistics().increaseTilesPushed(10); // Tie with player 0
-        players.get(2).getStatistics().increaseTilesPushed(5);
-        players.get(3).getStatistics().increaseTilesPushed(3);
 
         // Different for RUNNER
         players.get(0).getStatistics().increaseStepsTaken(100);
         players.get(1).getStatistics().increaseStepsTaken(80);
-        players.get(2).getStatistics().increaseStepsTaken(60);
-        players.get(3).getStatistics().increaseStepsTaken(40);
 
         // Manually trigger achievement awarding
         var achievementService = new AchievementService();
@@ -156,18 +149,20 @@ class EndGameAchievementTest {
     void achievementsAwardedAtGameEnd_shouldIncreaseScore() {
         // Arrange
         game.join("Player1");
+        game.join("Player2");
         game.startGame(gameConfig, treasureCards, board);
 
         List<Player> players = game.getPlayers();
         Player player1 = players.get(0);
+        Player player2 = players.get(1);
 
         // Set up statistics so player1 will win both achievements
         player1.getStatistics().increaseTilesPushed(15);
         player1.getStatistics().increaseStepsTaken(100);
 
         // Other players have less
-        players.get(1).getStatistics().increaseTilesPushed(5);
-        players.get(1).getStatistics().increaseStepsTaken(50);
+        player2.getStatistics().increaseTilesPushed(5);
+        player2.getStatistics().increaseStepsTaken(50);
 
         int scoreBeforeAchievements = player1.getStatistics().getScore();
 
