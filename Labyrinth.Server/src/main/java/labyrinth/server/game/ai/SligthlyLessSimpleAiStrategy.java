@@ -2,11 +2,13 @@ package labyrinth.server.game.ai;
 
 import labyrinth.server.game.GameService;
 import labyrinth.server.game.enums.Direction;
+import labyrinth.server.game.enums.MoveState;
 import labyrinth.server.game.models.Board;
 import labyrinth.server.game.models.Player;
 import labyrinth.server.game.models.Tile;
 import labyrinth.server.game.models.TreasureCard;
 import labyrinth.server.game.models.records.Position;
+import labyrinth.server.game.results.ShiftResult;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
@@ -26,8 +28,13 @@ public class SligthlyLessSimpleAiStrategy implements AiStrategy {
     }
 
     @Override
-    public void performTurn(Player realPlayer) {
+    public  void performTurnAsync(Player realPlayer) {
         log.debug("=== AI START: {} ===", realPlayer.getUsername());
+
+        if(game.getCurrentPlayer() != realPlayer) {
+            log.warn("AI wanted to perform a move but it's not it's turn");
+            return;
+        }
 
         CompletableFuture.runAsync(() -> {
             try {
@@ -42,23 +49,33 @@ public class SligthlyLessSimpleAiStrategy implements AiStrategy {
     private void executeTurnSynchronously(Player player) {
         log.info("AI {} - Starting turn execution", player.getUsername());
 
-        TreasureCard targetCard = player.getCurrentTreasureCard();
+        Position currentPosition = game.getCurrentPositionOfPlayer(player);
 
-        log.info("AI {} - Target treasure: {}", player.getUsername(), targetCard != null ? targetCard.getTreasureName() : "NONE (ALL TREASURES COLLECTED - GOING HOME)");
+        if(game.getCurrentMoveState() == MoveState.MOVE) {
+            //if PLACE_TILE has already be done, just do a move.
+            //TODO: currently no actual move is done because this is an edge case. It would be better if the AI determines the next treasure card
+            executeMove(player, currentPosition);
+        } else {
+            TreasureCard targetCard = player.getCurrentTreasureCard();
+            log.info("AI {} - Target treasure: {}", player.getUsername(), targetCard != null ? targetCard.getTreasureName() : "NONE (ALL TREASURES COLLECTED - GOING HOME)");
 
-        SimulationResult result = findBestMove(player, targetCard);
-        log.info("AI {} - Simulation result: {}", player.getUsername(), result != null ? "FOUND" : "NULL");
+            var result = findBestMove(player, targetCard);
+            log.info("AI {} - Simulation result: {}", player.getUsername(), result != null ? "FOUND" : "NULL");
 
-        int sleepTime = 1500;
-        sleep(sleepTime);
+            int sleepTime = 1500;
+            sleep(sleepTime);
 
-        boolean shiftSuccess = executeShift(player, result);
-        log.info("AI {} - Shift success: {}", player.getUsername(), shiftSuccess);
+            boolean shiftSuccess = executeShift(player, result);
+            log.info("AI {} - Shift success: {}", player.getUsername(), shiftSuccess);
 
-        sleep(sleepTime);
+            sleep(sleepTime);
 
-        executeMove(player, result);
-        log.info("AI {} - Move completed", player.getUsername());
+            Position targetPosition = (result != null && result.targetPosition != null)
+                    ? result.targetPosition
+                    : currentPosition;
+
+            executeMove(player, targetPosition);
+        }
 
         log.info("=== AI END: {} ===", player.getUsername());
     }
@@ -91,14 +108,11 @@ public class SligthlyLessSimpleAiStrategy implements AiStrategy {
         }
     }
 
-    private void executeMove(Player player, SimulationResult result) {
+
+
+    private void executeMove(Player player, Position targetPosition) {
         Position current = game.getCurrentPositionOfPlayer(player);
         log.info("AI {} - Current position: {}/{}", player.getUsername(), current.row(), current.column());
-
-        Position targetPosition = (result != null && result.targetPosition != null)
-                ? result.targetPosition
-                : current;
-
         log.info("AI {} - Target position: {}/{}", player.getUsername(), targetPosition.row(), targetPosition.column());
 
         try {
@@ -111,6 +125,8 @@ public class SligthlyLessSimpleAiStrategy implements AiStrategy {
             if (!moveSucceeded) {
                 log.info("AI {} - Move failed, staying at current", player.getUsername());
                 game.movePlayerToTile(current.row(), current.column(), player);
+            } else {
+                log.info("AI {} - Move completed", player.getUsername());
             }
         } catch (Exception e) {
             if (e.getMessage() != null && e.getMessage().contains("FINISHED")) {

@@ -30,6 +30,6 @@ public class DisconnectCommandHandler extends AbstractCommandHandler<DisconnectC
             playerSessionRegistry.removePlayer(playerId);
         }
 
-        gameService.leave(player);
+        gameService.enableAiAndMarkDisconnected(player);
     }
 }

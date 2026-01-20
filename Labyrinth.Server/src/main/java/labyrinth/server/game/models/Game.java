@@ -151,11 +151,9 @@ public class Game {
             throw new IllegalStateException("Cannot start a game that is in progress or finished!");
         }
 
-        if (playerRegistry.getPlayers().isEmpty()) {
-            throw new IllegalStateException("At least 1 player is required to start the game");
+        if (playerRegistry.getPlayers().size() < 2) {
+            throw new IllegalStateException("At least 2 player are required to start the game");
         }
-
-        playerRegistry.fillWithAiPlayers();
 
         this.gameConfig = Objects.requireNonNullElseGet(gameConfig, GameConfig::getDefault);
         this.activeBonusState = NoBonusActive.getInstance();
@@ -169,7 +167,7 @@ public class Game {
         this.board.setPlayers(players);
 
         if (getCurrentPlayer().shouldMoveBePerformedByAi()) {
-            this.aiStrategy.performTurn(getCurrentPlayer());
+            this.aiStrategy.performTurnAsync(getCurrentPlayer());
         }
 
         gameStartTime = OffsetDateTime.now();
@@ -232,6 +230,14 @@ public class Game {
 
     public void toggleAiForPlayer(Player player) {
         player.setAiActive(!player.isAiActive());
+    }
+
+    public void enableAiAndMarkDisconnected(Player player) {
+        player.setAiActive(true);
+        player.setDisconnected(true);
+        playerRegistry.reassignAdmin();
+
+
     }
 
     public MovePlayerToTileResult movePlayerToTile(int row, int col, Player player) {
@@ -372,7 +378,7 @@ public class Game {
                             playerRegistry.getPlayersInternal(),
                             roomState,
                             gameConfig,
-                aiStrategy::performTurn);
+                aiStrategy::performTurnAsync);
     }
 
     private void guardFor(MoveState moveState) {
@@ -518,6 +524,14 @@ public class Game {
 
     public OffsetDateTime getTurnEndTime() {
         return nextTurnTimer.getExpirationTime();
+    }
+
+    public boolean anyPlayerActive() {
+        return playerRegistry.anyPlayerActive();
+    }
+
+    public void performAiTurn(Player player) {
+        aiStrategy.performTurnAsync(player);
     }
 
 }
