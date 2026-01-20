@@ -68,7 +68,7 @@ jobs:
           echo "========================================"
           echo "  JAVA LINES OF CODE SUMMARY"
           echo "========================================"
-          for module in Labyrinth.Contracts Labyrinth.Server Labyrinth.Client; do
+          for module in Labyrinth.Server Labyrinth.Client; do
             if [ -d "$module/src" ]; then
               lines=$(find "$module/src" -name "*.java" -exec cat {} + 2>/dev/null | wc -l)
               printf "  %-25s %6d lines\n" "$module:" "$lines"
