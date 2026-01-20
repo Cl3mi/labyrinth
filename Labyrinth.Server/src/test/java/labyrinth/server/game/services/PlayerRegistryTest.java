@@ -175,20 +175,6 @@ class PlayerRegistryTest {
             assertTrue(player2.isAdmin());
         }
 
-        @Test
-        void shouldPreferHumanOverAiForAdminReassignment() {
-            // Arrange
-            Player admin = registry.addPlayer("Admin");
-            registry.fillWithAiPlayers(); // Fill remaining spots with AI
-
-            // Get a reference to a human player if added after (for this test, admin is the only human)
-            // Act
-            registry.removePlayer(admin);
-
-            // Assert - first available player (AI) should become admin if no humans left
-            assertFalse(registry.getPlayers().isEmpty());
-            assertTrue(registry.getPlayers().get(0).isAdmin());
-        }
     }
 
     @Nested
@@ -297,101 +283,6 @@ class PlayerRegistryTest {
     }
 
     @Nested
-    class FillWithAiPlayers {
-
-        @Test
-        void shouldFillRemainingSlots() {
-            // Arrange
-            registry.addPlayer("HumanPlayer");
-            assertEquals(1, registry.getPlayers().size());
-
-            // Act
-            registry.fillWithAiPlayers();
-
-            // Assert
-            assertEquals(4, registry.getPlayers().size());
-        }
-
-        @Test
-        void shouldMarkAiPlayersAsAi() {
-            // Arrange
-            registry.addPlayer("HumanPlayer");
-
-            // Act
-            registry.fillWithAiPlayers();
-
-            // Assert
-            long aiCount = registry.getPlayers().stream()
-                    .filter(Player::isAiActive)
-                    .count();
-            assertEquals(3, aiCount);
-        }
-
-        @Test
-        void shouldMarkAiPlayersAsDisconnected() {
-            // Arrange
-            registry.addPlayer("HumanPlayer");
-
-            // Act
-            registry.fillWithAiPlayers();
-
-            // Assert
-            long disconnectedAiCount = registry.getPlayers().stream()
-                    .filter(p -> p.isAiActive() && p.isDisconnected())
-                    .count();
-            assertEquals(3, disconnectedAiCount);
-        }
-
-        @Test
-        void shouldAssignColorsToAiPlayers() {
-            // Arrange
-            registry.addPlayer("HumanPlayer");
-
-            // Act
-            registry.fillWithAiPlayers();
-
-            // Assert
-            assertTrue(registry.getPlayers().stream()
-                    .allMatch(p -> p.getColor() != null));
-        }
-
-        @Test
-        void shouldNameAiPlayersSequentially() {
-            // Act
-            registry.fillWithAiPlayers();
-
-            // Assert
-            assertTrue(registry.getPlayers().stream()
-                    .anyMatch(p -> p.getUsername().contains("Bot")));
-        }
-
-        @Test
-        void shouldDoNothingWhenAlreadyFull() {
-            // Arrange
-            registry.addPlayer("Player1");
-            registry.addPlayer("Player2");
-            registry.addPlayer("Player3");
-            registry.addPlayer("Player4");
-
-            // Act
-            registry.fillWithAiPlayers();
-
-            // Assert - no exception and still 4 players
-            assertEquals(4, registry.getPlayers().size());
-        }
-
-        @Test
-        void shouldFillCompletelyWhenEmpty() {
-            // Act
-            registry.fillWithAiPlayers();
-
-            // Assert
-            assertEquals(4, registry.getPlayers().size());
-            assertTrue(registry.getPlayers().stream().allMatch(Player::isAiActive));
-        }
-    }
-
-    @Nested
     class ColorAssignment {
 
         @Test
@@ -429,34 +320,16 @@ class PlayerRegistryTest {
     class AdminReassignment {
 
         @Test
-        void shouldReassignAdminToHumanOverAi() {
+        void shouldReassignAdminToNextPlayer() {
             // Arrange
             Player admin = registry.addPlayer("Admin");
             Player human = registry.addPlayer("Human");
-            registry.fillWithAiPlayers();
 
             // Act
             registry.removePlayer(admin);
 
             // Assert - human should become admin
             assertTrue(human.isAdmin());
-        }
-
-        @Test
-        void shouldReassignAdminToFirstAvailableWhenNoHumans() {
-            // Arrange
-            Player admin = registry.addPlayer("Admin");
-            registry.fillWithAiPlayers();
-
-            // Remove the human admin
-            registry.removePlayer(admin);
-
-            // Assert - first AI should become admin
-            Player newAdmin = registry.getPlayers().stream()
-                    .filter(Player::isAdmin)
-                    .findFirst()
-                    .orElse(null);
-            assertNotNull(newAdmin);
         }
 
         @Test
@@ -492,17 +365,5 @@ class PlayerRegistryTest {
             );
         }
 
-        @Test
-        void shouldFillWithAiUpToMaxPlayers() {
-            // Arrange
-            PlayerRegistry smallRegistry = new PlayerRegistry(2);
-            smallRegistry.addPlayer("Human");
-
-            // Act
-            smallRegistry.fillWithAiPlayers();
-
-            // Assert
-            assertEquals(2, smallRegistry.getPlayers().size());
-        }
     }
 }
