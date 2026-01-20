@@ -1,0 +1,72 @@
+name: CI - Build, Test & Metrics
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build-and-test:
+    name: Build & Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 25
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - name: Cache Maven repository
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+
+      - name: Build and install Contracts module
+        run: mvn -B -pl Labyrinth.Contracts clean install
+
+      - name: Build all modules
+        run: mvn -B -pl 'Labyrinth.*' -am clean compile
+
+      - name: Run tests for all Labyrinth modules
+        run: mvn -B -pl 'Labyrinth.*' -am test
+
+      - name: Count Java lines of code
+        run: |
+          echo "## Java Lines of Code" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Count lines per module
+          for module in Labyrinth.Contracts Labyrinth.Server Labyrinth.Client; do
+            if [ -d "$module/src" ]; then
+              lines=$(find "$module/src" -name "*.java" -exec cat {} + 2>/dev/null | wc -l)
+              echo "| $module | $lines |" >> $GITHUB_STEP_SUMMARY
+            fi
+          done
+
+          # Count total lines
+          total=$(find . -path "*/src/*" -name "*.java" -exec cat {} + 2>/dev/null | wc -l)
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Total Java lines: $total**" >> $GITHUB_STEP_SUMMARY
+
+          # Also print to console
+          echo "========================================"
+          echo "  JAVA LINES OF CODE SUMMARY"
+          echo "========================================"
+          for module in Labyrinth.Contracts Labyrinth.Server Labyrinth.Client; do
+            if [ -d "$module/src" ]; then
+              lines=$(find "$module/src" -name "*.java" -exec cat {} + 2>/dev/null | wc -l)
+              printf "  %-25s %6d lines\n" "$module:" "$lines"
+            fi
+          done
+          echo "----------------------------------------"
+          printf "  %-25s %6d lines\n" "TOTAL:" "$total"
+          echo "========================================"
