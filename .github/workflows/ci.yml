@@ -59,8 +59,8 @@ jobs:
             fi
           done
 
-          # Count total lines
-          total=$(find . -path "*/src/*" -name "*.java" -exec cat {} + 2>/dev/null | wc -l)
+          # Count total lines (Server + Client only)
+          total=$(find Labyrinth.Server/src Labyrinth.Client/src -name "*.java" -exec cat {} + 2>/dev/null | wc -l)
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Total Java lines: $total**" >> $GITHUB_STEP_SUMMARY
 
