@@ -29,7 +29,7 @@ public class PushTileCommandHandler extends AbstractCommandHandler<PushTileComma
     }
 
     @Override
-    public void handle(WebSocketSession session, PushTileCommandPayload payload) throws Exception {
+    public void handle(WebSocketSession session, PushTileCommandPayload payload) throws ActionErrorException {
         var player = requireExistingPlayer(session);
         requirePlayerIsCurrent(player);
 

@@ -25,7 +25,7 @@ public class MovePawnCommandHandler extends AbstractCommandHandler<MovePawnComma
     }
 
     @Override
-    public void handle(WebSocketSession session, MovePawnCommandPayload payload) throws Exception {
+    public void handle(WebSocketSession session, MovePawnCommandPayload payload) throws ActionErrorException {
         var player = requireExistingPlayer(session);
 
         requirePlayerIsCurrent(player);

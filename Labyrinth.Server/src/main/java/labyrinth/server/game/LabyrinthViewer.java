@@ -1,6 +1,7 @@
 package labyrinth.server.game;
 
-import labyrinth.server.game.models.*;
+import labyrinth.server.game.models.Game;
+import labyrinth.server.game.models.Player;
 
 import javax.swing.*;
 import java.awt.event.KeyAdapter;
@@ -33,7 +34,15 @@ public class LabyrinthViewer {
                     if (e.getKeyChar() == 'q' || e.getKeyChar() == 'Q') {
                         frame.dispose(); // Close old GUI
                         System.out.println("\n--- Resetting debug ---\n");
-                        Testing.simulateGameStart(); // Re-run debug
+
+                        try {
+                            Testing.simulateGameStart(); // Re-run debug
+                        }
+                        catch(Exception ex) {
+                            System.out.println("Error restarting debug:");
+                            ex.printStackTrace();
+                        }
+
                     }
                 }
             });

@@ -28,7 +28,7 @@ public class UsePushFixedCommandHandler extends AbstractCommandHandler<UsePushFi
     }
 
     @Override
-    public void handle(WebSocketSession session, UsePushFixedCommandPayload payload) throws Exception {
+    public void handle(WebSocketSession session, UsePushFixedCommandPayload payload) throws ActionErrorException {
         var player = requireExistingPlayer(session);
         requirePlayerIsCurrent(player);
 

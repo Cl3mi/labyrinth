@@ -1,5 +1,6 @@
 package labyrinth.server.game.abstractions;
 
+import labyrinth.server.exceptions.UsernameTakenException;
 import labyrinth.server.game.models.Player;
 
 import java.util.List;
@@ -22,7 +23,7 @@ public interface IPlayerRegistry {
      * @throws IllegalStateException if the registry is full
      * @throws IllegalArgumentException if username is already taken
      */
-    Player addPlayer(String username);
+    Player addPlayer(String username) throws UsernameTakenException;
 
     /**
      * Removes a player from the registry and handles admin reassignment if necessary.

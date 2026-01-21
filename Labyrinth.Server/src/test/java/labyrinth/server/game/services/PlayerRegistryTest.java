@@ -1,6 +1,7 @@
 package labyrinth.server.game.services;
 
 import labyrinth.contracts.models.PlayerColor;
+import labyrinth.server.exceptions.UsernameTakenException;
 import labyrinth.server.game.models.Player;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -27,7 +28,7 @@ class PlayerRegistryTest {
     class AddPlayer {
 
         @Test
-        void shouldAddPlayerSuccessfully() {
+        void shouldAddPlayerSuccessfully() throws UsernameTakenException {
             // Act
             Player player = registry.addPlayer("TestPlayer");
 
@@ -38,7 +39,7 @@ class PlayerRegistryTest {
         }
 
         @Test
-        void shouldAssignUniqueId() {
+        void shouldAssignUniqueId() throws UsernameTakenException {
             // Act
             Player player = registry.addPlayer("TestPlayer");
 
@@ -47,7 +48,7 @@ class PlayerRegistryTest {
         }
 
         @Test
-        void shouldAssignColor() {
+        void shouldAssignColor()  throws UsernameTakenException {
             // Act
             Player player = registry.addPlayer("TestPlayer");
 
@@ -56,7 +57,7 @@ class PlayerRegistryTest {
         }
 
         @Test
-        void shouldAssignDifferentColorsToPlayers() {
+        void shouldAssignDifferentColorsToPlayers()  throws UsernameTakenException {
             // Act
             Player player1 = registry.addPlayer("Player1");
             Player player2 = registry.addPlayer("Player2");
@@ -66,7 +67,7 @@ class PlayerRegistryTest {
         }
 
         @Test
-        void shouldMakeFirstPlayerAdmin() {
+        void shouldMakeFirstPlayerAdmin()  throws UsernameTakenException {
             // Act
             Player player = registry.addPlayer("FirstPlayer");
 
@@ -75,7 +76,7 @@ class PlayerRegistryTest {
         }
 
         @Test
-        void shouldNotMakeSubsequentPlayersAdmin() {
+        void shouldNotMakeSubsequentPlayersAdmin() throws UsernameTakenException  {
             // Arrange
             registry.addPlayer("FirstPlayer");
 
@@ -87,7 +88,7 @@ class PlayerRegistryTest {
         }
 
         @Test
-        void shouldSetJoinDate() {
+        void shouldSetJoinDate()  throws UsernameTakenException {
             // Act
             Player player = registry.addPlayer("TestPlayer");
 
@@ -96,7 +97,7 @@ class PlayerRegistryTest {
         }
 
         @Test
-        void shouldThrowExceptionWhenRoomIsFull() {
+        void shouldThrowExceptionWhenRoomIsFull()  throws UsernameTakenException {
             // Arrange
             registry.addPlayer("Player1");
             registry.addPlayer("Player2");
@@ -110,7 +111,7 @@ class PlayerRegistryTest {
         }
 
         @Test
-        void shouldThrowExceptionForDuplicateUsername() {
+        void shouldThrowExceptionForDuplicateUsername() throws UsernameTakenException  {
             // Arrange
             registry.addPlayer("TestPlayer");
 
@@ -121,7 +122,7 @@ class PlayerRegistryTest {
         }
 
         @Test
-        void shouldThrowExceptionForDuplicateUsernameCaseInsensitive() {
+        void shouldThrowExceptionForDuplicateUsernameCaseInsensitive() throws UsernameTakenException  {
             // Arrange
             registry.addPlayer("TestPlayer");
 
@@ -136,7 +137,7 @@ class PlayerRegistryTest {
     class RemovePlayer {
 
         @Test
-        void shouldRemovePlayer() {
+        void shouldRemovePlayer() throws UsernameTakenException  {
             // Arrange
             Player player = registry.addPlayer("TestPlayer");
 
@@ -148,7 +149,7 @@ class PlayerRegistryTest {
         }
 
         @Test
-        void shouldDoNothingWhenRemovingNonExistentPlayer() {
+        void shouldDoNothingWhenRemovingNonExistentPlayer()  throws UsernameTakenException {
             // Arrange
             registry.addPlayer("TestPlayer");
             Player nonExistent = new Player(UUID.randomUUID(), "NonExistent");
@@ -161,7 +162,7 @@ class PlayerRegistryTest {
         }
 
         @Test
-        void shouldReassignAdminWhenAdminLeaves() {
+        void shouldReassignAdminWhenAdminLeaves() throws UsernameTakenException  {
             // Arrange
             Player admin = registry.addPlayer("Admin");
             Player player2 = registry.addPlayer("Player2");
@@ -181,7 +182,7 @@ class PlayerRegistryTest {
     class GetPlayer {
 
         @Test
-        void shouldGetPlayerById() {
+        void shouldGetPlayerById() throws UsernameTakenException  {
             // Arrange
             Player player = registry.addPlayer("TestPlayer");
             UUID playerId = player.getId();
@@ -194,7 +195,7 @@ class PlayerRegistryTest {
         }
 
         @Test
-        void shouldReturnNullForUnknownId() {
+        void shouldReturnNullForUnknownId() throws UsernameTakenException  {
             // Arrange
             registry.addPlayer("TestPlayer");
 
@@ -210,7 +211,7 @@ class PlayerRegistryTest {
     class GetPlayers {
 
         @Test
-        void shouldReturnImmutableList() {
+        void shouldReturnImmutableList() throws UsernameTakenException  {
             // Arrange
             registry.addPlayer("TestPlayer");
 
@@ -221,7 +222,7 @@ class PlayerRegistryTest {
         }
 
         @Test
-        void shouldReturnAllPlayers() {
+        void shouldReturnAllPlayers() throws UsernameTakenException  {
             // Arrange
             registry.addPlayer("Player1");
             registry.addPlayer("Player2");
@@ -239,7 +240,7 @@ class PlayerRegistryTest {
     class GetPlayersInternal {
 
         @Test
-        void shouldReturnMutableList() {
+        void shouldReturnMutableList() throws UsernameTakenException  {
             // Arrange
             registry.addPlayer("TestPlayer");
 
@@ -255,7 +256,7 @@ class PlayerRegistryTest {
     class IsFull {
 
         @Test
-        void shouldReturnFalseWhenNotFull() {
+        void shouldReturnFalseWhenNotFull() throws UsernameTakenException  {
             // Arrange
             registry.addPlayer("Player1");
 
@@ -264,7 +265,7 @@ class PlayerRegistryTest {
         }
 
         @Test
-        void shouldReturnTrueWhenFull() {
+        void shouldReturnTrueWhenFull()  throws UsernameTakenException {
             // Arrange
             registry.addPlayer("Player1");
             registry.addPlayer("Player2");
@@ -286,7 +287,7 @@ class PlayerRegistryTest {
     class ColorAssignment {
 
         @Test
-        void shouldAssignAllDifferentColors() {
+        void shouldAssignAllDifferentColors() throws UsernameTakenException  {
             // Act
             registry.addPlayer("Player1");
             registry.addPlayer("Player2");
@@ -302,7 +303,7 @@ class PlayerRegistryTest {
         }
 
         @Test
-        void shouldReuseColorAfterPlayerLeaves() {
+        void shouldReuseColorAfterPlayerLeaves() throws UsernameTakenException  {
             // Arrange
             Player player1 = registry.addPlayer("Player1");
             PlayerColor firstColor = player1.getColor();
@@ -320,7 +321,7 @@ class PlayerRegistryTest {
     class AdminReassignment {
 
         @Test
-        void shouldReassignAdminToNextPlayer() {
+        void shouldReassignAdminToNextPlayer() throws UsernameTakenException  {
             // Arrange
             Player admin = registry.addPlayer("Admin");
             Player human = registry.addPlayer("Human");
@@ -333,7 +334,7 @@ class PlayerRegistryTest {
         }
 
         @Test
-        void shouldNotReassignWhenNonAdminLeaves() {
+        void shouldNotReassignWhenNonAdminLeaves() throws UsernameTakenException  {
             // Arrange
             Player admin = registry.addPlayer("Admin");
             Player player2 = registry.addPlayer("Player2");
@@ -350,7 +351,7 @@ class PlayerRegistryTest {
     class RegistryWithDifferentMaxPlayers {
 
         @Test
-        void shouldRespectMaxPlayersOfTwo() {
+        void shouldRespectMaxPlayersOfTwo() throws UsernameTakenException  {
             // Arrange
             PlayerRegistry smallRegistry = new PlayerRegistry(2);
 

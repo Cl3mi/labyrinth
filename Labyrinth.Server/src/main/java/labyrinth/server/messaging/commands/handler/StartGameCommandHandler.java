@@ -2,6 +2,7 @@ package labyrinth.server.messaging.commands.handler;
 
 import labyrinth.contracts.models.CommandType;
 import labyrinth.contracts.models.StartGameCommandPayload;
+import labyrinth.server.exceptions.ActionErrorException;
 import labyrinth.server.game.GameService;
 import labyrinth.server.game.models.records.GameConfig;
 import labyrinth.server.messaging.PlayerSessionRegistry;
@@ -22,7 +23,7 @@ public class StartGameCommandHandler extends AbstractCommandHandler<StartGameCom
     }
 
     @Override
-    public void handle(WebSocketSession session, StartGameCommandPayload payload) throws Exception {
+    public void handle(WebSocketSession session, StartGameCommandPayload payload) throws ActionErrorException {
         var player = requireExistingPlayer(session);
         requireAdmin(player);
 

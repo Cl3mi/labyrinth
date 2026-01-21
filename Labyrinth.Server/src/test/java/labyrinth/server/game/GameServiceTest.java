@@ -9,10 +9,9 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-
 import static labyrinth.server.game.GameTestHelper.createGame;
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.mock;
 
 class GameServiceTest {
 
@@ -33,7 +32,7 @@ class GameServiceTest {
     // ===== Admin Reassignment Tests (using real Game object) =====
 
     @Test
-    void testAdminReassignmentOnLeave() {
+    void testAdminReassignmentOnLeave()  throws Exception{
         // Create real Game object for testing admin reassignment logic
         IGameTimer mockTimer = mock(IGameTimer.class);
         labyrinth.server.game.ai.AiStrategy mockAiStrategy = mock(labyrinth.server.game.ai.AiStrategy.class);
@@ -58,7 +57,7 @@ class GameServiceTest {
     }
 
     @Test
-    void testAdminReassignmentPrefersHuman() {
+    void testAdminReassignmentPrefersHuman()  throws Exception{
         IGameTimer mockTimer = mock(IGameTimer.class);
         labyrinth.server.game.ai.AiStrategy mockAiStrategy = mock(labyrinth.server.game.ai.AiStrategy.class);
         labyrinth.server.game.services.GameLogger mockGameLogger = mock(labyrinth.server.game.services.GameLogger.class);
@@ -97,7 +96,7 @@ class GameServiceTest {
     }
 
     @Test
-    void testLeaveEmptyLobby() {
+    void testLeaveEmptyLobby()  throws Exception{
         IGameTimer mockTimer = mock(IGameTimer.class);
         labyrinth.server.game.ai.AiStrategy mockAiStrategy = mock(labyrinth.server.game.ai.AiStrategy.class);
         labyrinth.server.game.services.GameLogger mockGameLogger = mock(labyrinth.server.game.services.GameLogger.class);
@@ -115,7 +114,7 @@ class GameServiceTest {
     }
 
     @Test
-    void testNonAdminLeave_NoReassignment() {
+    void testNonAdminLeave_NoReassignment()  throws Exception{
         IGameTimer mockTimer = mock(IGameTimer.class);
         labyrinth.server.game.ai.AiStrategy mockAiStrategy = mock(labyrinth.server.game.ai.AiStrategy.class);
         labyrinth.server.game.services.GameLogger mockGameLogger = mock(labyrinth.server.game.services.GameLogger.class);
@@ -137,7 +136,7 @@ class GameServiceTest {
     }
 
     @Test
-    void testAdminReassignmentWithMultiplePlayers() {
+    void testAdminReassignmentWithMultiplePlayers()  throws Exception{
         IGameTimer mockTimer = mock(IGameTimer.class);
         labyrinth.server.game.ai.AiStrategy mockAiStrategy = mock(labyrinth.server.game.ai.AiStrategy.class);
         labyrinth.server.game.services.GameLogger mockGameLogger = mock(labyrinth.server.game.services.GameLogger.class);

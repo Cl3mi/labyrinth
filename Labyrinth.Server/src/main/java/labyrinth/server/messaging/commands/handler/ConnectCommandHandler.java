@@ -2,6 +2,8 @@ package labyrinth.server.messaging.commands.handler;
 
 import labyrinth.contracts.models.*;
 import labyrinth.server.exceptions.ActionErrorException;
+import labyrinth.server.exceptions.GameAlreadyStartedException;
+import labyrinth.server.exceptions.UsernameTakenException;
 import labyrinth.server.game.GameService;
 import labyrinth.server.game.enums.RoomState;
 import labyrinth.server.messaging.MessageService;
@@ -44,7 +46,7 @@ public class ConnectCommandHandler extends AbstractCommandHandler<ConnectCommand
     }
 
     @Override
-    public void handle(WebSocketSession session, ConnectCommandPayload payload) throws Exception {
+    public void handle(WebSocketSession session, ConnectCommandPayload payload) throws ActionErrorException {
         if (playerSessionRegistry.isSessionRegistered(session)) {
             throw new ActionErrorException("Session is already connected", ErrorCode.GENERAL);
         }
@@ -57,7 +59,7 @@ public class ConnectCommandHandler extends AbstractCommandHandler<ConnectCommand
             connectNewPlayer(session, payload.getUsername());
         }
 
-        if(gameService.getGameState() == RoomState.LOBBY) {
+        if (gameService.getGameState() == RoomState.LOBBY) {
             broadcastLobbyState();
         } else {
             broadcastGameStateUpdateEvent();
@@ -67,7 +69,7 @@ public class ConnectCommandHandler extends AbstractCommandHandler<ConnectCommand
     private Optional<UUID> parseIdentifierToken(String tokenStr) {
         try {
 
-            if(tokenStr == null || tokenStr.isBlank()) {
+            if (tokenStr == null || tokenStr.isBlank()) {
                 return Optional.empty();
             }
 
@@ -78,6 +80,7 @@ public class ConnectCommandHandler extends AbstractCommandHandler<ConnectCommand
     }
 
     private void handleReconnection(WebSocketSession session, UUID identifierToken, ConnectCommandPayload payload) throws ActionErrorException {
+
         var playerId = playerSessionRegistry.getPlayerIdByIdentifierToken(identifierToken);
 
         if (playerId == null) {
@@ -99,14 +102,19 @@ public class ConnectCommandHandler extends AbstractCommandHandler<ConnectCommand
 
         // Clear disconnected flag on successful reconnection
         player.setDisconnected(false);
-
         registerAndAcknowledge(playerId, identifierToken, session);
     }
 
 
-    private void connectNewPlayer(WebSocketSession session, String username) {
-        var newPlayer = gameService.join(username);
-        registerAndAcknowledge(newPlayer.getId(), UUID.randomUUID(), session);
+    private void connectNewPlayer(WebSocketSession session, String username) throws ActionErrorException {
+        try {
+            var newPlayer = gameService.join(username);
+            registerAndAcknowledge(newPlayer.getId(), UUID.randomUUID(), session);
+        } catch (UsernameTakenException e) {
+            throw new ActionErrorException("Username already taken", ErrorCode.USERNAME_TAKEN);
+        } catch (GameAlreadyStartedException e) {
+            throw new ActionErrorException("Game already started", ErrorCode.GAME_ALREADY_STARTED);
+        }
     }
 
     private void registerAndAcknowledge(UUID playerId, UUID identifierToken, WebSocketSession session) {

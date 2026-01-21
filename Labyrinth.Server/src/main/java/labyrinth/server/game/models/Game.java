@@ -1,5 +1,7 @@
 package labyrinth.server.game.models;
 
+import labyrinth.server.exceptions.GameAlreadyStartedException;
+import labyrinth.server.exceptions.UsernameTakenException;
 import labyrinth.server.game.abstractions.*;
 import labyrinth.server.game.ai.AiStrategy;
 import labyrinth.server.game.constants.PointRewards;
@@ -124,11 +126,12 @@ public class Game {
      * Adds a player to the room. The first player that joins will become the admin.
      *
      * @param username the username of the player joining the room
-     * @throws IllegalStateException if the room is full
+     * @throws GameAlreadyStartedException if the room is full
+     * @throws UsernameTakenException if the username is already taken
      */
-    public Player join(String username) {
+    public Player join(String username) throws UsernameTakenException, GameAlreadyStartedException {
         if (roomState != RoomState.LOBBY) {
-            throw new IllegalStateException("Cannot join a game that is in progress!");
+            throw new GameAlreadyStartedException();
         }
 
         return playerRegistry.addPlayer(username);
