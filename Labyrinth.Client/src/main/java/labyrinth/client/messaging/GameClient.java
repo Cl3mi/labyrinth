@@ -30,8 +30,6 @@ public class GameClient extends WebSocketClient {
     @Setter private Consumer<NextTreasureCardEventPayload> onNextTreasure;
     @Setter private Consumer<PlayerUpdatedEventPayload> onPlayerUpdated;
 
-
-    // einzig vorhandenes State-Payload
     @Setter private Consumer<GameStateEventPayload> onGameStateUpdate;
 
     @Setter private Consumer<String> onErrorMessage;
@@ -120,13 +118,11 @@ public class GameClient extends WebSocketClient {
                     if (onErrorMessage != null) runOnUiThread(() -> onErrorMessage.accept(msg));
                 }
 
-                // ✅ NEU: ACHIEVEMENT_UNLOCKED
                 case ACHIEVEMENT_UNLOCKED -> {
                     AchievementUnlockedEventPayload payload = mapper.treeToValue(payloadNode, AchievementUnlockedEventPayload.class);
                     if (onAchievementUnlocked != null) runOnUiThread(() -> onAchievementUnlocked.accept(payload));
                 }
 
-                // ✅ NEU: GAME_OVER
                 case GAME_OVER -> {
                     System.out.println("[GameClient] GAME_OVER message received, parsing payload...");
                     GameOverEventPayload payload = mapper.treeToValue(payloadNode, GameOverEventPayload.class);
@@ -139,19 +135,16 @@ public class GameClient extends WebSocketClient {
                     }
                 }
 
-                // ✅ NEU: NEXT_TREASURE
                 case NEXT_TREASURE -> {
                     NextTreasureCardEventPayload payload = mapper.treeToValue(payloadNode, NextTreasureCardEventPayload.class);
                     if (onNextTreasure != null) runOnUiThread(() -> onNextTreasure.accept(payload));
                 }
 
-                // ✅ NEU: PLAYER_UPDATED
                 case PLAYER_UPDATED -> {
                     PlayerUpdatedEventPayload payload = mapper.treeToValue(payloadNode, PlayerUpdatedEventPayload.class);
                     if (onPlayerUpdated != null) runOnUiThread(() -> onPlayerUpdated.accept(payload));
                 }
 
-                // ✅ NEU: SERVER_INFO (optional, meist nur Info)
                 case SERVER_INFO -> {
                     // ServerInfoEventPayload payload = mapper.treeToValue(payloadNode, ServerInfoEventPayload.class);
                     System.out.println("SERVER_INFO received: " + payloadNode);
@@ -345,7 +338,6 @@ public class GameClient extends WebSocketClient {
         }
     }
 
-    //  nur direction, kein extraTileEntrances
     public void sendPushTile(int rowOrColIndex, Direction direction) {
         try {
             PushTileCommandPayload payload = new PushTileCommandPayload();
@@ -588,15 +580,6 @@ public class GameClient extends WebSocketClient {
             close();
         }
         reconnect();
-    }
-
-    // Getters for state
-    public ConnectionState getConnectionState() {
-        return connectionState;
-    }
-
-    public boolean isIntentionalDisconnect() {
-        return intentionalDisconnect;
     }
 
     private void runOnUiThread(Runnable r) {
