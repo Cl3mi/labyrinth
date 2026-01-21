@@ -42,7 +42,7 @@ public class LabyrinthApplication {
     private OptionsPanel optionsPanel;
     private BoardPanel boardPanel;
     private GameOverPanel gameOverPanel;
-    private JPanel gamePanel; // Ensure gamePanel is defined
+    private JPanel gamePanel;
 
     private String username;
     private String identifierToken;
@@ -71,16 +71,12 @@ public class LabyrinthApplication {
         frame = new JFrame("Labyrinth Online (" + PROFILE + ")");
         installWindowCloseHandler();
 
-        // Set minimum window size (HD)
         frame.setMinimumSize(new Dimension(MIN_WINDOW_WIDTH, MIN_WINDOW_HEIGHT));
 
-        // Lade gespeicherte Fenstergröße aus Einstellungen
         int[] windowSize = OptionsPanel.loadWindowSizeFromPreferences();
         if (windowSize[0] == -1 || windowSize[1] == -1) {
-            // Maximiert
             frame.setExtendedState(JFrame.MAXIMIZED_BOTH);
         } else {
-            // Ensure loaded size respects minimum
             int width = Math.max(windowSize[0], MIN_WINDOW_WIDTH);
             int height = Math.max(windowSize[1], MIN_WINDOW_HEIGHT);
             frame.setSize(width, height);
@@ -89,10 +85,8 @@ public class LabyrinthApplication {
 
         mainPanel = new JPanel(new CardLayout());
 
-        // Theme-Änderungen überwachen und UI neu zeichnen
         ThemeManager.getInstance().addThemeChangeListener(() -> {
             SwingUtilities.invokeLater(() -> {
-                // Alle Komponenten invalidieren und neu zeichnen
                 if (mainMenuPanel != null) {
                     mainMenuPanel.revalidate();
                     mainMenuPanel.repaint();
@@ -115,9 +109,8 @@ public class LabyrinthApplication {
             });
         });
 
-        // Hauptmenü erstellen
         mainMenuPanel = new MainMenuPanel();
-        // Gespeicherten Username laden und setzen (für beide Modi)
+
         String storedUsername = ClientIdentityStore.loadUsername();
         if (storedUsername != null && !storedUsername.isBlank()) {
             mainMenuPanel.setSingleplayerUsername(storedUsername);
@@ -136,31 +129,25 @@ public class LabyrinthApplication {
         serverBrowserPanel.setOnServerSelected(this::setUsername);
         mainPanel.add(serverBrowserPanel, "serverbrowser");
 
-        // Multiplayer-Lobby erstellen
         lobbyPanel = new MultiplayerLobbyPanel(null);
         lobbyPanel.setOnBackToMenu(this::showMainMenu);
         mainPanel.add(lobbyPanel, "lobby");
 
 
 
-        // Options Panel erstellen
         optionsPanel = new OptionsPanel();
         optionsPanel.setOnBackToMenu(this::showMainMenu);
         optionsPanel.setOnSettingsChanged(this::applySettings);
         optionsPanel.setOnMusicVolumeChanged(volume -> {
-            // Musik-Lautstärke in Echtzeit ändern
             if (mainMenuPanel != null) {
                 mainMenuPanel.setMusicVolume(volume);
             }
         });
         optionsPanel.setOnWindowSizeChanged(size -> {
-            // Fenstergröße sofort ändern
             if (frame != null) {
                 if (size[0] == -1 || size[1] == -1) {
-                    // Maximiert
                     frame.setExtendedState(JFrame.MAXIMIZED_BOTH);
                 } else {
-                    // Normale Größe - erst aus Maximiert-Modus holen falls nötig
                     frame.setExtendedState(JFrame.NORMAL);
                     frame.setSize(size[0], size[1]);
                     frame.setLocationRelativeTo(null);
@@ -169,7 +156,6 @@ public class LabyrinthApplication {
         });
         mainPanel.add(optionsPanel, "options");
 
-        // Game Over Panel
         gameOverPanel = new GameOverPanel(this::exitGameToLobby);
         gameOverPanel.setOnStartNewRound(this::startNewRound);
         mainPanel.add(gameOverPanel, "gameover");

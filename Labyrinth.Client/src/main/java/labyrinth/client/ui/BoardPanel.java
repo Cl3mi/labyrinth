@@ -65,21 +65,17 @@ public class BoardPanel extends JPanel {
     @Getter
     private Board board;
 
-    // Track previous board state to detect changes
     private Board previousBoard;
 
-    // Track last push action for visual feedback
-    private Integer lastPushedIndex = null;  // Row or column index
-    private Boolean lastPushedWasRow = null; // true = row, false = column
+    private Integer lastPushedIndex = null;
+    private Boolean lastPushedWasRow = null;
     private Direction lastPushDirection = null;
     private long lastPushTimestamp = 0;
     private static final long PUSH_HIGHLIGHT_DURATION = 2000; // 2 seconds
 
-    // Track current target to detect changes
     private String lastTargetTreasureName = null;
-    private boolean showTargetBanner = false; // Show banner until first action
+    private boolean showTargetBanner = false;
 
-    // Keyboard navigation
     private int selectedRow = 0;
     private int selectedCol = 0;
     private boolean keyboardNavigationActive = false;
@@ -1238,7 +1234,6 @@ public class BoardPanel extends JPanel {
         g2.drawRoundRect(boardX, boardY, boardWidth, boardHeight, 15, 15);
     }
 
-    // Cached layout values for use by other drawing methods
     private int cachedSidebarWidth = 280;
     private int cachedSidebarX = 10;
     private int cachedExtraTileX = 0;
@@ -1248,59 +1243,39 @@ public class BoardPanel extends JPanel {
         int windowWidth = getWidth();
         int windowHeight = getHeight();
 
-        // =====================================================================
-        // STEP 1: Sidebar - fixed to left edge, responsive width
-        // =====================================================================
         cachedSidebarWidth = Math.max(250, Math.min(320, windowWidth / 6));
         cachedSidebarX = 10;
 
-        // =====================================================================
-        // STEP 2: Extra tile area - bottom-right corner
-        // =====================================================================
         int extraTileMargin = 20;
         int estimatedExtraTileSize = Math.min(windowWidth / 12, windowHeight / 10);
 
-        // =====================================================================
-        // STEP 3: Calculate board size (fits between sidebar and extra tile)
-        // =====================================================================
         int sidebarRightEdge = cachedSidebarX + cachedSidebarWidth + 20; // 20px gap after sidebar
         int extraTileLeftEdge = windowWidth - estimatedExtraTileSize - extraTileMargin * 2;
 
         int availableWidth = extraTileLeftEdge - sidebarRightEdge - arrowSize * 2;
         int availableHeight = windowHeight - PANEL_PADDING * 2 - arrowSize * 2;
 
-        // Calculate tile size to fit
         size = Math.min(availableWidth / board.getWidth(), availableHeight / board.getHeight());
         size = Math.max(50, size); // Minimum playable size
 
-        // Scale arrow size proportionally (min 20, max 35)
         arrowSize = Math.max(20, Math.min(35, size / 3));
 
-        // =====================================================================
-        // STEP 4: Position board - centered in window, but don't overlap sidebar
-        // =====================================================================
         int boardPixelWidth = size * board.getWidth();
         int boardPixelHeight = size * board.getHeight();
 
-        // Center in window
         xOffset = (windowWidth - boardPixelWidth) / 2;
         yOffset = (windowHeight - boardPixelHeight) / 2;
 
-        // Ensure board doesn't overlap sidebar
         int minBoardX = sidebarRightEdge + arrowSize + ARROW_MARGIN;
         if (xOffset < minBoardX) {
             xOffset = minBoardX;
         }
 
-        // =====================================================================
-        // STEP 5: Extra tile position - bottom-right corner
-        // =====================================================================
         cachedExtraTileX = windowWidth - size - extraTileMargin;
-        cachedExtraTileY = windowHeight - size - extraTileMargin - 25; // 25 for hint text
+        cachedExtraTileY = windowHeight - size - extraTileMargin - 25;
     }
 
     private void drawBoardGrid(Graphics2D g2) {
-        // Draw push highlight overlay first (behind tiles)
         drawPushHighlight(g2);
 
         for (int row = 0; row < board.getHeight(); row++) {
@@ -1311,7 +1286,6 @@ public class BoardPanel extends JPanel {
                 int x = xOffset + col * size;
                 int y = yOffset + row * size;
 
-                // Show keyboard selection highlight
                 if (keyboardNavigationActive && row == selectedRow && col == selectedCol) {
                     drawKeyboardSelectionHighlight(g2, x, y);
                 }
@@ -1327,7 +1301,6 @@ public class BoardPanel extends JPanel {
     }
 
     private void drawKeyboardSelectionHighlight(Graphics2D g2, int x, int y) {
-        // Draw animated selection border
         long time = System.currentTimeMillis();
         int pulseAlpha = 150 + (int) (50 * Math.sin(time / 200.0));
 
