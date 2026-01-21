@@ -63,9 +63,16 @@ public class LabyrinthApplication {
     private volatile boolean isGameOver = false;
     private volatile boolean exitedToLobby = false;
 
+    // Minimum window size (HD resolution)
+    private static final int MIN_WINDOW_WIDTH = 1280;
+    private static final int MIN_WINDOW_HEIGHT = 720;
+
     public void start() throws Exception {
         frame = new JFrame("Labyrinth Online (" + PROFILE + ")");
         installWindowCloseHandler();
+
+        // Set minimum window size (HD)
+        frame.setMinimumSize(new Dimension(MIN_WINDOW_WIDTH, MIN_WINDOW_HEIGHT));
 
         // Lade gespeicherte Fenstergröße aus Einstellungen
         int[] windowSize = OptionsPanel.loadWindowSizeFromPreferences();
@@ -73,7 +80,10 @@ public class LabyrinthApplication {
             // Maximiert
             frame.setExtendedState(JFrame.MAXIMIZED_BOTH);
         } else {
-            frame.setSize(windowSize[0], windowSize[1]);
+            // Ensure loaded size respects minimum
+            int width = Math.max(windowSize[0], MIN_WINDOW_WIDTH);
+            int height = Math.max(windowSize[1], MIN_WINDOW_HEIGHT);
+            frame.setSize(width, height);
         }
         frame.setLocationRelativeTo(null);
 

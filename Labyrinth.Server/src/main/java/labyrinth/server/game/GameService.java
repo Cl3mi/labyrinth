@@ -155,7 +155,7 @@ public class GameService {
     public void startGame(GameConfig gameConfig) {
         rwLock.writeLock().lock();
         try {
-            int playersCount = 4;
+            int playersCount = game.getPlayers().size();
 
             var board = boardFactory.createBoard(gameConfig.boardWidth(), gameConfig.boardHeight());
             // Multiply treasures per player by actual player count (after AI fill)
