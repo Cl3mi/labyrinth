@@ -4,6 +4,7 @@ import labyrinth.client.models.Board;
 import labyrinth.client.models.Player;
 import labyrinth.client.models.Position;
 import labyrinth.contracts.models.Direction;
+import labyrinth.contracts.models.PushActionInfo;
 
 import java.util.*;
 
@@ -53,30 +54,88 @@ public class SimpleAiStrategy implements AiStrategy {
 
     /**
      * Generates all valid shift operations for the board.
-     * Excludes outer rows/columns (0 and height-1/width-1) and rows/columns with fixed tiles.
+     * Excludes outer rows/columns (0 and height-1/width-1), rows/columns with fixed tiles,
+     * and the forbidden reverse push (undoing the previous player's push).
      */
     private List<ShiftOperation> generateShiftCandidates(Board board) {
         List<ShiftOperation> ops = new ArrayList<>();
         int width = board.getWidth();
         int height = board.getHeight();
 
+        // Get the forbidden reverse push
+        ShiftOperation forbiddenOp = getForbiddenReversePush(board.getLastPush());
+        if (forbiddenOp != null) {
+            System.out.println("[AI] Forbidden reverse push: " + forbiddenOp.direction() + " at " + forbiddenOp.index());
+        }
+
         // Row shifts (LEFT/RIGHT) - exclude outer rows
         for (int row = 1; row < height - 1; row++) {
             if (!rowContainsFixedTile(board, row)) {
-                ops.add(ShiftOperation.row(row, Direction.LEFT));
-                ops.add(ShiftOperation.row(row, Direction.RIGHT));
+                ShiftOperation leftOp = ShiftOperation.row(row, Direction.LEFT);
+                ShiftOperation rightOp = ShiftOperation.row(row, Direction.RIGHT);
+
+                if (!isEqualShiftOp(leftOp, forbiddenOp)) {
+                    ops.add(leftOp);
+                }
+                if (!isEqualShiftOp(rightOp, forbiddenOp)) {
+                    ops.add(rightOp);
+                }
             }
         }
 
         // Column shifts (UP/DOWN) - exclude outer columns
         for (int col = 1; col < width - 1; col++) {
             if (!colContainsFixedTile(board, col)) {
-                ops.add(ShiftOperation.column(col, Direction.UP));
-                ops.add(ShiftOperation.column(col, Direction.DOWN));
+                ShiftOperation upOp = ShiftOperation.column(col, Direction.UP);
+                ShiftOperation downOp = ShiftOperation.column(col, Direction.DOWN);
+
+                if (!isEqualShiftOp(upOp, forbiddenOp)) {
+                    ops.add(upOp);
+                }
+                if (!isEqualShiftOp(downOp, forbiddenOp)) {
+                    ops.add(downOp);
+                }
             }
         }
 
         return ops;
+    }
+
+    /**
+     * Returns the forbidden reverse push operation based on the last push.
+     * In Labyrinth, you cannot simply reverse the previous player's push.
+     */
+    private ShiftOperation getForbiddenReversePush(PushActionInfo lastPush) {
+        if (lastPush == null || lastPush.getRowOrColIndex() == null || lastPush.getDirection() == null) {
+            return null;
+        }
+
+        int index = lastPush.getRowOrColIndex();
+        Direction lastDir = lastPush.getDirection();
+
+        // The forbidden operation is the reverse direction on the same row/column
+        Direction reverseDir = switch (lastDir) {
+            case LEFT -> Direction.RIGHT;
+            case RIGHT -> Direction.LEFT;
+            case UP -> Direction.DOWN;
+            case DOWN -> Direction.UP;
+        };
+
+        // Determine if it was a row or column shift
+        boolean isRowShift = (lastDir == Direction.LEFT || lastDir == Direction.RIGHT);
+
+        if (isRowShift) {
+            return ShiftOperation.row(index, reverseDir);
+        } else {
+            return ShiftOperation.column(index, reverseDir);
+        }
+    }
+
+    private boolean isEqualShiftOp(ShiftOperation a, ShiftOperation b) {
+        if (a == null || b == null) return false;
+        return a.index() == b.index() &&
+               a.direction() == b.direction() &&
+               a.isRow() == b.isRow();
     }
 
     private boolean rowContainsFixedTile(Board board, int rowIndex) {

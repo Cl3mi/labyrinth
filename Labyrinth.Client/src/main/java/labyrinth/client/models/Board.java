@@ -2,6 +2,7 @@ package labyrinth.client.models;
 
 import labyrinth.client.enums.MoveState;
 import labyrinth.contracts.models.Direction;
+import labyrinth.contracts.models.PushActionInfo;
 import labyrinth.contracts.models.Tile;
 import labyrinth.contracts.models.Treasure;
 import lombok.Getter;
@@ -28,6 +29,7 @@ public class Board {
     private MoveState currentMoveState = MoveState.PLACE_TILE;
     private Tile extraTile;
     private boolean freeRoam = false;
+    private PushActionInfo lastPush;
 
     public Board(int width, int height, Tile[][] tiles, Tile extraTile) {
         if (tiles.length != height || tiles[0].length != width) {
