@@ -30,7 +30,6 @@ import java.util.List;
  * - Rendert den letzten State vom Server.
  * - User-Input sendet ausschließlich Commands (MOVE_PAWN, PUSH_TILE).
  * - Keine lokale Spielzustands-Mutation.
- * - Reachable Tiles (Highlighting) werden optional vom Server gesetzt.
  */
 public class BoardPanel extends JPanel {
 
@@ -42,6 +41,33 @@ public class BoardPanel extends JPanel {
     private static final Font DEBUG_INFO_FONT = new Font("Arial", Font.BOLD, 16);
     private static final Font PLAYER_MARKER_FONT = new Font("Arial", Font.BOLD, 30);
     private static final Font COORDINATE_FONT = new Font("Arial", Font.PLAIN, 10);
+
+    private static final Font FONT_SANSSERIF_BOLD_20 = new Font("SansSerif", Font.BOLD, 20);
+    private static final Font FONT_SANSSERIF_BOLD_14 = new Font("SansSerif", Font.BOLD, 14);
+    private static final Font FONT_SANSSERIF_BOLD_12 = new Font("SansSerif", Font.BOLD, 12);
+    private static final Font FONT_SANSSERIF_PLAIN_14 = new Font("SansSerif", Font.PLAIN, 14);
+    private static final Font FONT_SANSSERIF_PLAIN_12 = new Font("SansSerif", Font.PLAIN, 12);
+    private static final Font FONT_ARIAL_BOLD_18 = new Font("Arial", Font.BOLD, 18);
+    private static final Font FONT_ARIAL_BOLD_16 = new Font("Arial", Font.BOLD, 16);
+    private static final Font FONT_ARIAL_BOLD_15 = new Font("Arial", Font.BOLD, 15);
+    private static final Font FONT_ARIAL_BOLD_11 = new Font("Arial", Font.BOLD, 11);
+    private static final Font FONT_ARIAL_BOLD_10 = new Font("Arial", Font.BOLD, 10);
+    private static final Font FONT_ARIAL_BOLD_9 = new Font("Arial", Font.BOLD, 9);
+    private static final Font FONT_ARIAL_PLAIN_14 = new Font("Arial", Font.PLAIN, 14);
+    private static final Font FONT_ARIAL_PLAIN_12 = new Font("Arial", Font.PLAIN, 12);
+    private static final Font FONT_ARIAL_PLAIN_11 = new Font("Arial", Font.PLAIN, 11);
+    private static final Font FONT_ARIAL_PLAIN_10 = new Font("Arial", Font.PLAIN, 10);
+    private static final Font FONT_ARIAL_ITALIC_12 = new Font("Arial", Font.ITALIC, 12);
+    private static final Font FONT_ARIAL_ITALIC_10 = new Font("Arial", Font.ITALIC, 10);
+    private static final Font FONT_SERIF_BOLD_24 = new Font("Serif", Font.BOLD, 24);
+    private static final Font FONT_SERIF_BOLD_16 = new Font("Serif", Font.BOLD, 16);
+    
+    private static final Map<String, Font> fontCache = new HashMap<>();
+
+    private static Font getCachedFont(String family, int style, int size) {
+        String key = family + "_" + style + "_" + size;
+        return fontCache.computeIfAbsent(key, k -> new Font(family, style, size));
+    }
 
     private static final Color BACKGROUND_COLOR = Color.DARK_GRAY;
     private static final Color CORRIDOR_COLOR = new Color(235, 235, 220);
@@ -125,6 +151,11 @@ public class BoardPanel extends JPanel {
     private boolean aiThinking = false;
     private Runnable onAiToggleRequested;
 
+    // Animation timer for smooth effects (60fps when animations are active)
+    private javax.swing.Timer animationTimer;
+    private static final int ANIMATION_FPS = 60;
+    private static final int ANIMATION_INTERVAL = 1000 / ANIMATION_FPS; // ~16ms
+
     private static final String EXTRA_KEY = "EXTRA";
 
     public BoardPanel(GameClient client, Board board, Player currentPlayer, List<Player> players) {
@@ -172,12 +203,52 @@ public class BoardPanel extends JPanel {
 
         soundEffects.setVolume(savedSfxVolume / 100.0f);
 
-        // Start timer to update sidebar countdowns every second
-        javax.swing.Timer sidebarTimer = new javax.swing.Timer(1000, e -> repaint());
+        javax.swing.Timer sidebarTimer = new javax.swing.Timer(1000, e -> {
+            if (gameEndTime != null || turnEndTime != null) {
+                repaint();
+            }
+        });
         sidebarTimer.start();
+
+        animationTimer = new javax.swing.Timer(ANIMATION_INTERVAL, e -> {
+            if (needsAnimationUpdate()) {
+                repaint();
+            }
+        });
+        animationTimer.start();
     }
 
-    // Callback für Beenden
+    /**
+     * Check if any animations are currently active and need smooth updates.
+     * This includes: your turn indicators, target treasure highlights, AI thinking, etc.
+     */
+    private boolean needsAnimationUpdate() {
+        if (isLocalPlayerTurn()) {
+            return true;
+        }
+
+        if (currentPlayer != null && currentPlayer.getCurrentTargetTreasure() != null) {
+            return true;
+        }
+
+        if (aiThinking) {
+            return true;
+        }
+
+        if (keyboardNavigationActive) {
+            return true;
+        }
+
+        if (lastPushedIndex != null) {
+            long elapsed = System.currentTimeMillis() - lastPushTimestamp;
+            if (elapsed <= PUSH_HIGHLIGHT_DURATION) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private Runnable onExitGame;
 
     public void setOnExitGame(Runnable callback) {
@@ -245,7 +316,7 @@ public class BoardPanel extends JPanel {
                 g2.drawRoundRect(1, 1, w - 2, h - 2, 10, 10);
 
                 // Icon
-                g2.setFont(new Font("SansSerif", Font.BOLD, 20));
+                g2.setFont(FONT_SANSSERIF_BOLD_20);
                 g2.setColor(new Color(255, 215, 0));
                 FontMetrics fm = g2.getFontMetrics();
                 String text = "⚙";
@@ -1056,7 +1127,7 @@ public class BoardPanel extends JPanel {
 
                 // Player initial
                 g2.setColor(playerColor.darker());
-                g2.setFont(new Font("Arial", Font.BOLD, 16));
+                g2.setFont(FONT_ARIAL_BOLD_16);
                 String initial = player.getName().substring(0, 1).toUpperCase();
                 FontMetrics fm = g2.getFontMetrics();
                 int textX = 15 + (30 - fm.stringWidth(initial)) / 2;
@@ -1065,12 +1136,12 @@ public class BoardPanel extends JPanel {
 
                 // Player name
                 g2.setColor(Color.WHITE);
-                g2.setFont(new Font("Arial", Font.BOLD, 15));
+                g2.setFont(FONT_ARIAL_BOLD_15);
                 g2.drawString(player.getName(), 55, getHeight() / 2 + 5);
 
                 // Position info
                 if (player.getCurrentPosition() != null) {
-                    g2.setFont(new Font("Arial", Font.PLAIN, 11));
+                    g2.setFont(FONT_ARIAL_PLAIN_11);
                     g2.setColor(new Color(255, 255, 255, 180));
                     String posText = "Position: " + player.getCurrentPosition().getRow() + "/" + player.getCurrentPosition().getColumn();
                     g2.drawString(posText, getWidth() - 100, getHeight() / 2 + 5);
@@ -1149,8 +1220,8 @@ public class BoardPanel extends JPanel {
         Graphics2D g2 = (Graphics2D) g.create();
         try {
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
-            g2.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+            g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+            g2.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_SPEED);
 
             calculateLayoutMetrics();
             drawYourTurnBoardHighlight(g2); // Draw glowing border when it's your turn
@@ -1199,7 +1270,7 @@ public class BoardPanel extends JPanel {
         g2.drawRoundRect(bannerX, bannerY, bannerWidth, bannerHeight, 8, 8);
 
         // Text
-        g2.setFont(new Font("SansSerif", Font.BOLD, 12));
+        g2.setFont(FONT_SANSSERIF_BOLD_12);
         g2.setColor(Color.WHITE);
         String text = "DEIN ZUG";
         FontMetrics fm = g2.getFontMetrics();
@@ -1474,7 +1545,7 @@ public class BoardPanel extends JPanel {
             g2.setColor(new Color(255, 215, 0, 200));  // Gold
             g2.fillOval(imgX, imgY, imgSize, imgSize);
             g2.setColor(Color.BLACK);
-            g2.setFont(new Font("Arial", Font.BOLD, imgSize / 3));
+            g2.setFont(getCachedFont("Arial", Font.BOLD, imgSize / 3));
             String label = switch (bonus) {
                 case BEAM -> "T";
                 case SWAP -> "S";
@@ -1552,7 +1623,7 @@ public class BoardPanel extends JPanel {
             g2.drawOval(centerX - fallbackSize / 2, centerY - fallbackSize / 2 - 12, fallbackSize, fallbackSize);
 
             // First letter
-            g2.setFont(new Font("Arial", Font.BOLD, fallbackSize / 2));
+            g2.setFont(getCachedFont("Arial", Font.BOLD, fallbackSize / 2));
             g2.setColor(Color.WHITE);
             String letter = treasure.getName().substring(0, 1);
             FontMetrics fm = g2.getFontMetrics();
@@ -1563,7 +1634,7 @@ public class BoardPanel extends JPanel {
         }
 
         // ✅ Draw treasure name UNDER the image with background
-        g2.setFont(new Font("Arial", Font.BOLD, isCurrentTarget ? 11 : 9));
+        g2.setFont(isCurrentTarget ? FONT_ARIAL_BOLD_11 : FONT_ARIAL_BOLD_9);
         FontMetrics fm = g2.getFontMetrics();
         String displayName = treasure.getName();
 
@@ -1842,7 +1913,7 @@ public class BoardPanel extends JPanel {
         int hintFontSize = Math.max(8, Math.min(10, size / 9));
 
         // Label above the tile
-        g2.setFont(new Font("Arial", Font.BOLD, labelFontSize));
+        g2.setFont(getCachedFont("Arial", Font.BOLD, labelFontSize));
         g2.setColor(ThemeManager.getInstance().getTextLight());
         g2.drawString("Schiebekarte", x, y - 8);
 
@@ -1851,7 +1922,7 @@ public class BoardPanel extends JPanel {
             // Debug: Fallback wenn null
             g2.setColor(new Color(255, 0, 0, 140));
             g2.drawRect(x, y, size, size);
-            g2.setFont(new Font("Arial", Font.PLAIN, 12));
+            g2.setFont(FONT_ARIAL_PLAIN_12);
             g2.drawString("NULL", x + 5, y + 15);
             return;
         }
@@ -1861,7 +1932,7 @@ public class BoardPanel extends JPanel {
 
         // Optional hint text that it can be rotated
         if (currentTurnState == labyrinth.contracts.models.TurnState.WAITING_FOR_PUSH) {
-            g2.setFont(new Font("Arial", Font.ITALIC, hintFontSize));
+            g2.setFont(getCachedFont("Arial", Font.ITALIC, hintFontSize));
             g2.setColor(new Color(255, 255, 255, 200));
             g2.drawString("R/Q/E: Drehen", x, y + size + 15);
         }
@@ -1928,7 +1999,7 @@ public class BoardPanel extends JPanel {
         int currentY = sidebarY + padding;
 
         // Header
-        g2.setFont(new Font("Arial", Font.BOLD, headerFontSize));
+        g2.setFont(getCachedFont("Arial", Font.BOLD, headerFontSize));
         g2.setColor(new Color(255, 215, 0)); // Gold color
         currentY += Math.round(35 * sidebarScale);
 
@@ -1937,7 +2008,7 @@ public class BoardPanel extends JPanel {
             drawSectionHeader(g2, "SPIEL-TIMER", sidebarX + padding, currentY, sidebarScale);
             currentY += Math.round(22 * sidebarScale);
 
-            g2.setFont(new Font("Arial", Font.BOLD, timerFontSize));
+            g2.setFont(getCachedFont("Arial", Font.BOLD, timerFontSize));
             g2.setColor(new Color(255, 200, 100));
             String timeRemaining = formatTimeRemaining(gameEndTime);
             g2.drawString(timeRemaining, sidebarX + padding + scaledPadding, currentY);
@@ -1959,7 +2030,7 @@ public class BoardPanel extends JPanel {
             currentY += Math.round(25 * sidebarScale);
 
             // Player name with larger font
-            g2.setFont(new Font("Arial", Font.BOLD, playerNameFontSize));
+            g2.setFont(getCachedFont("Arial", Font.BOLD, playerNameFontSize));
             g2.setColor(new Color(255, 255, 150));
             String turnText = currentTurnPlayer.getName();
             if (currentTurnPlayer.isAiControlled()) {
@@ -1969,7 +2040,7 @@ public class BoardPanel extends JPanel {
             currentY += Math.round(28 * sidebarScale);
 
             // Turn state - use server TurnState if available, otherwise client MoveState
-            g2.setFont(new Font("Arial", Font.PLAIN, stateFontSize));
+            g2.setFont(getCachedFont("Arial", Font.PLAIN, stateFontSize));
             g2.setColor(new Color(180, 180, 200));
             String stateText;
             if (currentTurnState != null) {
@@ -1987,7 +2058,7 @@ public class BoardPanel extends JPanel {
             // Turn timer
             if (turnEndTime != null) {
                 String turnTime = formatTimeRemaining(turnEndTime);
-                g2.setFont(new Font("Arial", Font.BOLD, turnTimerFontSize));
+                g2.setFont(getCachedFont("Arial", Font.BOLD, turnTimerFontSize));
                 g2.setColor(new Color(255, 150, 150));
                 g2.drawString("Zeit: " + turnTime, sidebarX + padding + scaledPadding, currentY);
                 currentY += Math.round(20 * sidebarScale);
@@ -1997,7 +2068,7 @@ public class BoardPanel extends JPanel {
 
             // Hint for staying in place
             if (currentTurnState != null && currentTurnState == labyrinth.contracts.models.TurnState.WAITING_FOR_MOVE) {
-                g2.setFont(new Font("Arial", Font.ITALIC, hintFontSize));
+                g2.setFont(getCachedFont("Arial", Font.ITALIC, hintFontSize));
                 g2.setColor(new Color(150, 150, 170));
                 g2.drawString("(Click your tile to stay in place)", sidebarX + padding + scaledPadding, currentY);
                 currentY += Math.round(15 * sidebarScale);
@@ -2062,7 +2133,7 @@ public class BoardPanel extends JPanel {
             g2.drawRoundRect(sidebarX + padding + 5, currentY - Math.round(15 * sidebarScale), sidebarWidth - 2 * padding - 10, boxHeight, 10, 10);
 
             // "AKTUELLES ZIEL" label
-            g2.setFont(new Font("Arial", Font.BOLD, Math.round(10 * sidebarScale)));
+            g2.setFont(getCachedFont("Arial", Font.BOLD, Math.round(10 * sidebarScale)));
             g2.setColor(new Color(100, 70, 0));
             g2.drawString("AKTUELLES ZIEL:", sidebarX + padding + Math.round(15 * sidebarScale), currentY - 2);
 
@@ -2081,7 +2152,7 @@ public class BoardPanel extends JPanel {
             }
 
             // Current target name next to image
-            g2.setFont(new Font("Arial", Font.BOLD, Math.round(16 * sidebarScale)));
+            g2.setFont(getCachedFont("Arial", Font.BOLD, Math.round(16 * sidebarScale)));
             g2.setColor(new Color(0, 0, 0));
             g2.drawString(currentTarget.getName(), imgX + imgSize + Math.round(10 * sidebarScale), imgY + imgSize / 2 + 5);
 
@@ -2094,7 +2165,7 @@ public class BoardPanel extends JPanel {
         drawDivider(g2, sidebarX + padding, sidebarX + sidebarWidth - padding, currentY);
         currentY += Math.round(15 * sidebarScale);
 
-        g2.setFont(new Font("Arial", Font.ITALIC, hintFontSize));
+        g2.setFont(getCachedFont("Arial", Font.ITALIC, hintFontSize));
         g2.setColor(new Color(150, 150, 170));
         g2.drawString("Pfeiltasten: Navigation", sidebarX + padding, currentY);
         currentY += Math.round(15 * sidebarScale);
@@ -2160,7 +2231,7 @@ public class BoardPanel extends JPanel {
 
         // Button text - scaled font
         int fontSize = Math.round(14 * scale);
-        g2.setFont(new Font("Arial", Font.BOLD, fontSize));
+        g2.setFont(getCachedFont("Arial", Font.BOLD, fontSize));
         String buttonText;
         if (aiThinking) {
             buttonText = "AI Denkt...";
@@ -2239,7 +2310,7 @@ public class BoardPanel extends JPanel {
             String bonusIcon = getBonusIcon(bonus);
 
             int fontSize = Math.round(14 * scale);
-            g2.setFont(new Font("Arial", Font.BOLD, fontSize));
+            g2.setFont(getCachedFont("Arial", Font.BOLD, fontSize));
             g2.setColor(isActive ? new Color(220, 255, 220) : new Color(255, 255, 255));
             g2.drawString(bonusIcon + " " + bonusName, buttonX + Math.round(10 * scale), buttonY + Math.round(26 * scale));
 
@@ -2249,7 +2320,7 @@ public class BoardPanel extends JPanel {
         // Show hint if a bonus mode is active
         if (activeBonusMode != null) {
             int hintFontSize = Math.round(10 * scale);
-            g2.setFont(new Font("Arial", Font.ITALIC, hintFontSize));
+            g2.setFont(getCachedFont("Arial", Font.ITALIC, hintFontSize));
             g2.setColor(new Color(150, 255, 150));
             String hint = switch (activeBonusMode) {
                 case BEAM -> "Klicke auf ein Zielfeld...";
@@ -2351,7 +2422,7 @@ public class BoardPanel extends JPanel {
      */
     private void drawSectionHeader(Graphics2D g2, String text, int x, int y, float scale) {
         int fontSize = Math.round(13 * scale);
-        g2.setFont(new Font("Arial", Font.BOLD, fontSize));
+        g2.setFont(getCachedFont("Arial", Font.BOLD, fontSize));
         g2.setColor(new Color(180, 200, 255));
         g2.drawString(text, x, y);
     }
@@ -2428,7 +2499,7 @@ public class BoardPanel extends JPanel {
 
         // Player name - scaled font
         int nameFontSize = Math.round(14 * scale);
-        g2.setFont(new Font("Arial", Font.BOLD, nameFontSize));
+        g2.setFont(getCachedFont("Arial", Font.BOLD, nameFontSize));
         g2.setColor(Color.WHITE);
         String name = player.getName();
         if (name.length() > 15) {
@@ -2439,7 +2510,7 @@ public class BoardPanel extends JPanel {
         // Badges (admin, AI, disconnected) - scaled
         int badgeFontSize = Math.round(10 * scale);
         int badgeX = x + width - padding - Math.round(20 * scale);
-        g2.setFont(new Font("Arial", Font.PLAIN, badgeFontSize));
+        g2.setFont(getCachedFont("Arial", Font.PLAIN, badgeFontSize));
 
         // Show AI badge or OFFLINE badge (but not both - AI bots don't need connections)
         if (player.isAiControlled()) {
@@ -2462,7 +2533,7 @@ public class BoardPanel extends JPanel {
         int totalTreasures = treasuresFound + player.getRemainingTreasureCount();
 
         int scoreFontSize = Math.round(12 * scale);
-        g2.setFont(new Font("Arial", Font.PLAIN, scoreFontSize));
+        g2.setFont(getCachedFont("Arial", Font.PLAIN, scoreFontSize));
         g2.setColor(new Color(200, 200, 220));
         g2.drawString("Treasures: " + treasuresFound + "/" + totalTreasures, x + padding + Math.round(24 * scale), currentY);
         currentY += Math.round(18 * scale);
