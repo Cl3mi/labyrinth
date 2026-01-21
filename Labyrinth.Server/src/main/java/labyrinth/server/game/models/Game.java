@@ -5,6 +5,7 @@ import labyrinth.server.game.ai.AiStrategy;
 import labyrinth.server.game.constants.PointRewards;
 import labyrinth.server.game.enums.*;
 import labyrinth.server.game.models.records.GameConfig;
+import labyrinth.server.game.models.records.LastShift;
 import labyrinth.server.game.models.records.Position;
 import labyrinth.server.game.results.MovePlayerToTileResult;
 import labyrinth.server.game.results.ShiftResult;
@@ -184,6 +185,10 @@ public class Game {
 
     public MoveState getCurrentMoveState() {
         return turnController.getCurrentMoveState();
+    }
+
+    public java.util.Optional<LastShift> getLastShift() {
+        return turnController.getLastShift();
     }
 
     public Position getCurrentPositionOfPlayer(Player player) {
