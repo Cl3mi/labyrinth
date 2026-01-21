@@ -116,7 +116,7 @@ class PlayerRegistryTest {
             registry.addPlayer("TestPlayer");
 
             // Act & Assert
-            assertThrows(IllegalArgumentException.class, () ->
+            assertThrows(UsernameTakenException.class, () ->
                     registry.addPlayer("TestPlayer")
             );
         }
@@ -127,7 +127,7 @@ class PlayerRegistryTest {
             registry.addPlayer("TestPlayer");
 
             // Act & Assert
-            assertThrows(IllegalArgumentException.class, () ->
+            assertThrows(UsernameTakenException.class, () ->
                     registry.addPlayer("testplayer")
             );
         }

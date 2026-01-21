@@ -1,5 +1,6 @@
 package labyrinth.server.game;
 
+import labyrinth.server.exceptions.GameAlreadyStartedException;
 import labyrinth.server.game.abstractions.IGameTimer;
 import labyrinth.server.game.ai.AiStrategy;
 import labyrinth.server.game.enums.BonusTypes;
@@ -94,7 +95,7 @@ class GameIntegrationTest {
             game.startGame(gameConfig, treasureCards, board);
 
             // Act & Assert
-            assertThrows(IllegalStateException.class, () ->
+            assertThrows(GameAlreadyStartedException.class, () ->
                     game.join("Player3")
             );
         }

@@ -26,7 +26,7 @@ import static org.mockito.Mockito.mock;
 class AiHomeReturnTest {
 
     @Test
-    void aiShouldTargetHomeTileWhenAllTreasuresCollected() {
+    void aiShouldTargetHomeTileWhenAllTreasuresCollected() throws Exception {
         AiStrategy aiStrategy = mock(AiStrategy.class);
         Game game = createGame(mock(IGameTimer.class), aiStrategy, new GameLogger());
         GameConfig gameConfig = GameConfig.getDefault();
@@ -77,7 +77,7 @@ class AiHomeReturnTest {
     }
 
     @Test
-    void gameOverLogicWorksCorrectly() {
+    void gameOverLogicWorksCorrectly() throws Exception {
         // This test verifies the actual game-over condition
         AiStrategy aiStrategy = mock(AiStrategy.class);
         Game game = createGame(mock(IGameTimer.class), aiStrategy, new GameLogger());
