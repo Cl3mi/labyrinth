@@ -195,13 +195,6 @@ public class GameService {
                 return false;
             }
 
-            publishEvent(new PlayerMovedEvent());
-
-            if (result.treasureCollected()) {
-                var treasureCardEvent = new NextTreasureCardEvent(player, player.getCurrentTreasureCard());
-                publishEvent(treasureCardEvent);
-            }
-
             if (result.gameOver()) {
                 for (var award : game.getEndGameAchievements()) {
                     var achievementEvent = new AchievementUnlockedEvent(award.player(), award.achievement());
@@ -213,7 +206,16 @@ public class GameService {
                 // IMPORTANT: Publish GameOverEvent BEFORE reset, otherwise player statistics are cleared
                 publishEvent(new GameOverEvent(players));
                 game.resetAndReturnToLobby();
+                return true;
             }
+
+            publishEvent(new PlayerMovedEvent());
+
+            if (result.treasureCollected()) {
+                var treasureCardEvent = new NextTreasureCardEvent(player, player.getCurrentTreasureCard());
+                publishEvent(treasureCardEvent);
+            }
+
 
             return true;
         } finally {
@@ -250,6 +252,11 @@ public class GameService {
     public void enableAiAndMarkDisconnected(Player player) {
         rwLock.writeLock().lock();
         try {
+            if(game.getRoomState() != RoomState.IN_GAME) {
+                log.warn("Game is not in IN_GAME state, cannot enable AI for player {}", player.getUsername());
+                return;
+            }
+
             game.enableAiAndMarkDisconnected(player);
 
             if (!game.anyPlayerActive()) {
