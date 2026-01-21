@@ -74,15 +74,15 @@ public class Game {
     /**
      * Constructor with interface-based dependencies for improved testability.
      *
-     * @param playerRegistry player management service
-     * @param turnController turn state management service
-     * @param movementManager movement and tile interaction service
+     * @param playerRegistry     player management service
+     * @param turnController     turn state management service
+     * @param movementManager    movement and tile interaction service
      * @param achievementService achievement awarding service
-     * @param bonusManager bonus management service
-     * @param nextTurnTimer timer for turn management
-     * @param aiStrategy AI strategy for automated players
-     * @param gameLogger game event logger
-     * @param gameInitializer game initialization service
+     * @param bonusManager       bonus management service
+     * @param nextTurnTimer      timer for turn management
+     * @param aiStrategy         AI strategy for automated players
+     * @param gameLogger         game event logger
+     * @param gameInitializer    game initialization service
      */
     public Game(
             IPlayerRegistry playerRegistry,
@@ -128,7 +128,7 @@ public class Game {
      *
      * @param username the username of the player joining the room
      * @throws GameAlreadyStartedException if the room is full
-     * @throws UsernameTakenException if the username is already taken
+     * @throws UsernameTakenException      if the username is already taken
      */
     public Player join(String username) throws UsernameTakenException, GameAlreadyStartedException {
         if (roomState != RoomState.LOBBY) {
@@ -159,6 +159,8 @@ public class Game {
             throw new IllegalStateException("At least 2 player are required to start the game");
         }
 
+        resetPlayers();
+        this.turnController.reset();
         this.gameConfig = Objects.requireNonNullElseGet(gameConfig, GameConfig::getDefault);
         this.activeBonusState = NoBonusActive.getInstance();
 
@@ -355,6 +357,7 @@ public class Game {
 
     /**
      * Gets the achievements that were awarded at the end of the game.
+     *
      * @return list of achievement awards
      */
     public List<labyrinth.server.game.services.AchievementService.AchievementAward> getEndGameAchievements() {
@@ -367,33 +370,26 @@ public class Game {
 
     /**
      * Resets the game back to lobby state after game completion.
-     * Clears the board and prepares for a new game to be started.
      */
-    public void resetAndReturnToLobby() {
+    public void returnToLobby() {
         gameLogger.log(GameLogType.RETURN_TO_LOBBY, "Current state: " + this.roomState);
-        gameLogger.log(GameLogType.RETURN_TO_LOBBY," Resetting game to lobby state");
+        gameLogger.log(GameLogType.RETURN_TO_LOBBY, "Return to lobby");
 
         this.roomState = RoomState.LOBBY;
-        this.board = null;
-        this.gameStartTime = null;
-        turnController.reset();
 
-        for(Player player : playerRegistry.getPlayers()) {
-            if(player.isAiActive()) {
+        for (Player player : playerRegistry.getPlayers()) {
+            if (player.isAiActive()) {
                 playerRegistry.removePlayer(player);
-            } else {
-                player.resetForNewGame();
             }
         }
-
-        gameLogger.log(GameLogType.RETURN_TO_LOBBY, "Reset complete. Players remaining: " + playerRegistry.getPlayers().size());
+        gameLogger.log(GameLogType.RETURN_TO_LOBBY, "Return to lobby complete.");
     }
 
     private synchronized void nextPlayer() {
         turnController.advanceToNextPlayer(
-                            playerRegistry.getPlayersInternal(),
-                            roomState,
-                            gameConfig,
+                playerRegistry.getPlayersInternal(),
+                roomState,
+                gameConfig,
                 aiStrategy::performTurnAsync);
     }
 
@@ -548,6 +544,13 @@ public class Game {
 
     public void performAiTurn(Player player) {
         aiStrategy.performTurnAsync(player);
+    }
+
+    private void resetPlayers() {
+        for (Player player : playerRegistry.getPlayers()) {
+            player.resetForNewGame();
+
+        }
     }
 
 }

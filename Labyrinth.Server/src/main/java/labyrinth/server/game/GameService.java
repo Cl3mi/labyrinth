@@ -98,7 +98,7 @@ public class GameService {
 
             if (!game.anyPlayerActive()) {
                 log.info("No human players left, resetting game to LOBBY");
-                game.resetAndReturnToLobby();
+                game.returnToLobby();
             }
 
             publishEvent(new PlayerLeftEvent());
@@ -203,9 +203,8 @@ public class GameService {
 
                 var players = getPlayers();
 
-                // IMPORTANT: Publish GameOverEvent BEFORE reset, otherwise player statistics are cleared
                 publishEvent(new GameOverEvent(players));
-                game.resetAndReturnToLobby();
+                game.returnToLobby();
                 return true;
             }
 
@@ -261,7 +260,7 @@ public class GameService {
 
             if (!game.anyPlayerActive()) {
                 log.info("No human players left, resetting game to LOBBY");
-                game.resetAndReturnToLobby();
+                game.returnToLobby();
             }
             else {
                 publishEvent(new PlayerUpdatedEvent(player));
