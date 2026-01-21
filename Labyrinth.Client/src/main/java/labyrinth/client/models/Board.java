@@ -1,6 +1,7 @@
 package labyrinth.client.models;
 
 import labyrinth.client.enums.MoveState;
+import labyrinth.client.models.extensions.TreasureUtils;
 import labyrinth.contracts.models.Direction;
 import labyrinth.contracts.models.Tile;
 import labyrinth.contracts.models.Treasure;
@@ -314,7 +315,7 @@ public class Board {
             tile = tiles[row][col];
             tileHasTreasure = tile.getTreasure() != null;
         } while (isCornerCoordinate(row, col) || tileHasTreasure);
-        System.out.println("Placing " + treasure.getName() + " at " + row + "/" + col);
+        System.out.println("Placing " + TreasureUtils.getLocalName(treasure.getId()) + " at " + row + "/" + col);
 
         tile.setTreasure(treasure);
     }
