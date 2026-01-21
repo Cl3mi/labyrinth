@@ -31,17 +31,6 @@ public final class Position {
     }
 
 
-    /**
-     * Creates a new Position offset by the given row and column deltas.
-     *
-     * @param deltaRow    change in row
-     * @param deltaColumn change in column
-     * @return new Position after applying the offset
-     */
-    public Position offset(int deltaRow, int deltaColumn) {
-        return new Position(this.row + deltaRow, this.column + deltaColumn);
-    }
-
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;

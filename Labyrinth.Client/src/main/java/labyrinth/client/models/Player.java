@@ -84,18 +84,6 @@ public class Player {
         this.name = Objects.requireNonNull(name, "name must not be null");
     }
 
-    /**
-     * Gibt eine Kopie der erreichbaren Tiles zurück, damit der interne Set nicht von außen manipuliert wird.
-     */
-    public Set<Tile> getReachableTiles() {
-        return reachableTiles == null ? Set.of() : new HashSet<>(reachableTiles);
-    }
-
-    public void setReachableTiles(Set<Tile> reachableTiles) {
-        this.reachableTiles = (reachableTiles == null)
-                ? null
-                : new HashSet<>(reachableTiles);
-    }
 
     /**
      * Updates the available bonuses for this player.
@@ -105,13 +93,6 @@ public class Player {
         if (bonuses != null) {
             this.availableBonuses.addAll(bonuses);
         }
-    }
-
-    /**
-     * Checks if this player has a specific bonus available.
-     */
-    public boolean hasBonus(BonusType type) {
-        return availableBonuses.contains(type);
     }
 
     @Override

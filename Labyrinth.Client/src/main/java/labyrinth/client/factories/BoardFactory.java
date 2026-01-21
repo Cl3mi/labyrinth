@@ -21,7 +21,7 @@ import java.util.List;
  */
 public class BoardFactory  {
 
-        // =================================================================================
+    // =================================================================================
     // Mapping: GameBoard (Contracts) -> Board (Client)
     // =================================================================================
 
@@ -138,14 +138,6 @@ public class BoardFactory  {
         return playersFromState(states);
     }
 
-    // =================================================================================
-    // Extra-Tile anwenden (falls du es separat updaten willst)
-    // =================================================================================
-
-    public static void applyExtraTile(Board board, Tile extraTile) {
-        if (board == null) return;
-        board.setExtraTile(extraTile);
-    }
 
     // =================================================================================
     // Turn info mapping: CurrentTurnInfo (Contracts) -> Board fields (Client)
