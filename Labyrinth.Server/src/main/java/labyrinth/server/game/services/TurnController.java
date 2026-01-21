@@ -2,18 +2,21 @@ package labyrinth.server.game.services;
 
 import labyrinth.server.game.abstractions.IGameTimer;
 import labyrinth.server.game.abstractions.ITurnController;
+import labyrinth.server.game.enums.Direction;
 import labyrinth.server.game.enums.GameLogType;
 import labyrinth.server.game.enums.MoveState;
 import labyrinth.server.game.enums.RoomState;
 import labyrinth.server.game.models.Board;
 import labyrinth.server.game.models.Player;
 import labyrinth.server.game.models.records.GameConfig;
+import labyrinth.server.game.models.records.LastShift;
 import lombok.Getter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Consumer;
 
 /**
@@ -43,6 +46,11 @@ public class TurnController implements ITurnController {
      */
     @Getter
     private boolean bonusUsedThisTurn = false;
+
+    /**
+     * Tracks the last shift performed. Used to prevent reversing the previous shift.
+     */
+    private LastShift lastShift = null;
 
     private final IGameTimer turnTimer;
     private final GameLogger gameLogger;
@@ -177,6 +185,7 @@ public class TurnController implements ITurnController {
         currentPlayerIndex = 0;
         currentMoveState = MoveState.PLACE_TILE;
         bonusUsedThisTurn = false;
+        lastShift = null;
         stopTimer();
     }
 
@@ -192,5 +201,41 @@ public class TurnController implements ITurnController {
      */
     public OffsetDateTime getTurnEndTime() {
         return turnTimer.getExpirationTime();
+    }
+
+    /**
+     * Gets the last shift performed, if any.
+     *
+     * @return an Optional containing the last shift, or empty if no shift has been performed
+     */
+    @Override
+    public Optional<LastShift> getLastShift() {
+        return Optional.ofNullable(lastShift);
+    }
+
+    /**
+     * Records a shift operation.
+     *
+     * @param index     the row or column index that was shifted
+     * @param direction the direction of the shift
+     */
+    @Override
+    public void recordShift(int index, Direction direction) {
+        this.lastShift = new LastShift(index, direction);
+    }
+
+    /**
+     * Checks if the proposed shift would reverse the last shift.
+     *
+     * @param index     the proposed shift index
+     * @param direction the proposed shift direction
+     * @return true if this shift would reverse the last shift
+     */
+    @Override
+    public boolean wouldReverseLastShift(int index, Direction direction) {
+        if (lastShift == null) {
+            return false;
+        }
+        return lastShift.isReversedBy(index, direction);
     }
 }

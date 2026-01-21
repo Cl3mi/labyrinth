@@ -9,6 +9,7 @@ import labyrinth.server.game.models.Board;
 import labyrinth.server.game.models.Player;
 import labyrinth.server.game.models.Tile;
 import labyrinth.server.game.models.records.GameConfig;
+import labyrinth.server.game.models.records.LastShift;
 import labyrinth.server.game.models.records.Position;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -445,6 +446,138 @@ class TurnControllerTest {
 
             // Assert - should have advanced to next player
             assertEquals(2, turnController.getCurrentPlayerIndex());
+        }
+    }
+
+    @Nested
+    class LastShiftTracking {
+
+        @Test
+        void shouldHaveNoLastShiftInitially() {
+            // Assert
+            assertTrue(turnController.getLastShift().isEmpty());
+        }
+
+        @Test
+        void shouldRecordShift() {
+            // Act
+            turnController.recordShift(1, Direction.DOWN);
+
+            // Assert
+            assertTrue(turnController.getLastShift().isPresent());
+            assertEquals(1, turnController.getLastShift().get().index());
+            assertEquals(Direction.DOWN, turnController.getLastShift().get().direction());
+        }
+
+        @Test
+        void shouldOverwritePreviousShiftWhenRecordingNew() {
+            // Arrange
+            turnController.recordShift(1, Direction.DOWN);
+
+            // Act
+            turnController.recordShift(3, Direction.LEFT);
+
+            // Assert
+            assertTrue(turnController.getLastShift().isPresent());
+            assertEquals(3, turnController.getLastShift().get().index());
+            assertEquals(Direction.LEFT, turnController.getLastShift().get().direction());
+        }
+
+        @Test
+        void shouldNotDetectReverseWhenNoLastShift() {
+            // Act & Assert
+            assertFalse(turnController.wouldReverseLastShift(1, Direction.UP));
+        }
+
+        @Test
+        void shouldDetectReverseShift_DownReversedByUp() {
+            // Arrange
+            turnController.recordShift(1, Direction.DOWN);
+
+            // Act & Assert
+            assertTrue(turnController.wouldReverseLastShift(1, Direction.UP));
+        }
+
+        @Test
+        void shouldDetectReverseShift_UpReversedByDown() {
+            // Arrange
+            turnController.recordShift(1, Direction.UP);
+
+            // Act & Assert
+            assertTrue(turnController.wouldReverseLastShift(1, Direction.DOWN));
+        }
+
+        @Test
+        void shouldDetectReverseShift_LeftReversedByRight() {
+            // Arrange
+            turnController.recordShift(2, Direction.LEFT);
+
+            // Act & Assert
+            assertTrue(turnController.wouldReverseLastShift(2, Direction.RIGHT));
+        }
+
+        @Test
+        void shouldDetectReverseShift_RightReversedByLeft() {
+            // Arrange
+            turnController.recordShift(2, Direction.RIGHT);
+
+            // Act & Assert
+            assertTrue(turnController.wouldReverseLastShift(2, Direction.LEFT));
+        }
+
+        @Test
+        void shouldNotDetectReverseWhenDifferentIndex() {
+            // Arrange
+            turnController.recordShift(1, Direction.DOWN);
+
+            // Act & Assert - same direction opposite, but different index
+            assertFalse(turnController.wouldReverseLastShift(2, Direction.UP));
+        }
+
+        @Test
+        void shouldNotDetectReverseWhenSameDirection() {
+            // Arrange
+            turnController.recordShift(1, Direction.DOWN);
+
+            // Act & Assert - same index, same direction
+            assertFalse(turnController.wouldReverseLastShift(1, Direction.DOWN));
+        }
+
+        @Test
+        void shouldNotDetectReverseWhenPerpendicularDirection() {
+            // Arrange
+            turnController.recordShift(1, Direction.DOWN);
+
+            // Act & Assert - same index, but perpendicular direction
+            assertFalse(turnController.wouldReverseLastShift(1, Direction.LEFT));
+            assertFalse(turnController.wouldReverseLastShift(1, Direction.RIGHT));
+        }
+
+        @Test
+        void shouldResetLastShiftOnReset() {
+            // Arrange
+            turnController.recordShift(1, Direction.DOWN);
+            assertTrue(turnController.getLastShift().isPresent());
+
+            // Act
+            turnController.reset();
+
+            // Assert
+            assertTrue(turnController.getLastShift().isEmpty());
+        }
+
+        @Test
+        void shouldPreserveLastShiftAcrossTurnAdvance() {
+            // Arrange
+            turnController.recordShift(1, Direction.DOWN);
+
+            // Act
+            turnController.advanceToNextPlayer(players, RoomState.IN_GAME, GameConfig.getDefault(), p -> {});
+
+            // Assert - last shift should still be present for the new player
+            assertTrue(turnController.getLastShift().isPresent());
+            assertEquals(1, turnController.getLastShift().get().index());
+            assertEquals(Direction.DOWN, turnController.getLastShift().get().direction());
         }
     }
 }

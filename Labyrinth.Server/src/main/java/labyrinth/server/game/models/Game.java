@@ -205,6 +205,11 @@ public class Game {
         guardFor(player);
         guardFor(RoomState.IN_GAME);
 
+        // Prevent reversing the last shift (pushing tile back where it came from)
+        if (turnController.wouldReverseLastShift(index, direction)) {
+            return new ShiftResult(false, false, true);
+        }
+
         var fixedBonusActive = activeBonusState.isOfType(BonusTypes.PUSH_FIXED);
 
         boolean res = switch (direction) {
@@ -217,6 +222,9 @@ public class Game {
         if (!res) {
             return new ShiftResult(false, false);
         }
+
+        // Record the shift for the next turn's validation
+        turnController.recordShift(index, direction);
 
         handleBonusAfterShift();
 
