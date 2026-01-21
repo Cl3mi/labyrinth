@@ -18,6 +18,7 @@ public class GameMapper {
     private final CoordinatesMapper coordinatesMapper;
     private final TreasureMapper treasureMapper;
     private final BonusMapper bonusMapper;
+    private final DirectionMapper directionMapper;
 
     public GameStateEventPayload toGameStateDto(Game game) {
 
@@ -69,7 +70,18 @@ public class GameMapper {
         gameState.setType(EventType.GAME_STATE_UPDATE);
         gameState.setPlayers(playerStates.toArray(PlayerState[]::new));
         gameState.setCurrentTurnInfo(currentTurnInfo);
-        gameState.setBoard(gameBoardMapper.toDto(gameBoard));
+
+        var boardDto = gameBoardMapper.toDto(gameBoard);
+
+        // Set lastPush for client-side AI to avoid forbidden reverse push
+        game.getLastShift().ifPresent(lastShift -> {
+            var pushInfo = new PushActionInfo();
+            pushInfo.setRowOrColIndex(lastShift.index());
+            pushInfo.setDirection(directionMapper.toDto(lastShift.direction()));
+            boardDto.setLastPush(pushInfo);
+        });
+
+        gameState.setBoard(boardDto);
         gameState.setGameEndTime(game.getGameEndTime());
 
         return gameState;

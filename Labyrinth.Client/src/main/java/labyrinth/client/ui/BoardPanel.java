@@ -1243,10 +1243,13 @@ public class BoardPanel extends JPanel {
         long time = System.currentTimeMillis();
         int pulseAlpha = 180 + (int) (75 * Math.sin(time / 250.0));
 
-        // Smaller banner below the options button (which is at 10,10 with size 45x40)
-        int bannerWidth = 350;
-        int bannerHeight = 26;
-        int bannerX = 10;
+        // Scale based on sidebar width (which scales with window size)
+        float scale = Math.max(0.8f, cachedSidebarWidth / 320f);
+
+        // Scaled banner dimensions
+        int bannerWidth = Math.round(cachedSidebarWidth - 20);
+        int bannerHeight = Math.round(26 * scale);
+        int bannerX = cachedSidebarX;
         int bannerY = 60; // Below options button
 
         // Glowing background
@@ -1266,8 +1269,9 @@ public class BoardPanel extends JPanel {
         g2.setStroke(new BasicStroke(1.5f));
         g2.drawRoundRect(bannerX, bannerY, bannerWidth, bannerHeight, 8, 8);
 
-        // Text
-        g2.setFont(FONT_SANSSERIF_BOLD_12);
+        // Scaled font
+        int fontSize = Math.round(12 * scale);
+        g2.setFont(getCachedFont("SansSerif", Font.BOLD, fontSize));
         g2.setColor(Color.WHITE);
         String text = "DEIN ZUG";
         FontMetrics fm = g2.getFontMetrics();

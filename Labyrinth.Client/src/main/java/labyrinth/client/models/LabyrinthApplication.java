@@ -650,7 +650,7 @@ public class LabyrinthApplication {
     }
 
     private void exitGameToLobby() {
-        System.out.println("[" + PROFILE + "] exitGameToLobby() - Returning to lobby");
+        System.out.println("[" + PROFILE + "] exitGameToLobby() - Returning to main menu");
 
         // Cleanup game over panel
         if (gameOverPanel != null) {
@@ -695,8 +695,8 @@ public class LabyrinthApplication {
             });
         }
 
-        showLobby();
-        System.out.println("[" + PROFILE + "] Returned to lobby");
+        showMainMenu();
+        System.out.println("[" + PROFILE + "] Returned to main menu");
     }
 
     private void startNewRound() {

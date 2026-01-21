@@ -61,7 +61,12 @@ public class BoardFactory  {
         Tile extraTile = gb.getSpareTile();
 
         // Board-Konstruktor: (width=cols, height=rows, tiles, extraTile)
-        return new Board(cols, rows, tiles, extraTile);
+        Board board = new Board(cols, rows, tiles, extraTile);
+
+        // lastPush übernehmen (für AI: verbotener Gegenzug)
+        board.setLastPush(gb.getLastPush());
+
+        return board;
     }
 
     // =================================================================================
