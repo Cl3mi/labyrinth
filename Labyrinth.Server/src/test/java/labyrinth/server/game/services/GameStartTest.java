@@ -47,7 +47,7 @@ class GameStartTest {
     // Basic Game Start Tests
 
     @Test
-    void startGame_shouldTransitionToInGameState() {
+    void startGame_shouldTransitionToInGameState() throws Exception{
         // Arrange
         game.join("Player1");
         game.join("Player2");
@@ -60,7 +60,7 @@ class GameStartTest {
     }
 
     @Test
-    void startGame_shouldSetGameStartTime() {
+    void startGame_shouldSetGameStartTime() throws Exception{
         // Arrange
         game.join("Player1");
         game.join("Player2");
@@ -73,7 +73,7 @@ class GameStartTest {
     }
 
     @Test
-    void startGame_shouldSetTheBoard() {
+    void startGame_shouldSetTheBoard() throws Exception{
         // Arrange
         game.join("Player1");
         game.join("Player2");
@@ -87,7 +87,7 @@ class GameStartTest {
     }
 
     @Test
-    void startGame_shouldThrowException_whenGameAlreadyStarted() {
+    void startGame_shouldThrowException_whenGameAlreadyStarted() throws Exception{
         // Arrange
         game.join("Player1");
         game.join("Player2");
@@ -112,7 +112,7 @@ class GameStartTest {
     // Player Count Tests
 
     @Test
-    void startGame_shouldRequireAtLeastTwoPlayers() {
+    void startGame_shouldRequireAtLeastTwoPlayers() throws Exception{
         // Arrange
         game.join("Player1");
 
@@ -123,7 +123,7 @@ class GameStartTest {
     }
 
     @Test
-    void startGame_shouldWorkWithFourPlayers() {
+    void startGame_shouldWorkWithFourPlayers() throws Exception{
         // Arrange
         game.join("Player1");
         game.join("Player2");
@@ -142,7 +142,7 @@ class GameStartTest {
     // Treasure Card Distribution Tests
 
     @Test
-    void startGame_shouldDistributeTreasureCardsEvenly() {
+    void startGame_shouldDistributeTreasureCardsEvenly() throws Exception{
         // Arrange
         game.join("Player1");
         game.join("Player2");
@@ -158,7 +158,7 @@ class GameStartTest {
     }
 
     @Test
-    void startGame_shouldDistributeTreasureCardsRoundRobin() {
+    void startGame_shouldDistributeTreasureCardsRoundRobin() throws Exception{
         // Arrange
         game.join("Player1");
         game.join("Player2");
@@ -179,7 +179,7 @@ class GameStartTest {
     }
 
     @Test
-    void startGame_shouldAssignAllTreasureCards() {
+    void startGame_shouldAssignAllTreasureCards() throws Exception {
         // Arrange
         game.join("Player1");
         game.join("Player2");
@@ -198,7 +198,7 @@ class GameStartTest {
     // Player Position Initialization Tests
 
     @Test
-    void startGame_shouldInitializePlayerPositions() {
+    void startGame_shouldInitializePlayerPositions() throws Exception{
         // Arrange
         game.join("Player1");
         game.join("Player2");
@@ -216,7 +216,7 @@ class GameStartTest {
     }
 
     @Test
-    void startGame_shouldPlacePlayersAtCorrectStartPositions() {
+    void startGame_shouldPlacePlayersAtCorrectStartPositions() throws Exception {
         // Arrange
         game.join("Player1");
         game.join("Player2");
@@ -237,7 +237,7 @@ class GameStartTest {
     }
 
     @Test
-    void startGame_shouldPlacePlayersAtCorners() {
+    void startGame_shouldPlacePlayersAtCorners() throws Exception{
         // Arrange
         game.join("Player1");
         game.join("Player2");
@@ -259,7 +259,7 @@ class GameStartTest {
     // Game Configuration Tests
 
     @Test
-    void startGame_shouldUseDefaultConfig_whenConfigIsNull() {
+    void startGame_shouldUseDefaultConfig_whenConfigIsNull() throws Exception{
         // Arrange
         game.join("Player1");
         game.join("Player2");
@@ -272,7 +272,7 @@ class GameStartTest {
     }
 
     @Test
-    void startGame_shouldUseProvidedConfig() {
+    void startGame_shouldUseProvidedConfig() throws Exception{
         // Arrange
         game.join("Player1");
         game.join("Player2");
@@ -288,7 +288,7 @@ class GameStartTest {
     // Bonus Placement Tests
 
     @Test
-    void startGame_shouldPlaceBonusesOnBoard() {
+    void startGame_shouldPlaceBonusesOnBoard() throws Exception{
         // Arrange
         game.join("Player1");
         game.join("Player2");

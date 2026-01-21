@@ -2,6 +2,7 @@ package labyrinth.server.messaging.commands.handler;
 
 import labyrinth.contracts.models.CommandType;
 import labyrinth.contracts.models.UsePushTwiceCommandPayload;
+import labyrinth.server.exceptions.ActionErrorException;
 import labyrinth.server.game.GameService;
 import labyrinth.server.messaging.PlayerSessionRegistry;
 import org.springframework.stereotype.Component;
@@ -21,7 +22,7 @@ public class UsePushTwiceCommandHandler extends AbstractCommandHandler<UsePushTw
     }
 
     @Override
-    public void handle(WebSocketSession session, UsePushTwiceCommandPayload payload) throws Exception {
+    public void handle(WebSocketSession session, UsePushTwiceCommandPayload payload) throws ActionErrorException {
         var player = requireExistingPlayer(session);
         requirePlayerIsCurrent(player);
 

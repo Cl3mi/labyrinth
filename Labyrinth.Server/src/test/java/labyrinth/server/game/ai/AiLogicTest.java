@@ -3,7 +3,10 @@ package labyrinth.server.game.ai;
 import labyrinth.server.game.abstractions.IGameTimer;
 import labyrinth.server.game.enums.Direction;
 import labyrinth.server.game.factories.BoardFactory;
-import labyrinth.server.game.models.*;
+import labyrinth.server.game.models.Board;
+import labyrinth.server.game.models.Game;
+import labyrinth.server.game.models.Player;
+import labyrinth.server.game.models.TreasureCard;
 import labyrinth.server.game.models.records.GameConfig;
 import labyrinth.server.game.models.records.Position;
 import labyrinth.server.game.services.GameLogger;
@@ -16,12 +19,12 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static labyrinth.server.game.GameTestHelper.createGame;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.mock;
 
 class AiLogicTest {
 
     @Test
-    void testAiTriggersOnNextPlayer() {
+    void testAiTriggersOnNextPlayer() throws Exception{
         // Setup: Create an AI strategy that will be triggered when it's the AI's turn
         AtomicBoolean aiWasTriggered = new AtomicBoolean(false);
         AtomicReference<Player> triggeredPlayer = new AtomicReference<>(null);
@@ -72,7 +75,7 @@ class AiLogicTest {
     }
 
     @Test
-    void testGameStartsWithTwoPlayers() {
+    void testGameStartsWithTwoPlayers() throws Exception {
         AiStrategy aiStrategy = mock(AiStrategy.class);
         Game game = createGame(mock(IGameTimer.class), aiStrategy, new GameLogger());
 
@@ -101,7 +104,7 @@ class AiLogicTest {
     }
 
     @Test
-    void testPlayerPositionsInitialized() {
+    void testPlayerPositionsInitialized() throws Exception{
         AiStrategy aiStrategy = mock(AiStrategy.class);
         Game game = createGame(mock(IGameTimer.class), aiStrategy, new GameLogger());
 

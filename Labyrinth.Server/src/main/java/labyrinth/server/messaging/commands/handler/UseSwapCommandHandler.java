@@ -25,7 +25,7 @@ public class UseSwapCommandHandler extends AbstractCommandHandler<UseSwapCommand
     }
 
     @Override
-    public void handle(WebSocketSession session, UseSwapCommandPayload payload) throws Exception {
+    public void handle(WebSocketSession session, UseSwapCommandPayload payload) throws ActionErrorException {
         var player = requireExistingPlayer(session);
         requirePlayerIsCurrent(player);
 

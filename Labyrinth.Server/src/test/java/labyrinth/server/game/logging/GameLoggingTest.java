@@ -35,7 +35,7 @@ class GameLoggingTest {
     }
 
     @Test
-    void testStartGameLogs() {
+    void testStartGameLogs() throws Exception{
         // Arrange
         game.join("P1");
         game.join("P2");
@@ -58,7 +58,7 @@ class GameLoggingTest {
     }
 
     @Test
-    void testShiftLogs() {
+    void testShiftLogs() throws Exception{
         // Arrange
         game.join("P1");
         game.join("P2");

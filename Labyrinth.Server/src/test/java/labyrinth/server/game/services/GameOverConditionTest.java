@@ -17,8 +17,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.IntStream;
 
-import static org.junit.jupiter.api.Assertions.*;
 import static labyrinth.server.game.GameTestHelper.createGame;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
 
 /**
@@ -44,7 +44,7 @@ class GameOverConditionTest {
     }
 
     @Test
-    void gameOver_shouldNotTrigger_whenPlayerCollectsAllTreasuresButNotAtHomeTile() {
+    void gameOver_shouldNotTrigger_whenPlayerCollectsAllTreasuresButNotAtHomeTile() throws Exception{
         // Arrange
         game.join("Player1");
         game.join("Player2");
@@ -82,7 +82,7 @@ class GameOverConditionTest {
     }
 
     @Test
-    void gameOver_shouldTrigger_whenPlayerReachesHomeTileAfterCollectingAllTreasures() {
+    void gameOver_shouldTrigger_whenPlayerReachesHomeTileAfterCollectingAllTreasures() throws Exception{
         // Arrange
         game.join("Player1");
         game.join("Player2");
@@ -144,7 +144,7 @@ class GameOverConditionTest {
     }
 
     @Test
-    void gameOver_shouldNotTrigger_whenPlayerAtHomeTileButHasNotCollectedAllTreasures() {
+    void gameOver_shouldNotTrigger_whenPlayerAtHomeTileButHasNotCollectedAllTreasures() throws Exception{
         // Arrange
         game.join("Player1");
         game.join("Player2");

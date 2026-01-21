@@ -1,6 +1,7 @@
 package labyrinth.server.game.services;
 
 import labyrinth.contracts.models.PlayerColor;
+import labyrinth.server.exceptions.UsernameTakenException;
 import labyrinth.server.game.abstractions.IPlayerRegistry;
 import labyrinth.server.game.models.Player;
 
@@ -38,13 +39,13 @@ public class PlayerRegistry implements IPlayerRegistry {
      * @throws IllegalStateException    if the registry is full
      * @throws IllegalArgumentException if username is already taken
      */
-    public Player addPlayer(String username) {
+    public Player addPlayer(String username) throws UsernameTakenException {
         if (isFull()) {
             throw new IllegalStateException("Room is full");
         }
 
         if (!isUsernameAvailable(username)) {
-            throw new IllegalArgumentException("Username is already taken");
+            throw new UsernameTakenException();
         }
 
         Player player = new Player(UUID.randomUUID(), username);

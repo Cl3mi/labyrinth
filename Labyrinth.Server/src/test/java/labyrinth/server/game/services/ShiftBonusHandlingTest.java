@@ -36,7 +36,7 @@ class ShiftBonusHandlingTest {
     private AiStrategy aiStrategy;
 
     @BeforeEach
-    void setUp() {
+    void setUp() throws Exception{
         var bonusFactory = new BonusFactory();
         var distributionService = new TreasureBonusDistributionService(bonusFactory);
         var gameInitializer = new GameInitializerService(distributionService);

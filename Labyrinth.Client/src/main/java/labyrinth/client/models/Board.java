@@ -1,6 +1,7 @@
 package labyrinth.client.models;
 
 import labyrinth.client.enums.MoveState;
+import labyrinth.client.models.extensions.TreasureUtils;
 import labyrinth.contracts.models.Direction;
 import labyrinth.contracts.models.PushActionInfo;
 import labyrinth.contracts.models.Tile;

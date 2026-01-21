@@ -47,7 +47,7 @@ class EndGameAchievementTest {
     }
 
     @Test
-    void pusherAchievement_shouldBeAwardedToPlayerWithMostTilesPushed() {
+    void pusherAchievement_shouldBeAwardedToPlayerWithMostTilesPushed() throws Exception{
         // Arrange
         game.join("Player1");
         game.join("Player2");
@@ -82,7 +82,7 @@ class EndGameAchievementTest {
     }
 
     @Test
-    void runnerAchievement_shouldBeAwardedToPlayerWithMostStepsTaken() {
+    void runnerAchievement_shouldBeAwardedToPlayerWithMostStepsTaken() throws Exception{
         // Arrange
         game.join("Player1");
         game.join("Player2");
@@ -117,7 +117,7 @@ class EndGameAchievementTest {
     }
 
     @Test
-    void multiplePlayersTie_shouldAllReceiveAchievement() {
+    void multiplePlayersTie_shouldAllReceiveAchievement() throws Exception{
         // Arrange
         game.join("Player1");
         game.join("Player2");
@@ -146,7 +146,7 @@ class EndGameAchievementTest {
     }
 
     @Test
-    void achievementsAwardedAtGameEnd_shouldIncreaseScore() {
+    void achievementsAwardedAtGameEnd_shouldIncreaseScore() throws Exception{
         // Arrange
         game.join("Player1");
         game.join("Player2");
@@ -193,7 +193,7 @@ class EndGameAchievementTest {
     }
 
     @Test
-    void noAchievements_whenNoMovesOrPushes() {
+    void noAchievements_whenNoMovesOrPushes() throws Exception{
         // Arrange
         game.join("Player1");
         game.join("Player2");

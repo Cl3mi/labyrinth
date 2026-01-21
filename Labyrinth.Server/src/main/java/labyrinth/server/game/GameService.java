@@ -1,5 +1,7 @@
 package labyrinth.server.game;
 
+import labyrinth.server.exceptions.GameAlreadyStartedException;
+import labyrinth.server.exceptions.UsernameTakenException;
 import labyrinth.server.game.ai.SligthlyLessSimpleAiStrategy;
 import labyrinth.server.game.constants.PointRewards;
 import labyrinth.server.game.enums.BonusTypes;
@@ -80,7 +82,7 @@ public class GameService {
         );
     }
 
-    public Player join(String username) {
+    public Player join(String username) throws UsernameTakenException, GameAlreadyStartedException {
         rwLock.writeLock().lock();
         try {
             return game.join(username);

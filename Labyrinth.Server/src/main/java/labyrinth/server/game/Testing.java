@@ -20,24 +20,31 @@ public class Testing {
     private static GameService game;
 
     static void main() {
-        ThreadPoolTaskScheduler scheduler = new ThreadPoolTaskScheduler();
-        scheduler.setPoolSize(1);
-        scheduler.initialize();
+        try {
+            ThreadPoolTaskScheduler scheduler = new ThreadPoolTaskScheduler();
+            scheduler.setPoolSize(1);
+            scheduler.initialize();
 
-        var bonusFactory = new BonusFactory();
-        var distributionService = new TreasureBonusDistributionService(bonusFactory);
-        var gameInitializer = new GameInitializerService(distributionService);
+            var bonusFactory = new BonusFactory();
+            var distributionService = new TreasureBonusDistributionService(bonusFactory);
+            var gameInitializer = new GameInitializerService(distributionService);
 
-        var treasureCardFactory = new TreasureCardFactory();
-        var boardFactory = new BoardFactory();
+            var treasureCardFactory = new TreasureCardFactory();
+            var boardFactory = new BoardFactory();
 
-        game = new GameService(treasureCardFactory, boardFactory, null, scheduler, gameInitializer);
+            game = new GameService(treasureCardFactory, boardFactory, null, scheduler, gameInitializer);
 
-        simulateGameStart();
-        // simulateGameMoves(1000);
+            simulateGameStart();
+            // simulateGameMoves(1000);
+        }
+        catch (Exception e) {
+            System.out.println("Miese scheiße");
+            e.printStackTrace();
+        }
+
     }
 
-    public static void simulateGameStart() {
+    public static void simulateGameStart() throws Exception{
         // Lets Simulate creating a room here. Player presses something like "create
         // lobby"
         game.join("Alice");
@@ -81,7 +88,7 @@ public class Testing {
         timer.start();
     }
 
-    public static void simulateGameMoves(Game game, long delayMillis) {
+    public static void simulateGameMoves(Game game, long delayMillis) throws Exception {
         simulateGameStart();
         var players = game.getPlayers();
         var board = game.getBoard();

@@ -2,6 +2,7 @@ package labyrinth.client.models;
 
 import labyrinth.client.ai.AiController;
 import labyrinth.client.messaging.ServerClientFactory;
+import labyrinth.client.models.extensions.TreasureUtils;
 import labyrinth.client.ui.*;
 import labyrinth.client.ui.theme.ThemeManager;
 import labyrinth.client.factories.BoardFactory;
@@ -13,7 +14,6 @@ import labyrinth.managementclient.model.GameServer;
 
 import javax.swing.*;
 import java.awt.*;
-import java.net.URI;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.List;
@@ -331,7 +331,7 @@ public class LabyrinthApplication {
                 player.setCurrentTargetTreasure(treasure);
 
                 if (boardPanel != null) {
-                    boardPanel.showInfoToast("NEXT_TREASURE", "Neues Ziel!", "Finde: " + treasure.getName());
+                    boardPanel.showInfoToast("NEXT_TREASURE", "Neues Ziel!", "Finde: " + TreasureUtils.getLocalName(treasure.getId()));
                 }
             });
         });

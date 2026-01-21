@@ -1,5 +1,6 @@
 package labyrinth.server.game;
 
+import labyrinth.server.exceptions.GameAlreadyStartedException;
 import labyrinth.server.game.abstractions.IGameTimer;
 import labyrinth.server.game.ai.AiStrategy;
 import labyrinth.server.game.enums.BonusTypes;
@@ -21,7 +22,7 @@ import java.util.List;
 import java.util.stream.IntStream;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.mock;
 
 /**
  * Integration tests for the Game class.
@@ -61,7 +62,7 @@ class GameIntegrationTest {
         }
 
         @Test
-        void shouldTransitionToInGameOnStart() {
+        void shouldTransitionToInGameOnStart() throws Exception {
             // Arrange
             game.join("Player1");
             game.join("Player2");
@@ -74,7 +75,7 @@ class GameIntegrationTest {
         }
 
         @Test
-        void shouldThrowExceptionWhenStartingGameTwice() {
+        void shouldThrowExceptionWhenStartingGameTwice() throws Exception {
             // Arrange
             game.join("Player1");
             game.join("Player2");
@@ -87,20 +88,20 @@ class GameIntegrationTest {
         }
 
         @Test
-        void shouldThrowExceptionWhenJoiningDuringGame() {
+        void shouldThrowExceptionWhenJoiningDuringGame() throws Exception {
             // Arrange
             game.join("Player1");
             game.join("Player2");
             game.startGame(gameConfig, treasureCards, board);
 
             // Act & Assert
-            assertThrows(IllegalStateException.class, () ->
+            assertThrows(GameAlreadyStartedException.class, () ->
                     game.join("Player3")
             );
         }
 
         @Test
-        void shouldThrowExceptionWhenStartingWithLessThanTwoPlayers() {
+        void shouldThrowExceptionWhenStartingWithLessThanTwoPlayers() throws Exception {
             // Arrange
             game.join("Player1");
 
@@ -115,7 +116,7 @@ class GameIntegrationTest {
     class PlayerJoinAndLeave {
 
         @Test
-        void shouldAddPlayerSuccessfully() {
+        void shouldAddPlayerSuccessfully() throws Exception {
             // Act
             Player player = game.join("TestPlayer");
 
@@ -126,7 +127,7 @@ class GameIntegrationTest {
         }
 
         @Test
-        void shouldGetPlayerById() {
+        void shouldGetPlayerById() throws Exception {
             // Arrange
             Player player = game.join("TestPlayer");
 
@@ -138,7 +139,7 @@ class GameIntegrationTest {
         }
 
         @Test
-        void shouldRemovePlayerFromLobby() {
+        void shouldRemovePlayerFromLobby() throws Exception {
             // Arrange
             Player player = game.join("TestPlayer");
 
@@ -154,7 +155,7 @@ class GameIntegrationTest {
     class TurnMechanics {
 
         @BeforeEach
-        void startGame() {
+        void startGame() throws Exception {
             game.join("Player1");
             game.join("Player2");
             game.startGame(gameConfig, treasureCards, board);
@@ -207,7 +208,7 @@ class GameIntegrationTest {
     class BoardShifting {
 
         @BeforeEach
-        void startGame() {
+        void startGame() throws Exception {
             game.join("Player1");
             game.join("Player2");
             game.startGame(gameConfig, treasureCards, board);
@@ -291,7 +292,7 @@ class GameIntegrationTest {
     class PlayerMovement {
 
         @BeforeEach
-        void startGameAndShift() {
+        void startGameAndShift() throws Exception {
             game.join("Player1");
             game.join("Player2");
             game.startGame(gameConfig, treasureCards, board);
@@ -344,7 +345,7 @@ class GameIntegrationTest {
     class BonusIntegration {
 
         @BeforeEach
-        void startGame() {
+        void startGame() throws Exception {
             game.join("Player1");
             game.join("Player2");
             game.startGame(gameConfig, treasureCards, board);
@@ -419,7 +420,7 @@ class GameIntegrationTest {
     class ResetAndReturnToLobby {
 
         @BeforeEach
-        void startAndFinishGame() {
+        void startAndFinishGame() throws Exception {
             game.join("Player1");
             game.join("Player2");
             game.startGame(gameConfig, treasureCards, board);
@@ -465,7 +466,7 @@ class GameIntegrationTest {
     class AiToggle {
 
         @BeforeEach
-        void setupPlayer() {
+        void setupPlayer() throws Exception {
             game.join("Player1");
         }
 
@@ -501,7 +502,7 @@ class GameIntegrationTest {
     class GameLogging {
 
         @Test
-        void shouldLogGameEvents() {
+        void shouldLogGameEvents() throws Exception {
             // Arrange
             game.join("Player1");
             game.join("Player2");
@@ -520,7 +521,7 @@ class GameIntegrationTest {
     class FreeRoamMode {
 
         @BeforeEach
-        void startGame() {
+        void startGame() throws Exception {
             game.join("Player1");
             game.join("Player2");
             game.startGame(gameConfig, treasureCards, board);
@@ -565,7 +566,7 @@ class GameIntegrationTest {
         }
 
         @Test
-        void shouldNotAllowMoreThanMaxPlayers() {
+        void shouldNotAllowMoreThanMaxPlayers() throws Exception {
             // Arrange
             game.join("Player1");
             game.join("Player2");
