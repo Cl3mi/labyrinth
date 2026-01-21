@@ -5,6 +5,7 @@ import labyrinth.client.audio.SoundEffects;
 import labyrinth.client.messaging.GameClient;
 import labyrinth.client.models.Board;
 import labyrinth.client.models.Player;
+import labyrinth.client.models.extensions.TreasureUtils;
 import labyrinth.client.ui.Styles.StyledContextMenu;
 import labyrinth.client.ui.Styles.StyledDialog;
 import labyrinth.client.ui.Styles.StyledTooltipManager;
@@ -61,7 +62,7 @@ public class BoardPanel extends JPanel {
     private static final Font FONT_ARIAL_ITALIC_10 = new Font("Arial", Font.ITALIC, 10);
     private static final Font FONT_SERIF_BOLD_24 = new Font("Serif", Font.BOLD, 24);
     private static final Font FONT_SERIF_BOLD_16 = new Font("Serif", Font.BOLD, 16);
-    
+
     private static final Map<String, Font> fontCache = new HashMap<>();
 
     private static Font getCachedFont(String family, int style, int size) {
@@ -99,7 +100,7 @@ public class BoardPanel extends JPanel {
     private long lastPushTimestamp = 0;
     private static final long PUSH_HIGHLIGHT_DURATION = 2000; // 2 seconds
 
-    private String lastTargetTreasureName = null;
+    private int lastTargetTreasureId = -1;
     private boolean showTargetBanner = false;
 
     private int selectedRow = 0;
@@ -112,7 +113,7 @@ public class BoardPanel extends JPanel {
     private java.time.OffsetDateTime gameEndTime;
     private java.time.OffsetDateTime turnEndTime;
     private labyrinth.contracts.models.TurnState currentTurnState;
-    private final Map<String, BufferedImage> treasureImages = new HashMap<>();
+    private final Map<Integer, BufferedImage> treasureImages = new HashMap<>();
     private final Map<String, BufferedImage> tileImages = new HashMap<>();
     private BufferedImage bonusBagImage;
 
@@ -373,53 +374,49 @@ public class BoardPanel extends JPanel {
     }
 
     private void loadTreasureImages() {
-        // ✅ MAPPING: Deutsche Server-Namen -> Englische Dateinamen
-        Map<String, String> treasureFileMapping = new HashMap<>();
+        Map<Integer, String> treasureFileMapping = new HashMap<>();
 
-        // Server sendet deutsche Namen, Dateien haben englische Namen
-        treasureFileMapping.put("Geist", "Ghost");           // id: 1
-        treasureFileMapping.put("Drache", "Dragon");         // id: 2
-        treasureFileMapping.put("Hexe", "Witch");            // id: 3
-        treasureFileMapping.put("Eule", "Owl");              // id: 4
-        treasureFileMapping.put("Ratte", "Rat");             // id: 5
-        treasureFileMapping.put("Käfer", "Bug");             // id: 6
-        treasureFileMapping.put("Spinne", "Spider");         // id: 7
-        treasureFileMapping.put("Schlange", "Snake");        // id: 8
-        treasureFileMapping.put("Fledermaus", "Bat");        // id: 9
-        treasureFileMapping.put("Krone", "Crown");           // id: 10
-        treasureFileMapping.put("Schlüssel", "Key");         // id: 11
-        treasureFileMapping.put("Schatztruhe", "Treasure"); // id: 12
-        treasureFileMapping.put("Helm", "Helmet");           // id: 13
-        treasureFileMapping.put("Buch", "Book");              // id: 14
-        treasureFileMapping.put("Kerze", "Candle");          // id: 15
-        treasureFileMapping.put("Ring", "Ring");             // id: 16
-        treasureFileMapping.put("Beutel", "Bag");            // id: 17
-        treasureFileMapping.put("Totenkopf", "Skull");       // id: 18
-        treasureFileMapping.put("Karte", "Map");             // id: 19
-        treasureFileMapping.put("Schwert", "Sword");         // id: 20
-        treasureFileMapping.put("Kelch", "chalice");         // id: 21
-        treasureFileMapping.put("Edelstein", "Diamond");     // id: 22
-        treasureFileMapping.put("Krug", "Jug");              // id: 23
-        treasureFileMapping.put("Maus", "Mouse");            // id: 24
+        treasureFileMapping.put(1, "Ghost");
+        treasureFileMapping.put(2, "Dragon");
+        treasureFileMapping.put(3, "Witch");
+        treasureFileMapping.put(4, "Owl");
+        treasureFileMapping.put(5, "Rat");
+        treasureFileMapping.put(6, "Bug");
+        treasureFileMapping.put(7, "Spider");
+        treasureFileMapping.put(8, "Snake");
+        treasureFileMapping.put(9, "Bat");
+        treasureFileMapping.put(10, "Crown");
+        treasureFileMapping.put(11, "Key");
+        treasureFileMapping.put(12, "Treasure");
+        treasureFileMapping.put(13, "Helmet");
+        treasureFileMapping.put(14, "Book");
+        treasureFileMapping.put(15, "Candle");
+        treasureFileMapping.put(16, "Ring");
+        treasureFileMapping.put(17, "Bag");
+        treasureFileMapping.put(18, "Skull");
+        treasureFileMapping.put(19, "Map");
+        treasureFileMapping.put(20, "Sword");
+        treasureFileMapping.put(21, "chalice");
+        treasureFileMapping.put(22, "Diamond");
+        treasureFileMapping.put(23, "Jug");
+        treasureFileMapping.put(24, "Mouse");
 
         // Load each treasure image
-        for (Map.Entry<String, String> entry : treasureFileMapping.entrySet()) {
-            String serverName = entry.getKey();
-            String fileName = entry.getValue();
+        for (var entry : treasureFileMapping.entrySet()) {
+            var treasureId = entry.getKey();
+            var fileName = entry.getValue();
 
-            BufferedImage img = null;
-
-            img = loadImage("/images/tiles/" + fileName + ".png");
+            var img = loadImage("/images/tiles/" + fileName + ".png");
 
             if (img != null) {
-                treasureImages.put(serverName, img);
-                System.out.println("✅ Loaded treasure: " + serverName + " -> " + fileName);
+                treasureImages.put(treasureId, img);
+                System.out.println("Loaded treasure: " + treasureId + " -> " + fileName);
             } else {
-                System.err.println("❌ Failed to load treasure: " + serverName + " (file: " + fileName + ")");
+                System.err.println("Failed to load treasure: " + treasureId + " (file: " + fileName + ")");
             }
         }
 
-        System.out.println("📦 Loaded " + treasureImages.size() + "/24 treasure images");
+        System.out.println("Loaded " + treasureImages.size() + "/24 treasure images");
     }
 
 
@@ -1560,17 +1557,17 @@ public class BoardPanel extends JPanel {
     }
 
     private void drawTreasureOnTile(Graphics2D g2, Treasure treasure, int centerX, int centerY) {
-        if (treasure == null || treasure.getName() == null) return;
+        if (treasure == null) return;
 
         // Check if this is the current player's target treasure
         boolean isCurrentTarget = false;
         if (currentPlayer != null) {
             Treasure currentTarget = currentPlayer.getCurrentTargetTreasure();
-            isCurrentTarget = currentTarget != null && currentTarget.getName() != null
-                    && currentTarget.getName().equals(treasure.getName());
+            isCurrentTarget = currentTarget != null
+                    && currentTarget.getId() == treasure.getId();
         }
 
-        // ✅ Pulsing glow effect for target treasure
+
         if (isCurrentTarget) {
             long time = System.currentTimeMillis();
             int glowRadius = 28 + (int) (8 * Math.sin(time / 300.0));
@@ -1585,8 +1582,7 @@ public class BoardPanel extends JPanel {
             g2.fillOval(centerX - glowRadius / 2, centerY - glowRadius / 2 - 8, glowRadius, glowRadius);
         }
 
-        // ✅ Draw treasure IMAGE
-        BufferedImage treasureImg = treasureImages.get(treasure.getName());
+        BufferedImage treasureImg = treasureImages.get(treasure.getId());
         if (treasureImg != null) {
             // Calculate image size (scaled based on tile size, but not too large)
             int imgSize = Math.min((int)(size * 0.45), 48); // Max 48px, ~45% of tile
@@ -1625,18 +1621,18 @@ public class BoardPanel extends JPanel {
             // First letter
             g2.setFont(getCachedFont("Arial", Font.BOLD, fallbackSize / 2));
             g2.setColor(Color.WHITE);
-            String letter = treasure.getName().substring(0, 1);
+            String letter = TreasureUtils.getLocalName(treasure.getId()).substring(0, 1);
             FontMetrics fm = g2.getFontMetrics();
             int letterWidth = fm.stringWidth(letter);
             g2.drawString(letter, centerX - letterWidth / 2, centerY + fm.getAscent() / 2 - 12);
 
-            System.err.println("⚠️ Using fallback for treasure: " + treasure.getName());
+            System.err.println("Using fallback for treasure: " + TreasureUtils.getLocalName(treasure.getId()));
         }
 
-        // ✅ Draw treasure name UNDER the image with background
+        // Draw treasure name UNDER the image with background
         g2.setFont(isCurrentTarget ? FONT_ARIAL_BOLD_11 : FONT_ARIAL_BOLD_9);
         FontMetrics fm = g2.getFontMetrics();
-        String displayName = treasure.getName();
+        String displayName = TreasureUtils.getLocalName(treasure.getId());
 
         // Shorten long names
         if (displayName.length() > 10) {
@@ -2138,7 +2134,7 @@ public class BoardPanel extends JPanel {
             g2.drawString("AKTUELLES ZIEL:", sidebarX + padding + Math.round(15 * sidebarScale), currentY - 2);
 
             // Draw treasure image - scaled
-            BufferedImage treasureImg = treasureImages.get(currentTarget.getName());
+            BufferedImage treasureImg = treasureImages.get(currentTarget.getId());
             int imgSize = Math.round(40 * sidebarScale);
             int imgX = sidebarX + padding + Math.round(15 * sidebarScale);
             int imgY = currentY + Math.round(5 * sidebarScale);
@@ -2154,7 +2150,7 @@ public class BoardPanel extends JPanel {
             // Current target name next to image
             g2.setFont(getCachedFont("Arial", Font.BOLD, Math.round(16 * sidebarScale)));
             g2.setColor(new Color(0, 0, 0));
-            g2.drawString(currentTarget.getName(), imgX + imgSize + Math.round(10 * sidebarScale), imgY + imgSize / 2 + 5);
+            g2.drawString(TreasureUtils.getLocalName(currentTarget.getId()), imgX + imgSize + Math.round(10 * sidebarScale), imgY + imgSize / 2 + 5);
 
             currentY += boxHeight - Math.round(5 * sidebarScale);
         }
@@ -2757,12 +2753,12 @@ public class BoardPanel extends JPanel {
         // Check if target treasure has changed and show toast
         if (currentPlayer != null && currentPlayer.getCurrentTargetTreasure() != null) {
             Treasure currentTarget = currentPlayer.getCurrentTargetTreasure();
-            String currentTargetName = currentTarget.getName();
+            var currentTreasureId = currentTarget.getId();
 
-            if (lastTargetTreasureName == null || !lastTargetTreasureName.equals(currentTargetName)) {
+            if (lastTargetTreasureId == -1 || lastTargetTreasureId != currentTreasureId) {
                 // Target changed or first time - show toast and banner
-                showNewTargetToast(currentTargetName);
-                lastTargetTreasureName = currentTargetName;
+                showNewTargetToast(TreasureUtils.getLocalName(currentTarget.getId()));
+                lastTargetTreasureId = currentTreasureId;
                 showTargetBanner = true; // Show banner until first action
             }
         }
