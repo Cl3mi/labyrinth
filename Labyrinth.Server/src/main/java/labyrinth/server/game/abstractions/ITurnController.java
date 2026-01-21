@@ -1,13 +1,16 @@
 package labyrinth.server.game.abstractions;
 
+import labyrinth.server.game.enums.Direction;
 import labyrinth.server.game.enums.MoveState;
 import labyrinth.server.game.enums.RoomState;
 import labyrinth.server.game.models.Board;
 import labyrinth.server.game.models.Player;
 import labyrinth.server.game.models.records.GameConfig;
+import labyrinth.server.game.models.records.LastShift;
 
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Consumer;
 
 /**
@@ -119,4 +122,28 @@ public interface ITurnController {
      * @return the turn end time
      */
     OffsetDateTime getTurnEndTime();
+
+    /**
+     * Gets the last shift performed, if any.
+     *
+     * @return an Optional containing the last shift, or empty if no shift has been performed
+     */
+    Optional<LastShift> getLastShift();
+
+    /**
+     * Records a shift operation.
+     *
+     * @param index     the row or column index that was shifted
+     * @param direction the direction of the shift
+     */
+    void recordShift(int index, Direction direction);
+
+    /**
+     * Checks if the proposed shift would reverse the last shift.
+     *
+     * @param index     the proposed shift index
+     * @param direction the proposed shift direction
+     * @return true if this shift would reverse the last shift
+     */
+    boolean wouldReverseLastShift(int index, Direction direction);
 }
