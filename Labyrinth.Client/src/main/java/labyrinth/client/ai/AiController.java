@@ -4,6 +4,7 @@ import labyrinth.client.messaging.GameClient;
 import labyrinth.client.models.Board;
 import labyrinth.client.models.Player;
 import labyrinth.client.models.Position;
+import labyrinth.contracts.models.BonusType;
 import labyrinth.contracts.models.CurrentTurnInfo;
 import labyrinth.contracts.models.TurnState;
 
@@ -275,15 +276,34 @@ public class AiController {
         });
     }
 
+    // Store the current decision for bonus handling in move phase
+    private volatile AiDecision currentDecision;
+
     private void executeShiftPhase(Board board, Player player) throws InterruptedException {
-        // Compute best move
-        AiDecision decision = strategy.computeBestMove(board, player);
+        // Compute best move with all players info
+        AiDecision decision;
+        if (strategy instanceof SimpleAiStrategy simpleStrategy) {
+            decision = simpleStrategy.computeBestMove(board, player, latestPlayers);
+        } else {
+            decision = strategy.computeBestMove(board, player);
+        }
 
         if (decision == null) {
             System.out.println("[AI] No valid move found, using fallback");
             // Fallback: push row 1 to the right
             client.sendPushTile(1, labyrinth.contracts.models.Direction.RIGHT);
+            currentDecision = null;
             return;
+        }
+
+        // Store decision for move phase (bonus handling)
+        currentDecision = decision;
+
+        // Check if we need to activate PUSH_TWICE before the shift
+        if (decision.bonusAction() != null && decision.bonusAction().bonusType() == BonusType.PUSH_TWICE) {
+            System.out.println("[AI] Activating PUSH_TWICE bonus");
+            client.sendUsePushTwice();
+            Thread.sleep(300);
         }
 
         // Apply rotations first
@@ -302,24 +322,83 @@ public class AiController {
         System.out.println("[AI] Shifting " + (decision.shift().isRow() ? "row" : "column") +
                 " " + decision.shift().index() + " " + decision.shift().direction());
         client.sendPushTile(decision.shift().index(), decision.shift().direction());
+
+        // Handle PUSH_TWICE second shift
+        if (decision.bonusAction() != null && decision.bonusAction().bonusType() == BonusType.PUSH_TWICE) {
+            Thread.sleep(400); // Wait for first shift to complete
+
+            SimulationResult.BonusAction bonus = decision.bonusAction();
+            ShiftOperation secondOp = bonus.secondPush();
+
+            // Apply rotations for second push
+            if (bonus.secondPushRotations() > 0) {
+                System.out.println("[AI] Rotating for second push " + bonus.secondPushRotations() + " times");
+                for (int i = 0; i < bonus.secondPushRotations(); i++) {
+                    client.sendRotateTile();
+                    Thread.sleep(100);
+                }
+            }
+
+            Thread.sleep(150);
+
+            System.out.println("[AI] Executing second push: " + (secondOp.isRow() ? "row" : "column") +
+                    " " + secondOp.index() + " " + secondOp.direction());
+            client.sendPushTile(secondOp.index(), secondOp.direction());
+        }
+
+        // Handle PUSH_FIXED bonus
+        if (decision.bonusAction() != null && decision.bonusAction().bonusType() == BonusType.PUSH_FIXED) {
+            Thread.sleep(400); // Wait for regular shift to complete
+
+            SimulationResult.BonusAction bonus = decision.bonusAction();
+            ShiftOperation fixedOp = bonus.pushFixedOp();
+
+            // Apply rotations for PUSH_FIXED
+            if (bonus.pushFixedRotations() > 0) {
+                System.out.println("[AI] Rotating for PUSH_FIXED " + bonus.pushFixedRotations() + " times");
+                for (int i = 0; i < bonus.pushFixedRotations(); i++) {
+                    client.sendRotateTile();
+                    Thread.sleep(100);
+                }
+            }
+
+            Thread.sleep(150);
+
+            System.out.println("[AI] Using PUSH_FIXED: " + (fixedOp.isRow() ? "row" : "column") +
+                    " " + fixedOp.index() + " " + fixedOp.direction());
+            client.sendUsePushFixed(fixedOp.index(), fixedOp.direction());
+        }
     }
 
     private void executeMovePhase(Board board, Player player, List<Player> allPlayers) throws InterruptedException {
-        // Use BoardSimulator to find reachable positions from current state (no shift simulation)
-        BoardSimulator sim = new BoardSimulator(board, player);
-        java.util.Set<Position> reachable = sim.getReachablePositions();
+        // Check if we have a stored decision with bonus action
+        AiDecision decision = currentDecision;
+
+        // Handle BEAM bonus before movement
+        if (decision != null && decision.bonusAction() != null &&
+            decision.bonusAction().bonusType() == BonusType.BEAM) {
+            Position beamTarget = decision.bonusAction().targetPosition();
+            System.out.println("[AI] Using BEAM to teleport to " + beamTarget.getRow() + "/" + beamTarget.getColumn());
+            client.sendUseBeam(beamTarget.getRow(), beamTarget.getColumn());
+            Thread.sleep(300);
+        }
+
+        // Handle SWAP bonus before movement
+        if (decision != null && decision.bonusAction() != null &&
+            decision.bonusAction().bonusType() == BonusType.SWAP) {
+            String targetPlayerId = decision.bonusAction().targetPlayerId();
+            System.out.println("[AI] Using SWAP with player " + targetPlayerId);
+            client.sendUseSwap(targetPlayerId);
+            Thread.sleep(300);
+        }
+
+        // Use BoardSimulator to find reachable positions from current state
+        BoardSimulator sim = new BoardSimulator(board, player, allPlayers);
+        java.util.Set<Position> reachable = sim.getReachableUnblockedPositions();
         Position targetPos = sim.getTargetPosition(); // Treasure or home
 
-        // Remove positions occupied by other players (can't move there)
-        java.util.Set<Position> blockedPositions = new java.util.HashSet<>();
-        if (allPlayers != null) {
-            for (Player p : allPlayers) {
-                if (!p.getId().equals(player.getId()) && p.getCurrentPosition() != null) {
-                    blockedPositions.add(p.getCurrentPosition());
-                }
-            }
-        }
-        reachable.removeAll(blockedPositions);
+        // Get blocked positions for logging
+        java.util.Set<Position> blockedPositions = sim.getOtherPlayerPositions();
 
         System.out.println("[AI] Move phase: " + reachable.size() + " reachable positions (excl. " +
                 blockedPositions.size() + " blocked), target: " +
@@ -328,26 +407,38 @@ public class AiController {
         // Find the best position to move to
         Position bestMove = null;
 
-        if (targetPos != null && reachable.contains(targetPos)) {
-            // Target is directly reachable and not blocked!
-            bestMove = targetPos;
-            System.out.println("[AI] Target is directly reachable!");
-        } else if (targetPos != null) {
-            // Target blocked or not reachable - find closest reachable position to target
-            if (blockedPositions.contains(targetPos)) {
-                System.out.println("[AI] Target is blocked by another player!");
+        // If we have a decision with a target position, try to use it
+        if (decision != null && decision.targetPosition() != null) {
+            Position decisionTarget = decision.targetPosition();
+            if (reachable.contains(decisionTarget)) {
+                bestMove = decisionTarget;
+                System.out.println("[AI] Using decision target position");
             }
-            int minDist = Integer.MAX_VALUE;
-            for (Position rPos : reachable) {
-                int dist = Math.abs(rPos.getRow() - targetPos.getRow()) +
-                        Math.abs(rPos.getColumn() - targetPos.getColumn());
-                if (dist < minDist) {
-                    minDist = dist;
-                    bestMove = rPos;
+        }
+
+        // If no decision target or it's not reachable, find best move
+        if (bestMove == null) {
+            if (targetPos != null && reachable.contains(targetPos)) {
+                // Target is directly reachable and not blocked!
+                bestMove = targetPos;
+                System.out.println("[AI] Target is directly reachable!");
+            } else if (targetPos != null) {
+                // Target blocked or not reachable - find closest reachable position to target
+                if (blockedPositions.contains(targetPos)) {
+                    System.out.println("[AI] Target is blocked by another player!");
                 }
-            }
-            if (bestMove != null) {
-                System.out.println("[AI] Moving closer to target, distance: " + minDist);
+                int minDist = Integer.MAX_VALUE;
+                for (Position rPos : reachable) {
+                    int dist = Math.abs(rPos.getRow() - targetPos.getRow()) +
+                            Math.abs(rPos.getColumn() - targetPos.getColumn());
+                    if (dist < minDist) {
+                        minDist = dist;
+                        bestMove = rPos;
+                    }
+                }
+                if (bestMove != null) {
+                    System.out.println("[AI] Moving closer to target, distance: " + minDist);
+                }
             }
         }
 
@@ -361,6 +452,9 @@ public class AiController {
 
         System.out.println("[AI] Moving to " + bestMove.getRow() + "/" + bestMove.getColumn());
         client.sendMovePawn(bestMove.getRow(), bestMove.getColumn());
+
+        // Clear the decision after move
+        currentDecision = null;
     }
 
     private Player findPlayerById(String playerId, List<Player> players) {
