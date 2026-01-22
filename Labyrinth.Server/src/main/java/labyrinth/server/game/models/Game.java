@@ -172,12 +172,11 @@ public class Game {
         this.board = board;
         this.board.setPlayers(players);
 
-        if (getCurrentPlayer().shouldMoveBePerformedByAi()) {
-            this.aiStrategy.performTurnAsync(getCurrentPlayer());
-        }
 
         gameStartTime = OffsetDateTime.now();
         this.roomState = RoomState.IN_GAME;
+
+        turnController.startTurn(players, this.roomState, this.gameConfig, aiStrategy::performTurnAsync);
     }
 
     public Player getCurrentPlayer() {
