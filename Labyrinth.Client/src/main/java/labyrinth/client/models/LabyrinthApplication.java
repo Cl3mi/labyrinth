@@ -69,6 +69,14 @@ public class LabyrinthApplication {
 
     public void start() throws Exception {
         frame = new JFrame("Labyrinth Online (" + PROFILE + ")");
+
+        // Set application icon for taskbar and window header
+        java.net.URL iconUrl = getClass().getClassLoader().getResource("images/ui/icon.png");
+        if (iconUrl != null) {
+            ImageIcon icon = new ImageIcon(iconUrl);
+            frame.setIconImage(icon.getImage());
+        }
+
         installWindowCloseHandler();
 
         frame.setMinimumSize(new Dimension(MIN_WINDOW_WIDTH, MIN_WINDOW_HEIGHT));

@@ -358,10 +358,20 @@ public class MainMenuPanel extends JPanel {
 
         contentPanel.add(Box.createVerticalStrut(15));
 
-        // Untertitel
-        subtitleLabel = new JLabel("Das mystische Abenteuer beginnt... DiBSE 2025");
+        // Untertitel mit sehr subtilem Hintergrund für bessere Lesbarkeit
+        subtitleLabel = new JLabel("Das mystische Abenteuer beginnt... DiBSE 2025") {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2d = (Graphics2D) g.create();
+                g2d.setColor(new Color(50, 50, 50, 150));
+                g2d.fillRoundRect(0, 0, getWidth(), getHeight(), 8, 8);
+                g2d.dispose();
+                super.paintComponent(g);
+            }
+        };
         subtitleLabel.setFont(new Font("SansSerif", Font.BOLD, 24));
         subtitleLabel.setForeground(ThemeManager.getInstance().getSubtitleColor());
+        subtitleLabel.setBorder(BorderFactory.createEmptyBorder(4, 12, 4, 12));
         subtitleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         contentPanel.add(subtitleLabel);
 
