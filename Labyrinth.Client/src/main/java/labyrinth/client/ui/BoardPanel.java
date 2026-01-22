@@ -2206,12 +2206,8 @@ public class BoardPanel extends JPanel {
         currentY += Math.round(15 * sidebarScale);
 
         g2.setFont(getCachedFont("Arial", Font.ITALIC, hintFontSize));
-        g2.setColor(new Color(150, 150, 170));
-        g2.drawString("Pfeiltasten: Navigation", sidebarX + padding, currentY);
         currentY += Math.round(15 * sidebarScale);
         g2.drawString("R/Q/E: Tile drehen", sidebarX + padding, currentY);
-        currentY += Math.round(15 * sidebarScale);
-        g2.drawString("Tab: Tastaturhilfe", sidebarX + padding, currentY);
     }
 
     /**

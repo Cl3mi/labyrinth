@@ -620,10 +620,14 @@ public class MultiplayerLobbyPanel extends JPanel {
     private void onStartGameClicked() {
         int playerCount = lastLobbyState != null && lastLobbyState.getPlayers() != null
                 ? lastLobbyState.getPlayers().length : 0;
-        String message = playerCount > 1
-                ? "Spiel mit " + playerCount + " Spielern starten?"
-                : "Spiel starten? (Leere Plätze werden mit KI-Spielern gefüllt)";
 
+        // Zu wenig Spieler - nur Info-Dialog anzeigen
+        if (playerCount < 2) {
+            StyledDialog.showMessage(this, "Zu wenig Spieler", "Es müssen mindestens zwei Spieler in der Lobby sein, um ein Spiel zu starten.");
+            return;
+        }
+
+        String message = "Spiel mit " + playerCount + " Spielern starten?";
         boolean confirmed = StyledDialog.showConfirm(this, "Spiel starten?", message);
 
         if (!confirmed) {
