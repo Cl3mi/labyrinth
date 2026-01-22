@@ -429,36 +429,10 @@ class GameIntegrationTest {
         @Test
         void shouldResetToLobbyState() {
             // Act
-            game.resetAndReturnToLobby();
+            game.returnToLobby();
 
             // Assert
             assertEquals(RoomState.LOBBY, game.getRoomState());
-        }
-
-        @Test
-        void shouldClearBoard() {
-            // Act
-            game.resetAndReturnToLobby();
-
-            // Assert
-            assertNull(game.getBoard());
-        }
-
-        @Test
-        void shouldResetHumanPlayerState() {
-            // Arrange
-            Player humanPlayer = game.getPlayers().stream()
-                    .filter(p -> !p.isAiActive())
-                    .findFirst()
-                    .orElseThrow();
-
-            // Act
-            game.resetAndReturnToLobby();
-
-            // Assert
-            assertTrue(humanPlayer.getAssignedTreasureCards().isEmpty());
-            assertTrue(humanPlayer.getBonuses().isEmpty());
-            assertNull(humanPlayer.getCurrentTile());
         }
     }
 
@@ -473,7 +447,7 @@ class GameIntegrationTest {
         @Test
         void shouldToggleAiStatus() {
             // Arrange
-            Player player = game.getPlayers().get(0);
+            Player player = game.getPlayers().getFirst();
             boolean initialAiStatus = player.isAiActive();
 
             // Act

@@ -604,14 +604,15 @@ public class LabyrinthApplication {
 
             mainPanel.add(boardPanel, "game");
         } else {
-            boardPanel.setBoard(board);
-            boardPanel.setPlayers(allPlayers);
-            boardPanel.setCurrentPlayer(currentPlayer);
-        }
-        if (gameEndTime != null) boardPanel.setGameEndTime(gameEndTime);
-        if (turnInfo != null) {
-            boardPanel.setTurnEndTime(turnInfo.getTurnEndTime());
-            boardPanel.setCurrentTurnState(turnInfo.getState());
+            // Use batch update to avoid multiple sequential repaints (6+ repaints -> 1 repaint)
+            boardPanel.updateGameState(
+                board,
+                allPlayers,
+                currentPlayer,
+                gameEndTime,
+                turnInfo != null ? turnInfo.getTurnEndTime() : null,
+                turnInfo != null ? turnInfo.getState() : null
+            );
         }
         switchToGameView();
         frame.revalidate();

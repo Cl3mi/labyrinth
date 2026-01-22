@@ -18,6 +18,8 @@ import lombok.Getter;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionAdapter;
@@ -191,6 +193,14 @@ public class BoardPanel extends JPanel {
         setupMouseListener();
         setupKeyboardListener();
 
+        // Add resize listener for layout cache invalidation
+        addComponentListener(new ComponentAdapter() {
+            @Override
+            public void componentResized(ComponentEvent e) {
+                invalidateLayout();
+            }
+        });
+
         // Lade gespeicherte Lautstärke
         java.util.prefs.Preferences prefs = java.util.prefs.Preferences.userNodeForPackage(getClass());
         int savedMusicVolume = prefs.getInt("musicVolume", 50);
@@ -206,7 +216,8 @@ public class BoardPanel extends JPanel {
 
         javax.swing.Timer sidebarTimer = new javax.swing.Timer(1000, e -> {
             if (gameEndTime != null || turnEndTime != null) {
-                repaint();
+                // Only repaint the sidebar region for timer updates (avoid full repaint)
+                repaintSidebarRegion();
             }
         });
         sidebarTimer.start();
@@ -1310,10 +1321,39 @@ public class BoardPanel extends JPanel {
     private int cachedSidebarX = 10;
     private int cachedExtraTileX = 0;
     private int cachedExtraTileY = 0;
+    private int cachedWindowWidth = 0;
+    private int cachedWindowHeight = 0;
+    private boolean layoutDirty = true;
+
+    /**
+     * Marks layout as dirty, requiring recalculation on next paint.
+     * Called automatically on component resize.
+     */
+    public void invalidateLayout() {
+        layoutDirty = true;
+    }
+
+    /**
+     * Repaints only the sidebar region for efficient timer updates.
+     * This avoids a full component repaint when only timers change.
+     */
+    private void repaintSidebarRegion() {
+        // Repaint the sidebar area only (x=0 to cachedSidebarWidth + margin, full height)
+        repaint(0, 0, cachedSidebarX + cachedSidebarWidth + 20, getHeight());
+    }
 
     private void calculateLayoutMetrics() {
         int windowWidth = getWidth();
         int windowHeight = getHeight();
+
+        // Skip recalculation if size hasn't changed
+        if (!layoutDirty && windowWidth == cachedWindowWidth && windowHeight == cachedWindowHeight) {
+            return;
+        }
+
+        cachedWindowWidth = windowWidth;
+        cachedWindowHeight = windowHeight;
+        layoutDirty = false;
 
         cachedSidebarWidth = Math.max(250, Math.min(320, windowWidth / 6));
         cachedSidebarX = 10;
@@ -2808,6 +2848,56 @@ public class BoardPanel extends JPanel {
         this.inputLocked = false;
     }
 
+    /**
+     * Batch update method to set multiple state values with a single repaint.
+     * This significantly improves performance by avoiding multiple sequential repaints.
+     *
+     * @param board The game board (required)
+     * @param players List of all players (required)
+     * @param currentPlayer The current player whose turn it is (can be null)
+     * @param gameEndTime Game end time (can be null)
+     * @param turnEndTime Turn end time (can be null)
+     * @param turnState Current turn state (can be null)
+     */
+    public void updateGameState(Board board, List<Player> players, Player currentPlayer,
+                                java.time.OffsetDateTime gameEndTime,
+                                java.time.OffsetDateTime turnEndTime,
+                                labyrinth.contracts.models.TurnState turnState) {
+        // Update board
+        this.board = Objects.requireNonNull(board, "board must not be null");
+        detectAndNotifyBoardChanges(previousBoard, board);
+        this.previousBoard = copyBoardState(board);
+        this.inputLocked = false;
+
+        // Update players
+        this.players = players != null ? players : List.of();
+
+        // Update current player
+        this.currentPlayer = currentPlayer;
+        if (currentPlayer != null && currentPlayer.getCurrentPosition() != null) {
+            selectedRow = currentPlayer.getCurrentPosition().getRow();
+            selectedCol = currentPlayer.getCurrentPosition().getColumn();
+        }
+
+        // Check for target treasure changes
+        if (currentPlayer != null && currentPlayer.getCurrentTargetTreasure() != null) {
+            Treasure currentTarget = currentPlayer.getCurrentTargetTreasure();
+            var currentTreasureId = currentTarget.getId();
+            if (lastTargetTreasureId == -1 || lastTargetTreasureId != currentTreasureId) {
+                showNewTargetToast(TreasureUtils.getLocalName(currentTarget.getId()));
+                lastTargetTreasureId = currentTreasureId;
+                showTargetBanner = true;
+            }
+        }
+
+        // Update timers and turn state
+        this.gameEndTime = gameEndTime;
+        this.turnEndTime = turnEndTime;
+        this.currentTurnState = turnState;
+
+        // Single repaint for all updates
+        repaint();
+    }
 
     private void showOptionsDialog() {
         // Farben

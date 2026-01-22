@@ -98,7 +98,7 @@ public class GameService {
 
             if (!game.anyPlayerActive()) {
                 log.info("No human players left, resetting game to LOBBY");
-                game.resetAndReturnToLobby();
+                game.returnToLobby();
             }
 
             publishEvent(new PlayerLeftEvent());
@@ -195,13 +195,6 @@ public class GameService {
                 return false;
             }
 
-            publishEvent(new PlayerMovedEvent());
-
-            if (result.treasureCollected()) {
-                var treasureCardEvent = new NextTreasureCardEvent(player, player.getCurrentTreasureCard());
-                publishEvent(treasureCardEvent);
-            }
-
             if (result.gameOver()) {
                 for (var award : game.getEndGameAchievements()) {
                     var achievementEvent = new AchievementUnlockedEvent(award.player(), award.achievement());
@@ -210,10 +203,18 @@ public class GameService {
 
                 var players = getPlayers();
 
-                // IMPORTANT: Publish GameOverEvent BEFORE reset, otherwise player statistics are cleared
                 publishEvent(new GameOverEvent(players));
-                game.resetAndReturnToLobby();
+                game.returnToLobby();
+                return true;
             }
+
+            publishEvent(new PlayerMovedEvent());
+
+            if (result.treasureCollected()) {
+                var treasureCardEvent = new NextTreasureCardEvent(player, player.getCurrentTreasureCard());
+                publishEvent(treasureCardEvent);
+            }
+
 
             return true;
         } finally {
@@ -250,11 +251,16 @@ public class GameService {
     public void enableAiAndMarkDisconnected(Player player) {
         rwLock.writeLock().lock();
         try {
+            if(game.getRoomState() != RoomState.IN_GAME) {
+                log.warn("Game is not in IN_GAME state, cannot enable AI for player {}", player.getUsername());
+                return;
+            }
+
             game.enableAiAndMarkDisconnected(player);
 
             if (!game.anyPlayerActive()) {
                 log.info("No human players left, resetting game to LOBBY");
-                game.resetAndReturnToLobby();
+                game.returnToLobby();
             }
             else {
                 publishEvent(new PlayerUpdatedEvent(player));
