@@ -371,10 +371,8 @@ public class AiController {
     }
 
     private void executeMovePhase(Board board, Player player, List<Player> allPlayers) throws InterruptedException {
-        // Check if we have a stored decision with bonus action
         AiDecision decision = currentDecision;
 
-        // Handle BEAM bonus before movement
         if (decision != null && decision.bonusAction() != null &&
             decision.bonusAction().bonusType() == BonusType.BEAM) {
             Position beamTarget = decision.bonusAction().targetPosition();
@@ -383,7 +381,6 @@ public class AiController {
             Thread.sleep(300);
         }
 
-        // Handle SWAP bonus before movement
         if (decision != null && decision.bonusAction() != null &&
             decision.bonusAction().bonusType() == BonusType.SWAP) {
             String targetPlayerId = decision.bonusAction().targetPlayerId();
@@ -392,22 +389,18 @@ public class AiController {
             Thread.sleep(300);
         }
 
-        // Use BoardSimulator to find reachable positions from current state
         BoardSimulator sim = new BoardSimulator(board, player, allPlayers);
         java.util.Set<Position> reachable = sim.getReachableUnblockedPositions();
-        Position targetPos = sim.getTargetPosition(); // Treasure or home
-
-        // Get blocked positions for logging
+        Position targetPos = sim.getTargetPosition();
+        Position currentPos = sim.getPlayerPosition();
         java.util.Set<Position> blockedPositions = sim.getOtherPlayerPositions();
 
         System.out.println("[AI] Move phase: " + reachable.size() + " reachable positions (excl. " +
                 blockedPositions.size() + " blocked), target: " +
                 (targetPos != null ? targetPos.getRow() + "/" + targetPos.getColumn() : "none"));
 
-        // Find the best position to move to
         Position bestMove = null;
 
-        // If we have a decision with a target position, try to use it
         if (decision != null && decision.targetPosition() != null) {
             Position decisionTarget = decision.targetPosition();
             if (reachable.contains(decisionTarget)) {
@@ -416,33 +409,26 @@ public class AiController {
             }
         }
 
-        // If no decision target or it's not reachable, find best move
         if (bestMove == null) {
             if (targetPos != null && reachable.contains(targetPos)) {
-                // Target is directly reachable and not blocked!
                 bestMove = targetPos;
                 System.out.println("[AI] Target is directly reachable!");
             } else if (targetPos != null) {
-                // Target blocked or not reachable - find closest reachable position to target
                 if (blockedPositions.contains(targetPos)) {
                     System.out.println("[AI] Target is blocked by another player!");
                 }
-                int minDist = Integer.MAX_VALUE;
-                for (Position rPos : reachable) {
-                    int dist = Math.abs(rPos.getRow() - targetPos.getRow()) +
-                            Math.abs(rPos.getColumn() - targetPos.getColumn());
-                    if (dist < minDist) {
-                        minDist = dist;
-                        bestMove = rPos;
-                    }
-                }
+                bestMove = findBestMoveWithSteps(reachable, targetPos, currentPos);
                 if (bestMove != null) {
-                    System.out.println("[AI] Moving closer to target, distance: " + minDist);
+                    int dist = BoardSimulator.manhattanDistance(bestMove, targetPos);
+                    int steps = BoardSimulator.manhattanDistance(currentPos, bestMove);
+                    System.out.println("[AI] Moving closer to target, distance: " + dist + ", steps: " + steps);
                 }
+            } else if (!reachable.isEmpty()) {
+                bestMove = findFarthestPosition(reachable, currentPos);
+                System.out.println("[AI] No target, maximizing steps");
             }
         }
 
-        // Fallback: stay in place if no better option
         if (bestMove == null) {
             bestMove = player.getCurrentPosition();
             System.out.println("[AI] No better move found, staying in place");
@@ -453,8 +439,38 @@ public class AiController {
         System.out.println("[AI] Moving to " + bestMove.getRow() + "/" + bestMove.getColumn());
         client.sendMovePawn(bestMove.getRow(), bestMove.getColumn());
 
-        // Clear the decision after move
         currentDecision = null;
+    }
+
+    private Position findBestMoveWithSteps(java.util.Set<Position> reachable, Position target, Position current) {
+        Position best = null;
+        double bestScore = Double.NEGATIVE_INFINITY;
+        final double DISTANCE_WEIGHT = 3.0;
+        final double STEPS_WEIGHT = 1.0;
+
+        for (Position pos : reachable) {
+            int distToTarget = BoardSimulator.manhattanDistance(pos, target);
+            int steps = BoardSimulator.manhattanDistance(current, pos);
+            double score = -distToTarget * DISTANCE_WEIGHT + steps * STEPS_WEIGHT;
+            if (score > bestScore) {
+                bestScore = score;
+                best = pos;
+            }
+        }
+        return best;
+    }
+
+    private Position findFarthestPosition(java.util.Set<Position> reachable, Position current) {
+        Position farthest = null;
+        int maxDist = -1;
+        for (Position pos : reachable) {
+            int dist = BoardSimulator.manhattanDistance(pos, current);
+            if (dist > maxDist) {
+                maxDist = dist;
+                farthest = pos;
+            }
+        }
+        return farthest != null ? farthest : reachable.iterator().next();
     }
 
     private Player findPlayerById(String playerId, List<Player> players) {

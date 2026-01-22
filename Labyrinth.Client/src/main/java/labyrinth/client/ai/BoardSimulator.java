@@ -27,16 +27,10 @@ public class BoardSimulator {
     private final Set<Position> otherPlayerPositions;
     private final List<BonusType> availableBonuses;
 
-    /**
-     * Creates a new board simulator from the given board and player.
-     */
     public BoardSimulator(Board board, Player player) {
         this(board, player, null);
     }
 
-    /**
-     * Creates a new board simulator from the given board, player, and all players list.
-     */
     public BoardSimulator(Board board, Player player, List<Player> allPlayers) {
         this.width = board.getWidth();
         this.height = board.getHeight();
@@ -51,7 +45,6 @@ public class BoardSimulator {
         this.targetTreasurePosition = findCurrentTreasurePosition(board, player);
         this.availableBonuses = new ArrayList<>(player.getAvailableBonuses());
 
-        // Track other player positions
         this.otherPlayerPositions = new HashSet<>();
         if (allPlayers != null) {
             for (Player p : allPlayers) {
@@ -62,9 +55,6 @@ public class BoardSimulator {
         }
     }
 
-    /**
-     * Copy constructor for creating simulation variants.
-     */
     private BoardSimulator(BoardSimulator other) {
         this.width = other.width;
         this.height = other.height;
@@ -78,9 +68,6 @@ public class BoardSimulator {
         this.availableBonuses = new ArrayList<>(other.availableBonuses);
     }
 
-    /**
-     * Creates a copy of this simulator for further simulation.
-     */
     public BoardSimulator copy() {
         return new BoardSimulator(this);
     }
@@ -114,13 +101,10 @@ public class BoardSimulator {
         return new SimTile(entrancesCopy, isFixed, treasure, bonus);
     }
 
-    /**
-     * Finds the position of the player's current target treasure.
-     */
     private Position findCurrentTreasurePosition(Board board, Player player) {
         Treasure currentTarget = player.getCurrentTargetTreasure();
         if (currentTarget == null) {
-            return null; // All treasures collected - will target home
+            return null;
         }
 
         Tile[][] boardTiles = board.getTiles();
@@ -138,11 +122,10 @@ public class BoardSimulator {
 
     /**
      * Recalculates the target treasure position based on current simulated board state.
-     * This is needed because tiles shift during simulation.
      */
     public Position recalculateTargetTreasurePosition() {
         if (targetTreasure == null) {
-            return null; // Going home
+            return null;
         }
 
         for (int r = 0; r < height; r++) {
@@ -157,17 +140,13 @@ public class BoardSimulator {
         return null;
     }
 
-    /**
-     * Rotates the extra tile clockwise once.
-     */
     public void rotateExtraTile() {
         extraTile.rotateClockwise();
     }
 
     /**
      * Applies a shift operation to the simulated board.
-     *
-     * @return true if the shift was successful, false if blocked by fixed tiles
+     * @return true if successful, false if blocked by fixed tiles
      */
     public boolean applyShift(ShiftOperation op) {
         if (op.isRow()) {
@@ -178,7 +157,6 @@ public class BoardSimulator {
     }
 
     private boolean applyRowShift(int rowIndex, Direction direction) {
-        // Check for fixed tiles in the row
         for (int c = 0; c < width; c++) {
             if (tiles[rowIndex][c].isFixed()) {
                 return false;
@@ -193,13 +171,11 @@ public class BoardSimulator {
             tiles[rowIndex][0] = extraTile;
             extraTile = last;
 
-            // Update player position if affected
             if (playerPosition.getRow() == rowIndex) {
-                int newCol = playerPosition.getColumn() + 1;
-                if (newCol >= width) newCol = 0; // Wrap around
+                int newCol = (playerPosition.getColumn() + 1) % width;
                 playerPosition = new Position(rowIndex, newCol);
             }
-        } else { // LEFT
+        } else {
             SimTile first = tiles[rowIndex][0];
             for (int c = 0; c < width - 1; c++) {
                 tiles[rowIndex][c] = tiles[rowIndex][c + 1];
@@ -207,10 +183,8 @@ public class BoardSimulator {
             tiles[rowIndex][width - 1] = extraTile;
             extraTile = first;
 
-            // Update player position if affected
             if (playerPosition.getRow() == rowIndex) {
-                int newCol = playerPosition.getColumn() - 1;
-                if (newCol < 0) newCol = width - 1; // Wrap around
+                int newCol = (playerPosition.getColumn() - 1 + width) % width;
                 playerPosition = new Position(rowIndex, newCol);
             }
         }
@@ -218,7 +192,6 @@ public class BoardSimulator {
     }
 
     private boolean applyColumnShift(int colIndex, Direction direction) {
-        // Check for fixed tiles in the column
         for (int r = 0; r < height; r++) {
             if (tiles[r][colIndex].isFixed()) {
                 return false;
@@ -233,13 +206,11 @@ public class BoardSimulator {
             tiles[0][colIndex] = extraTile;
             extraTile = bottom;
 
-            // Update player position if affected
             if (playerPosition.getColumn() == colIndex) {
-                int newRow = playerPosition.getRow() + 1;
-                if (newRow >= height) newRow = 0; // Wrap around
+                int newRow = (playerPosition.getRow() + 1) % height;
                 playerPosition = new Position(newRow, colIndex);
             }
-        } else { // UP
+        } else {
             SimTile top = tiles[0][colIndex];
             for (int r = 0; r < height - 1; r++) {
                 tiles[r][colIndex] = tiles[r + 1][colIndex];
@@ -247,10 +218,8 @@ public class BoardSimulator {
             tiles[height - 1][colIndex] = extraTile;
             extraTile = top;
 
-            // Update player position if affected
             if (playerPosition.getColumn() == colIndex) {
-                int newRow = playerPosition.getRow() - 1;
-                if (newRow < 0) newRow = height - 1; // Wrap around
+                int newRow = (playerPosition.getRow() - 1 + height) % height;
                 playerPosition = new Position(newRow, colIndex);
             }
         }
@@ -258,7 +227,7 @@ public class BoardSimulator {
     }
 
     /**
-     * Gets all positions reachable from the player's current position.
+     * Gets all positions reachable from the player's current position using BFS.
      */
     public Set<Position> getReachablePositions() {
         Set<Position> visited = new HashSet<>();
@@ -282,7 +251,6 @@ public class BoardSimulator {
                     case RIGHT -> newCol++;
                 }
 
-                // Bounds check
                 if (newRow < 0 || newRow >= height || newCol < 0 || newCol >= width) {
                     continue;
                 }
@@ -295,7 +263,6 @@ public class BoardSimulator {
                 SimTile neighbor = tiles[newRow][newCol];
                 Direction opposite = opposite(dir);
 
-                // Check if both tiles have matching entrances
                 if (currentTile.hasEntrance(dir) && neighbor.hasEntrance(opposite)) {
                     visited.add(neighborPos);
                     queue.add(neighborPos);
@@ -315,9 +282,6 @@ public class BoardSimulator {
         };
     }
 
-    /**
-     * Checks if a row contains any fixed tiles.
-     */
     public boolean rowContainsFixedTile(int rowIndex) {
         for (int c = 0; c < width; c++) {
             if (tiles[rowIndex][c].isFixed()) {
@@ -327,9 +291,6 @@ public class BoardSimulator {
         return false;
     }
 
-    /**
-     * Checks if a column contains any fixed tiles.
-     */
     public boolean colContainsFixedTile(int colIndex) {
         for (int r = 0; r < height; r++) {
             if (tiles[r][colIndex].isFixed()) {
@@ -348,44 +309,30 @@ public class BoardSimulator {
     public List<BonusType> getAvailableBonuses() { return availableBonuses; }
 
     /**
-     * Gets the target position: treasure position if available, otherwise home.
-     * Recalculates the treasure position in case tiles have shifted.
+     * Gets the target position (treasure or home). Recalculates treasure position in case tiles shifted.
      */
     public Position getTargetPosition() {
         if (targetTreasure == null) {
-            return homePosition; // Going home
+            return homePosition;
         }
-        // Recalculate because tiles may have shifted
         Position currentTreasurePos = recalculateTargetTreasurePosition();
         return currentTreasurePos != null ? currentTreasurePos : homePosition;
     }
 
-    /**
-     * Checks if the player is going home (all treasures collected).
-     */
     public boolean isGoingHome() {
         return targetTreasurePosition == null;
     }
 
-    /**
-     * Checks if a position is occupied by another player.
-     */
     public boolean isPositionBlocked(Position pos) {
         return otherPlayerPositions.contains(pos);
     }
 
-    /**
-     * Gets all reachable positions that are not blocked by other players.
-     */
     public Set<Position> getReachableUnblockedPositions() {
         Set<Position> reachable = getReachablePositions();
         reachable.removeAll(otherPlayerPositions);
         return reachable;
     }
 
-    /**
-     * Finds all bonus positions on the board.
-     */
     public Map<Position, BonusType> findAllBonusPositions() {
         Map<Position, BonusType> bonuses = new HashMap<>();
         for (int r = 0; r < height; r++) {
@@ -399,9 +346,6 @@ public class BoardSimulator {
         return bonuses;
     }
 
-    /**
-     * Finds reachable bonus positions (not blocked by other players).
-     */
     public Map<Position, BonusType> findReachableBonuses() {
         Set<Position> reachable = getReachableUnblockedPositions();
         Map<Position, BonusType> bonuses = new HashMap<>();
@@ -414,9 +358,6 @@ public class BoardSimulator {
         return bonuses;
     }
 
-    /**
-     * Gets the tile at a given position.
-     */
     public SimTile getTileAt(Position pos) {
         if (pos.getRow() < 0 || pos.getRow() >= height || pos.getColumn() < 0 || pos.getColumn() >= width) {
             return null;
@@ -424,52 +365,21 @@ public class BoardSimulator {
         return tiles[pos.getRow()][pos.getColumn()];
     }
 
-    /**
-     * Checks if the player has a specific bonus available.
-     */
     public boolean hasBonus(BonusType bonus) {
         return availableBonuses.contains(bonus);
     }
 
-    /**
-     * Gets all positions reachable after a BEAM teleport to any reachable tile.
-     * This is a superset of normal reachability - from any reachable tile, compute further reachability.
-     */
-    public Set<Position> getAllPositionsReachableWithBeam() {
-        Set<Position> allReachable = new HashSet<>();
-        Set<Position> directlyReachable = getReachablePositions();
-        allReachable.addAll(directlyReachable);
-
-        // BEAM allows teleporting to any reachable position
-        // From there, we can reach more positions (but this is the same as just being at that position)
-        // So BEAM essentially lets us move to any reachable position directly
-        // The key advantage is we can teleport THEN walk in the same turn
-        return allReachable;
-    }
-
-    /**
-     * Simulates using BEAM to teleport to a target position.
-     * Updates player position to the target.
-     */
     public void simulateBeam(Position target) {
         this.playerPosition = target;
     }
 
-    /**
-     * Simulates a SWAP with another player at the given position.
-     * Updates player position and removes the other player from their old position.
-     */
     public void simulateSwap(Position otherPlayerPos) {
         Position oldPos = this.playerPosition;
         this.playerPosition = otherPlayerPos;
-        // The other player moves to our old position
         otherPlayerPositions.remove(otherPlayerPos);
         otherPlayerPositions.add(oldPos);
     }
 
-    /**
-     * Checks if a row contains fixed tiles (for PUSH_FIXED evaluation).
-     */
     public boolean rowHasFixedTiles(int rowIndex) {
         for (int c = 0; c < width; c++) {
             if (tiles[rowIndex][c].isFixed()) {
@@ -479,9 +389,6 @@ public class BoardSimulator {
         return false;
     }
 
-    /**
-     * Checks if a column contains fixed tiles (for PUSH_FIXED evaluation).
-     */
     public boolean colHasFixedTiles(int colIndex) {
         for (int r = 0; r < height; r++) {
             if (tiles[r][colIndex].isFixed()) {
@@ -492,13 +399,11 @@ public class BoardSimulator {
     }
 
     /**
-     * Gets all valid PUSH_FIXED operations (rows/columns that have fixed tiles but could be pushed).
-     * Note: Outer rows/columns (0 and height-1/width-1) cannot be pushed even with PUSH_FIXED.
+     * Gets rows/columns with fixed tiles that can be pushed with PUSH_FIXED bonus.
      */
     public List<ShiftOperation> getPushFixedCandidates() {
         List<ShiftOperation> candidates = new ArrayList<>();
 
-        // Row shifts - only inner rows that have fixed tiles
         for (int row = 1; row < height - 1; row++) {
             if (rowHasFixedTiles(row)) {
                 candidates.add(ShiftOperation.row(row, Direction.LEFT));
@@ -506,7 +411,6 @@ public class BoardSimulator {
             }
         }
 
-        // Column shifts - only inner columns that have fixed tiles
         for (int col = 1; col < width - 1; col++) {
             if (colHasFixedTiles(col)) {
                 candidates.add(ShiftOperation.column(col, Direction.UP));
@@ -518,8 +422,7 @@ public class BoardSimulator {
     }
 
     /**
-     * Applies a shift ignoring fixed tiles (for PUSH_FIXED simulation).
-     * This version always succeeds for valid indices.
+     * Applies a shift ignoring fixed tile restrictions (for PUSH_FIXED bonus simulation).
      */
     public void applyShiftIgnoringFixed(ShiftOperation op) {
         if (op.isRow()) {
@@ -539,24 +442,11 @@ public class BoardSimulator {
             extraTile = last;
 
             if (playerPosition.getRow() == rowIndex) {
-                int newCol = playerPosition.getColumn() + 1;
-                if (newCol >= width) newCol = 0;
+                int newCol = (playerPosition.getColumn() + 1) % width;
                 playerPosition = new Position(rowIndex, newCol);
             }
-            // Update other player positions in this row
-            Set<Position> newOtherPositions = new HashSet<>();
-            for (Position pos : otherPlayerPositions) {
-                if (pos.getRow() == rowIndex) {
-                    int newCol = pos.getColumn() + 1;
-                    if (newCol >= width) newCol = 0;
-                    newOtherPositions.add(new Position(rowIndex, newCol));
-                } else {
-                    newOtherPositions.add(pos);
-                }
-            }
-            otherPlayerPositions.clear();
-            otherPlayerPositions.addAll(newOtherPositions);
-        } else { // LEFT
+            updateOtherPlayersInRow(rowIndex, 1);
+        } else {
             SimTile first = tiles[rowIndex][0];
             for (int c = 0; c < width - 1; c++) {
                 tiles[rowIndex][c] = tiles[rowIndex][c + 1];
@@ -565,23 +455,10 @@ public class BoardSimulator {
             extraTile = first;
 
             if (playerPosition.getRow() == rowIndex) {
-                int newCol = playerPosition.getColumn() - 1;
-                if (newCol < 0) newCol = width - 1;
+                int newCol = (playerPosition.getColumn() - 1 + width) % width;
                 playerPosition = new Position(rowIndex, newCol);
             }
-            // Update other player positions in this row
-            Set<Position> newOtherPositions = new HashSet<>();
-            for (Position pos : otherPlayerPositions) {
-                if (pos.getRow() == rowIndex) {
-                    int newCol = pos.getColumn() - 1;
-                    if (newCol < 0) newCol = width - 1;
-                    newOtherPositions.add(new Position(rowIndex, newCol));
-                } else {
-                    newOtherPositions.add(pos);
-                }
-            }
-            otherPlayerPositions.clear();
-            otherPlayerPositions.addAll(newOtherPositions);
+            updateOtherPlayersInRow(rowIndex, -1);
         }
     }
 
@@ -595,24 +472,11 @@ public class BoardSimulator {
             extraTile = bottom;
 
             if (playerPosition.getColumn() == colIndex) {
-                int newRow = playerPosition.getRow() + 1;
-                if (newRow >= height) newRow = 0;
+                int newRow = (playerPosition.getRow() + 1) % height;
                 playerPosition = new Position(newRow, colIndex);
             }
-            // Update other player positions in this column
-            Set<Position> newOtherPositions = new HashSet<>();
-            for (Position pos : otherPlayerPositions) {
-                if (pos.getColumn() == colIndex) {
-                    int newRow = pos.getRow() + 1;
-                    if (newRow >= height) newRow = 0;
-                    newOtherPositions.add(new Position(newRow, colIndex));
-                } else {
-                    newOtherPositions.add(pos);
-                }
-            }
-            otherPlayerPositions.clear();
-            otherPlayerPositions.addAll(newOtherPositions);
-        } else { // UP
+            updateOtherPlayersInColumn(colIndex, 1);
+        } else {
             SimTile top = tiles[0][colIndex];
             for (int r = 0; r < height - 1; r++) {
                 tiles[r][colIndex] = tiles[r + 1][colIndex];
@@ -621,36 +485,45 @@ public class BoardSimulator {
             extraTile = top;
 
             if (playerPosition.getColumn() == colIndex) {
-                int newRow = playerPosition.getRow() - 1;
-                if (newRow < 0) newRow = height - 1;
+                int newRow = (playerPosition.getRow() - 1 + height) % height;
                 playerPosition = new Position(newRow, colIndex);
             }
-            // Update other player positions in this column
-            Set<Position> newOtherPositions = new HashSet<>();
-            for (Position pos : otherPlayerPositions) {
-                if (pos.getColumn() == colIndex) {
-                    int newRow = pos.getRow() - 1;
-                    if (newRow < 0) newRow = height - 1;
-                    newOtherPositions.add(new Position(newRow, colIndex));
-                } else {
-                    newOtherPositions.add(pos);
-                }
-            }
-            otherPlayerPositions.clear();
-            otherPlayerPositions.addAll(newOtherPositions);
+            updateOtherPlayersInColumn(colIndex, -1);
         }
     }
 
-    /**
-     * Calculate Manhattan distance between two positions.
-     */
+    private void updateOtherPlayersInRow(int rowIndex, int colDelta) {
+        Set<Position> newPositions = new HashSet<>();
+        for (Position pos : otherPlayerPositions) {
+            if (pos.getRow() == rowIndex) {
+                int newCol = (pos.getColumn() + colDelta + width) % width;
+                newPositions.add(new Position(rowIndex, newCol));
+            } else {
+                newPositions.add(pos);
+            }
+        }
+        otherPlayerPositions.clear();
+        otherPlayerPositions.addAll(newPositions);
+    }
+
+    private void updateOtherPlayersInColumn(int colIndex, int rowDelta) {
+        Set<Position> newPositions = new HashSet<>();
+        for (Position pos : otherPlayerPositions) {
+            if (pos.getColumn() == colIndex) {
+                int newRow = (pos.getRow() + rowDelta + height) % height;
+                newPositions.add(new Position(newRow, colIndex));
+            } else {
+                newPositions.add(pos);
+            }
+        }
+        otherPlayerPositions.clear();
+        otherPlayerPositions.addAll(newPositions);
+    }
+
     public static int manhattanDistance(Position a, Position b) {
         return Math.abs(a.getRow() - b.getRow()) + Math.abs(a.getColumn() - b.getColumn());
     }
 
-    /**
-     * Lightweight tile representation for simulation.
-     */
     public static class SimTile {
         private Direction[] entrances;
         private final boolean isFixed;

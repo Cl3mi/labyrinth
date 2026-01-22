@@ -13,22 +13,27 @@ public record SimulationResult(
     int score,
     int distanceToTarget,
     Position targetMovePosition,
+    int stepsToMove,
     BonusAction bonusAction
 ) {
-    // Score priorities (higher = better)
-    public static final int SCORE_FINISH_GAME = 1000;       // Win the game by returning home
-    public static final int SCORE_TARGET_REACHABLE = 100;   // Treasure is reachable
-    public static final int SCORE_BONUS_REACHABLE = 50;     // Bonus tile is reachable (when can't reach target)
-    public static final int SCORE_TARGET_WITH_BONUS = 90;   // Can reach target using a bonus
-    public static final int SCORE_MOVING_CLOSER = 10;       // Getting closer to target
-    public static final int SCORE_FALLBACK = 1;             // Any movement
-    public static final int SCORE_NO_MOVE = 0;              // No valid move
+    public static final int SCORE_FINISH_GAME = 1000;
+    public static final int SCORE_TARGET_REACHABLE = 100;
+    public static final int SCORE_BONUS_REACHABLE = 50;
+    public static final int SCORE_TARGET_WITH_BONUS = 90;
+    public static final int SCORE_MOVING_CLOSER = 10;
+    public static final int SCORE_FALLBACK = 1;
+    public static final int SCORE_NO_MOVE = 0;
 
-    /**
-     * Constructor without bonus action (backward compatible).
-     */
     public SimulationResult(ShiftOperation shift, int rotations, int score, int distanceToTarget, Position targetMovePosition) {
-        this(shift, rotations, score, distanceToTarget, targetMovePosition, null);
+        this(shift, rotations, score, distanceToTarget, targetMovePosition, 0, null);
+    }
+
+    public SimulationResult(ShiftOperation shift, int rotations, int score, int distanceToTarget, Position targetMovePosition, int stepsToMove) {
+        this(shift, rotations, score, distanceToTarget, targetMovePosition, stepsToMove, null);
+    }
+
+    public SimulationResult(ShiftOperation shift, int rotations, int score, int distanceToTarget, Position targetMovePosition, BonusAction bonusAction) {
+        this(shift, rotations, score, distanceToTarget, targetMovePosition, 0, bonusAction);
     }
 
     /**

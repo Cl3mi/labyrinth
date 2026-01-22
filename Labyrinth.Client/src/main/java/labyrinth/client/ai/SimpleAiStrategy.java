@@ -10,12 +10,12 @@ import labyrinth.contracts.models.PushActionInfo;
 import java.util.*;
 
 /**
- * Improved AI strategy with the following priority:
+ * AI strategy with the following priority:
  * 1. If all treasures collected and can reach home -> finish game
  * 2. Try to reach treasure with any valid push + rotation
- * 3. If treasure blocked, try to reach a bonus tile
- * 4. If can't reach bonus, try using owned bonuses to reach treasure
- * 5. Move as close to treasure as possible
+ * 3. If treasure unreachable, try to reach a bonus tile
+ * 4. Try using owned bonuses to reach treasure
+ * 5. Move as close to treasure as possible while maximizing steps taken
  *
  * Special handling:
  * - Avoids tiles occupied by other players
@@ -23,6 +23,9 @@ import java.util.*;
  * - Simulates all rotations but avoids duplicate board states
  */
 public class SimpleAiStrategy implements AiStrategy {
+
+    private static final double DISTANCE_WEIGHT = 3.0;
+    private static final double STEPS_WEIGHT = 1.0;
 
     private final Random random = new Random();
     private List<Player> allPlayers;
@@ -32,28 +35,21 @@ public class SimpleAiStrategy implements AiStrategy {
         return computeBestMove(board, player, null);
     }
 
-    /**
-     * Computes the best move with knowledge of all players (for blocking detection).
-     */
     public AiDecision computeBestMove(Board board, Player player, List<Player> allPlayers) {
         this.allPlayers = allPlayers;
         SimulationResult bestResult = null;
 
-        // Generate all valid shift candidates
         List<ShiftOperation> candidates = generateShiftCandidates(board);
 
         System.out.println("[AI] Evaluating " + candidates.size() + " shift candidates");
         System.out.println("[AI] Going home: " + (player.getCurrentTargetTreasure() == null));
         System.out.println("[AI] Available bonuses: " + player.getAvailableBonuses());
 
-        // Check if going home (all treasures collected)
         boolean goingHome = player.getCurrentTargetTreasure() == null;
 
-        // Phase 1: Try to reach target (treasure or home) directly
         for (ShiftOperation op : candidates) {
             Set<Integer> evaluatedRotations = new HashSet<>();
             for (int rotation = 0; rotation < 4; rotation++) {
-                // Skip duplicate rotations (some tiles look the same after rotation)
                 int rotationKey = getRotationKey(board.getExtraTile(), rotation);
                 if (evaluatedRotations.contains(rotationKey)) {
                     continue;
@@ -67,8 +63,7 @@ public class SimpleAiStrategy implements AiStrategy {
             }
         }
 
-        // If we can reach the target directly, use that move
-        if (bestResult != null && (bestResult.score() >= SimulationResult.SCORE_TARGET_REACHABLE)) {
+        if (bestResult != null && bestResult.score() >= SimulationResult.SCORE_TARGET_REACHABLE) {
             if (goingHome && bestResult.score() >= SimulationResult.SCORE_FINISH_GAME) {
                 System.out.println("[AI] Can FINISH THE GAME!");
             } else {
@@ -77,33 +72,27 @@ public class SimpleAiStrategy implements AiStrategy {
             return AiDecision.from(bestResult);
         }
 
-        // Phase 2: If going home, skip bonus hunting - just get closer
         if (goingHome) {
             System.out.println("[AI] Going home - not hunting for bonuses");
-            // Best result already has the closest move, use it
             if (bestResult != null) {
                 System.out.println("[AI] Moving closer to home");
                 return AiDecision.from(bestResult);
             }
         }
 
-        // Phase 3: Try to reach a bonus tile (when not going home)
         if (!goingHome) {
             SimulationResult bonusResult = findBestBonusMove(board, player, candidates);
             if (bonusResult != null && bonusResult.score() == SimulationResult.SCORE_BONUS_REACHABLE) {
                 System.out.println("[AI] Moving to collect a bonus");
-                // Only prefer bonus if we can't get closer to target
                 if (bestResult == null || bestResult.score() < SimulationResult.SCORE_MOVING_CLOSER) {
                     return AiDecision.from(bonusResult);
                 }
-                // If we can get closer to target, compare distances
                 if (bonusResult.distanceToTarget() < bestResult.distanceToTarget()) {
                     return AiDecision.from(bonusResult);
                 }
             }
         }
 
-        // Phase 4: Try using owned bonuses to reach treasure
         if (!goingHome && !player.getAvailableBonuses().isEmpty()) {
             SimulationResult bonusUseResult = tryUsingBonusesToReachTarget(board, player, candidates);
             if (bonusUseResult != null && bonusUseResult.score() >= SimulationResult.SCORE_TARGET_WITH_BONUS) {
@@ -112,26 +101,24 @@ public class SimpleAiStrategy implements AiStrategy {
             }
         }
 
-        // Phase 5: Fallback - use best result from Phase 1 (moving closer or any move)
         if (bestResult == null && !candidates.isEmpty()) {
             ShiftOperation fallbackOp = candidates.get(random.nextInt(candidates.size()));
             Position currentPos = player.getCurrentPosition();
-            bestResult = new SimulationResult(fallbackOp, 0, SimulationResult.SCORE_NO_MOVE, 0, currentPos);
+            bestResult = new SimulationResult(fallbackOp, 0, SimulationResult.SCORE_NO_MOVE, 0, currentPos, 0);
             System.out.println("[AI] Using fallback shift");
         }
 
         if (bestResult != null) {
             System.out.println("[AI] Best move: " + bestResult.shift().direction() + " at " +
                     bestResult.shift().index() + ", score=" + bestResult.score() +
-                    ", rotations=" + bestResult.rotations());
+                    ", rotations=" + bestResult.rotations() + ", steps=" + bestResult.stepsToMove());
         }
 
         return AiDecision.from(bestResult);
     }
 
     /**
-     * Generates a key representing the effective rotation state of a tile.
-     * Tiles with rotational symmetry will have the same key for equivalent rotations.
+     * Generates a rotation key based on entrance bitmask to detect equivalent rotations.
      */
     private int getRotationKey(labyrinth.contracts.models.Tile tile, int rotation) {
         Direction[] entrances = tile.getEntrances();
@@ -139,7 +126,6 @@ public class SimpleAiStrategy implements AiStrategy {
             return 0;
         }
 
-        // Create a bitmask of entrances after rotation
         int mask = 0;
         for (Direction d : entrances) {
             Direction rotated = rotateDirection(d, rotation);
@@ -161,9 +147,6 @@ public class SimpleAiStrategy implements AiStrategy {
         return result;
     }
 
-    /**
-     * Generates all valid shift operations for the board.
-     */
     private List<ShiftOperation> generateShiftCandidates(Board board) {
         List<ShiftOperation> ops = new ArrayList<>();
         int width = board.getWidth();
@@ -174,33 +157,21 @@ public class SimpleAiStrategy implements AiStrategy {
             System.out.println("[AI] Forbidden reverse push: " + forbiddenOp.direction() + " at " + forbiddenOp.index());
         }
 
-        // Row shifts (LEFT/RIGHT) - exclude outer rows
         for (int row = 1; row < height - 1; row++) {
             if (!rowContainsFixedTile(board, row)) {
                 ShiftOperation leftOp = ShiftOperation.row(row, Direction.LEFT);
                 ShiftOperation rightOp = ShiftOperation.row(row, Direction.RIGHT);
-
-                if (!isEqualShiftOp(leftOp, forbiddenOp)) {
-                    ops.add(leftOp);
-                }
-                if (!isEqualShiftOp(rightOp, forbiddenOp)) {
-                    ops.add(rightOp);
-                }
+                if (!isEqualShiftOp(leftOp, forbiddenOp)) ops.add(leftOp);
+                if (!isEqualShiftOp(rightOp, forbiddenOp)) ops.add(rightOp);
             }
         }
 
-        // Column shifts (UP/DOWN) - exclude outer columns
         for (int col = 1; col < width - 1; col++) {
             if (!colContainsFixedTile(board, col)) {
                 ShiftOperation upOp = ShiftOperation.column(col, Direction.UP);
                 ShiftOperation downOp = ShiftOperation.column(col, Direction.DOWN);
-
-                if (!isEqualShiftOp(upOp, forbiddenOp)) {
-                    ops.add(upOp);
-                }
-                if (!isEqualShiftOp(downOp, forbiddenOp)) {
-                    ops.add(downOp);
-                }
+                if (!isEqualShiftOp(upOp, forbiddenOp)) ops.add(upOp);
+                if (!isEqualShiftOp(downOp, forbiddenOp)) ops.add(downOp);
             }
         }
 
@@ -214,7 +185,6 @@ public class SimpleAiStrategy implements AiStrategy {
 
         int index = lastPush.getRowOrColIndex();
         Direction lastDir = lastPush.getDirection();
-
         Direction reverseDir = switch (lastDir) {
             case LEFT -> Direction.RIGHT;
             case RIGHT -> Direction.LEFT;
@@ -223,19 +193,12 @@ public class SimpleAiStrategy implements AiStrategy {
         };
 
         boolean isRowShift = (lastDir == Direction.LEFT || lastDir == Direction.RIGHT);
-
-        if (isRowShift) {
-            return ShiftOperation.row(index, reverseDir);
-        } else {
-            return ShiftOperation.column(index, reverseDir);
-        }
+        return isRowShift ? ShiftOperation.row(index, reverseDir) : ShiftOperation.column(index, reverseDir);
     }
 
     private boolean isEqualShiftOp(ShiftOperation a, ShiftOperation b) {
         if (a == null || b == null) return false;
-        return a.index() == b.index() &&
-               a.direction() == b.direction() &&
-               a.isRow() == b.isRow();
+        return a.index() == b.index() && a.direction() == b.direction() && a.isRow() == b.isRow();
     }
 
     private boolean rowContainsFixedTile(Board board, int rowIndex) {
@@ -256,111 +219,127 @@ public class SimpleAiStrategy implements AiStrategy {
         return false;
     }
 
-    /**
-     * Simulates a basic move (push + walk) and evaluates the result.
-     */
     private SimulationResult simulateBasicMove(Board board, Player player, ShiftOperation op, int rotations, boolean goingHome) {
         BoardSimulator sim = new BoardSimulator(board, player, allPlayers);
 
-        // Apply rotations to the extra tile
         for (int i = 0; i < rotations; i++) {
             sim.rotateExtraTile();
         }
 
-        // Apply the shift
         if (!sim.applyShift(op)) {
             return null;
         }
 
-        // Get reachable positions (excluding blocked positions)
         Set<Position> reachable = sim.getReachableUnblockedPositions();
         Position targetPos = sim.getTargetPosition();
+        Position currentPos = sim.getPlayerPosition();
 
         if (targetPos != null) {
-            // Check if target is directly reachable and not blocked
             if (reachable.contains(targetPos)) {
                 int score = goingHome ? SimulationResult.SCORE_FINISH_GAME : SimulationResult.SCORE_TARGET_REACHABLE;
+                int steps = manhattanDistance(currentPos, targetPos);
                 if (goingHome) {
                     System.out.println("[AI] HOME TILE IS REACHABLE! Score=" + score);
                 }
-                return new SimulationResult(op, rotations, score, 0, targetPos);
+                return new SimulationResult(op, rotations, score, 0, targetPos, steps);
             }
 
-            // Check if target is blocked by another player
             if (sim.isPositionBlocked(targetPos)) {
-                // Target is blocked - find alternative
                 Set<Position> allReachable = sim.getReachablePositions();
                 if (allReachable.contains(targetPos)) {
-                    // We could reach target but it's blocked - get as close as possible
-                    Position bestAlt = findClosestUnblockedPosition(reachable, targetPos, sim.getOtherPlayerPositions());
+                    Position bestAlt = findBestPositionWithSteps(reachable, targetPos, currentPos, sim.getOtherPlayerPositions());
                     if (bestAlt != null) {
                         int dist = manhattanDistance(bestAlt, targetPos);
-                        return new SimulationResult(op, rotations, SimulationResult.SCORE_MOVING_CLOSER, dist, bestAlt);
+                        int steps = manhattanDistance(currentPos, bestAlt);
+                        return new SimulationResult(op, rotations, SimulationResult.SCORE_MOVING_CLOSER, dist, bestAlt, steps);
                     }
                 }
             }
 
-            // Find closest reachable position to target
-            int minDist = Integer.MAX_VALUE;
-            Position bestPos = null;
-            for (Position rPos : reachable) {
-                int dist = manhattanDistance(rPos, targetPos);
-                if (dist < minDist) {
-                    minDist = dist;
-                    bestPos = rPos;
-                }
-            }
-
+            Position bestPos = findBestPositionWithSteps(reachable, targetPos, currentPos, Collections.emptySet());
             if (bestPos != null) {
-                return new SimulationResult(op, rotations, SimulationResult.SCORE_MOVING_CLOSER, minDist, bestPos);
+                int dist = manhattanDistance(bestPos, targetPos);
+                int steps = manhattanDistance(currentPos, bestPos);
+                return new SimulationResult(op, rotations, SimulationResult.SCORE_MOVING_CLOSER, dist, bestPos, steps);
             }
         }
 
-        // Fallback: move to any reachable position
-        Position currentPos = sim.getPlayerPosition();
         if (!reachable.isEmpty()) {
-            List<Position> reachableList = new ArrayList<>(reachable);
-            Position randomPos = reachableList.get(random.nextInt(reachableList.size()));
-            return new SimulationResult(op, rotations, SimulationResult.SCORE_FALLBACK, 0, randomPos);
+            Position farthestPos = findFarthestPosition(reachable, currentPos);
+            int steps = manhattanDistance(currentPos, farthestPos);
+            return new SimulationResult(op, rotations, SimulationResult.SCORE_FALLBACK, 0, farthestPos, steps);
         }
 
-        return new SimulationResult(op, rotations, SimulationResult.SCORE_NO_MOVE, 0, currentPos);
+        return new SimulationResult(op, rotations, SimulationResult.SCORE_NO_MOVE, 0, currentPos, 0);
     }
 
     /**
-     * Finds the best move that reaches a bonus tile.
+     * Finds the best position balancing distance to target and steps taken.
+     * Uses weighted scoring: lower distance to target is better, but more steps is also valuable.
      */
+    private Position findBestPositionWithSteps(Set<Position> reachable, Position target, Position current, Set<Position> blocked) {
+        Position best = null;
+        double bestScore = Double.NEGATIVE_INFINITY;
+
+        for (Position pos : reachable) {
+            if (blocked.contains(pos)) continue;
+
+            int distToTarget = manhattanDistance(pos, target);
+            int steps = manhattanDistance(current, pos);
+
+            // Score: prioritize getting closer to target, but reward taking more steps
+            // Negative distance (closer is better) + positive steps bonus
+            double score = -distToTarget * DISTANCE_WEIGHT + steps * STEPS_WEIGHT;
+
+            if (score > bestScore) {
+                bestScore = score;
+                best = pos;
+            }
+        }
+
+        return best;
+    }
+
+    /**
+     * Finds the position farthest from current position (maximizes steps when no target).
+     */
+    private Position findFarthestPosition(Set<Position> reachable, Position current) {
+        Position farthest = null;
+        int maxDist = -1;
+
+        for (Position pos : reachable) {
+            int dist = manhattanDistance(pos, current);
+            if (dist > maxDist) {
+                maxDist = dist;
+                farthest = pos;
+            }
+        }
+
+        return farthest != null ? farthest : reachable.iterator().next();
+    }
+
     private SimulationResult findBestBonusMove(Board board, Player player, List<ShiftOperation> candidates) {
         SimulationResult bestBonusResult = null;
-        Position targetPos = null;
 
-        // First, find where the treasure is to calculate distance
         BoardSimulator tempSim = new BoardSimulator(board, player, allPlayers);
-        targetPos = tempSim.getTargetPosition();
+        Position targetPos = tempSim.getTargetPosition();
 
         for (ShiftOperation op : candidates) {
             Set<Integer> evaluatedRotations = new HashSet<>();
             for (int rotation = 0; rotation < 4; rotation++) {
                 int rotationKey = getRotationKey(board.getExtraTile(), rotation);
-                if (evaluatedRotations.contains(rotationKey)) {
-                    continue;
-                }
+                if (evaluatedRotations.contains(rotationKey)) continue;
                 evaluatedRotations.add(rotationKey);
 
                 BoardSimulator sim = new BoardSimulator(board, player, allPlayers);
-
                 for (int i = 0; i < rotation; i++) {
                     sim.rotateExtraTile();
                 }
 
-                if (!sim.applyShift(op)) {
-                    continue;
-                }
+                if (!sim.applyShift(op)) continue;
 
-                // Find reachable bonus positions
                 Map<Position, BonusType> reachableBonuses = sim.findReachableBonuses();
                 if (!reachableBonuses.isEmpty()) {
-                    // Find the bonus closest to the target
                     Position bestBonusPos = null;
                     int bestDistance = Integer.MAX_VALUE;
 
@@ -373,8 +352,9 @@ public class SimpleAiStrategy implements AiStrategy {
                     }
 
                     if (bestBonusPos != null) {
+                        int steps = manhattanDistance(sim.getPlayerPosition(), bestBonusPos);
                         SimulationResult result = new SimulationResult(
-                            op, rotation, SimulationResult.SCORE_BONUS_REACHABLE, bestDistance, bestBonusPos
+                            op, rotation, SimulationResult.SCORE_BONUS_REACHABLE, bestDistance, bestBonusPos, steps
                         );
 
                         if (bestBonusResult == null || result.distanceToTarget() < bestBonusResult.distanceToTarget()) {
@@ -388,9 +368,6 @@ public class SimpleAiStrategy implements AiStrategy {
         return bestBonusResult;
     }
 
-    /**
-     * Tries using available bonuses to reach the target.
-     */
     private SimulationResult tryUsingBonusesToReachTarget(Board board, Player player, List<ShiftOperation> candidates) {
         List<BonusType> bonuses = player.getAvailableBonuses();
         SimulationResult bestResult = null;
@@ -399,12 +376,9 @@ public class SimpleAiStrategy implements AiStrategy {
             Set<Integer> evaluatedRotations = new HashSet<>();
             for (int rotation = 0; rotation < 4; rotation++) {
                 int rotationKey = getRotationKey(board.getExtraTile(), rotation);
-                if (evaluatedRotations.contains(rotationKey)) {
-                    continue;
-                }
+                if (evaluatedRotations.contains(rotationKey)) continue;
                 evaluatedRotations.add(rotationKey);
 
-                // Try BEAM bonus
                 if (bonuses.contains(BonusType.BEAM)) {
                     SimulationResult beamResult = tryBeamBonus(board, player, op, rotation);
                     if (beamResult != null && (bestResult == null || compareResults(beamResult, bestResult) > 0)) {
@@ -412,7 +386,6 @@ public class SimpleAiStrategy implements AiStrategy {
                     }
                 }
 
-                // Try SWAP bonus
                 if (bonuses.contains(BonusType.SWAP)) {
                     SimulationResult swapResult = trySwapBonus(board, player, op, rotation);
                     if (swapResult != null && (bestResult == null || compareResults(swapResult, bestResult) > 0)) {
@@ -420,7 +393,6 @@ public class SimpleAiStrategy implements AiStrategy {
                     }
                 }
 
-                // Try PUSH_FIXED bonus
                 if (bonuses.contains(BonusType.PUSH_FIXED)) {
                     SimulationResult pushFixedResult = tryPushFixedBonus(board, player, op, rotation);
                     if (pushFixedResult != null && (bestResult == null || compareResults(pushFixedResult, bestResult) > 0)) {
@@ -428,7 +400,6 @@ public class SimpleAiStrategy implements AiStrategy {
                     }
                 }
 
-                // Try PUSH_TWICE bonus
                 if (bonuses.contains(BonusType.PUSH_TWICE)) {
                     SimulationResult pushTwiceResult = tryPushTwiceBonus(board, player, op, rotation, candidates);
                     if (pushTwiceResult != null && (bestResult == null || compareResults(pushTwiceResult, bestResult) > 0)) {
@@ -441,36 +412,22 @@ public class SimpleAiStrategy implements AiStrategy {
         return bestResult;
     }
 
-    /**
-     * Tries using BEAM bonus to reach target after a shift.
-     * BEAM allows teleporting to any reachable position, then walking further.
-     */
     private SimulationResult tryBeamBonus(Board board, Player player, ShiftOperation op, int rotation) {
         BoardSimulator sim = new BoardSimulator(board, player, allPlayers);
-
-        for (int i = 0; i < rotation; i++) {
-            sim.rotateExtraTile();
-        }
-
-        if (!sim.applyShift(op)) {
-            return null;
-        }
+        for (int i = 0; i < rotation; i++) sim.rotateExtraTile();
+        if (!sim.applyShift(op)) return null;
 
         Position targetPos = sim.getTargetPosition();
         if (targetPos == null) return null;
 
-        // Get all positions reachable from current position
         Set<Position> directlyReachable = sim.getReachablePositions();
 
-        // For each reachable position, see if we can reach target from there
         for (Position beamDest : directlyReachable) {
             if (sim.isPositionBlocked(beamDest)) continue;
 
-            // Simulate being at beamDest
             BoardSimulator simFromBeam = sim.copy();
             simFromBeam.simulateBeam(beamDest);
 
-            // Check reachability from beam destination
             Set<Position> reachableFromBeam = simFromBeam.getReachableUnblockedPositions();
             if (reachableFromBeam.contains(targetPos)) {
                 return new SimulationResult(
@@ -483,37 +440,22 @@ public class SimpleAiStrategy implements AiStrategy {
         return null;
     }
 
-    /**
-     * Tries using SWAP bonus to reach target.
-     * SWAP lets us swap positions with another player.
-     */
     private SimulationResult trySwapBonus(Board board, Player player, ShiftOperation op, int rotation) {
         if (allPlayers == null || allPlayers.size() <= 1) return null;
 
         BoardSimulator sim = new BoardSimulator(board, player, allPlayers);
-
-        for (int i = 0; i < rotation; i++) {
-            sim.rotateExtraTile();
-        }
-
-        if (!sim.applyShift(op)) {
-            return null;
-        }
+        for (int i = 0; i < rotation; i++) sim.rotateExtraTile();
+        if (!sim.applyShift(op)) return null;
 
         Position targetPos = sim.getTargetPosition();
         if (targetPos == null) return null;
 
-        // Try swapping with each other player
         for (Player other : allPlayers) {
             if (other.getId().equals(player.getId())) continue;
             if (other.getCurrentPosition() == null) continue;
 
-            // Simulate swap
             BoardSimulator simAfterSwap = sim.copy();
             Position otherPos = other.getCurrentPosition();
-
-            // After shift, we need to find other player's new position
-            // For simplicity, check if swapping would put us closer or on target
             simAfterSwap.simulateSwap(otherPos);
 
             Set<Position> reachableAfterSwap = simAfterSwap.getReachableUnblockedPositions();
@@ -528,39 +470,23 @@ public class SimpleAiStrategy implements AiStrategy {
         return null;
     }
 
-    /**
-     * Tries using PUSH_FIXED bonus to reach target.
-     * PUSH_FIXED allows pushing a row/column that has fixed tiles.
-     */
     private SimulationResult tryPushFixedBonus(Board board, Player player, ShiftOperation op, int rotation) {
         BoardSimulator sim = new BoardSimulator(board, player, allPlayers);
-
-        for (int i = 0; i < rotation; i++) {
-            sim.rotateExtraTile();
-        }
-
-        if (!sim.applyShift(op)) {
-            return null;
-        }
+        for (int i = 0; i < rotation; i++) sim.rotateExtraTile();
+        if (!sim.applyShift(op)) return null;
 
         Position targetPos = sim.getTargetPosition();
         if (targetPos == null) return null;
 
-        // Get possible PUSH_FIXED operations
         List<ShiftOperation> pushFixedCandidates = sim.getPushFixedCandidates();
 
         for (ShiftOperation fixedOp : pushFixedCandidates) {
             for (int fixedRotation = 0; fixedRotation < 4; fixedRotation++) {
                 BoardSimulator simAfterFixed = sim.copy();
-
-                for (int i = 0; i < fixedRotation; i++) {
-                    simAfterFixed.rotateExtraTile();
-                }
-
+                for (int i = 0; i < fixedRotation; i++) simAfterFixed.rotateExtraTile();
                 simAfterFixed.applyShiftIgnoringFixed(fixedOp);
 
                 Set<Position> reachable = simAfterFixed.getReachableUnblockedPositions();
-                // Recalculate target position as it may have moved
                 Position newTargetPos = simAfterFixed.getTargetPosition();
 
                 if (newTargetPos != null && reachable.contains(newTargetPos)) {
@@ -575,25 +501,14 @@ public class SimpleAiStrategy implements AiStrategy {
         return null;
     }
 
-    /**
-     * Tries using PUSH_TWICE bonus to reach target.
-     * PUSH_TWICE allows doing two push operations.
-     */
     private SimulationResult tryPushTwiceBonus(Board board, Player player, ShiftOperation firstOp, int firstRotation, List<ShiftOperation> allCandidates) {
         BoardSimulator sim = new BoardSimulator(board, player, allPlayers);
-
-        for (int i = 0; i < firstRotation; i++) {
-            sim.rotateExtraTile();
-        }
-
-        if (!sim.applyShift(firstOp)) {
-            return null;
-        }
+        for (int i = 0; i < firstRotation; i++) sim.rotateExtraTile();
+        if (!sim.applyShift(firstOp)) return null;
 
         Position targetPos = sim.getTargetPosition();
         if (targetPos == null) return null;
 
-        // Generate second push candidates (excluding reverse of first push)
         ShiftOperation forbiddenSecond = getReversePush(firstOp);
 
         for (ShiftOperation secondOp : allCandidates) {
@@ -601,14 +516,8 @@ public class SimpleAiStrategy implements AiStrategy {
 
             for (int secondRotation = 0; secondRotation < 4; secondRotation++) {
                 BoardSimulator simAfterSecond = sim.copy();
-
-                for (int i = 0; i < secondRotation; i++) {
-                    simAfterSecond.rotateExtraTile();
-                }
-
-                if (!simAfterSecond.applyShift(secondOp)) {
-                    continue;
-                }
+                for (int i = 0; i < secondRotation; i++) simAfterSecond.rotateExtraTile();
+                if (!simAfterSecond.applyShift(secondOp)) continue;
 
                 Set<Position> reachable = simAfterSecond.getReachableUnblockedPositions();
                 Position newTargetPos = simAfterSecond.getTargetPosition();
@@ -632,43 +541,20 @@ public class SimpleAiStrategy implements AiStrategy {
             case UP -> Direction.DOWN;
             case DOWN -> Direction.UP;
         };
-
-        if (op.isRow()) {
-            return ShiftOperation.row(op.index(), reverseDir);
-        } else {
-            return ShiftOperation.column(op.index(), reverseDir);
-        }
+        return op.isRow() ? ShiftOperation.row(op.index(), reverseDir) : ShiftOperation.column(op.index(), reverseDir);
     }
 
     /**
-     * Finds the closest unblocked position to the target.
-     */
-    private Position findClosestUnblockedPosition(Set<Position> reachable, Position target, Set<Position> blocked) {
-        Position best = null;
-        int minDist = Integer.MAX_VALUE;
-
-        for (Position pos : reachable) {
-            if (blocked.contains(pos)) continue;
-            int dist = manhattanDistance(pos, target);
-            if (dist < minDist) {
-                minDist = dist;
-                best = pos;
-            }
-        }
-
-        return best;
-    }
-
-    /**
-     * Compares two simulation results.
-     * Higher score wins; if tied, lower distance wins.
+     * Compares two simulation results. Higher score wins; if tied, prefers lower distance then more steps.
      */
     private int compareResults(SimulationResult a, SimulationResult b) {
         if (a.score() != b.score()) {
             return Integer.compare(a.score(), b.score());
         }
-        // Lower distance is better
-        return Integer.compare(b.distanceToTarget(), a.distanceToTarget());
+        if (a.distanceToTarget() != b.distanceToTarget()) {
+            return Integer.compare(b.distanceToTarget(), a.distanceToTarget());
+        }
+        return Integer.compare(a.stepsToMove(), b.stepsToMove());
     }
 
     private int manhattanDistance(Position a, Position b) {
