@@ -366,10 +366,12 @@ public class MainMenuPanel extends JPanel {
 
         contentPanel.add(Box.createVerticalStrut(15));
 
-        // Untertitel
         subtitleLabel = new JLabel("Das mystische Abenteuer beginnt... DiBSE 2025");
         subtitleLabel.setFont(new Font("SansSerif", Font.BOLD, 24));
         subtitleLabel.setForeground(ThemeManager.getInstance().getSubtitleColor());
+        subtitleLabel.setOpaque(true);
+        subtitleLabel.setBackground(new Color(0, 0, 0, 120));
+        subtitleLabel.setBorder(BorderFactory.createEmptyBorder(8, 20, 8, 20));
         subtitleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         contentPanel.add(subtitleLabel);
 
