@@ -63,8 +63,8 @@ public class MultiplayerLobbyPanel extends JPanel {
     private JComboBox<String> boardSizeCombo;
     private JComboBox<String> treasureCombo;
     private JComboBox<String> bonusCombo;
-    private JComboBox<String> turnTimeCombo;
-    //private JComboBox<String> durationCombo;
+    //private JComboBox<String> turnTimeCombo;
+    private JComboBox<String> durationCombo;
 
     // Callbacks
     private Runnable onBackToMenu;
@@ -304,7 +304,7 @@ public class MultiplayerLobbyPanel extends JPanel {
         });
         StyledTooltipManager.setTooltip(bonusCombo, "Bonus", "Gesamtanzahl der Boni im Spiel");
         settingsGrid.add(bonusCombo, gbc);
-
+/*
         // Runden-Zeit
         gbc.gridx = 0; gbc.gridy = 4;
         settingsGrid.add(createStyledLabel("Runden-Zeit:"), gbc);
@@ -326,7 +326,7 @@ public class MultiplayerLobbyPanel extends JPanel {
         });
         StyledTooltipManager.setTooltip(turnTimeCombo, "Runden-Zeit", "Zeitlimit pro Spielzug");
         settingsGrid.add(turnTimeCombo, gbc);
-/*
+*/
         // Spiel-Dauer
         gbc.gridx = 0; gbc.gridy = 5;
         settingsGrid.add(createStyledLabel("Spiel-Dauer:"), gbc);
@@ -351,7 +351,7 @@ public class MultiplayerLobbyPanel extends JPanel {
         StyledTooltipManager.setTooltip(durationCombo, "Spiel-Dauer", "Maximale Gesamtdauer des Spiels");
         settingsGrid.add(durationCombo, gbc);
 
-*/
+
 
         // Hinweis
         gbc.gridx = 0; gbc.gridy = 6; gbc.gridwidth = 2;
@@ -613,8 +613,8 @@ public class MultiplayerLobbyPanel extends JPanel {
         if (boardSizeCombo != null) boardSizeCombo.setEnabled(enabled);
         if (treasureCombo != null) treasureCombo.setEnabled(enabled);
         if (bonusCombo != null) bonusCombo.setEnabled(enabled);
-        if (turnTimeCombo != null) turnTimeCombo.setEnabled(enabled);
-        //if (durationCombo != null) durationCombo.setEnabled(enabled);
+        //if (turnTimeCombo != null) turnTimeCombo.setEnabled(enabled);
+        if (durationCombo != null) durationCombo.setEnabled(enabled);
     }
 
     private void onStartGameClicked() {

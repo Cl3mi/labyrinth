@@ -569,7 +569,7 @@ public class LabyrinthApplication {
 
         if (boardPanel == null) {
             boardPanel = new BoardPanel(client, board, currentPlayer, allPlayers);
-            boardPanel.setOnExitGame(this::exitGameToLobby);
+            boardPanel.setOnExitGame(this::exitGameToMainMenu);
 
             // Wire up AI toggle button
             boardPanel.setOnAiToggleRequested(() -> {
@@ -603,17 +603,17 @@ public class LabyrinthApplication {
             }
 
             mainPanel.add(boardPanel, "game");
-        } else {
-            // Use batch update to avoid multiple sequential repaints (6+ repaints -> 1 repaint)
-            boardPanel.updateGameState(
-                board,
-                allPlayers,
-                currentPlayer,
-                gameEndTime,
-                turnInfo != null ? turnInfo.getTurnEndTime() : null,
-                turnInfo != null ? turnInfo.getState() : null
-            );
         }
+
+        // Always update game state to ensure turnState is set (fixes rotation on first turn)
+        boardPanel.updateGameState(
+            board,
+            allPlayers,
+            currentPlayer,
+            gameEndTime,
+            turnInfo != null ? turnInfo.getTurnEndTime() : null,
+            turnInfo != null ? turnInfo.getState() : null
+        );
         switchToGameView();
         frame.revalidate();
         frame.repaint();
@@ -651,25 +651,42 @@ public class LabyrinthApplication {
     }
 
     private void exitGameToLobby() {
-        System.out.println("[" + PROFILE + "] exitGameToLobby() - Returning to main menu");
+        System.out.println("[" + PROFILE + "] exitGameToLobby() - Returning to lobby");
+        exitGameCleanup();
 
-        // Cleanup game over panel
-        if (gameOverPanel != null) {
-            gameOverPanel.cleanup();
+        // Disconnect from server and reconnect to reset game state
+        if (client != null && client.isOpen()) {
+            System.out.println("[" + PROFILE + "] Disconnecting to reset game state...");
+            client.disconnectCleanly();
+
+            // Reconnect after a short delay
+            new Thread(() -> {
+                try {
+                    Thread.sleep(500);
+                    SwingUtilities.invokeLater(() -> {
+                        System.out.println("[" + PROFILE + "] Reconnecting to server...");
+                        connectToServer();
+                        showLobby();
+                        System.out.println("[" + PROFILE + "] Returned to lobby");
+                    });
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            }).start();
+        } else {
+            // Not connected - just show lobby
+            SwingUtilities.invokeLater(() -> {
+                lobbyPanel.setConnected(false);
+                lobbyPanel.setStatusText("Nicht verbunden", new Color(170, 120, 0));
+            });
+            showLobby();
+            System.out.println("[" + PROFILE + "] Returned to lobby");
         }
+    }
 
-        // Reset game state flags
-        gameViewShown = false;
-        isGameOver = false;
-        pendingSingleplayerStart = false;
-        isGameOverCleanup = false;
-        exitedToLobby = true;  // Block GAME_STATE_UPDATE from showing game again
-
-        // BoardPanel entfernen und zurücksetzen
-        if (boardPanel != null) {
-            mainPanel.remove(boardPanel);
-            boardPanel = null;
-        }
+    private void exitToMainMenu() {
+        System.out.println("[" + PROFILE + "] exitToMainMenu() - Returning to main menu");
+        exitGameCleanup();
 
         // Disconnect from server and reconnect to reset game state
         if (client != null && client.isOpen()) {
@@ -689,7 +706,7 @@ public class LabyrinthApplication {
                 }
             }).start();
         } else {
-            // Not connected - just show lobby
+            // Not connected - just show main menu
             SwingUtilities.invokeLater(() -> {
                 lobbyPanel.setConnected(false);
                 lobbyPanel.setStatusText("Nicht verbunden", new Color(170, 120, 0));
@@ -698,6 +715,26 @@ public class LabyrinthApplication {
 
         showMainMenu();
         System.out.println("[" + PROFILE + "] Returned to main menu");
+    }
+
+    private void exitGameCleanup() {
+        // Cleanup game over panel
+        if (gameOverPanel != null) {
+            gameOverPanel.cleanup();
+        }
+
+        // Reset game state flags
+        gameViewShown = false;
+        isGameOver = false;
+        pendingSingleplayerStart = false;
+        isGameOverCleanup = false;
+        exitedToLobby = true;  // Block GAME_STATE_UPDATE from showing game again
+
+        // BoardPanel entfernen und zurücksetzen
+        if (boardPanel != null) {
+            mainPanel.remove(boardPanel);
+            boardPanel = null;
+        }
     }
 
     private void startNewRound() {
