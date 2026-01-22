@@ -22,7 +22,7 @@ import java.util.function.Consumer;
  *
  * Features:
  * - Zentriertes Layout mit Logo oben
- * - Große, stilvolle Buttons: Einzelspieler, Mehrspieler, Einstellungen
+ * - Große, stilvolle Buttons: Spiel starten, Einstellungen
  * - Atmosphärischer Hintergrund mit Labyrinth-Textur
  * - Animierte Hover-Effekte
  * - Mystische Farbpalette passend zum "Verrückten Labyrinth"
@@ -30,17 +30,9 @@ import java.util.function.Consumer;
 public class MainMenuPanel extends JPanel {
 
     // Callbacks für Button-Aktionen
-    private Runnable onSingleplayerClicked;
     private Runnable onMultiplayerClicked;
     private Runnable onOptionsClicked;
     private Runnable onExitClicked;
-
-    // Singleplayer Default-Einstellungen
-    private int singleplayerBoardSize = 7;
-    private int singleplayerTreasures = 4;
-    private int singleplayerTurnTime = 30;
-    private int singleplayerGameDuration = 30;
-    private String singleplayerUsername = "Player";
 
     // Multiplayer Username
     private String multiplayerUsername = "Player";
@@ -548,10 +540,6 @@ public class MainMenuPanel extends JPanel {
     // Callback Setter
     // --------------------------------------------------------------------------------
 
-    public void setOnSingleplayerClicked(Runnable callback) {
-        this.onSingleplayerClicked = callback;
-    }
-
     public void setOnMultiplayerClicked(Runnable callback) {
         this.onMultiplayerClicked = callback;
     }
@@ -562,33 +550,6 @@ public class MainMenuPanel extends JPanel {
 
     public void setOnExitClicked(Runnable callback) {
         this.onExitClicked = callback;
-    }
-
-    // Singleplayer Einstellungen Getter
-    public int getSingleplayerBoardSize() {
-        return singleplayerBoardSize;
-    }
-
-    public int getSingleplayerTreasures() {
-        return singleplayerTreasures;
-    }
-
-    public int getSingleplayerTurnTime() {
-        return singleplayerTurnTime;
-    }
-
-    public int getSingleplayerGameDuration() {
-        return singleplayerGameDuration;
-    }
-
-    public String getSingleplayerUsername() {
-        return singleplayerUsername;
-    }
-
-    public void setSingleplayerUsername(String username) {
-        if (username != null && !username.isBlank()) {
-            this.singleplayerUsername = username;
-        }
     }
 
     public String getMultiplayerUsername() {

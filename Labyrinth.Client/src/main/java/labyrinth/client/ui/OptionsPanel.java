@@ -363,7 +363,7 @@ public class OptionsPanel extends JPanel {
         // Hinweis
         gbc.gridx = 0; gbc.gridy = 1; gbc.gridwidth = 3;
         gbc.insets = new Insets(5, 5, 0, 5);
-        JLabel hintLabel = new JLabel("Format: ws://hostname:port/path");
+        JLabel hintLabel = new JLabel("Format: https://mgmt.dvl.spalx.dev");
         hintLabel.setFont(new Font("SansSerif", Font.ITALIC, 11));
         hintLabel.setForeground(GameTheme.Colors.TEXT_MUTED);
         panel.add(hintLabel, gbc);
@@ -424,7 +424,7 @@ public class OptionsPanel extends JPanel {
         // Hinweis
         gbc.gridx = 0; gbc.gridy = 2; gbc.gridwidth = 2;
         gbc.insets = new Insets(5, 5, 0, 5);
-        JLabel hintLabel = new JLabel("Änderungen werden nach Neustart wirksam");
+        JLabel hintLabel = new JLabel("Änderungen werden nach dem speichern übernommen.");
         hintLabel.setFont(new Font("SansSerif", Font.ITALIC, 11));
         hintLabel.setForeground(GameTheme.Colors.TEXT_MUTED);
         panel.add(hintLabel, gbc);
