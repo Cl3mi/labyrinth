@@ -69,6 +69,7 @@ public class LabyrinthApplication {
 
     public void start() throws Exception {
         frame = new JFrame("Labyrinth Online (" + PROFILE + ")");
+        loadApplicationIcon();
         installWindowCloseHandler();
 
         frame.setMinimumSize(new Dimension(MIN_WINDOW_WIDTH, MIN_WINDOW_HEIGHT));
@@ -168,6 +169,18 @@ public class LabyrinthApplication {
 
 
         showMainMenu();
+    }
+
+    private void loadApplicationIcon() {
+        try {
+            var iconUrl = getClass().getResource("/images/ui/Icon.png");
+            if (iconUrl != null) {
+                Image icon = new ImageIcon(iconUrl).getImage();
+                frame.setIconImage(icon);
+            }
+        } catch (Exception e) {
+            System.err.println("Failed to load application icon: " + e.getMessage());
+        }
     }
 
     private void showMainMenu() {

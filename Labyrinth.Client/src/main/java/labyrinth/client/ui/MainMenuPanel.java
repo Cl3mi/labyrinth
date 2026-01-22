@@ -494,10 +494,10 @@ public class MainMenuPanel extends JPanel {
         panel.setOpaque(false);
 
         // Mehrspieler Button
-        MenuButton multiplayerBtn = new MenuButton("Spiel starten", "Spiele alleine gegen KI oder online mit Freunden");
+        MenuButton multiplayerBtn = new MenuButton("Spiel starten", "Spiele online mit Freunden");
         multiplayerBtn.addActionListener(e -> onMultiplayerClicked.run());
         multiplayerBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
-        StyledTooltipManager.setTooltip(multiplayerBtn, "Spiel starten", "Spiele alleine gegen KI oder online mit Freunden");
+        StyledTooltipManager.setTooltip(multiplayerBtn, "Spiel starten", "Spiele online mit Freunden");
         StyledContextMenu.attachTo(multiplayerBtn);
         panel.add(multiplayerBtn);
 

@@ -360,13 +360,12 @@ public class OptionsPanel extends JPanel {
         });
         panel.add(serverUrlField, gbc);
 
-        // Hinweis
         gbc.gridx = 0; gbc.gridy = 1; gbc.gridwidth = 3;
         gbc.insets = new Insets(5, 5, 0, 5);
-        JLabel hintLabel = new JLabel("Format: ws://hostname:port/path");
-        hintLabel.setFont(new Font("SansSerif", Font.ITALIC, 11));
-        hintLabel.setForeground(GameTheme.Colors.TEXT_MUTED);
-        panel.add(hintLabel, gbc);
+        JLabel serverHintLabel = new JLabel("Wird nach Neustart angewendet");
+        serverHintLabel.setFont(new Font("SansSerif", Font.ITALIC, 11));
+        serverHintLabel.setForeground(GameTheme.Colors.TEXT_MUTED);
+        panel.add(serverHintLabel, gbc);
 
         panel.setPreferredSize(new Dimension(480, 90));
         return panel;
@@ -421,13 +420,12 @@ public class OptionsPanel extends JPanel {
         });
         panel.add(windowSizeCombo, gbc);
 
-        // Hinweis
         gbc.gridx = 0; gbc.gridy = 2; gbc.gridwidth = 2;
         gbc.insets = new Insets(5, 5, 0, 5);
-        JLabel hintLabel = new JLabel("Änderungen werden nach Neustart wirksam");
-        hintLabel.setFont(new Font("SansSerif", Font.ITALIC, 11));
-        hintLabel.setForeground(GameTheme.Colors.TEXT_MUTED);
-        panel.add(hintLabel, gbc);
+        JLabel windowHintLabel = new JLabel("Wird nach Neustart angewendet");
+        windowHintLabel.setFont(new Font("SansSerif", Font.ITALIC, 11));
+        windowHintLabel.setForeground(GameTheme.Colors.TEXT_MUTED);
+        panel.add(windowHintLabel, gbc);
 
         panel.setPreferredSize(new Dimension(480, 130));
         return panel;

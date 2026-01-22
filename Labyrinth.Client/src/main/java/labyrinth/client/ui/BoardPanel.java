@@ -46,24 +46,12 @@ public class BoardPanel extends JPanel {
     private static final Font COORDINATE_FONT = new Font("Arial", Font.PLAIN, 10);
 
     private static final Font FONT_SANSSERIF_BOLD_20 = new Font("SansSerif", Font.BOLD, 20);
-    private static final Font FONT_SANSSERIF_BOLD_14 = new Font("SansSerif", Font.BOLD, 14);
-    private static final Font FONT_SANSSERIF_BOLD_12 = new Font("SansSerif", Font.BOLD, 12);
-    private static final Font FONT_SANSSERIF_PLAIN_14 = new Font("SansSerif", Font.PLAIN, 14);
-    private static final Font FONT_SANSSERIF_PLAIN_12 = new Font("SansSerif", Font.PLAIN, 12);
-    private static final Font FONT_ARIAL_BOLD_18 = new Font("Arial", Font.BOLD, 18);
     private static final Font FONT_ARIAL_BOLD_16 = new Font("Arial", Font.BOLD, 16);
     private static final Font FONT_ARIAL_BOLD_15 = new Font("Arial", Font.BOLD, 15);
     private static final Font FONT_ARIAL_BOLD_11 = new Font("Arial", Font.BOLD, 11);
-    private static final Font FONT_ARIAL_BOLD_10 = new Font("Arial", Font.BOLD, 10);
     private static final Font FONT_ARIAL_BOLD_9 = new Font("Arial", Font.BOLD, 9);
-    private static final Font FONT_ARIAL_PLAIN_14 = new Font("Arial", Font.PLAIN, 14);
     private static final Font FONT_ARIAL_PLAIN_12 = new Font("Arial", Font.PLAIN, 12);
     private static final Font FONT_ARIAL_PLAIN_11 = new Font("Arial", Font.PLAIN, 11);
-    private static final Font FONT_ARIAL_PLAIN_10 = new Font("Arial", Font.PLAIN, 10);
-    private static final Font FONT_ARIAL_ITALIC_12 = new Font("Arial", Font.ITALIC, 12);
-    private static final Font FONT_ARIAL_ITALIC_10 = new Font("Arial", Font.ITALIC, 10);
-    private static final Font FONT_SERIF_BOLD_24 = new Font("Serif", Font.BOLD, 24);
-    private static final Font FONT_SERIF_BOLD_16 = new Font("Serif", Font.BOLD, 16);
 
     private static final Map<String, Font> fontCache = new HashMap<>();
 
@@ -83,6 +71,116 @@ public class BoardPanel extends JPanel {
             new Color(200, 80, 80), new Color(80, 180, 80),
             new Color(80, 120, 200), new Color(230, 200, 80)
     };
+
+    // ========== PERFORMANCE: Cached Colors ==========
+    // Sidebar colors
+    private static final Color SIDEBAR_GRADIENT_TOP = new Color(40, 40, 50, 240);
+    private static final Color SIDEBAR_GRADIENT_BOTTOM = new Color(30, 30, 40, 240);
+    private static final Color SIDEBAR_BORDER = new Color(100, 130, 180, 150);
+    private static final Color GOLD_COLOR = new Color(255, 215, 0);
+    private static final Color TIMER_COLOR = new Color(255, 200, 100);
+    private static final Color PLAYER_NAME_COLOR = new Color(255, 255, 150);
+    private static final Color STATE_TEXT_COLOR = new Color(180, 180, 200);
+    private static final Color TURN_TIMER_COLOR = new Color(255, 150, 150);
+    private static final Color HINT_COLOR = new Color(150, 150, 170);
+    private static final Color SECTION_HEADER_COLOR = new Color(180, 200, 255);
+
+    // Animation colors
+    private static final Color TURN_BANNER_GLOW = new Color(0, 180, 80, 120);
+    private static final Color TURN_BORDER_OUTER = new Color(50, 200, 100, 60);
+    private static final Color TURN_BORDER_INNER = new Color(100, 255, 150, 120);
+
+    // Keyboard selection colors
+    private static final Color KEYBOARD_HIGHLIGHT = new Color(255, 255, 100, 200);
+    private static final Color KEYBOARD_CORNER = new Color(255, 255, 0, 200);
+
+    // Push highlight colors
+    private static final Color PUSH_HIGHLIGHT = new Color(70, 130, 180, 100);
+    private static final Color PUSH_ARROW_COLOR = new Color(255, 255, 255, 200);
+
+    // Treasure glow colors
+    private static final Color TREASURE_GLOW_OUTER = new Color(255, 215, 0, 50);
+    private static final Color TREASURE_GLOW_INNER = new Color(255, 255, 0, 75);
+    private static final Color TREASURE_SHADOW = new Color(0, 0, 0, 80);
+    private static final Color TREASURE_BORDER = new Color(255, 215, 0, 200);
+    private static final Color TREASURE_NAME_BG = new Color(255, 215, 0, 240);
+    private static final Color TREASURE_NAME_BORDER_COLOR = new Color(200, 160, 0);
+    private static final Color TREASURE_NAME_BG_NORMAL = new Color(255, 255, 255, 220);
+    private static final Color TREASURE_NAME_BORDER_NORMAL = new Color(150, 120, 80, 180);
+    private static final Color TREASURE_TEXT_TARGET = new Color(0, 0, 0);
+    private static final Color TREASURE_TEXT_NORMAL = new Color(60, 40, 10);
+    private static final Color TREASURE_STAR_GLOW = new Color(255, 215, 0, 150);
+    private static final Color TREASURE_STAR_CENTER = new Color(255, 255, 100);
+    private static final Color TREASURE_STAR_BORDER = new Color(200, 150, 0);
+
+    // Player highlight colors
+    private static final Color PLAYER_GLOW_OUTER = new Color(0, 200, 255, 40);
+    private static final Color PLAYER_GLOW_INNER = new Color(100, 220, 255, 60);
+    private static final Color PLAYER_BORDER = new Color(0, 200, 255, 200);
+
+    // Button colors
+    private static final Color BUTTON_SHADOW = new Color(20, 20, 40, 180);
+
+    // Divider gradient colors
+    private static final Color DIVIDER_EDGE = new Color(100, 130, 180, 50);
+    private static final Color DIVIDER_CENTER = new Color(100, 130, 180, 180);
+
+    // AI button colors
+    private static final Color AI_THINKING = new Color(200, 150, 50, 180);
+    private static final Color AI_ENABLED = new Color(50, 150, 70, 200);
+    private static final Color AI_ENABLED_HOVER = new Color(60, 180, 80, 220);
+    private static final Color AI_DISABLED = new Color(60, 80, 110, 180);
+    private static final Color AI_DISABLED_HOVER = new Color(80, 100, 140, 200);
+    private static final Color AI_BORDER_THINKING = new Color(255, 200, 100, 255);
+    private static final Color AI_BORDER_ENABLED = new Color(100, 220, 120, 255);
+    private static final Color AI_BORDER_HOVER = new Color(120, 150, 200, 200);
+    private static final Color AI_BORDER_DISABLED = new Color(90, 110, 140, 150);
+    private static final Color AI_TEXT_THINKING = new Color(255, 220, 100);
+    private static final Color AI_TEXT_ENABLED = new Color(220, 255, 220);
+    private static final Color AI_TEXT_DISABLED = new Color(200, 200, 210);
+
+    // Bonus button colors
+    private static final Color BONUS_ACTIVE = new Color(100, 200, 100, 200);
+    private static final Color BONUS_HOVER = new Color(80, 120, 180, 200);
+    private static final Color BONUS_NORMAL = new Color(60, 60, 80, 200);
+    private static final Color BONUS_BORDER_ACTIVE = new Color(150, 255, 150, 255);
+    private static final Color BONUS_BORDER_HOVER = new Color(120, 180, 230, 200);
+    private static final Color BONUS_BORDER_NORMAL = new Color(100, 100, 120, 150);
+    private static final Color BONUS_HINT_COLOR = new Color(150, 255, 150);
+
+    // Target overlay colors
+    private static final Color TARGET_BORDER_OUTER = new Color(255, 215, 0, 200);
+    private static final Color TARGET_BORDER_INNER = new Color(255, 255, 0, 250);
+
+    // Player card colors
+    private static final Color CARD_BG_CURRENT = new Color(80, 100, 140, 200);
+    private static final Color CARD_BG_NORMAL = new Color(50, 50, 60, 180);
+    private static final Color CARD_BORDER = new Color(255, 220, 100);
+
+    // Treasure fallback colors
+    private static final Color FALLBACK_TREASURE_TARGET = new Color(255, 215, 0, 200);
+    private static final Color FALLBACK_TREASURE_NORMAL = new Color(180, 140, 70, 200);
+    private static final Color FALLBACK_TREASURE_BORDER = new Color(100, 70, 30);
+
+    // Options button colors
+    private static final Color OPTIONS_BG = new Color(50, 45, 40, 200);
+    private static final Color OPTIONS_BG_HOVER = new Color(80, 70, 55, 220);
+    private static final Color OPTIONS_BORDER = new Color(180, 150, 100, 180);
+    private static final Color OPTIONS_BORDER_HOVER = new Color(180, 150, 100, 255);
+    private static final Color OPTIONS_ICON = new Color(255, 215, 0);
+
+    // ========== PERFORMANCE: Cached BasicStrokes ==========
+    private static final BasicStroke STROKE_1 = new BasicStroke(1);
+    private static final BasicStroke STROKE_1_5 = new BasicStroke(1.5f);
+    private static final BasicStroke STROKE_2 = new BasicStroke(2);
+    private static final BasicStroke STROKE_3 = new BasicStroke(3);
+    private static final BasicStroke STROKE_4 = new BasicStroke(4);
+    private static final BasicStroke STROKE_6 = new BasicStroke(6);
+    private static final BasicStroke STROKE_8 = new BasicStroke(8);
+
+    // ========== PERFORMANCE: Cached rotated tile images ==========
+    private final Map<String, BufferedImage> rotatedTileCache = new HashMap<>();
+    private int cachedTileSize = -1;
 
     private final GameClient client;
     private final ToastManager toastManager;
@@ -158,6 +256,13 @@ public class BoardPanel extends JPanel {
     private javax.swing.Timer animationTimer;
     private static final int ANIMATION_FPS = 60;
     private static final int ANIMATION_INTERVAL = 1000 / ANIMATION_FPS; // ~16ms
+
+    // ========== PERFORMANCE: Pre-calculated sin values for animations ==========
+    // Updated once per frame in paintComponent to avoid repeated Math.sin() calls
+    private double cachedSinSlow;      // Period ~400ms - for slow pulsing effects
+    private double cachedSinMedium;    // Period ~300ms - for medium pulsing effects
+    private double cachedSinFast;      // Period ~200ms - for fast pulsing effects
+    private double cachedSinVeryFast;  // Period ~250ms - for banner pulsing
 
     private static final String EXTRA_KEY = "EXTRA";
 
@@ -318,18 +423,16 @@ public class BoardPanel extends JPanel {
                 if (isHovered) {
                     g2.setColor(new Color(80, 70, 55, 220));
                 } else {
-                    g2.setColor(new Color(50, 45, 40, 200));
+                    g2.setColor(OPTIONS_BG);
                 }
                 g2.fillRoundRect(0, 0, w, h, 10, 10);
 
-                // Border
-                g2.setColor(new Color(180, 150, 100, isHovered ? 255 : 180));
-                g2.setStroke(new BasicStroke(2));
+                g2.setColor(isHovered ? OPTIONS_BORDER_HOVER : OPTIONS_BORDER);
+                g2.setStroke(STROKE_2);
                 g2.drawRoundRect(1, 1, w - 2, h - 2, 10, 10);
 
-                // Icon
                 g2.setFont(FONT_SANSSERIF_BOLD_20);
-                g2.setColor(new Color(255, 215, 0));
+                g2.setColor(OPTIONS_ICON);
                 FontMetrics fm = g2.getFontMetrics();
                 String text = "⚙";
                 int textX = (w - fm.stringWidth(text)) / 2;
@@ -412,50 +515,19 @@ public class BoardPanel extends JPanel {
         treasureFileMapping.put(23, "Jug");
         treasureFileMapping.put(24, "Mouse");
 
-        // Load each treasure image
         for (var entry : treasureFileMapping.entrySet()) {
-            var treasureId = entry.getKey();
-            var fileName = entry.getValue();
-
-            var img = loadImage("/images/tiles/" + fileName + ".png");
-
+            var img = loadImage("/images/tiles/" + entry.getValue() + ".png");
             if (img != null) {
-                treasureImages.put(treasureId, img);
-                System.out.println("Loaded treasure: " + treasureId + " -> " + fileName);
-            } else {
-                System.err.println("Failed to load treasure: " + treasureId + " (file: " + fileName + ")");
+                treasureImages.put(entry.getKey(), img);
             }
         }
-
-        System.out.println("Loaded " + treasureImages.size() + "/24 treasure images");
     }
 
-
-    /**
-     * Lädt ALLE Varianten in tileVariants und initialisiert die tileBags.
-     */
     private void loadTileImages() {
-        // Nur noch je 1 Bild pro Typ
         tileImages.put("I", loadImage("/images/tiles/I_tile.png"));
         tileImages.put("L", loadImage("/images/tiles/L_tile.png"));
         tileImages.put("T", loadImage("/images/tiles/T_tile.png"));
-
-        // Bonus bag image
         bonusBagImage = loadImage("/images/tiles/BonusBag.png");
-
-        System.out.println("Loaded tile images:");
-        tileImages.forEach((type, img) -> {
-            if (img != null) {
-                System.out.println("  " + type + " tile");
-            } else {
-                System.err.println("  " + type + " tile FEHLT!");
-            }
-        });
-        if (bonusBagImage != null) {
-            System.out.println("  BonusBag loaded");
-        } else {
-            System.err.println("  BonusBag FEHLT!");
-        }
     }
 
     private void loadPlayerIcons() {
@@ -464,10 +536,6 @@ public class BoardPanel extends JPanel {
             playerIcons.add(img);
         }
     }
-
-    // =================================================================================
-    // TILE IMAGE INFO & DRAWING
-    // =================================================================================
 
     private static class TileImageInfo {
         final String type;
@@ -493,21 +561,15 @@ public class BoardPanel extends JPanel {
         EnumSet<Direction> dirs = EnumSet.noneOf(Direction.class);
         Collections.addAll(dirs, entrancesArray);
 
-        // I
         if (dirs.size() == 2) {
             if (dirs.contains(Direction.UP) && dirs.contains(Direction.DOWN)) return new TileImageInfo("I", 0);
             if (dirs.contains(Direction.LEFT) && dirs.contains(Direction.RIGHT)) return new TileImageInfo("I", 90);
-        }
-
-        // L
-        if (dirs.size() == 2) {
             if (dirs.contains(Direction.UP) && dirs.contains(Direction.RIGHT)) return new TileImageInfo("L", 0);
             if (dirs.contains(Direction.RIGHT) && dirs.contains(Direction.DOWN)) return new TileImageInfo("L", 90);
             if (dirs.contains(Direction.DOWN) && dirs.contains(Direction.LEFT)) return new TileImageInfo("L", 180);
             if (dirs.contains(Direction.LEFT) && dirs.contains(Direction.UP)) return new TileImageInfo("L", 270);
         }
 
-        // T
         if (dirs.size() == 3) {
             if (!dirs.contains(Direction.DOWN)) return new TileImageInfo("T", 0);
             if (!dirs.contains(Direction.LEFT)) return new TileImageInfo("T", 90);
@@ -518,32 +580,53 @@ public class BoardPanel extends JPanel {
         return null;
     }
 
-    private void drawRotatedImage(Graphics2D g2, Image img, int x, int y, int rotationDeg) {
-        if (img == null) return;
+    private BufferedImage getRotatedTileImage(BufferedImage srcImg, String type, int rotationDeg) {
+        if (srcImg == null) return null;
 
-        Graphics2D g = (Graphics2D) g2.create();
+        if (size != cachedTileSize) {
+            rotatedTileCache.clear();
+            cachedTileSize = size;
+        }
+
+        int normalizedRotation = ((rotationDeg % 360) + 360) % 360;
+        String cacheKey = type + "_" + normalizedRotation + "_" + size;
+
+        BufferedImage cached = rotatedTileCache.get(cacheKey);
+        if (cached != null) {
+            return cached;
+        }
+
+        double scale = 1.2;
+        int drawSize = (int) Math.round(size * scale);
+
+        BufferedImage rotated = new BufferedImage(size, size, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g = rotated.createGraphics();
         try {
             g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
             g.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
             g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            Shape oldClip = g.getClip();
-            g.setClip(new Rectangle(x, y, size, size));
 
-            double scale = 1.2;
-            int drawSize = (int) Math.round(size * scale);
-
-            int drawX = x - (drawSize - size) / 2;
-            int drawY = y - (drawSize - size) / 2;
-
+            int drawX = -(drawSize - size) / 2;
+            int drawY = -(drawSize - size) / 2;
             int cx = drawX + drawSize / 2;
             int cy = drawY + drawSize / 2;
 
-            g.rotate(Math.toRadians(rotationDeg), cx, cy);
-            g.drawImage(img, drawX, drawY, drawSize, drawSize, null);
-
-            g.setClip(oldClip);
+            g.rotate(Math.toRadians(normalizedRotation), cx, cy);
+            g.drawImage(srcImg, drawX, drawY, drawSize, drawSize, null);
         } finally {
             g.dispose();
+        }
+
+        rotatedTileCache.put(cacheKey, rotated);
+        return rotated;
+    }
+
+    private void drawRotatedImage(Graphics2D g2, BufferedImage img, String type, int x, int y, int rotationDeg) {
+        if (img == null) return;
+
+        BufferedImage rotatedImg = getRotatedTileImage(img, type, rotationDeg);
+        if (rotatedImg != null) {
+            g2.drawImage(rotatedImg, x, y, null);
         }
     }
 
@@ -608,16 +691,9 @@ public class BoardPanel extends JPanel {
                     return;
                 }
 
-                // Check bonus button clicks first
                 if (handleBonusButtonClick(e.getPoint())) return;
-
-                // Check AI Move button click
                 if (handleAiButtonClick(e.getPoint())) return;
-
-                // Handle active bonus mode clicks
-                if (activeBonusMode != null) {
-                    if (handleActiveBonusModeClick(e.getPoint())) return;
-                }
+                if (activeBonusMode != null && handleActiveBonusModeClick(e.getPoint())) return;
 
                 if (handleArrowClick(e.getPoint())) return;
                 handleTileClick(e.getPoint());
@@ -635,7 +711,6 @@ public class BoardPanel extends JPanel {
                     }
                 }
 
-                // Track hovered bonus button
                 hoveredBonusIndex = -1;
                 for (int i = 0; i < bonusButtonBounds.size(); i++) {
                     if (bonusButtonBounds.get(i).contains(e.getPoint())) {
@@ -644,7 +719,6 @@ public class BoardPanel extends JPanel {
                     }
                 }
 
-                // Track hovered AI button
                 aiMoveButtonHovered = aiMoveButtonBounds != null && aiMoveButtonBounds.contains(e.getPoint());
 
                 repaint();
@@ -653,7 +727,6 @@ public class BoardPanel extends JPanel {
     }
 
     private void setupKeyboardListener() {
-        // Make panel focusable to receive keyboard events
         setFocusable(true);
         requestFocusInWindow();
 
@@ -665,7 +738,6 @@ public class BoardPanel extends JPanel {
             }
         });
 
-        // Request focus when clicked
         addMouseListener(new MouseAdapter() {
             @Override
             public void mousePressed(MouseEvent e) {
@@ -681,32 +753,27 @@ public class BoardPanel extends JPanel {
         switch (e.getKeyCode()) {
             // Rotation controls
             case java.awt.event.KeyEvent.VK_R, java.awt.event.KeyEvent.VK_E -> {
-                // Rotate spare tile clockwise
                 if (currentTurnState == labyrinth.contracts.models.TurnState.WAITING_FOR_PUSH) {
                     soundEffects.playRotate();
                     client.sendRotateTile();
-                    showTargetBanner = false; // Hide banner after first action
+                    showTargetBanner = false;
                     toastManager.showInfo("ROTATE", "Extra-Tile gedreht", "R/E: im Uhrzeigersinn, Q: gegen Uhrzeigersinn");
                     inputLocked = true;
                 }
             }
             case java.awt.event.KeyEvent.VK_Q -> {
-                // Rotate spare tile counter-clockwise (3 times clockwise = 1 counter-clockwise)
                 if (currentTurnState == labyrinth.contracts.models.TurnState.WAITING_FOR_PUSH) {
                     soundEffects.playRotate();
-                    // Send 3 rotate commands for counter-clockwise
                     client.sendRotateTile();
                     try { Thread.sleep(50); } catch (InterruptedException ignored) {}
                     client.sendRotateTile();
                     try { Thread.sleep(50); } catch (InterruptedException ignored) {}
                     client.sendRotateTile();
-                    showTargetBanner = false; // Hide banner after first action
+                    showTargetBanner = false;
                     toastManager.showInfo("ROTATE", "Extra-Tile gedreht", "Gegen Uhrzeigersinn gedreht");
                     inputLocked = true;
                 }
             }
-
-            // Arrow key navigation
             case java.awt.event.KeyEvent.VK_UP -> {
                 keyboardNavigationActive = true;
                 selectedRow = Math.max(0, selectedRow - 1);
@@ -727,20 +794,16 @@ public class BoardPanel extends JPanel {
                 selectedCol = Math.min(board.getWidth() - 1, selectedCol + 1);
                 repaint();
             }
-
-            // Confirm selection with Enter or Space
             case java.awt.event.KeyEvent.VK_ENTER, java.awt.event.KeyEvent.VK_SPACE -> {
                 if (keyboardNavigationActive && currentTurnState == labyrinth.contracts.models.TurnState.WAITING_FOR_MOVE) {
                     client.sendMovePawn(selectedRow, selectedCol);
-                    showTargetBanner = false; // Hide banner after first action
+                    showTargetBanner = false;
                     inputLocked = true;
                     keyboardNavigationActive = false;
                 } else if (currentTurnState == labyrinth.contracts.models.TurnState.WAITING_FOR_PUSH) {
                     toastManager.showInfo("INFO", "Hinweis", "Erst Tile einschieben, dann Figur bewegen");
                 }
             }
-
-            // Escape - cancel bonus mode or show options
             case java.awt.event.KeyEvent.VK_ESCAPE -> {
                 if (activeBonusMode != null) {
                     cancelBonusMode();
@@ -748,16 +811,8 @@ public class BoardPanel extends JPanel {
                     showOptionsDialog();
                 }
             }
-
-            // P - pause/options
-            case java.awt.event.KeyEvent.VK_P -> {
-                showOptionsDialog();
-            }
-
-            // Tab or H - toggle keyboard navigation help
-            case java.awt.event.KeyEvent.VK_TAB, java.awt.event.KeyEvent.VK_H -> {
-                showKeyboardHelp();
-            }
+            case java.awt.event.KeyEvent.VK_P -> showOptionsDialog();
+            case java.awt.event.KeyEvent.VK_TAB, java.awt.event.KeyEvent.VK_H -> showKeyboardHelp();
         }
     }
 
@@ -799,10 +854,8 @@ public class BoardPanel extends JPanel {
                     case RIGHT -> "nach rechts";
                 };
                 toastManager.showInfo("PUSH", "Einschub", rowCol + " wird " + directionStr + " geschoben");
-
-                // Send command to server
                 client.sendPushTile(arrow.index, arrow.direction);
-                showTargetBanner = false; // Hide banner after first action
+                showTargetBanner = false;
                 inputLocked = true;
                 return true;
             }
@@ -820,7 +873,7 @@ public class BoardPanel extends JPanel {
                 if (tileRect.contains(p)) {
                     soundEffects.playMove();
                     client.sendMovePawn(row, col);
-                    showTargetBanner = false; // Hide banner after first action
+                    showTargetBanner = false;
                     inputLocked = true;
                     break outer;
                 }
@@ -828,21 +881,12 @@ public class BoardPanel extends JPanel {
         }
     }
 
-    // =================================================================================
-    // BONUS HANDLING
-    // =================================================================================
-
-    /**
-     * Handle click on bonus buttons in the sidebar.
-     * @return true if a bonus button was clicked
-     */
     private boolean handleBonusButtonClick(Point p) {
         if (currentPlayer == null) return false;
 
         List<BonusType> bonuses = currentPlayer.getAvailableBonuses();
         if (bonuses.isEmpty()) return false;
 
-        // Check if it's the local player's turn
         if (!isLocalPlayerTurn()) {
             for (int i = 0; i < bonusButtonBounds.size() && i < bonuses.size(); i++) {
                 if (bonusButtonBounds.get(i).contains(p)) {
@@ -876,9 +920,6 @@ public class BoardPanel extends JPanel {
         return false;
     }
 
-    /**
-     * Check if it's the local player's turn.
-     */
     private boolean isLocalPlayerTurn() {
         if (board == null || currentPlayer == null || players == null || players.isEmpty()) {
             return false;
@@ -893,15 +934,10 @@ public class BoardPanel extends JPanel {
                currentTurnPlayer.getId().equals(currentPlayer.getId());
     }
 
-    /**
-     * Handle click on the AI toggle button.
-     * @return true if the AI button was clicked
-     */
     private boolean handleAiButtonClick(Point p) {
         if (aiMoveButtonBounds == null || !aiMoveButtonBounds.contains(p)) {
             return false;
         }
-        // Toggle is always allowed (even when not your turn or AI is thinking)
         if (onAiToggleRequested != null) {
             soundEffects.playMove();
             onAiToggleRequested.run();
@@ -909,38 +945,28 @@ public class BoardPanel extends JPanel {
         return true;
     }
 
-    /**
-     * Activate a bonus - either immediately send command or enter selection mode.
-     */
     private void handleBonusActivation(BonusType bonus) {
         soundEffects.playMove();
 
         switch (bonus) {
             case PUSH_TWICE -> {
-                // PUSH_TWICE activates immediately - server handles the double push state
                 client.sendUsePushTwice();
                 toastManager.showInfo("BONUS", "Push Twice aktiviert",
                         "Du kannst jetzt zweimal hintereinander schieben!");
                 inputLocked = true;
             }
             case BEAM -> {
-                // Enter beam selection mode - player clicks on target tile
                 activeBonusMode = BonusType.BEAM;
                 toastManager.showInfo("BONUS", "Beam aktiviert",
                         "Klicke auf ein beliebiges Feld um dich dorthin zu teleportieren!");
             }
-            case SWAP -> {
-                // Show player selection dialog for swap
-                showSwapPlayerDialog();
-            }
+            case SWAP -> showSwapPlayerDialog();
             case PUSH_FIXED -> {
-                // Check if there are any valid fixed rows/columns to push
                 if (!hasValidPushFixedTargets()) {
                     toastManager.showError("BONUS", "Nicht möglich",
                             "Keine fixierten Reihen/Spalten zum Schieben verfügbar auf diesem Spielfeld!");
                     return;
                 }
-                // Enter push fixed mode - player clicks on an arrow to push fixed row/column
                 activeBonusMode = BonusType.PUSH_FIXED;
                 toastManager.showInfo("BONUS", "Push Fixed aktiviert",
                         "Klicke auf einen goldenen Pfeil! (Rechtsklick oder ESC zum Abbrechen)");
@@ -949,16 +975,11 @@ public class BoardPanel extends JPanel {
         repaint();
     }
 
-    /**
-     * Handle clicks when a bonus selection mode is active.
-     * @return true if the click was handled by the bonus mode
-     */
     private boolean handleActiveBonusModeClick(Point p) {
         if (activeBonusMode == null) return false;
 
         switch (activeBonusMode) {
             case BEAM -> {
-                // Check if clicked on a tile
                 for (int row = 0; row < board.getHeight(); row++) {
                     for (int col = 0; col < board.getWidth(); col++) {
                         Rectangle tileRect = new Rectangle(xOffset + col * size, yOffset + row * size, size, size);
@@ -975,7 +996,6 @@ public class BoardPanel extends JPanel {
                 }
             }
             case PUSH_FIXED -> {
-                // Check if clicked on an arrow button - only fixed arrows are valid for this bonus
                 for (ArrowButton arrow : arrowButtons) {
                     if (arrow.contains(p)) {
                         if (!arrow.isFixed) {
@@ -995,23 +1015,15 @@ public class BoardPanel extends JPanel {
                     }
                 }
             }
-            default -> {
-                // Other bonus modes don't need click handling here
-            }
+            default -> {}
         }
-
-        // Right-click or ESC to cancel bonus mode
         return false;
     }
 
-    /**
-     * Show dialog to select a player for SWAP bonus.
-     */
     private void showSwapPlayerDialog() {
         List<Player> allPlayers = (players != null && !players.isEmpty()) ? players :
                 (board != null && board.getPlayers() != null) ? board.getPlayers() : List.of();
 
-        // Filter out current player
         List<Player> otherPlayers = new ArrayList<>();
         for (Player p : allPlayers) {
             if (!p.getId().equals(currentPlayer.getId())) {
@@ -1189,32 +1201,14 @@ public class BoardPanel extends JPanel {
         }
     }
 
-    /**
-     * Check if there are any valid fixed rows/columns that can be pushed with PUSH_FIXED bonus.
-     * Valid targets are rows/columns with even index (fixed tiles) that are NOT on the edge.
-     */
     private boolean hasValidPushFixedTargets() {
         if (board == null) return false;
-
         int rows = board.getHeight();
         int cols = board.getWidth();
-
-        // Check for valid fixed rows (even index, not edge)
-        for (int row = 2; row < rows - 1; row += 2) {
-            return true; // Found at least one valid row
-        }
-
-        // Check for valid fixed columns (even index, not edge)
-        for (int col = 2; col < cols - 1; col += 2) {
-            return true; // Found at least one valid column
-        }
-
+        for (int row = 2; row < rows - 1; row += 2) return true;
+        for (int col = 2; col < cols - 1; col += 2) return true;
         return false;
     }
-
-    // =================================================================================
-    // PAINTING
-    // =================================================================================
 
     @Override
     protected void paintComponent(Graphics g) {
@@ -1225,6 +1219,12 @@ public class BoardPanel extends JPanel {
             g.drawImage(backgroundImage, 0, 0, getWidth(), getHeight(), this);
         }
 
+        long time = System.currentTimeMillis();
+        cachedSinSlow = Math.sin(time / 400.0);
+        cachedSinMedium = Math.sin(time / 300.0);
+        cachedSinFast = Math.sin(time / 200.0);
+        cachedSinVeryFast = Math.sin(time / 250.0);
+
         Graphics2D g2 = (Graphics2D) g.create();
         try {
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
@@ -1232,42 +1232,31 @@ public class BoardPanel extends JPanel {
             g2.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_SPEED);
 
             calculateLayoutMetrics();
-            drawYourTurnBoardHighlight(g2); // Draw glowing border when it's your turn
+            drawYourTurnBoardHighlight(g2);
             drawBoardGrid(g2);
             createAndDrawArrowButtons(g2);
             drawExtraTile(g2);
             drawSidebar(g2);
             drawCurrentTargetOverlay(g2);
-            drawYourTurnBanner(g2); // Draw "Your Turn" banner
+            drawYourTurnBanner(g2);
         } finally {
             g2.dispose();
         }
     }
 
-    /**
-     * Draw a "DEIN ZUG" indicator in the sidebar area when it's the local player's turn.
-     * Positioned to not obstruct the game board.
-     */
     private void drawYourTurnBanner(Graphics2D g2) {
         if (!isLocalPlayerTurn()) return;
 
-        long time = System.currentTimeMillis();
-        int pulseAlpha = 180 + (int) (75 * Math.sin(time / 250.0));
-
-        // Scale based on sidebar width (which scales with window size)
+        int pulseAlpha = 180 + (int) (75 * cachedSinVeryFast);
         float scale = Math.max(0.8f, cachedSidebarWidth / 320f);
-
-        // Scaled banner dimensions
         int bannerWidth = Math.round(cachedSidebarWidth - 20);
         int bannerHeight = Math.round(26 * scale);
         int bannerX = cachedSidebarX;
-        int bannerY = 60; // Below options button
+        int bannerY = 60;
 
-        // Glowing background
         g2.setColor(new Color(0, 180, 80, Math.min(pulseAlpha - 30, 150)));
         g2.fillRoundRect(bannerX - 2, bannerY - 2, bannerWidth + 4, bannerHeight + 4, 10, 10);
 
-        // Main background
         GradientPaint gradient = new GradientPaint(
                 bannerX, bannerY, new Color(30, 160, 60, pulseAlpha),
                 bannerX, bannerY + bannerHeight, new Color(20, 120, 40, pulseAlpha)
@@ -1275,12 +1264,10 @@ public class BoardPanel extends JPanel {
         g2.setPaint(gradient);
         g2.fillRoundRect(bannerX, bannerY, bannerWidth, bannerHeight, 8, 8);
 
-        // Border
         g2.setColor(new Color(100, 255, 150, pulseAlpha));
-        g2.setStroke(new BasicStroke(1.5f));
+        g2.setStroke(STROKE_1_5);
         g2.drawRoundRect(bannerX, bannerY, bannerWidth, bannerHeight, 8, 8);
 
-        // Scaled font
         int fontSize = Math.round(12 * scale);
         g2.setFont(getCachedFont("SansSerif", Font.BOLD, fontSize));
         g2.setColor(Color.WHITE);
@@ -1291,29 +1278,21 @@ public class BoardPanel extends JPanel {
         g2.drawString(text, textX, textY);
     }
 
-    /**
-     * Draw a glowing border around the board when it's the local player's turn.
-     */
     private void drawYourTurnBoardHighlight(Graphics2D g2) {
         if (!isLocalPlayerTurn()) return;
 
-        long time = System.currentTimeMillis();
-        int pulseAlpha = 80 + (int) (40 * Math.sin(time / 400.0));
-
-        // Calculate board bounds
+        int pulseAlpha = 80 + (int) (40 * cachedSinSlow);
         int boardX = xOffset - 10;
         int boardY = yOffset - 10;
         int boardWidth = board.getWidth() * size + 20;
         int boardHeight = board.getHeight() * size + 20;
 
-        // Outer glow
         g2.setColor(new Color(50, 200, 100, pulseAlpha / 2));
-        g2.setStroke(new BasicStroke(8));
+        g2.setStroke(STROKE_8);
         g2.drawRoundRect(boardX - 4, boardY - 4, boardWidth + 8, boardHeight + 8, 20, 20);
 
-        // Inner glow
         g2.setColor(new Color(100, 255, 150, pulseAlpha));
-        g2.setStroke(new BasicStroke(4));
+        g2.setStroke(STROKE_4);
         g2.drawRoundRect(boardX, boardY, boardWidth, boardHeight, 15, 15);
     }
 
@@ -1325,10 +1304,6 @@ public class BoardPanel extends JPanel {
     private int cachedWindowHeight = 0;
     private boolean layoutDirty = true;
 
-    /**
-     * Marks layout as dirty, requiring recalculation on next paint.
-     * Called automatically on component resize.
-     */
     public void invalidateLayout() {
         layoutDirty = true;
     }
@@ -1413,15 +1388,15 @@ public class BoardPanel extends JPanel {
     }
 
     private void drawKeyboardSelectionHighlight(Graphics2D g2, int x, int y) {
-        long time = System.currentTimeMillis();
-        int pulseAlpha = 150 + (int) (50 * Math.sin(time / 200.0));
+        // Use pre-calculated sin value
+        int pulseAlpha = 150 + (int) (50 * cachedSinFast);
 
         g2.setColor(new Color(255, 255, 100, pulseAlpha));
-        g2.setStroke(new BasicStroke(4));
+        g2.setStroke(STROKE_4);
         g2.drawRoundRect(x - 2, y - 2, size + 4, size + 4, 10, 10);
 
         // Draw corner markers
-        g2.setColor(new Color(255, 255, 0, 200));
+        g2.setColor(KEYBOARD_CORNER);
         int cornerSize = 10;
         // Top-left
         g2.fillRect(x - 2, y - 2, cornerSize, 3);
@@ -1484,7 +1459,7 @@ public class BoardPanel extends JPanel {
         if (direction == null) return;
 
         g2.setColor(new Color(255, 255, 255, (int) (200 * alpha)));
-        g2.setStroke(new BasicStroke(3));
+        g2.setStroke(STROKE_3);
 
         if (row >= 0) {
             // Draw arrows along the row
@@ -1537,10 +1512,9 @@ public class BoardPanel extends JPanel {
         boolean drewImage = false;
 
         if (info != null) {
-            // ✅ Einfach: Hole Bild direkt aus Map
             BufferedImage img = getTileImage(info.type);
             if (img != null) {
-                drawRotatedImage(g2, img, x, y, info.rotation);
+                drawRotatedImage(g2, img, info.type, x, y, info.rotation);
                 drewImage = true;
             }
         }
@@ -1603,39 +1577,30 @@ public class BoardPanel extends JPanel {
     private void drawTreasureOnTile(Graphics2D g2, Treasure treasure, int centerX, int centerY) {
         if (treasure == null) return;
 
-        // Check if this is the current player's target treasure
         boolean isCurrentTarget = false;
         if (currentPlayer != null) {
             Treasure currentTarget = currentPlayer.getCurrentTargetTreasure();
-            isCurrentTarget = currentTarget != null
-                    && currentTarget.getId() == treasure.getId();
+            isCurrentTarget = currentTarget != null && currentTarget.getId() == treasure.getId();
         }
 
-
         if (isCurrentTarget) {
-            long time = System.currentTimeMillis();
-            int glowRadius = 28 + (int) (8 * Math.sin(time / 300.0));
-            int glowAlpha = 120 + (int) (60 * Math.sin(time / 300.0));
+            int glowRadius = 28 + (int) (8 * cachedSinMedium);
+            int glowAlpha = 120 + (int) (60 * cachedSinMedium);
 
-            // Outer glow
             g2.setColor(new Color(255, 215, 0, Math.min(glowAlpha / 2, 100)));
             g2.fillOval(centerX - glowRadius, centerY - glowRadius - 8, glowRadius * 2, glowRadius * 2);
 
-            // Inner glow
             g2.setColor(new Color(255, 255, 0, Math.min(glowAlpha, 150)));
             g2.fillOval(centerX - glowRadius / 2, centerY - glowRadius / 2 - 8, glowRadius, glowRadius);
         }
 
         BufferedImage treasureImg = treasureImages.get(treasure.getId());
         if (treasureImg != null) {
-            // Calculate image size (scaled based on tile size, but not too large)
-            int imgSize = Math.min((int)(size * 0.45), 48); // Max 48px, ~45% of tile
+            int imgSize = Math.min((int)(size * 0.45), 48);
 
-            // Draw subtle shadow for depth
-            g2.setColor(new Color(0, 0, 0, 80));
+            g2.setColor(TREASURE_SHADOW);
             g2.fillOval(centerX - imgSize / 2 + 2, centerY - imgSize / 2 + 2 - 8, imgSize, imgSize);
 
-            // Draw actual treasure image
             g2.drawImage(treasureImg,
                     centerX - imgSize / 2,
                     centerY - imgSize / 2 - 12,
@@ -1643,26 +1608,21 @@ public class BoardPanel extends JPanel {
                     imgSize,
                     null);
 
-            // Add extra border highlight for current target
             if (isCurrentTarget) {
-                g2.setColor(new Color(255, 215, 0, 200));
-                g2.setStroke(new BasicStroke(3));
+                g2.setColor(TREASURE_BORDER);
+                g2.setStroke(STROKE_3);
                 g2.drawOval(centerX - imgSize / 2 - 2, centerY - imgSize / 2 - 14, imgSize + 4, imgSize + 4);
             }
         } else {
-            // ⚠️ Fallback if image missing: Simple colored circle with first letter
             int fallbackSize = Math.min((int)(size * 0.4), 40);
 
-            // Circle background
-            g2.setColor(isCurrentTarget ? new Color(255, 215, 0, 200) : new Color(180, 140, 70, 200));
+            g2.setColor(isCurrentTarget ? FALLBACK_TREASURE_TARGET : FALLBACK_TREASURE_NORMAL);
             g2.fillOval(centerX - fallbackSize / 2, centerY - fallbackSize / 2 - 12, fallbackSize, fallbackSize);
 
-            // Border
-            g2.setColor(new Color(100, 70, 30));
-            g2.setStroke(new BasicStroke(2));
+            g2.setColor(FALLBACK_TREASURE_BORDER);
+            g2.setStroke(STROKE_2);
             g2.drawOval(centerX - fallbackSize / 2, centerY - fallbackSize / 2 - 12, fallbackSize, fallbackSize);
 
-            // First letter
             g2.setFont(getCachedFont("Arial", Font.BOLD, fallbackSize / 2));
             g2.setColor(Color.WHITE);
             String letter = TreasureUtils.getLocalName(treasure.getId()).substring(0, 1);
@@ -1673,12 +1633,10 @@ public class BoardPanel extends JPanel {
             System.err.println("Using fallback for treasure: " + TreasureUtils.getLocalName(treasure.getId()));
         }
 
-        // Draw treasure name UNDER the image with background
         g2.setFont(isCurrentTarget ? FONT_ARIAL_BOLD_11 : FONT_ARIAL_BOLD_9);
         FontMetrics fm = g2.getFontMetrics();
         String displayName = TreasureUtils.getLocalName(treasure.getId());
 
-        // Shorten long names
         if (displayName.length() > 10) {
             displayName = displayName.substring(0, 9) + "…";
         }
@@ -1687,53 +1645,41 @@ public class BoardPanel extends JPanel {
         int textHeight = fm.getHeight();
         int boxY = centerY + 12;
 
-        // Background box for better readability
         if (isCurrentTarget) {
-            // Gold background for target
-            g2.setColor(new Color(255, 215, 0, 240));
+            g2.setColor(TREASURE_NAME_BG);
             g2.fillRoundRect(centerX - textWidth / 2 - 5, boxY - 2, textWidth + 10, textHeight, 6, 6);
 
-            // Border
-            g2.setColor(new Color(200, 160, 0));
-            g2.setStroke(new BasicStroke(2));
+            g2.setColor(TREASURE_NAME_BORDER_COLOR);
+            g2.setStroke(STROKE_2);
             g2.drawRoundRect(centerX - textWidth / 2 - 5, boxY - 2, textWidth + 10, textHeight, 6, 6);
 
-            // Text
-            g2.setColor(new Color(0, 0, 0));
+            g2.setColor(TREASURE_TEXT_TARGET);
         } else {
-            // White/transparent background for non-target
-            g2.setColor(new Color(255, 255, 255, 220));
+            g2.setColor(TREASURE_NAME_BG_NORMAL);
             g2.fillRoundRect(centerX - textWidth / 2 - 4, boxY - 1, textWidth + 8, textHeight - 2, 5, 5);
 
-            // Subtle border
-            g2.setColor(new Color(150, 120, 80, 180));
-            g2.setStroke(new BasicStroke(1));
+            g2.setColor(TREASURE_NAME_BORDER_NORMAL);
+            g2.setStroke(STROKE_1);
             g2.drawRoundRect(centerX - textWidth / 2 - 4, boxY - 1, textWidth + 8, textHeight - 2, 5, 5);
 
-            // Text
-            g2.setColor(new Color(60, 40, 10));
+            g2.setColor(TREASURE_TEXT_NORMAL);
         }
 
         g2.drawString(displayName, centerX - textWidth / 2, boxY + fm.getAscent() - 2);
 
-        // Target indicator above the treasure - use golden circle instead of emoji
         if (isCurrentTarget) {
-            // Draw golden star indicator
             int starSize = 16;
             int starX = centerX - starSize / 2;
             int starY = centerY - 40;
 
-            // Glow effect
-            g2.setColor(new Color(255, 215, 0, 150));
+            g2.setColor(TREASURE_STAR_GLOW);
             g2.fillOval(starX - 4, starY - 4, starSize + 8, starSize + 8);
 
-            // Star center
-            g2.setColor(new Color(255, 255, 100));
+            g2.setColor(TREASURE_STAR_CENTER);
             g2.fillOval(starX, starY, starSize, starSize);
 
-            // Border
-            g2.setColor(new Color(200, 150, 0));
-            g2.setStroke(new BasicStroke(2));
+            g2.setColor(TREASURE_STAR_BORDER);
+            g2.setStroke(STROKE_2);
             g2.drawOval(starX, starY, starSize, starSize);
         }
     }
@@ -1795,18 +1741,13 @@ public class BoardPanel extends JPanel {
             BufferedImage icon = (i < playerIcons.size()) ? playerIcons.get(i) : null;
             int iconSize = count > 1 ? (int) (size * 0.25) : (int) (size * 0.4);
 
-            // Draw glowing highlight around local player (similar to target treasure)
             if (isLocalPlayer) {
-                long time = System.currentTimeMillis();
-                // Make glow radius larger than icon size to fully surround the avatar
-                int glowRadius = iconSize / 2 + 12 + (int) (4 * Math.sin(time / 300.0));
-                int glowAlpha = 120 + (int) (60 * Math.sin(time / 300.0));
+                int glowRadius = iconSize / 2 + 12 + (int) (4 * cachedSinMedium);
+                int glowAlpha = 120 + (int) (60 * cachedSinMedium);
 
-                // Outer glow - cyan/blue for player (larger)
                 g2.setColor(new Color(0, 200, 255, Math.min(glowAlpha / 2, 80)));
                 g2.fillOval(px - glowRadius - 4, py - glowRadius - 4, (glowRadius + 4) * 2, (glowRadius + 4) * 2);
 
-                // Inner glow (surrounds avatar fully)
                 g2.setColor(new Color(100, 220, 255, Math.min(glowAlpha, 120)));
                 g2.fillOval(px - glowRadius, py - glowRadius, glowRadius * 2, glowRadius * 2);
             }
@@ -1833,10 +1774,9 @@ public class BoardPanel extends JPanel {
                         drawH,
                         null);
 
-                // Draw border around local player icon
                 if (isLocalPlayer) {
-                    g2.setColor(new Color(0, 200, 255, 200));
-                    g2.setStroke(new BasicStroke(3));
+                    g2.setColor(PLAYER_BORDER);
+                    g2.setStroke(STROKE_3);
                     int borderSize = Math.max(drawW, drawH);
                     g2.drawOval(px - borderSize / 2 - 2, py - borderSize / 2 - 2, borderSize + 4, borderSize + 4);
                 }
@@ -1860,7 +1800,7 @@ public class BoardPanel extends JPanel {
 
     private void createAndDrawArrowButtons(Graphics2D g2) {
         arrowButtons.clear();
-        g2.setStroke(new BasicStroke(2));
+        g2.setStroke(STROKE_2);
 
         int rows = board.getHeight();
         int cols = board.getWidth();
@@ -2024,23 +1964,23 @@ public class BoardPanel extends JPanel {
         // Background panel with gradient
         GradientPaint gradient = new GradientPaint(
                 sidebarX, sidebarY,
-                new Color(40, 40, 50, 240),
+                SIDEBAR_GRADIENT_TOP,
                 sidebarX, getHeight(),
-                new Color(30, 30, 40, 240)
+                SIDEBAR_GRADIENT_BOTTOM
         );
         g2.setPaint(gradient);
         g2.fillRoundRect(sidebarX, sidebarY, sidebarWidth, getHeight() - sidebarY - 20, 15, 15);
 
         // Border with glow effect
-        g2.setColor(new Color(100, 130, 180, 150));
-        g2.setStroke(new BasicStroke(3));
+        g2.setColor(SIDEBAR_BORDER);
+        g2.setStroke(STROKE_3);
         g2.drawRoundRect(sidebarX, sidebarY, sidebarWidth, getHeight() - sidebarY - 20, 15, 15);
 
         int currentY = sidebarY + padding;
 
         // Header
         g2.setFont(getCachedFont("Arial", Font.BOLD, headerFontSize));
-        g2.setColor(new Color(255, 215, 0)); // Gold color
+        g2.setColor(GOLD_COLOR);
         currentY += Math.round(35 * sidebarScale);
 
         // Game timer section
@@ -2049,7 +1989,7 @@ public class BoardPanel extends JPanel {
             currentY += Math.round(22 * sidebarScale);
 
             g2.setFont(getCachedFont("Arial", Font.BOLD, timerFontSize));
-            g2.setColor(new Color(255, 200, 100));
+            g2.setColor(TIMER_COLOR);
             String timeRemaining = formatTimeRemaining(gameEndTime);
             g2.drawString(timeRemaining, sidebarX + padding + scaledPadding, currentY);
             currentY += Math.round(25 * sidebarScale);
@@ -2071,7 +2011,7 @@ public class BoardPanel extends JPanel {
 
             // Player name with larger font
             g2.setFont(getCachedFont("Arial", Font.BOLD, playerNameFontSize));
-            g2.setColor(new Color(255, 255, 150));
+            g2.setColor(PLAYER_NAME_COLOR);
             String turnText = currentTurnPlayer.getName();
             if (currentTurnPlayer.isAiControlled()) {
                 turnText += " [AI]";
@@ -2081,7 +2021,7 @@ public class BoardPanel extends JPanel {
 
             // Turn state - use server TurnState if available, otherwise client MoveState
             g2.setFont(getCachedFont("Arial", Font.PLAIN, stateFontSize));
-            g2.setColor(new Color(180, 180, 200));
+            g2.setColor(STATE_TEXT_COLOR);
             String stateText;
             if (currentTurnState != null) {
                 stateText = switch (currentTurnState) {
@@ -2099,7 +2039,7 @@ public class BoardPanel extends JPanel {
             if (turnEndTime != null) {
                 String turnTime = formatTimeRemaining(turnEndTime);
                 g2.setFont(getCachedFont("Arial", Font.BOLD, turnTimerFontSize));
-                g2.setColor(new Color(255, 150, 150));
+                g2.setColor(TURN_TIMER_COLOR);
                 g2.drawString("Zeit: " + turnTime, sidebarX + padding + scaledPadding, currentY);
                 currentY += Math.round(20 * sidebarScale);
             } else {
@@ -2109,7 +2049,7 @@ public class BoardPanel extends JPanel {
             // Hint for staying in place
             if (currentTurnState != null && currentTurnState == labyrinth.contracts.models.TurnState.WAITING_FOR_MOVE) {
                 g2.setFont(getCachedFont("Arial", Font.ITALIC, hintFontSize));
-                g2.setColor(new Color(150, 150, 170));
+                g2.setColor(HINT_COLOR);
                 g2.drawString("(Click your tile to stay in place)", sidebarX + padding + scaledPadding, currentY);
                 currentY += Math.round(15 * sidebarScale);
             }
@@ -2155,29 +2095,22 @@ public class BoardPanel extends JPanel {
             drawSectionHeader(g2, "DEINE ZIELE", sidebarX + padding, currentY, sidebarScale);
             currentY += Math.round(22 * sidebarScale);
 
-            // Draw CURRENT TARGET treasure prominently
             Treasure currentTarget = currentPlayer.getCurrentTargetTreasure();
 
-            // Current target box with pulsing effect
-            long time = System.currentTimeMillis();
-            int pulseAlpha = 200 + (int) (55 * Math.sin(time / 400.0));
+            int pulseAlpha = 200 + (int) (55 * cachedSinSlow);
 
-            // Background box for current target - scaled height
             int boxHeight = Math.round(70 * sidebarScale);
             g2.setColor(new Color(255, 215, 0, pulseAlpha));
             g2.fillRoundRect(sidebarX + padding + 5, currentY - Math.round(15 * sidebarScale), sidebarWidth - 2 * padding - 10, boxHeight, 10, 10);
 
-            // Border
             g2.setColor(new Color(255, 255, 255, 200));
-            g2.setStroke(new BasicStroke(2));
+            g2.setStroke(STROKE_2);
             g2.drawRoundRect(sidebarX + padding + 5, currentY - Math.round(15 * sidebarScale), sidebarWidth - 2 * padding - 10, boxHeight, 10, 10);
 
-            // "AKTUELLES ZIEL" label
             g2.setFont(getCachedFont("Arial", Font.BOLD, Math.round(10 * sidebarScale)));
             g2.setColor(new Color(100, 70, 0));
             g2.drawString("AKTUELLES ZIEL:", sidebarX + padding + Math.round(15 * sidebarScale), currentY - 2);
 
-            // Draw treasure image - scaled
             BufferedImage treasureImg = treasureImages.get(currentTarget.getId());
             int imgSize = Math.round(40 * sidebarScale);
             int imgX = sidebarX + padding + Math.round(15 * sidebarScale);
@@ -2186,32 +2119,27 @@ public class BoardPanel extends JPanel {
             if (treasureImg != null) {
                 g2.drawImage(treasureImg, imgX, imgY, imgSize, imgSize, null);
             } else {
-                // Fallback circle
-                g2.setColor(new Color(180, 140, 70));
+                g2.setColor(FALLBACK_TREASURE_NORMAL);
                 g2.fillOval(imgX, imgY, imgSize, imgSize);
             }
 
-            // Current target name next to image
             g2.setFont(getCachedFont("Arial", Font.BOLD, Math.round(16 * sidebarScale)));
-            g2.setColor(new Color(0, 0, 0));
+            g2.setColor(Color.BLACK);
             g2.drawString(TreasureUtils.getLocalName(currentTarget.getId()), imgX + imgSize + Math.round(10 * sidebarScale), imgY + imgSize / 2 + 5);
 
             currentY += boxHeight - Math.round(5 * sidebarScale);
         }
 
-        // Add keyboard hints at the bottom
         int hintsHeight = Math.round(80 * sidebarScale);
         currentY = Math.max(currentY + Math.round(10 * sidebarScale), getHeight() - hintsHeight);
         drawDivider(g2, sidebarX + padding, sidebarX + sidebarWidth - padding, currentY);
         currentY += Math.round(15 * sidebarScale);
 
         g2.setFont(getCachedFont("Arial", Font.ITALIC, hintFontSize));
-        g2.setColor(new Color(150, 150, 170));
-        g2.drawString("Pfeiltasten: Navigation", sidebarX + padding, currentY);
+        g2.setColor(HINT_COLOR);
+
         currentY += Math.round(15 * sidebarScale);
         g2.drawString("R/Q/E: Tile drehen", sidebarX + padding, currentY);
-        currentY += Math.round(15 * sidebarScale);
-        g2.drawString("Tab: Tastaturhilfe", sidebarX + padding, currentY);
     }
 
     /**
@@ -2232,40 +2160,29 @@ public class BoardPanel extends JPanel {
 
         // Button background - green when enabled, gray when disabled
         if (aiThinking) {
-            // AI is thinking - pulsing orange effect
-            long time = System.currentTimeMillis();
-            int alpha = (int) (180 + 40 * Math.sin(time / 200.0));
+            // AI is thinking - pulsing orange effect (need dynamic alpha)
+            int alpha = (int) (180 + 40 * cachedSinFast);
             g2.setColor(new Color(200, 150, 50, alpha));
         } else if (aiModeEnabled) {
-            // Enabled - green
-            if (isHovered) {
-                g2.setColor(new Color(60, 180, 80, 220));
-            } else {
-                g2.setColor(new Color(50, 150, 70, 200));
-            }
+            g2.setColor(isHovered ? AI_ENABLED_HOVER : AI_ENABLED);
         } else {
-            // Disabled - gray/blue
-            if (isHovered) {
-                g2.setColor(new Color(80, 100, 140, 200));
-            } else {
-                g2.setColor(new Color(60, 80, 110, 180));
-            }
+            g2.setColor(isHovered ? AI_DISABLED_HOVER : AI_DISABLED);
         }
         g2.fillRoundRect(buttonX, buttonY, buttonWidth, buttonHeight, 10, 10);
 
         // Button border
         if (aiThinking) {
-            g2.setColor(new Color(255, 200, 100, 255));
-            g2.setStroke(new BasicStroke(2));
+            g2.setColor(AI_BORDER_THINKING);
+            g2.setStroke(STROKE_2);
         } else if (aiModeEnabled) {
-            g2.setColor(new Color(100, 220, 120, 255));
-            g2.setStroke(new BasicStroke(2));
+            g2.setColor(AI_BORDER_ENABLED);
+            g2.setStroke(STROKE_2);
         } else if (isHovered) {
-            g2.setColor(new Color(120, 150, 200, 200));
-            g2.setStroke(new BasicStroke(2));
+            g2.setColor(AI_BORDER_HOVER);
+            g2.setStroke(STROKE_2);
         } else {
-            g2.setColor(new Color(90, 110, 140, 150));
-            g2.setStroke(new BasicStroke(1));
+            g2.setColor(AI_BORDER_DISABLED);
+            g2.setStroke(STROKE_1);
         }
         g2.drawRoundRect(buttonX, buttonY, buttonWidth, buttonHeight, 10, 10);
 
@@ -2275,13 +2192,13 @@ public class BoardPanel extends JPanel {
         String buttonText;
         if (aiThinking) {
             buttonText = "AI Denkt...";
-            g2.setColor(new Color(255, 220, 100));
+            g2.setColor(AI_TEXT_THINKING);
         } else if (aiModeEnabled) {
             buttonText = "AI - AN";
-            g2.setColor(new Color(220, 255, 220));
+            g2.setColor(AI_TEXT_ENABLED);
         } else {
             buttonText = "AI - AUS";
-            g2.setColor(new Color(200, 200, 210));
+            g2.setColor(AI_TEXT_DISABLED);
         }
         FontMetrics fm = g2.getFontMetrics();
         int textX = buttonX + (buttonWidth - fm.stringWidth(buttonText)) / 2;
@@ -2321,27 +2238,24 @@ public class BoardPanel extends JPanel {
 
             // Button background
             if (isActive) {
-                // Active bonus mode - glowing effect
-                g2.setColor(new Color(100, 200, 100, 200));
+                g2.setColor(BONUS_ACTIVE);
             } else if (isHovered) {
-                // Hovered
-                g2.setColor(new Color(80, 120, 180, 200));
+                g2.setColor(BONUS_HOVER);
             } else {
-                // Normal
-                g2.setColor(new Color(60, 60, 80, 200));
+                g2.setColor(BONUS_NORMAL);
             }
             g2.fillRoundRect(buttonX, buttonY, buttonWidth, buttonHeight, 10, 10);
 
             // Button border
             if (isActive) {
-                g2.setColor(new Color(150, 255, 150, 255));
-                g2.setStroke(new BasicStroke(2));
+                g2.setColor(BONUS_BORDER_ACTIVE);
+                g2.setStroke(STROKE_2);
             } else if (isHovered) {
-                g2.setColor(new Color(120, 180, 230, 200));
-                g2.setStroke(new BasicStroke(2));
+                g2.setColor(BONUS_BORDER_HOVER);
+                g2.setStroke(STROKE_2);
             } else {
-                g2.setColor(new Color(100, 100, 120, 150));
-                g2.setStroke(new BasicStroke(1));
+                g2.setColor(BONUS_BORDER_NORMAL);
+                g2.setStroke(STROKE_1);
             }
             g2.drawRoundRect(buttonX, buttonY, buttonWidth, buttonHeight, 10, 10);
 
@@ -2351,7 +2265,7 @@ public class BoardPanel extends JPanel {
 
             int fontSize = Math.round(14 * scale);
             g2.setFont(getCachedFont("Arial", Font.BOLD, fontSize));
-            g2.setColor(isActive ? new Color(220, 255, 220) : new Color(255, 255, 255));
+            g2.setColor(isActive ? AI_TEXT_ENABLED : Color.WHITE);
             g2.drawString(bonusIcon + " " + bonusName, buttonX + Math.round(10 * scale), buttonY + Math.round(26 * scale));
 
             currentY += buttonHeight + buttonSpacing;
@@ -2435,15 +2349,13 @@ public class BoardPanel extends JPanel {
             int tileX = xOffset + targetCol * size;
             int tileY = yOffset + targetRow * size;
 
-            // Pulsing tile highlight
-            int highlightAlpha = 150 + (int) (50 * Math.sin(time / 400.0));
+            int highlightAlpha = 150 + (int) (50 * cachedSinSlow);
             g2.setColor(new Color(255, 215, 0, highlightAlpha));
-            g2.setStroke(new BasicStroke(6));
+            g2.setStroke(STROKE_6);
             g2.drawRoundRect(tileX - 3, tileY - 3, size + 6, size + 6, 12, 12);
 
-            // Draw thicker inner border
             g2.setColor(new Color(255, 255, 0, highlightAlpha + 50));
-            g2.setStroke(new BasicStroke(3));
+            g2.setStroke(STROKE_3);
             g2.drawRoundRect(tileX - 6, tileY - 6, size + 12, size + 12, 15, 15);
         }
 
@@ -2463,7 +2375,7 @@ public class BoardPanel extends JPanel {
     private void drawSectionHeader(Graphics2D g2, String text, int x, int y, float scale) {
         int fontSize = Math.round(13 * scale);
         g2.setFont(getCachedFont("Arial", Font.BOLD, fontSize));
-        g2.setColor(new Color(180, 200, 255));
+        g2.setColor(SECTION_HEADER_COLOR);
         g2.drawString(text, x, y);
     }
 
@@ -2474,12 +2386,12 @@ public class BoardPanel extends JPanel {
         // Draw gradient divider
         GradientPaint dividerGradient = new GradientPaint(
                 x1, y,
-                new Color(100, 130, 180, 50),
+                DIVIDER_EDGE,
                 (x1 + x2) / 2, y,
-                new Color(100, 130, 180, 180)
+                DIVIDER_CENTER
         );
         g2.setPaint(dividerGradient);
-        g2.setStroke(new BasicStroke(2));
+        g2.setStroke(STROKE_2);
         g2.drawLine(x1, y, x2, y);
     }
 
@@ -2492,14 +2404,13 @@ public class BoardPanel extends JPanel {
         int padding = Math.round(10 * scale);
 
         // Card background
-        Color bgColor = isCurrentTurn ? new Color(80, 100, 140, 200) : new Color(50, 50, 60, 180);
-        g2.setColor(bgColor);
+        g2.setColor(isCurrentTurn ? CARD_BG_CURRENT : CARD_BG_NORMAL);
         g2.fillRoundRect(x, y, width, cardHeight, 10, 10);
 
         // Border for current turn
         if (isCurrentTurn) {
-            g2.setColor(new Color(255, 220, 100));
-            g2.setStroke(new BasicStroke(2));
+            g2.setColor(CARD_BORDER);
+            g2.setStroke(STROKE_2);
             g2.drawRoundRect(x, y, width, cardHeight, 10, 10);
         }
 
@@ -2532,7 +2443,7 @@ public class BoardPanel extends JPanel {
                 g2.setColor(playerColor);
                 g2.fillOval(x + padding, y + padding + 3, circleSize, circleSize);
                 g2.setColor(Color.WHITE);
-                g2.setStroke(new BasicStroke(1.5f));
+                g2.setStroke(STROKE_1_5);
                 g2.drawOval(x + padding, y + padding + 3, circleSize, circleSize);
             }
         }
