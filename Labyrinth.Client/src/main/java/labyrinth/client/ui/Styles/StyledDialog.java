@@ -195,7 +195,6 @@ public class StyledDialog extends JDialog {
         panel.setOpaque(false);
         panel.setBorder(BorderFactory.createEmptyBorder(PADDING, PADDING, PADDING, PADDING));
 
-        // Title with icon
         JPanel titlePanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 0));
         titlePanel.setOpaque(false);
 
@@ -223,18 +222,17 @@ public class StyledDialog extends JDialog {
         buttonPanel.setOpaque(false);
 
         if (isConfirm) {
-            JButton yesButton = createStyledButton("Ja", true, type.color);
+            StyledButton yesButton = createStyledButton("Ja", true, type.color);
             yesButton.addActionListener(e -> closeDialog(true));
             buttonPanel.add(yesButton);
 
-            JButton noButton = createStyledButton("Nein", false, null);
+            StyledButton noButton = createStyledButton("Nein", false, null);
             noButton.addActionListener(e -> closeDialog(false));
             buttonPanel.add(noButton);
 
-            // Focus on Yes button by default
             SwingUtilities.invokeLater(yesButton::requestFocusInWindow);
         } else {
-            JButton okButton = createStyledButton("OK", true, type.color);
+            StyledButton okButton = createStyledButton("OK", true, type.color);
             okButton.addActionListener(e -> closeDialog(true));
             buttonPanel.add(okButton);
 
@@ -243,9 +241,8 @@ public class StyledDialog extends JDialog {
 
         panel.add(buttonPanel, BorderLayout.SOUTH);
 
-        // Calculate preferred size
+
         int height = DIALOG_MIN_HEIGHT;
-        // Add extra height for long messages
         int messageLines = message.split("\n").length;
         if (messageLines > 2) {
             height += (messageLines - 2) * 20;
@@ -255,104 +252,21 @@ public class StyledDialog extends JDialog {
         return panel;
     }
 
-    private JButton createStyledButton(String text, boolean isPrimary, Color accentColor) {
-        JButton button = new JButton(text) {
-            private boolean isHovered = false;
-            private boolean isFocused = false;
-
-            {
-                setOpaque(false);
-                setContentAreaFilled(false);
-                setBorderPainted(false);
-                setFocusPainted(false);
-                setFont(FontManager.getBodyMedium(Font.BOLD));
-                setCursor(new Cursor(Cursor.HAND_CURSOR));
-                setPreferredSize(new Dimension(100, 40));
-
-                addMouseListener(new MouseAdapter() {
-                    @Override
-                    public void mouseEntered(MouseEvent e) {
-                        isHovered = true;
-                        repaint();
-                    }
-
-                    @Override
-                    public void mouseExited(MouseEvent e) {
-                        isHovered = false;
-                        repaint();
-                    }
-                });
-
-                addFocusListener(new FocusAdapter() {
-                    @Override
-                    public void focusGained(FocusEvent e) {
-                        isFocused = true;
-                        repaint();
-                    }
-
-                    @Override
-                    public void focusLost(FocusEvent e) {
-                        isFocused = false;
-                        repaint();
-                    }
-                });
+    private StyledButton createStyledButton(String text, boolean isPrimary, Color accentColor) {
+        StyledButton.Style style;
+        if (isPrimary) {
+            if (accentColor != null && accentColor.equals(GameTheme.Colors.PLAYER_RED)) {
+                style = StyledButton.Style.DIALOG_DANGER;
+            } else {
+                style = StyledButton.Style.DIALOG_PRIMARY;
             }
+        } else {
+            style = StyledButton.Style.DIALOG_SECONDARY;
+        }
 
-            @Override
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-
-                int w = getWidth();
-                int h = getHeight();
-                int arc = 8;
-
-                // Background
-                Color bgColor;
-                if (isPrimary) {
-                    if (isHovered) {
-                        bgColor = ThemeEffects.brighten(accentColor != null ? accentColor : GameTheme.Colors.ACCENT_GOLD, 0.2f);
-                    } else {
-                        bgColor = accentColor != null ? accentColor : GameTheme.Colors.ACCENT_GOLD;
-                    }
-                    bgColor = ThemeEffects.withAlpha(bgColor, isHovered ? 200 : 150);
-                } else {
-                    bgColor = isHovered
-                            ? ThemeEffects.withAlpha(GameTheme.Colors.ACCENT_COPPER, 100)
-                            : ThemeEffects.withAlpha(ThemeManager.getInstance().getSurfaceSecondary(), 150);
-                }
-
-                g2.setColor(bgColor);
-                g2.fillRoundRect(0, 0, w, h, arc, arc);
-
-                // Border
-                Color borderColor = isPrimary
-                        ? (accentColor != null ? accentColor : GameTheme.Colors.ACCENT_GOLD)
-                        : GameTheme.Colors.ACCENT_COPPER;
-                g2.setColor(borderColor);
-                g2.setStroke(new BasicStroke(1.5f));
-                g2.drawRoundRect(1, 1, w - 3, h - 3, arc, arc);
-
-                // Focus indicator
-                if (isFocused) {
-                    g2.setColor(ThemeEffects.withAlpha(GameTheme.Colors.ACCENT_GOLD, 100));
-                    g2.setStroke(new BasicStroke(3f));
-                    g2.drawRoundRect(-1, -1, w + 1, h + 1, arc + 4, arc + 4);
-                }
-
-                // Text
-                g2.setFont(getFont());
-                FontMetrics fm = g2.getFontMetrics();
-                int textX = (w - fm.stringWidth(getText())) / 2;
-                int textY = (h + fm.getAscent() - fm.getDescent()) / 2;
-
-                g2.setColor(isPrimary ? Color.WHITE : ThemeManager.getInstance().getTextPrimary());
-                g2.drawString(getText(), textX, textY);
-
-                g2.dispose();
-            }
-        };
-
+        StyledButton button = new StyledButton(text, style);
+        button.setPreferredSize(new Dimension(100, 40));
+        button.setFont(FontManager.getBodySmall(Font.BOLD));
         return button;
     }
 
