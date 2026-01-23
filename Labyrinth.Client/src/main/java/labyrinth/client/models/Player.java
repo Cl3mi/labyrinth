@@ -9,74 +9,23 @@ import lombok.Setter;
 
 import java.util.*;
 
-/**
- * Client-seitiges Player-Modell für das Labyrinth-Spiel.
- * Entkoppelt von den Contracts (PlayerState), damit die UI frei ist.
- */
 @Getter
 @Setter
 public class Player {
 
     private final String id;
     private final String name;
-
-
-    /**
-     * Aktuelle Position auf dem Brett (Zeile/Spalte im Client).
-     */
     private Position currentPosition;
-
-    /**
-     * Start-/Heimatfeld des Spielers (falls vom Server geliefert).
-     */
     private Position homePosition;
-
-    /**
-     * Optionaler Cache für erreichbare Tiles (nur UI-Hilfe).
-     */
     private Set<Tile> reachableTiles = new HashSet<>();
-
-    /**
-     * Player color assigned by server
-     */
     private PlayerColor color;
-
-    /**
-     * Treasures found by this player
-     */
     private final List<Treasure> treasuresFound = new ArrayList<>();
-
-    /**
-     * Number of treasures remaining to find
-     */
     private int remainingTreasureCount = 0;
-
-    /**
-     * Whether this player is connected to the server
-     */
     private boolean isConnected = true;
-
-    /**
-     * Whether this player is the admin
-     */
     private boolean isAdmin = false;
-
-    /**
-     * Whether this player is AI controlled
-     */
     private boolean isAiControlled = false;
-
-    /**
-     * -- GETTER --
-     *  Gets the current target treasure (first uncollected treasure).
-     *  Returns null if all treasures have been collected.
-     */
     private Treasure currentTargetTreasure;
 
-
-    /**
-     * Available bonuses for this player (from server)
-     */
     private final List<BonusType> availableBonuses = new ArrayList<>();
 
     public Player(String id, String name) {
@@ -85,9 +34,7 @@ public class Player {
     }
 
 
-    /**
-     * Updates the available bonuses for this player.
-     */
+
     public void setAvailableBonuses(List<BonusType> bonuses) {
         this.availableBonuses.clear();
         if (bonuses != null) {
