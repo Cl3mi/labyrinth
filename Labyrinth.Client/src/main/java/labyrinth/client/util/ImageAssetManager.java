@@ -1,6 +1,8 @@
 package labyrinth.client.util;
 
 import labyrinth.client.ui.theme.ThemeManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.imageio.ImageIO;
 import javax.swing.*;
@@ -15,6 +17,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public final class ImageAssetManager {
 
+    private static final Logger log = LoggerFactory.getLogger(ImageAssetManager.class);
     private static final ImageAssetManager INSTANCE = new ImageAssetManager();
 
     private final Map<String, Image> backgroundCache = new ConcurrentHashMap<>();
@@ -156,7 +159,7 @@ public final class ImageAssetManager {
                 getPlayerIcon(i);
             }
 
-            System.out.println("[ImageAssetManager] Preloaded all images");
+            log.info("[ImageAssetManager] Preloaded all images");
         }, "ImagePreloader");
         preloadThread.setDaemon(true);
         preloadThread.start();
@@ -186,11 +189,11 @@ public final class ImageAssetManager {
             if (url != null) {
                 return new ImageIcon(url).getImage();
             } else {
-                System.err.println("[ImageAssetManager] Image not found: " + path);
+                log.error("[ImageAssetManager] Image not found: " + path);
                 return null;
             }
         } catch (Exception e) {
-            System.err.println("[ImageAssetManager] Error loading image: " + path + " -> " + e.getMessage());
+            log.error("[ImageAssetManager] Error loading image: " + path + " -> " + e.getMessage());
             return null;
         }
     }
@@ -199,12 +202,12 @@ public final class ImageAssetManager {
         try {
             var url = getClass().getResource(path);
             if (url == null) {
-                System.err.println("[ImageAssetManager] Image not found: " + path);
+                log.error("[ImageAssetManager] Image not found: " + path);
                 return null;
             }
             return ImageIO.read(url);
         } catch (Exception e) {
-            System.err.println("[ImageAssetManager] Error loading image: " + path + " -> " + e.getMessage());
+            log.error("[ImageAssetManager] Error loading image: " + path + " -> " + e.getMessage());
             return null;
         }
     }

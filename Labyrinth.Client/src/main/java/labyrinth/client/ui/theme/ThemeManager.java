@@ -1,5 +1,8 @@
 package labyrinth.client.ui.theme;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.awt.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -11,6 +14,7 @@ import java.util.prefs.Preferences;
  */
 public final class ThemeManager {
 
+    private static final Logger log = LoggerFactory.getLogger(ThemeManager.class);
     private static final ThemeManager INSTANCE = new ThemeManager();
     private static final String PREF_DARK_THEME = "darkTheme";
 
@@ -66,11 +70,11 @@ public final class ThemeManager {
     }
 
     public void setDarkMode(boolean dark) {
-        System.out.println("[ThemeManager] setDarkMode called: " + dark + " (current: " + darkMode + ")");
+        log.info("[ThemeManager] setDarkMode called: {} (current: {})", dark, darkMode);
         if (this.darkMode != dark) {
             this.darkMode = dark;
             prefs.putBoolean(PREF_DARK_THEME, dark);
-            System.out.println("[ThemeManager] Theme changed to: " + (dark ? "DARK" : "LIGHT") + ", notifying " + listeners.size() + " listeners");
+            log.info("[ThemeManager] Theme changed to: {}, notifying {} listeners", dark ? "DARK" : "LIGHT", listeners.size());
             notifyListeners();
         }
     }

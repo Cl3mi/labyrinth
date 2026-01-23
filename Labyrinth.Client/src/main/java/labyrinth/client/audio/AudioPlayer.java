@@ -1,5 +1,8 @@
 package labyrinth.client.audio;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import javax.sound.sampled.*;
 import java.io.BufferedInputStream;
 import java.net.URL;
@@ -11,6 +14,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 public final class AudioPlayer {
 
+    private static final Logger log = LoggerFactory.getLogger(AudioPlayer.class);
 
     public static final String MENU_MUSIC_PATH = "/sounds/BackgroundSound1.wav";
     public static final String GAMEOVER_APPLAUSE_PATH = "/sounds/Applause.wav";
@@ -71,7 +75,7 @@ public final class AudioPlayer {
     }
 
     public synchronized void playMusic(String path, boolean loop) {
-        System.out.println("[AudioPlayer] playMusic called: " + path + ", loop=" + loop);
+        log.info("[AudioPlayer] playMusic called: " + path + ", loop=" + loop);
 
         if (musicMode == MusicMode.SINGLE
                 && musicClip != null && musicClip.isOpen()
@@ -79,11 +83,11 @@ public final class AudioPlayer {
                 && loop == currentMusicLoop) {
 
             if (!musicClip.isRunning()) {
-                System.out.println("[AudioPlayer] Resuming existing clip");
+                log.info("[AudioPlayer] Resuming existing clip");
                 if (loop) musicClip.loop(Clip.LOOP_CONTINUOUSLY);
                 else musicClip.start();
             } else {
-                System.out.println("[AudioPlayer] Already playing, skipping");
+                log.info("[AudioPlayer] Already playing, skipping");
             }
             return;
         }
@@ -96,9 +100,9 @@ public final class AudioPlayer {
 
         try {
             openAndStartMusicClipLocked(path, loop, null, -1);
-            System.out.println("[AudioPlayer] Music started successfully!");
+            log.info("[AudioPlayer] Music started successfully!");
         } catch (Exception e) {
-            System.err.println("[AudioPlayer] Error playing music: " + e.getMessage());
+            log.error("[AudioPlayer] Error playing music: " + e.getMessage());
             e.printStackTrace();
             // Make sure state is clean after failure.
             invalidateAndStopMusicLocked();
@@ -106,12 +110,12 @@ public final class AudioPlayer {
     }
 
     public synchronized void playMusicPlaylist(String[] paths, boolean loopPlaylist) {
-        System.out.println("[AudioPlayer] playMusicPlaylist called: "
+        log.info("[AudioPlayer] playMusicPlaylist called: "
                 + (paths == null ? "null" : Arrays.toString(paths))
                 + ", loopPlaylist=" + loopPlaylist);
 
         if (paths == null || paths.length == 0) {
-            System.err.println("[AudioPlayer] Playlist is empty; nothing to play.");
+            log.error("[AudioPlayer] Playlist is empty; nothing to play.");
             return;
         }
 
@@ -122,10 +126,10 @@ public final class AudioPlayer {
                 && musicClip != null && musicClip.isOpen()) {
 
             if (!musicClip.isRunning()) {
-                System.out.println("[AudioPlayer] Resuming playlist at index " + playlistIndex);
+                log.info("[AudioPlayer] Resuming playlist at index " + playlistIndex);
                 musicClip.start();
             } else {
-                System.out.println("[AudioPlayer] Playlist already playing, skipping");
+                log.info("[AudioPlayer] Playlist already playing, skipping");
             }
             return;
         }
@@ -138,9 +142,9 @@ public final class AudioPlayer {
 
         try {
             openAndStartMusicClipLocked(currentPlaylist[playlistIndex], false, musicToken.get(), playlistIndex);
-            System.out.println("[AudioPlayer] Playlist started successfully!");
+            log.info("[AudioPlayer] Playlist started successfully!");
         } catch (Exception e) {
-            System.err.println("[AudioPlayer] Error starting playlist: " + e.getMessage());
+            log.error("[AudioPlayer] Error starting playlist: " + e.getMessage());
             e.printStackTrace();
             invalidateAndStopMusicLocked();
         }
@@ -148,7 +152,7 @@ public final class AudioPlayer {
 
     public synchronized void stopMusic() {
         invalidateAndStopMusicLocked();
-        System.out.println("[AudioPlayer] Music stopped");
+        log.info("[AudioPlayer] Music stopped");
     }
 
 
@@ -178,7 +182,7 @@ public final class AudioPlayer {
             try {
                 URL url = getClass().getResource(path);
                 if (url == null) {
-                    System.err.println("SFX not found: " + path);
+                    log.error("SFX not found: {}", path);
                     return;
                 }
 
@@ -297,7 +301,7 @@ public final class AudioPlayer {
             try {
                 openAndStartMusicClipLocked(currentPlaylist[playlistIndex], false, token, playlistIndex);
             } catch (Exception e) {
-                System.err.println("[AudioPlayer] Error advancing playlist: " + e.getMessage());
+                log.error("[AudioPlayer] Error advancing playlist: " + e.getMessage());
                 e.printStackTrace();
                 invalidateAndStopMusicLocked();
             }

@@ -1,6 +1,8 @@
 package labyrinth.client.ui;
 
 import labyrinth.client.messaging.GameClient;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import labyrinth.client.ui.Styles.StyledButton;
 import labyrinth.client.ui.Styles.StyledComboBox;
 import labyrinth.client.ui.Styles.StyledContextMenu;
@@ -24,6 +26,8 @@ import java.awt.geom.RoundRectangle2D;
 
 
 public class MultiplayerLobbyPanel extends JPanel {
+
+    private static final Logger log = LoggerFactory.getLogger(MultiplayerLobbyPanel.class);
 
     @Setter
     private GameClient client;
@@ -80,10 +84,10 @@ public class MultiplayerLobbyPanel extends JPanel {
             var url = getClass().getResource(imagePath);
             if (url != null) {
                 backgroundImage = new ImageIcon(url).getImage();
-                System.out.println("[MultiplayerLobbyPanel] Loaded background: " + imagePath);
+                log.info("[MultiplayerLobbyPanel] Loaded background: {}", imagePath);
             }
         } catch (Exception e) {
-            System.err.println("Error loading background: " + e.getMessage());
+            log.error("Error loading background: {}", e.getMessage());
         }
     }
 
@@ -536,7 +540,7 @@ public class MultiplayerLobbyPanel extends JPanel {
         bs.setCols(configBoardSize);
 
         try {
-            System.out.println("START clicked -> sending START_GAME with " + configBonusCount + " bonuses");
+            log.info("START clicked -> sending START_GAME with {} bonuses", configBonusCount);
             client.sendStartGame(bs, configTreasuresToWin * playerCount, configBonusCount, configGameDurationMinutes * 60, configTurnTimeSeconds);
         } catch (Exception ex) {
             ex.printStackTrace();
@@ -555,7 +559,7 @@ public class MultiplayerLobbyPanel extends JPanel {
         SwingUtilities.invokeLater(() -> {
             startButton.setEnabled(true);
             enableSettingsPanel(true);
-            System.out.println("[MultiplayerLobbyPanel] Start button force-enabled");
+            log.info("[MultiplayerLobbyPanel] Start button force-enabled");
         });
     }
 
