@@ -157,20 +157,16 @@ public class GameClient extends WebSocketClient {
     @Override
     public void onClose(int code, String reason, boolean remote) {
         System.out.println("WebSocket closed. code=" + code + " remote=" + remote + " reason=" + reason);
-
         ConnectionState previousState = connectionState;
 
-        // Update state based on whether disconnect was intentional
         if (connectionState == ConnectionState.DISCONNECTING) {
             connectionState = ConnectionState.DISCONNECTED;
             System.out.println("Intentional disconnect completed");
-            return; // Don't trigger reconnection
+            return;
         }
 
-        // Unintentional disconnect - prepare for reconnection
         connectionState = ConnectionState.DISCONNECTED;
 
-        // Determine if this was an unexpected disconnect
         boolean shouldReconnect = !intentionalDisconnect &&
                                   previousState == ConnectionState.CONNECTED;
 
@@ -180,7 +176,6 @@ public class GameClient extends WebSocketClient {
                 runOnUiThread(onConnectionLost);
             }
         } else {
-            // Normal error message for expected disconnects
             runOnUiThread(() -> {
                 if (onErrorMessage != null) {
                     onErrorMessage.accept("Disconnected (code=" + code + "): " +
@@ -194,14 +189,11 @@ public class GameClient extends WebSocketClient {
     public void onError(Exception ex) {
         ex.printStackTrace();
 
-        // If we're connected or connecting, this is an unexpected error
         boolean shouldReconnect = (connectionState == ConnectionState.CONNECTED ||
                                    connectionState == ConnectionState.CONNECTING) &&
                                   !intentionalDisconnect;
-
         if (shouldReconnect) {
             System.out.println("WebSocket error during active connection - may trigger reconnection");
-            // Note: onClose() will be called after this, which handles reconnection
         }
 
         runOnUiThread(() -> {

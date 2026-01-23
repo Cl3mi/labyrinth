@@ -138,7 +138,6 @@ public class LabyrinthApplication {
         mainPanel.add(lobbyPanel, "lobby");
 
 
-
         optionsPanel = new OptionsPanel();
         optionsPanel.setOnBackToMenu(this::showMainMenu);
         optionsPanel.setOnSettingsChanged(this::applySettings);
@@ -179,16 +178,16 @@ public class LabyrinthApplication {
         gameViewShown = false;
         isGameOver = false;
 
-        // ZUERST alle Flags zurücksetzen und Token löschen
+
         loginSent = false;
         connectAckReceived = false;
         ClientIdentityStore.clearToken();
 
-        // Verbindung komplett schließen, damit onOpenHook beim nächsten Verbindungsversuch erneut ausgelöst wird
+
         if (client != null && client.isOpen()) {
-            isGameOverCleanup = true; // Verhindert ReconnectionManager
+            isGameOverCleanup = true;
             try {
-                client.disconnectCleanly(); // Vollständig schließen statt nur sendDisconnect
+                client.disconnectCleanly();
             } catch (Exception e) {
                 System.err.println("Error disconnecting when returning to main menu: " + e.getMessage());
             } finally {
@@ -201,14 +200,11 @@ public class LabyrinthApplication {
     }
 
     private void showOptions() {
-        // Musik weiterlaufen lassen, damit man die Lautstärke testen kann
         CardLayout cl = (CardLayout) mainPanel.getLayout();
         cl.show(mainPanel, "options");
     }
 
     private void applySettings() {
-        // Hier können die Einstellungen angewendet werden
-        // z.B. Musik-Lautstärke aktualisieren
         System.out.println("Settings applied:");
         System.out.println("  Music Volume: " + optionsPanel.getMusicVolume() + "%");
         System.out.println("  SFX Volume: " + optionsPanel.getSfxVolume() + "%");
@@ -217,14 +213,12 @@ public class LabyrinthApplication {
     }
 
     private void showServerBrowser() {
-        // ServerBrowserPanel mit aktueller URL neu erstellen
         var serversApi = ServerClientFactory.create(OptionsPanel.loadServerUrlFromPreferences());
         serverBrowserPanel = new ServerBrowserPanel(serversApi);
         serverBrowserPanel.setOnBackToMenu(this::showMainMenu);
         serverBrowserPanel.setOnServerSelected(this::setUsername);
 
-        // Altes Panel entfernen, neues hinzufügen
-        mainPanel.remove(serverBrowserPanel); // Falls vorhanden
+        mainPanel.remove(serverBrowserPanel);
         mainPanel.add(serverBrowserPanel, "serverbrowser");
 
         CardLayout cl = (CardLayout) mainPanel.getLayout();
@@ -234,23 +228,18 @@ public class LabyrinthApplication {
     }
 
     private void setUsername(GameServer gameServer) {
-        mainMenuPanel.showMultiplayerUsernameDialog(new Consumer<String>() {
-            @Override
-            public void accept(String username) {
-                showMultiplayerLobby(gameServer, username);
-            }
-        });
+        mainMenuPanel.showMultiplayerUsernameDialog(username -> showMultiplayerLobby(gameServer, username));
     }
+
     private void showMultiplayerLobby(GameServer gameServer, String username) {
         lobbyPanel.setMultiplayerUsername(username);
 
-        // Für einen neuen Multiplayer-Beitritt Token löschen und Flags zurücksetzen
         ClientIdentityStore.clearToken();
         loginSent = false;
         connectAckReceived = false;
         pendingMultiplayerJoin = true;
 
-        // Wenn bereits verbunden, erst komplett schließen (nicht nur sendDisconnect)
+
         if (client != null && client.isOpen()) {
             isGameOverCleanup = true; // Verhindert ReconnectionManager
             try {
@@ -259,7 +248,6 @@ public class LabyrinthApplication {
                 client = null;
                 lobbyPanel.setClient(null);
 
-                // Kurz warten damit der Server die Trennung verarbeiten kann
                 Thread.sleep(200);
             } catch (Exception e) {
                 System.err.println("Error disconnecting before reconnect: " + e.getMessage());
@@ -272,8 +260,6 @@ public class LabyrinthApplication {
         var client = new GameClient(serverUri);
 
         setupClient(client);
-
-        // Nicht sofort zur Lobby wechseln - erst nach erfolgreicher Verbindung (CONNECT_ACK)
         connectToServer();
     }
 
@@ -283,7 +269,6 @@ public class LabyrinthApplication {
         reconnectionManager = new ReconnectionManager(client, this);
         lobbyPanel.setClient(client);
 
-        // Initialize AI controller for manual AI assist (button click)
         aiController = new AiController(client);
 
         registerCallbacks();
@@ -293,7 +278,7 @@ public class LabyrinthApplication {
                 System.out.println("Connection lost during shutdown/game-over cleanup - ignoring");
                 return;
             }
-            // Wenn Multiplayer-Join fehlschlägt, zurück zum Hauptmenü
+
             if (pendingMultiplayerJoin) {
                 pendingMultiplayerJoin = false;
                 SwingUtilities.invokeLater(() -> {
@@ -315,7 +300,6 @@ public class LabyrinthApplication {
             System.out.println("[" + PROFILE + "] Achievement unlocked: "
                     + achievement.getAchievement() + " for player " + achievement.getPlayerId());
 
-            // Add achievement to GameOverPanel for later display
             if (gameOverPanel != null) {
                 String achievementName = achievement.getAchievement() != null
                         ? achievement.getAchievement().toString() : "UNKNOWN";
@@ -373,7 +357,6 @@ public class LabyrinthApplication {
             return;
         }
 
-        // Username aus dem MainMenuPanel verwenden (wurde im Dialog festgelegt)
         username = mainMenuPanel.getMultiplayerUsername();
         if (username == null || username.isBlank()) {
             username = (storedUsername != null && !storedUsername.isBlank()) ? storedUsername : "Player";
@@ -385,7 +368,6 @@ public class LabyrinthApplication {
     private void connectToServer() {
         lobbyPanel.setStatusText("Verbinde...", new Color(170, 120, 0));
 
-        // Wenn gerade ein Session-Reset läuft: nicht CONNECT senden, sondern Transport neu öffnen
         if (sessionResetPending) {
             loginSent = false;
             connectAckReceived = false;
@@ -415,7 +397,6 @@ public class LabyrinthApplication {
                 System.out.println("[" + PROFILE + "] onOpen -> RECONNECT with token");
                 client.sendReconnect(token);
             } else {
-                // Username aus dem MainMenuPanel verwenden (wurde im Dialog festgelegt)
                 username = mainMenuPanel.getMultiplayerUsername();
                 if (username == null || username.isBlank()) {
                     username = storedUsername != null ? storedUsername : "Player";
@@ -427,7 +408,10 @@ public class LabyrinthApplication {
 
             final String finalStoredUsername = storedUsername;
             new Thread(() -> {
-                try { Thread.sleep(2000); } catch (InterruptedException ignored) {}
+                try {
+                    Thread.sleep(2000);
+                } catch (InterruptedException ignored) {
+                }
                 if (connectAckReceived) return;
 
                 SwingUtilities.invokeLater(() -> {
@@ -472,7 +456,10 @@ public class LabyrinthApplication {
             if (client != null && client.isOpen()) {
                 sessionResetPending = true;
                 client.disconnectCleanly();
-                try { Thread.sleep(1000); } catch (InterruptedException ignored) {}
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException ignored) {
+                }
             }
             if (client != null) client.close();
         } finally {
@@ -517,12 +504,12 @@ public class LabyrinthApplication {
 
                 // Callback when AI starts/stops thinking
                 aiController.setThinkingCallbacks(
-                    () -> SwingUtilities.invokeLater(() -> {
-                        if (boardPanel != null) boardPanel.setAiThinking(true);
-                    }),
-                    () -> SwingUtilities.invokeLater(() -> {
-                        if (boardPanel != null) boardPanel.setAiThinking(false);
-                    })
+                        () -> SwingUtilities.invokeLater(() -> {
+                            if (boardPanel != null) boardPanel.setAiThinking(true);
+                        }),
+                        () -> SwingUtilities.invokeLater(() -> {
+                            if (boardPanel != null) boardPanel.setAiThinking(false);
+                        })
                 );
             }
 
@@ -531,12 +518,12 @@ public class LabyrinthApplication {
 
         // Always update game state to ensure turnState is set (fixes rotation on first turn)
         boardPanel.updateGameState(
-            board,
-            allPlayers,
-            currentPlayer,
-            gameEndTime,
-            turnInfo != null ? turnInfo.getTurnEndTime() : null,
-            turnInfo != null ? turnInfo.getState() : null
+                board,
+                allPlayers,
+                currentPlayer,
+                gameEndTime,
+                turnInfo != null ? turnInfo.getTurnEndTime() : null,
+                turnInfo != null ? turnInfo.getState() : null
         );
         switchToGameView();
         frame.revalidate();
@@ -728,14 +715,14 @@ public class LabyrinthApplication {
 
             Optional<Treasure> currentPlayerNextTreasure = Optional.empty();
             var currentPlayer = resolveLocalPlayer(currentPlayers);
-            if(currentPlayer != null) {
+            if (currentPlayer != null) {
                 currentPlayerNextTreasure = Optional.ofNullable(currentPlayer.getCurrentTargetTreasure());
             }
 
             Board board = BoardFactory.fromContracts(state.getBoard());
             List<Player> players = BoardFactory.convertPlayerStates(state.getPlayers());
             currentPlayer = resolveLocalPlayer(players);
-            if(currentPlayer != null && currentPlayerNextTreasure.isPresent()) {
+            if (currentPlayer != null && currentPlayerNextTreasure.isPresent()) {
                 currentPlayer.setCurrentTargetTreasure(currentPlayerNextTreasure.get());
             }
 
@@ -906,7 +893,9 @@ public class LabyrinthApplication {
                 }
             }
         } else {
-            errorCode = "999"; errorTitle = "Fehler"; errorMessage = msg;
+            errorCode = "999";
+            errorTitle = "Fehler";
+            errorMessage = msg;
         }
         boardPanel.showErrorToast(errorCode, errorTitle, errorMessage);
         boardPanel.unlockInput();
@@ -989,17 +978,26 @@ public class LabyrinthApplication {
         private static final String KEY_PLAYER_ID = "playerId";
         private static final String KEY_USERNAME = "username";
 
-        public static String loadToken() { return PREFS.get(KEY_TOKEN, null); }
+        public static String loadToken() {
+            return PREFS.get(KEY_TOKEN, null);
+        }
+
         public static void saveToken(String token) {
             if (token != null && !token.isBlank()) PREFS.put(KEY_TOKEN, token);
         }
-        public static void clearToken() { PREFS.remove(KEY_TOKEN); }
+
+        public static void clearToken() {
+            PREFS.remove(KEY_TOKEN);
+        }
 
         public static void savePlayerId(String playerId) {
             if (playerId != null && !playerId.isBlank()) PREFS.put(KEY_PLAYER_ID, playerId);
         }
 
-        public static String loadUsername() { return PREFS.get(KEY_USERNAME, null); }
+        public static String loadUsername() {
+            return PREFS.get(KEY_USERNAME, null);
+        }
+
         public static void saveUsername(String username) {
             if (username != null && !username.isBlank()) PREFS.put(KEY_USERNAME, username);
         }

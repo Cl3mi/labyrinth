@@ -400,8 +400,10 @@ public class MainMenuPanel extends JPanel {
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
         panel.setOpaque(false);
 
-
-        MenuButton multiplayerBtn = new MenuButton("Spiel starten", "Spiele alleine gegen KI oder online mit Freunden");
+        StyledButton multiplayerBtn = new StyledButton("Spiel starten", "Spiele alleine gegen KI oder online mit Freunden", StyledButton.Style.MENU);
+        multiplayerBtn.setPreferredSize(new Dimension(320, 70));
+        multiplayerBtn.setMinimumSize(new Dimension(200, 50));
+        multiplayerBtn.setMaximumSize(new Dimension(450, 90));
         multiplayerBtn.addActionListener(e -> onMultiplayerClicked.run());
         multiplayerBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
         StyledTooltipManager.setTooltip(multiplayerBtn, "Spiel starten", "Spiele alleine gegen KI oder online mit Freunden");
@@ -410,7 +412,10 @@ public class MainMenuPanel extends JPanel {
 
         panel.add(Box.createVerticalStrut(12));
 
-        MenuButton optionsBtn = new MenuButton("Einstellungen", "Grafik, Audio & mehr");
+        StyledButton optionsBtn = new StyledButton("Einstellungen", "Grafik, Audio & mehr", StyledButton.Style.MENU);
+        optionsBtn.setPreferredSize(new Dimension(320, 70));
+        optionsBtn.setMinimumSize(new Dimension(200, 50));
+        optionsBtn.setMaximumSize(new Dimension(450, 90));
         optionsBtn.addActionListener(e -> {
             if (onOptionsClicked != null) onOptionsClicked.run();
         });
@@ -421,7 +426,10 @@ public class MainMenuPanel extends JPanel {
 
         panel.add(Box.createVerticalStrut(20));
 
-        ExitButton exitBtn = new ExitButton("Beenden");
+        StyledButton exitBtn = new StyledButton("Beenden", StyledButton.Style.DANGER);
+        exitBtn.setPreferredSize(new Dimension(130, 38));
+        exitBtn.setMaximumSize(new Dimension(150, 45));
+        exitBtn.setMinimumSize(new Dimension(100, 32));
         exitBtn.addActionListener(e -> {
             if (onExitClicked != null) {
                 onExitClicked.run();
@@ -532,243 +540,4 @@ public class MainMenuPanel extends JPanel {
         g2.drawLine(w - 25, h - 25, w - 25, h - 25 - size);
         g2.fillOval(w - 28, h - 28, 6, 6);
     }
-
-
-
-    private class MenuButton extends JButton {
-        private final String subtitle;
-        private float hoverProgress = 0f;
-        private boolean isHovered = false;
-        private boolean isFocused = false;
-
-        public MenuButton(String text, String subtitle) {
-            super(text);
-            this.subtitle = subtitle;
-
-            setFont(FontManager.getBodyMedium(Font.BOLD));
-            setForeground(GameTheme.Colors.textLight());
-            setFocusPainted(false);
-            setBorderPainted(false);
-            setContentAreaFilled(false);
-            setCursor(new Cursor(Cursor.HAND_CURSOR));
-            setFocusable(true);
-
-            setPreferredSize(new Dimension(320, 70));
-            setMinimumSize(new Dimension(200, 50));
-            setMaximumSize(new Dimension(450, 90));
-
-            var animationTimer = new Timer(16, e -> {
-                if (isHovered && hoverProgress < 1f) {
-                    hoverProgress = Math.min(1f, hoverProgress + 0.12f);
-                    repaint();
-                } else if (!isHovered && hoverProgress > 0f) {
-                    hoverProgress = Math.max(0f, hoverProgress - 0.12f);
-                    repaint();
-                }
-            });
-            animationTimer.start();
-
-            addMouseListener(new MouseAdapter() {
-                @Override
-                public void mouseEntered(MouseEvent e) {
-                    isHovered = true;
-                }
-
-                @Override
-                public void mouseExited(MouseEvent e) {
-                    isHovered = false;
-                }
-            });
-
-            addFocusListener(new java.awt.event.FocusAdapter() {
-                @Override
-                public void focusGained(java.awt.event.FocusEvent e) {
-                    isFocused = true;
-                    repaint();
-                }
-                @Override
-                public void focusLost(java.awt.event.FocusEvent e) {
-                    isFocused = false;
-                    repaint();
-                }
-            });
-        }
-
-        @Override
-        protected void paintComponent(Graphics g) {
-            Graphics2D g2 = (Graphics2D) g.create();
-            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
-
-            int w = getWidth();
-            int h = getHeight();
-            int arc = 10;
-
-            // shadow
-            g2.setColor(ThemeEffects.withAlpha(GameTheme.Colors.shadow(), (int) (70 + 30 * hoverProgress)));
-            g2.fill(new RoundRectangle2D.Float(4, 5, w - 8, h - 7, arc, arc));
-
-            // background
-            Color bgStart = interpolateColor(GameTheme.Colors.stoneDark(), GameTheme.Colors.stoneDark().darker(), hoverProgress);
-            Color bgEnd = interpolateColor(GameTheme.Colors.stoneMedium(), GameTheme.Colors.stoneMedium().darker(), hoverProgress);
-            GradientPaint bgGradient = new GradientPaint(0, 0, bgStart, 0, h, bgEnd);
-            g2.setPaint(bgGradient);
-            g2.fill(new RoundRectangle2D.Float(2, 2, w - 4, h - 4, arc, arc));
-
-            // golden border
-            Color borderColor = interpolateColor(GameTheme.Colors.PRIMARY_GOLD_DARK, GameTheme.Colors.PRIMARY_GOLD_LIGHT, hoverProgress);
-            g2.setColor(borderColor);
-            g2.setStroke(new BasicStroke(2f + hoverProgress * 0.5f));
-            g2.draw(new RoundRectangle2D.Float(2, 2, w - 5, h - 5, arc, arc));
-
-            // Focus indicator - glowing outline
-            if (isFocused) {
-                // Outer glow
-                g2.setColor(new Color(GameTheme.Colors.PRIMARY_GOLD_LIGHT.getRed(), GameTheme.Colors.PRIMARY_GOLD_LIGHT.getGreen(), GameTheme.Colors.PRIMARY_GOLD_LIGHT.getBlue(), 80));
-                g2.setStroke(new BasicStroke(4f));
-                g2.draw(new RoundRectangle2D.Float(0, 0, w - 1, h - 1, arc + 4, arc + 4));
-                // Inner bright ring
-                g2.setColor(new Color(GameTheme.Colors.PRIMARY_GOLD_LIGHT.getRed(), GameTheme.Colors.PRIMARY_GOLD_LIGHT.getGreen(), GameTheme.Colors.PRIMARY_GOLD_LIGHT.getBlue(), 200));
-                g2.setStroke(new BasicStroke(2f));
-                g2.draw(new RoundRectangle2D.Float(1, 1, w - 3, h - 3, arc + 2, arc + 2));
-            }
-
-            // glow
-            g2.setColor(ThemeEffects.withAlpha(GameTheme.Colors.textLight(), (int) (15 + 20 * hoverProgress)));
-            g2.fill(new RoundRectangle2D.Float(4, 4, w - 8, (h - 8) / 3f, arc - 2, arc - 2));
-
-            // text
-            g2.setFont(FontManager.getBodyMedium(Font.BOLD));
-            FontMetrics fm = g2.getFontMetrics();
-            String text = getText();
-            int textWidth = fm.stringWidth(text);
-            int textX = (w - textWidth) / 2;
-            int textY = h / 2 - 3;
-
-            g2.setColor(GameTheme.Colors.shadow());
-            g2.drawString(text, textX + 2, textY + 2);
-
-            Color textColor = interpolateColor(GameTheme.Colors.textLight(), GameTheme.Colors.PRIMARY_GOLD_LIGHT, hoverProgress * 0.4f);
-            g2.setColor(textColor);
-            g2.drawString(text, textX, textY);
-
-            // subtitle
-            if (subtitle != null && !subtitle.isEmpty()) {
-                g2.setFont(FontManager.getBodySmall());
-                fm = g2.getFontMetrics();
-                int subWidth = fm.stringWidth(subtitle);
-                g2.setColor(ThemeEffects.withAlpha(GameTheme.Colors.textMuted(), (int) (140 + 40 * hoverProgress)));
-                g2.drawString(subtitle, (w - subWidth) / 2, textY + 18);
-            }
-
-            g2.dispose();
-        }
-
-        private Color interpolateColor(Color c1, Color c2, float t) {
-            int r = (int) (c1.getRed() + (c2.getRed() - c1.getRed()) * t);
-            int gr = (int) (c1.getGreen() + (c2.getGreen() - c1.getGreen()) * t);
-            int b = (int) (c1.getBlue() + (c2.getBlue() - c1.getBlue()) * t);
-            int a = (int) (c1.getAlpha() + (c2.getAlpha() - c1.getAlpha()) * t);
-            return new Color(r, gr, b, a);
-        }
-    }
-
-
-
-    private static class ExitButton extends JButton {
-        private boolean isHovered = false;
-        private boolean isFocused = false;
-
-        public ExitButton(String text) {
-            super(text);
-            setFont(FontManager.getBodySmall(Font.BOLD));
-            setForeground(GameTheme.Colors.PLAYER_RED);
-            setFocusPainted(false);
-            setBorderPainted(false);
-            setContentAreaFilled(false);
-            setCursor(new Cursor(Cursor.HAND_CURSOR));
-            setFocusable(true);
-            setPreferredSize(new Dimension(130, 38));
-            setMaximumSize(new Dimension(150, 45));
-            setMinimumSize(new Dimension(100, 32));
-
-            addMouseListener(new MouseAdapter() {
-                @Override
-                public void mouseEntered(MouseEvent e) {
-                    isHovered = true;
-                    repaint();
-                }
-
-                @Override
-                public void mouseExited(MouseEvent e) {
-                    isHovered = false;
-                    repaint();
-                }
-            });
-
-            addFocusListener(new java.awt.event.FocusAdapter() {
-                @Override
-                public void focusGained(java.awt.event.FocusEvent e) {
-                    isFocused = true;
-                    repaint();
-                }
-                @Override
-                public void focusLost(java.awt.event.FocusEvent e) {
-                    isFocused = false;
-                    repaint();
-                }
-            });
-        }
-
-        @Override
-        protected void paintComponent(Graphics g) {
-            Graphics2D g2 = (Graphics2D) g.create();
-            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
-
-            int w = getWidth();
-            int h = getHeight();
-
-            if (isHovered) {
-                Color red = GameTheme.Colors.PLAYER_RED;
-                g2.setColor(new Color(red.getRed(), red.getGreen(), red.getBlue(), 180));
-                g2.fillRoundRect(0, 0, w, h, 8, 8);
-                g2.setColor(new Color(GameTheme.Colors.PLAYER_RED.getRed(), GameTheme.Colors.PLAYER_RED.getGreen(), GameTheme.Colors.PLAYER_RED.getBlue()));
-                g2.setStroke(new BasicStroke(2));
-                g2.drawRoundRect(1, 1, w - 2, h - 2, 8, 8);
-                g2.setColor(new Color(GameTheme.Colors.PLAYER_RED.getRed(), GameTheme.Colors.PLAYER_RED.getGreen(), GameTheme.Colors.PLAYER_RED.getBlue(), 200));
-            } else {
-                Color base = GameTheme.Colors.stoneDark();
-                g2.setColor(ThemeEffects.withAlpha(base, 120));
-                g2.fillRoundRect(0, 0, w, h, 8, 8);
-                g2.setColor(GameTheme.Colors.PLAYER_RED);
-                g2.setStroke(new BasicStroke(1.5f));
-                g2.drawRoundRect(1, 1, w - 2, h - 2, 8, 8);
-                g2.setColor(ThemeEffects.withAlpha(GameTheme.Colors.PLAYER_RED, 200));
-            }
-
-            // Focus indicator - glowing outline
-            if (isFocused) {
-                // Outer glow (red-tinted for exit button)
-                Color red = GameTheme.Colors.PLAYER_RED;
-                g2.setColor(new Color(red.getRed(), red.getGreen(), red.getBlue(), 80));
-                g2.setStroke(new BasicStroke(4f));
-                g2.drawRoundRect(-1, -1, w + 1, h + 1, 12, 12);
-                // Inner bright ring
-                g2.setColor(new Color(red.getRed(), red.getGreen(), red.getBlue(), 200));
-                g2.setStroke(new BasicStroke(2f));
-                g2.drawRoundRect(0, 0, w - 1, h - 1, 10, 10);
-            }
-
-            g2.setFont(getFont());
-            FontMetrics fm = g2.getFontMetrics();
-            String text = getText();
-            int textX = (w - fm.stringWidth(text)) / 2;
-            int textY = (h + fm.getAscent() - fm.getDescent()) / 2;
-            g2.drawString(text, textX, textY);
-
-            g2.dispose();
-        }
-    }
 }
-

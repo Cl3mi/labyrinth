@@ -2,9 +2,11 @@ package labyrinth.client.ui;
 
 import labyrinth.client.messaging.GameClient;
 import labyrinth.client.ui.Styles.StyledButton;
+import labyrinth.client.ui.Styles.StyledComboBox;
 import labyrinth.client.ui.Styles.StyledContextMenu;
 import labyrinth.client.ui.Styles.StyledDialog;
 import labyrinth.client.ui.Styles.StyledPlayerCardRenderer;
+import labyrinth.client.ui.Styles.StyledTextField;
 import labyrinth.client.ui.Styles.StyledTooltipManager;
 import labyrinth.client.ui.theme.FontManager;
 import labyrinth.client.ui.theme.GameTheme;
@@ -48,11 +50,11 @@ public class MultiplayerLobbyPanel extends JPanel {
     private int configGameDurationMinutes = 60;
     private String configUsername = "Player";
 
-    private JTextField usernameField;
-    private JComboBox<String> boardSizeCombo;
-    private JComboBox<String> treasureCombo;
-    private JComboBox<String> bonusCombo;
-    private JComboBox<String> durationCombo;
+    private StyledTextField usernameField;
+    private StyledComboBox<String> boardSizeCombo;
+    private StyledComboBox<String> treasureCombo;
+    private StyledComboBox<String> bonusCombo;
+    private StyledComboBox<String> durationCombo;
 
     @Setter
     private Runnable onBackToMenu;
@@ -227,7 +229,7 @@ public class MultiplayerLobbyPanel extends JPanel {
         settingsGrid.add(createStyledLabel("Spielername:"), gbc);
 
         gbc.gridx = 1; gbc.weightx = 0.6;
-        usernameField = createStyledTextField(configUsername);
+        usernameField = new StyledTextField(configUsername);
         usernameField.setEditable(false);
         StyledTooltipManager.setTooltip(usernameField, "Spielername", "Dein Anzeigename im Spiel (wird im Hauptmenü festgelegt)");
         settingsGrid.add(usernameField, gbc);
@@ -237,7 +239,7 @@ public class MultiplayerLobbyPanel extends JPanel {
         settingsGrid.add(createStyledLabel("Spielfeldgröße:"), gbc);
 
         gbc.gridx = 1; gbc.weightx = 0.6;
-        boardSizeCombo = createStyledComboBox();
+        boardSizeCombo = new StyledComboBox<>();
         for (int i = 3; i <= 11; i += 2) {
             boardSizeCombo.addItem(i + " × " + i);
         }
@@ -256,7 +258,7 @@ public class MultiplayerLobbyPanel extends JPanel {
         settingsGrid.add(createStyledLabel("Schätze pro Spieler:"), gbc);
 
         gbc.gridx = 1;
-        treasureCombo = createStyledComboBox();
+        treasureCombo = new StyledComboBox<>();
         for (int i = 1; i <= 6; i++) {
             treasureCombo.addItem(String.valueOf(i));
         }
@@ -275,7 +277,7 @@ public class MultiplayerLobbyPanel extends JPanel {
         settingsGrid.add(createStyledLabel("Bonus-Anzahl:"), gbc);
 
         gbc.gridx = 1;
-        bonusCombo = createStyledComboBox();
+        bonusCombo = new StyledComboBox<>();
         for (int i = 0; i <= 20; i++) {
             bonusCombo.addItem(String.valueOf(i));
         }
@@ -296,7 +298,7 @@ public class MultiplayerLobbyPanel extends JPanel {
 
         gbc.gridx = 1;
 
-        durationCombo = createStyledComboBox();
+        durationCombo = new StyledComboBox<>();
         durationCombo.addItem("10 Minuten");
         durationCombo.addItem("15 Minuten");
         durationCombo.addItem("30 Minuten");
@@ -413,43 +415,6 @@ public class MultiplayerLobbyPanel extends JPanel {
         label.setForeground(GameTheme.Colors.TEXT_LIGHT);
         return label;
     }
-
-    private JComboBox<String> createStyledComboBox() {
-        JComboBox<String> combo = new JComboBox<>();
-        combo.setFont(FontManager.getBodySmall());
-        combo.setBackground(GameTheme.Colors.STONE_MEDIUM);
-        combo.setForeground(GameTheme.Colors.TEXT_LIGHT);
-        combo.setPreferredSize(new Dimension(150, 30));
-
-        combo.setRenderer(new DefaultListCellRenderer() {
-            @Override
-            public Component getListCellRendererComponent(JList<?> list, Object value,
-                    int index, boolean isSelected, boolean cellHasFocus) {
-                super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
-                setBackground(isSelected ? GameTheme.Colors.PRIMARY_GOLD_DARK : GameTheme.Colors.STONE_MEDIUM);
-                setForeground(GameTheme.Colors.TEXT_LIGHT);
-                setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
-                return this;
-            }
-        });
-
-        return combo;
-    }
-
-    private JTextField createStyledTextField(String defaultText) {
-        JTextField textField = new JTextField(defaultText, 15);
-        textField.setFont(FontManager.getBodySmall());
-        textField.setBackground(GameTheme.Colors.STONE_MEDIUM);
-        textField.setForeground(GameTheme.Colors.TEXT_LIGHT);
-        textField.setCaretColor(GameTheme.Colors.TEXT_LIGHT);
-        textField.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(GameTheme.Colors.CARD_BORDER, 1),
-                BorderFactory.createEmptyBorder(5, 8, 5, 8)
-        ));
-        textField.setPreferredSize(new Dimension(150, 30));
-        return textField;
-    }
-
 
     public void setConnected(boolean connected) {
         SwingUtilities.invokeLater(() -> {
@@ -665,4 +630,3 @@ public class MultiplayerLobbyPanel extends JPanel {
 
 
 }
-

@@ -6,6 +6,7 @@ import labyrinth.client.messaging.GameClient;
 import labyrinth.client.models.Board;
 import labyrinth.client.models.Player;
 import labyrinth.client.models.extensions.TreasureUtils;
+import labyrinth.client.ui.Styles.StyledButton;
 import labyrinth.client.ui.Styles.StyledContextMenu;
 import labyrinth.client.ui.Styles.StyledDialog;
 import labyrinth.client.ui.Styles.StyledTooltipManager;
@@ -141,7 +142,7 @@ public class BoardPanel extends JPanel {
 
         setLayout(null);
 
-        JButton optionsButton = createStyledOptionsButton();
+        StyledButton optionsButton = createStyledOptionsButton();
         add(optionsButton);
 
 
@@ -238,58 +239,10 @@ public class BoardPanel extends JPanel {
         repaint();
     }
 
-    private JButton createStyledOptionsButton() {
-        JButton btn = new JButton("⚙") {
-            private boolean isHovered = false;
-
-            {
-                addMouseListener(new MouseAdapter() {
-                    @Override
-                    public void mouseEntered(MouseEvent e) { isHovered = true; repaint(); }
-                    @Override
-                    public void mouseExited(MouseEvent e) { isHovered = false; repaint(); }
-                });
-            }
-
-            @Override
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-
-                int w = getWidth();
-                int h = getHeight();
-
-                // Background
-                if (isHovered) {
-                    g2.setColor(new Color(80, 70, 55, 220));
-                } else {
-                    g2.setColor(new Color(50, 45, 40, 200));
-                }
-                g2.fillRoundRect(0, 0, w, h, 10, 10);
-
-                // Border
-                g2.setColor(new Color(180, 150, 100, isHovered ? 255 : 180));
-                g2.setStroke(new BasicStroke(2));
-                g2.drawRoundRect(1, 1, w - 2, h - 2, 10, 10);
-
-                // Icon
-                g2.setFont(FontManager.getFontForSize(30f, Font.BOLD));
-                g2.setColor(new Color(255, 215, 0));
-                FontMetrics fm = g2.getFontMetrics();
-                String text = "⚙";
-                int textX = (w - fm.stringWidth(text)) / 2;
-                int textY = (h + fm.getAscent() - fm.getDescent()) / 2;
-                g2.drawString(text, textX, textY);
-
-                g2.dispose();
-            }
-        };
+    private StyledButton createStyledOptionsButton() {
+        StyledButton btn = new StyledButton("⚙", StyledButton.Style.SECONDARY);
+        btn.setPreferredSize(new Dimension(45, 40));
         btn.setBounds(10, 10, 45, 40);
-        btn.setOpaque(false);
-        btn.setContentAreaFilled(false);
-        btn.setBorderPainted(false);
-        btn.setFocusPainted(false);
-        btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
         btn.addActionListener(e -> showOptionsDialog());
         StyledTooltipManager.setTooltip(btn, "Optionen", "Einstellungen öffnen (Esc/P)");
         StyledContextMenu.attachTo(btn);
@@ -2889,7 +2842,7 @@ public class BoardPanel extends JPanel {
         buttonPanel.setOpaque(false);
 
         // Exit Button
-        JButton exitButton = createStyledDialogButton("🚪 Spiel beenden", new Color(120, 50, 50), new Color(180, 80, 80));
+        StyledButton exitButton = new StyledButton("🚪 Spiel beenden", StyledButton.Style.DIALOG_DANGER);
         exitButton.addActionListener(e -> {
             boolean confirmed = StyledDialog.showConfirm(dialog,
                     "Spiel beenden?",
@@ -2904,7 +2857,7 @@ public class BoardPanel extends JPanel {
         buttonPanel.add(exitButton);
 
         // Save & Close Button
-        JButton saveButton = createStyledDialogButton("💾 Speichern & Schließen", new Color(60, 100, 60), new Color(100, 160, 100));
+        StyledButton saveButton = new StyledButton("💾 Speichern & Schließen", StyledButton.Style.DIALOG_PRIMARY);
         saveButton.addActionListener(e -> {
             // Einstellungen speichern
             prefs.putInt("musicVolume", musicSlider.getValue());
@@ -2916,7 +2869,7 @@ public class BoardPanel extends JPanel {
         buttonPanel.add(saveButton);
 
         // Close Button
-        JButton closeButton = createStyledDialogButton("✕ Schließen", STONE_DARK, new Color(90, 80, 70));
+        StyledButton closeButton = new StyledButton("✕ Schließen", StyledButton.Style.DIALOG_SECONDARY);
         closeButton.addActionListener(e -> dialog.dispose());
         buttonPanel.add(closeButton);
 
@@ -2955,49 +2908,6 @@ public class BoardPanel extends JPanel {
         return section;
     }
 
-    private JButton createStyledDialogButton(String text, Color bgColor, Color borderColor) {
-        JButton btn = new JButton(text) {
-            private boolean isHovered = false;
-            {
-                addMouseListener(new MouseAdapter() {
-                    @Override
-                    public void mouseEntered(MouseEvent e) { isHovered = true; repaint(); }
-                    @Override
-                    public void mouseExited(MouseEvent e) { isHovered = false; repaint(); }
-                });
-            }
-            @Override
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                int w = getWidth(), h = getHeight();
-
-                Color bg = isHovered ? borderColor : bgColor;
-                g2.setColor(bg);
-                g2.fillRoundRect(0, 0, w, h, 8, 8);
-
-                g2.setColor(borderColor);
-                g2.setStroke(new BasicStroke(2));
-                g2.drawRoundRect(1, 1, w - 2, h - 2, 8, 8);
-
-                g2.setFont(FontManager.getBodySmall(Font.BOLD));
-                g2.setColor(new Color(255, 248, 230));
-                FontMetrics fm = g2.getFontMetrics();
-                int textX = (w - fm.stringWidth(getText())) / 2;
-                int textY = (h + fm.getAscent() - fm.getDescent()) / 2;
-                g2.drawString(getText(), textX, textY);
-                g2.dispose();
-            }
-        };
-        btn.setPreferredSize(new Dimension(170, 38));
-        btn.setOpaque(false);
-        btn.setContentAreaFilled(false);
-        btn.setBorderPainted(false);
-        btn.setFocusPainted(false);
-        btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        return btn;
-    }
-
     /**
      * Called when the game ends to prevent further input
      */
@@ -3006,4 +2916,3 @@ public class BoardPanel extends JPanel {
         this.inputLocked = gameOver; // Also lock input
     }
 }
-

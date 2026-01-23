@@ -136,10 +136,6 @@ public class ToastManager {
         iconLabel.setForeground(toast.type.color);
         leftPanel.add(iconLabel, BorderLayout.WEST);
 
-        JLabel idLabel = new JLabel(toast.type.prefix + "-" + toast.id);
-        idLabel.setFont(FontManager.getBodyTiny());
-        idLabel.setForeground(GameTheme.Colors.textMuted());
-        leftPanel.add(idLabel, BorderLayout.SOUTH);
 
         panel.add(leftPanel, BorderLayout.WEST);
 
