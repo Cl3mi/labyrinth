@@ -23,7 +23,6 @@ public class GameClient extends WebSocketClient {
     private volatile ConnectionState connectionState = ConnectionState.DISCONNECTED;
     private volatile boolean intentionalDisconnect = false;
 
-
     @Setter private Consumer<ConnectAckEventPayload> onConnectAck;
     @Setter private Consumer<LobbyStateEventPayload> onLobbyState;
     @Setter private Consumer<GameStateEventPayload> onGameStarted;
@@ -37,8 +36,8 @@ public class GameClient extends WebSocketClient {
     @Setter private Consumer<String> onErrorMessage;
     @Setter private Runnable onOpenHook;
 
-    @Setter private Runnable onConnectionLost;        // Triggered on unintentional disconnect
-    @Setter private Consumer<String> onStatusUpdate;  // Status messages for UI
+    @Setter private Runnable onConnectionLost;
+    @Setter private Consumer<String> onStatusUpdate;
 
     public GameClient(URI serverUri) {
         super(serverUri);
@@ -52,7 +51,7 @@ public class GameClient extends WebSocketClient {
         log.info("WebSocket connected");
 
         connectionState = ConnectionState.CONNECTED;
-        intentionalDisconnect = false; // Reset flag on successful connection
+        intentionalDisconnect = false;
 
         if (onStatusUpdate != null) {
             runOnUiThread(() -> onStatusUpdate.accept("Verbunden mit Server"));
@@ -109,7 +108,6 @@ public class GameClient extends WebSocketClient {
                 }
                 case ACTION_ERROR -> {
                     ActionErrorEventPayload payload = mapper.treeToValue(payloadNode, ActionErrorEventPayload.class);
-                    // Include error code in the message so handlers can detect specific error types
                     String errorCode = payload.getErrorCode() != null ? payload.getErrorCode().toString() : "UNKNOWN";
                     String msg = errorCode + ": " + (payload.getMessage() != null ? payload.getMessage() : "No details");
                     if (onErrorMessage != null) runOnUiThread(() -> onErrorMessage.accept(msg));

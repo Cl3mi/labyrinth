@@ -7,6 +7,7 @@ import labyrinth.client.audio.SoundEffects;
 import labyrinth.client.messaging.GameClient;
 import labyrinth.client.models.Board;
 import labyrinth.client.models.Player;
+import labyrinth.client.models.TileImageInfo;
 import labyrinth.client.models.extensions.TreasureUtils;
 import labyrinth.client.ui.Styles.StyledButton;
 import labyrinth.client.ui.Styles.StyledContextMenu;
@@ -363,16 +364,6 @@ public class BoardPanel extends JPanel {
     // =================================================================================
     // TILE IMAGE INFO & DRAWING
     // =================================================================================
-
-    private static class TileImageInfo {
-        final String type;
-        final int rotation;
-
-        TileImageInfo(String type, int rotation) {
-            this.type = type;
-            this.rotation = rotation;
-        }
-    }
 
     private BufferedImage getTileImage(String type) {
         return tileImages.get(type);
@@ -1395,9 +1386,9 @@ public class BoardPanel extends JPanel {
         boolean drewImage = false;
 
         if (info != null) {
-            BufferedImage img = getTileImage(info.type);
+            BufferedImage img = getTileImage(info.type());
             if (img != null) {
-                drawRotatedImage(g2, img, x, y, info.rotation);
+                drawRotatedImage(g2, img, x, y, info.rotation());
                 drewImage = true;
             }
         }
