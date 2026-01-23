@@ -1,0 +1,173 @@
+{
+  "description": "Sample board configurations for testing",
+  "boards": {
+    "standard_7x7": {
+      "width": 7,
+      "height": 7,
+      "description": "Standard 7x7 game board with fixed corner tiles",
+      "tiles": [
+        [
+          {"entrances": ["DOWN", "RIGHT"], "isFixed": true, "treasure": null},
+          {"entrances": ["UP", "DOWN", "RIGHT"], "isFixed": false, "treasure": {"id": 1, "name": "Helmet"}},
+          {"entrances": ["LEFT", "DOWN", "RIGHT"], "isFixed": true, "treasure": null},
+          {"entrances": ["UP", "DOWN", "LEFT"], "isFixed": false, "treasure": {"id": 2, "name": "Sword"}},
+          {"entrances": ["LEFT", "DOWN", "RIGHT"], "isFixed": true, "treasure": null},
+          {"entrances": ["UP", "DOWN", "LEFT"], "isFixed": false, "treasure": {"id": 3, "name": "Ring"}},
+          {"entrances": ["DOWN", "LEFT"], "isFixed": true, "treasure": null}
+        ],
+        [
+          {"entrances": ["UP", "DOWN", "RIGHT"], "isFixed": false, "treasure": null},
+          {"entrances": ["UP", "DOWN", "LEFT", "RIGHT"], "isFixed": false, "treasure": null},
+          {"entrances": ["UP", "DOWN", "LEFT", "RIGHT"], "isFixed": false, "treasure": null},
+          {"entrances": ["UP", "DOWN", "LEFT", "RIGHT"], "isFixed": false, "treasure": null},
+          {"entrances": ["UP", "DOWN", "LEFT", "RIGHT"], "isFixed": false, "treasure": null},
+          {"entrances": ["UP", "DOWN", "LEFT", "RIGHT"], "isFixed": false, "treasure": null},
+          {"entrances": ["UP", "DOWN", "LEFT"], "isFixed": false, "treasure": null}
+        ],
+        [
+          {"entrances": ["UP", "DOWN", "RIGHT"], "isFixed": true, "treasure": null},
+          {"entrances": ["UP", "DOWN", "LEFT", "RIGHT"], "isFixed": false, "treasure": {"id": 4, "name": "Map"}},
+          {"entrances": ["UP", "DOWN", "RIGHT"], "isFixed": true, "treasure": null},
+          {"entrances": ["UP", "DOWN", "LEFT", "RIGHT"], "isFixed": false, "treasure": {"id": 5, "name": "Crown"}},
+          {"entrances": ["UP", "DOWN", "RIGHT"], "isFixed": true, "treasure": null},
+          {"entrances": ["UP", "DOWN", "LEFT", "RIGHT"], "isFixed": false, "treasure": {"id": 6, "name": "Book"}},
+          {"entrances": ["UP", "DOWN", "LEFT"], "isFixed": true, "treasure": null}
+        ],
+        [
+          {"entrances": ["UP", "DOWN", "RIGHT"], "isFixed": false, "treasure": null},
+          {"entrances": ["UP", "DOWN", "LEFT", "RIGHT"], "isFixed": false, "treasure": null},
+          {"entrances": ["UP", "DOWN", "LEFT", "RIGHT"], "isFixed": false, "treasure": null},
+          {"entrances": ["UP", "DOWN", "LEFT", "RIGHT"], "isFixed": false, "treasure": null},
+          {"entrances": ["UP", "DOWN", "LEFT", "RIGHT"], "isFixed": false, "treasure": null},
+          {"entrances": ["UP", "DOWN", "LEFT", "RIGHT"], "isFixed": false, "treasure": null},
+          {"entrances": ["UP", "DOWN", "LEFT"], "isFixed": false, "treasure": null}
+        ],
+        [
+          {"entrances": ["UP", "DOWN", "RIGHT"], "isFixed": true, "treasure": null},
+          {"entrances": ["UP", "DOWN", "LEFT", "RIGHT"], "isFixed": false, "treasure": {"id": 7, "name": "Chest"}},
+          {"entrances": ["UP", "DOWN", "RIGHT"], "isFixed": true, "treasure": null},
+          {"entrances": ["UP", "DOWN", "LEFT", "RIGHT"], "isFixed": false, "treasure": {"id": 8, "name": "Key"}},
+          {"entrances": ["UP", "DOWN", "RIGHT"], "isFixed": true, "treasure": null},
+          {"entrances": ["UP", "DOWN", "LEFT", "RIGHT"], "isFixed": false, "treasure": {"id": 9, "name": "Potion"}},
+          {"entrances": ["UP", "DOWN", "LEFT"], "isFixed": true, "treasure": null}
+        ],
+        [
+          {"entrances": ["UP", "DOWN", "RIGHT"], "isFixed": false, "treasure": null},
+          {"entrances": ["UP", "DOWN", "LEFT", "RIGHT"], "isFixed": false, "treasure": null},
+          {"entrances": ["UP", "DOWN", "LEFT", "RIGHT"], "isFixed": false, "treasure": null},
+          {"entrances": ["UP", "DOWN", "LEFT", "RIGHT"], "isFixed": false, "treasure": null},
+          {"entrances": ["UP", "DOWN", "LEFT", "RIGHT"], "isFixed": false, "treasure": null},
+          {"entrances": ["UP", "DOWN", "LEFT", "RIGHT"], "isFixed": false, "treasure": null},
+          {"entrances": ["UP", "DOWN", "LEFT"], "isFixed": false, "treasure": null}
+        ],
+        [
+          {"entrances": ["UP", "RIGHT"], "isFixed": true, "treasure": null},
+          {"entrances": ["UP", "DOWN", "RIGHT"], "isFixed": false, "treasure": {"id": 10, "name": "Skull"}},
+          {"entrances": ["UP", "LEFT", "RIGHT"], "isFixed": true, "treasure": null},
+          {"entrances": ["UP", "DOWN", "LEFT"], "isFixed": false, "treasure": {"id": 11, "name": "Ghost"}},
+          {"entrances": ["UP", "LEFT", "RIGHT"], "isFixed": true, "treasure": null},
+          {"entrances": ["UP", "DOWN", "LEFT"], "isFixed": false, "treasure": {"id": 12, "name": "Dragon"}},
+          {"entrances": ["UP", "LEFT"], "isFixed": true, "treasure": null}
+        ]
+      ],
+      "extraTile": {
+        "entrances": ["UP", "DOWN"],
+        "isFixed": false,
+        "treasure": null
+      }
+    },
+    "small_3x3": {
+      "width": 3,
+      "height": 3,
+      "description": "Small 3x3 board for quick tests",
+      "tiles": [
+        [
+          {"entrances": ["DOWN", "RIGHT"], "isFixed": true, "treasure": null},
+          {"entrances": ["LEFT", "DOWN", "RIGHT"], "isFixed": false, "treasure": {"id": 1, "name": "Gold"}},
+          {"entrances": ["DOWN", "LEFT"], "isFixed": true, "treasure": null}
+        ],
+        [
+          {"entrances": ["UP", "DOWN", "RIGHT"], "isFixed": false, "treasure": null},
+          {"entrances": ["UP", "DOWN", "LEFT", "RIGHT"], "isFixed": false, "treasure": {"id": 2, "name": "Silver"}},
+          {"entrances": ["UP", "DOWN", "LEFT"], "isFixed": false, "treasure": null}
+        ],
+        [
+          {"entrances": ["UP", "RIGHT"], "isFixed": true, "treasure": null},
+          {"entrances": ["UP", "LEFT", "RIGHT"], "isFixed": false, "treasure": {"id": 3, "name": "Bronze"}},
+          {"entrances": ["UP", "LEFT"], "isFixed": true, "treasure": null}
+        ]
+      ],
+      "extraTile": {
+        "entrances": ["UP", "DOWN"],
+        "isFixed": false,
+        "treasure": null
+      }
+    },
+    "fully_connected": {
+      "width": 5,
+      "height": 5,
+      "description": "All tiles fully connected (cross-shaped) - for reachability tests",
+      "tiles": [
+        [
+          {"entrances": ["UP", "DOWN", "LEFT", "RIGHT"], "isFixed": false, "treasure": null},
+          {"entrances": ["UP", "DOWN", "LEFT", "RIGHT"], "isFixed": false, "treasure": null},
+          {"entrances": ["UP", "DOWN", "LEFT", "RIGHT"], "isFixed": false, "treasure": null},
+          {"entrances": ["UP", "DOWN", "LEFT", "RIGHT"], "isFixed": false, "treasure": null},
+          {"entrances": ["UP", "DOWN", "LEFT", "RIGHT"], "isFixed": false, "treasure": null}
+        ],
+        [
+          {"entrances": ["UP", "DOWN", "LEFT", "RIGHT"], "isFixed": false, "treasure": null},
+          {"entrances": ["UP", "DOWN", "LEFT", "RIGHT"], "isFixed": false, "treasure": null},
+          {"entrances": ["UP", "DOWN", "LEFT", "RIGHT"], "isFixed": false, "treasure": null},
+          {"entrances": ["UP", "DOWN", "LEFT", "RIGHT"], "isFixed": false, "treasure": null},
+          {"entrances": ["UP", "DOWN", "LEFT", "RIGHT"], "isFixed": false, "treasure": null}
+        ],
+        [
+          {"entrances": ["UP", "DOWN", "LEFT", "RIGHT"], "isFixed": false, "treasure": null},
+          {"entrances": ["UP", "DOWN", "LEFT", "RIGHT"], "isFixed": false, "treasure": null},
+          {"entrances": ["UP", "DOWN", "LEFT", "RIGHT"], "isFixed": false, "treasure": {"id": 1, "name": "Target"}},
+          {"entrances": ["UP", "DOWN", "LEFT", "RIGHT"], "isFixed": false, "treasure": null},
+          {"entrances": ["UP", "DOWN", "LEFT", "RIGHT"], "isFixed": false, "treasure": null}
+        ],
+        [
+          {"entrances": ["UP", "DOWN", "LEFT", "RIGHT"], "isFixed": false, "treasure": null},
+          {"entrances": ["UP", "DOWN", "LEFT", "RIGHT"], "isFixed": false, "treasure": null},
+          {"entrances": ["UP", "DOWN", "LEFT", "RIGHT"], "isFixed": false, "treasure": null},
+          {"entrances": ["UP", "DOWN", "LEFT", "RIGHT"], "isFixed": false, "treasure": null},
+          {"entrances": ["UP", "DOWN", "LEFT", "RIGHT"], "isFixed": false, "treasure": null}
+        ],
+        [
+          {"entrances": ["UP", "DOWN", "LEFT", "RIGHT"], "isFixed": false, "treasure": null},
+          {"entrances": ["UP", "DOWN", "LEFT", "RIGHT"], "isFixed": false, "treasure": null},
+          {"entrances": ["UP", "DOWN", "LEFT", "RIGHT"], "isFixed": false, "treasure": null},
+          {"entrances": ["UP", "DOWN", "LEFT", "RIGHT"], "isFixed": false, "treasure": null},
+          {"entrances": ["UP", "DOWN", "LEFT", "RIGHT"], "isFixed": false, "treasure": null}
+        ]
+      ],
+      "extraTile": {
+        "entrances": ["UP", "DOWN", "LEFT", "RIGHT"],
+        "isFixed": false,
+        "treasure": null
+      }
+    },
+    "endgame_scenario": {
+      "width": 7,
+      "height": 7,
+      "description": "Endgame scenario - player near home with all treasures collected",
+      "playerPosition": {"row": 1, "column": 1},
+      "homePosition": {"row": 0, "column": 0},
+      "hasAllTreasures": true
+    },
+    "with_bonuses": {
+      "width": 5,
+      "height": 5,
+      "description": "Board with bonus tiles for testing bonus mechanics",
+      "bonusPositions": [
+        {"row": 1, "column": 1, "bonusType": "BEAM"},
+        {"row": 1, "column": 3, "bonusType": "SWAP"},
+        {"row": 3, "column": 1, "bonusType": "PUSH_FIXED"},
+        {"row": 3, "column": 3, "bonusType": "PUSH_TWICE"}
+      ]
+    }
+  }
+}
