@@ -80,7 +80,6 @@ public class SimpleAiStrategy implements AiStrategy {
             }
         }
 
-        // Check if opponent stands on our treasure - use SWAP to steal it
         if (!goingHome && player.getAvailableBonuses().contains(BonusType.SWAP)) {
             SimulationResult swapStealResult = trySwapToStealTreasure(board, player);
             if (swapStealResult != null) {
@@ -89,7 +88,6 @@ public class SimpleAiStrategy implements AiStrategy {
             }
         }
 
-        // Try BEAM/SWAP to collect two treasures in one turn
         if (!goingHome && !player.getAvailableBonuses().isEmpty()) {
             SimulationResult doubleTreasureResult = tryDoubleTreasureCollection(board, player);
             if (doubleTreasureResult != null && doubleTreasureResult.score() >= SimulationResult.SCORE_DOUBLE_TREASURE) {
@@ -98,7 +96,6 @@ public class SimpleAiStrategy implements AiStrategy {
             }
         }
 
-        // Try using bonuses to reach target - PREFER getting treasure over collecting more bonuses
         if (!goingHome && !player.getAvailableBonuses().isEmpty()) {
             SimulationResult bonusUseResult = tryUsingBonusesToReachTarget(board, player, candidates);
             if (bonusUseResult != null && bonusUseResult.score() >= SimulationResult.SCORE_TARGET_WITH_BONUS) {
@@ -107,7 +104,6 @@ public class SimpleAiStrategy implements AiStrategy {
             }
         }
 
-        // Try to reach a bonus tile - only if we can't use bonuses to get treasure
         if (!goingHome) {
             SimulationResult bonusResult = findBestBonusMove(board, player, candidates);
             if (bonusResult != null && bonusResult.score() == SimulationResult.SCORE_BONUS_REACHABLE) {
@@ -116,7 +112,6 @@ public class SimpleAiStrategy implements AiStrategy {
             }
         }
 
-        // Try to block opponent or push treasure closer
         if (!goingHome && bestResult != null && bestResult.score() <= SimulationResult.SCORE_MOVING_CLOSER) {
             SimulationResult strategicResult = findStrategicMove(board, player, candidates, bestResult);
             if (strategicResult != null && compareResults(strategicResult, bestResult) > 0) {
@@ -132,7 +127,6 @@ public class SimpleAiStrategy implements AiStrategy {
             System.out.println("[AI] Using fallback shift");
         }
 
-        // STUCK DETECTION: If the AI would stay on the same tile, try to move far away
         if (bestResult != null) {
             Position currentPos = player.getCurrentPosition();
             Position targetMovePos = bestResult.targetMovePosition();
@@ -178,7 +172,6 @@ public class SimpleAiStrategy implements AiStrategy {
                 Set<Position> reachable = sim.getReachableUnblockedPositions();
                 Position currentPos = sim.getPlayerPosition();
 
-                // Find the farthest reachable position
                 for (Position pos : reachable) {
                     int distance = manhattanDistance(currentPos, pos);
                     if (distance > maxDistance) {
@@ -206,7 +199,6 @@ public class SimpleAiStrategy implements AiStrategy {
         Position targetPos = sim.getTargetPosition();
         if (targetPos == null) return null;
 
-        // Check if any opponent is standing on our treasure (no shift - current board state)
         for (Player other : allPlayers) {
             if (other.getId().equals(player.getId())) continue;
             if (other.getCurrentPosition() == null) continue;
@@ -214,8 +206,6 @@ public class SimpleAiStrategy implements AiStrategy {
             Position otherPos = other.getCurrentPosition();
 
             if (otherPos.equals(targetPos)) {
-                // Opponent is on our treasure! SWAP with them
-                // After swap we'll be on the treasure, then we can still move
                 System.out.println("[AI] Opponent " + other.getName() + " is on our treasure - using SWAP!");
                 return new SimulationResult(
                     null, 0, SimulationResult.SCORE_TARGET_REACHABLE, 0, targetPos,
@@ -241,9 +231,7 @@ public class SimpleAiStrategy implements AiStrategy {
         Position currentTreasurePos = sim.getTargetPosition();
         if (currentTreasurePos == null) return null;
 
-        // Try BEAM: teleport to treasure tile, then walk to next treasure
         if (bonuses.contains(BonusType.BEAM)) {
-            // Beam directly to current treasure
             if (!sim.isPositionBlocked(currentTreasurePos)) {
                 BoardSimulator simFromBeam = sim.copy();
                 simFromBeam.simulateBeam(currentTreasurePos);
@@ -261,7 +249,6 @@ public class SimpleAiStrategy implements AiStrategy {
             }
         }
 
-        // Try SWAP: swap with player on treasure, then walk to next
         if (bonuses.contains(BonusType.SWAP) && allPlayers != null) {
             for (Player other : allPlayers) {
                 if (other.getId().equals(player.getId())) continue;
@@ -270,7 +257,6 @@ public class SimpleAiStrategy implements AiStrategy {
                 Position otherPos = other.getCurrentPosition();
                 if (!otherPos.equals(currentTreasurePos)) continue;
 
-                // Swap puts us on treasure
                 BoardSimulator simAfterSwap = sim.copy();
                 simAfterSwap.simulateSwap(otherPos);
 
@@ -307,13 +293,11 @@ public class SimpleAiStrategy implements AiStrategy {
                 for (int i = 0; i < rotation; i++) sim.rotateExtraTile();
                 if (!sim.applyShift(op)) continue;
 
-                // Check if this push moves our treasure closer to us
                 SimulationResult pushTreasureResult = evaluateTreasurePush(sim, op, rotation, player);
                 if (pushTreasureResult != null && (bestStrategic == null || compareResults(pushTreasureResult, bestStrategic) > 0)) {
                     bestStrategic = pushTreasureResult;
                 }
 
-                // Check if this push blocks an opponent
                 SimulationResult blockResult = evaluateOpponentBlock(sim, op, rotation, player);
                 if (blockResult != null && (bestStrategic == null || compareResults(blockResult, bestStrategic) > 0)) {
                     bestStrategic = blockResult;
@@ -334,20 +318,17 @@ public class SimpleAiStrategy implements AiStrategy {
 
         int newDistance = manhattanDistance(playerPos, targetPos);
 
-        // Compare with original distance (before push)
         Position origTarget = sim.getTargetTreasurePosition();
         if (origTarget == null) return null;
 
         int origDistance = manhattanDistance(player.getCurrentPosition(), origTarget);
 
-        // If push moved treasure closer, this is good
         if (newDistance < origDistance) {
             Set<Position> reachable = sim.getReachableUnblockedPositions();
             Position bestMove = findBestPositionWithSteps(reachable, targetPos, playerPos, Collections.emptySet());
             if (bestMove != null) {
                 int distAfterMove = manhattanDistance(bestMove, targetPos);
                 int steps = manhattanDistance(playerPos, bestMove);
-                // Give bonus score for pushing treasure closer
                 int score = SimulationResult.SCORE_MOVING_CLOSER + (origDistance - newDistance);
                 return new SimulationResult(op, rotation, score, distAfterMove, bestMove, steps);
             }
@@ -370,20 +351,15 @@ public class SimpleAiStrategy implements AiStrategy {
             if (opponent.getCurrentPosition() == null) continue;
             if (opponent.getCurrentTargetTreasure() == null) continue;
 
-            // Find opponent's treasure position after our shift
             Position opponentTreasurePos = findTreasurePosition(sim, opponent.getCurrentTargetTreasure());
             if (opponentTreasurePos == null) continue;
 
-            // Simulate opponent's position after shift
             Position opponentPosAfterShift = simulatePlayerPositionAfterShift(
                 opponent.getCurrentPosition(), op, sim.getWidth(), sim.getHeight());
 
-            // Check if opponent could reach their treasure before our move
-            // This is a simplified check - just see if they're close
             int opponentDistBefore = manhattanDistance(opponent.getCurrentPosition(), opponentTreasurePos);
             int opponentDistAfter = manhattanDistance(opponentPosAfterShift, opponentTreasurePos);
 
-            // If we pushed opponent away from their treasure, that's good
             if (opponentDistAfter > opponentDistBefore) {
                 Set<Position> reachable = sim.getReachableUnblockedPositions();
                 Position bestMove = targetPos != null ?
@@ -419,8 +395,6 @@ public class SimpleAiStrategy implements AiStrategy {
     }
 
     private Position findNextTreasurePosition(BoardSimulator sim, Player player) {
-        // This is a simplification - we'd need server info about next treasure
-        // For now, just look for any treasure on the board that's not our current target
         Treasure currentTarget = player.getCurrentTargetTreasure();
 
         for (int r = 0; r < sim.getHeight(); r++) {

@@ -31,7 +31,6 @@ public class AiController {
     private final AtomicBoolean aiModeEnabled = new AtomicBoolean(false);
     private final AtomicBoolean stopped = new AtomicBoolean(false);
 
-    // Callback for UI feedback
     private Runnable onAiThinkingStart;
     private Runnable onAiThinkingEnd;
     private Runnable onAiModeChanged;
@@ -111,7 +110,6 @@ public class AiController {
         aiModeEnabled.set(false);
         aiTurnInProgress.set(false);
 
-        // Clear stored state to prevent re-triggering
         latestBoard = null;
         latestPlayers = null;
         latestTurnInfo = null;
@@ -129,7 +127,6 @@ public class AiController {
         stopped.set(false);
     }
 
-    // Store latest state for re-triggering
     private volatile Board latestBoard;
     private volatile List<Player> latestPlayers;
     private volatile CurrentTurnInfo latestTurnInfo;
@@ -139,19 +136,17 @@ public class AiController {
      * If AI mode is enabled and it's the local player's turn, triggers AI automatically.
      */
     public void onGameStateUpdate(Board board, List<Player> players, CurrentTurnInfo turnInfo) {
-        // Check if stopped (game ended)
         if (stopped.get()) {
             System.out.println("[AI Controller] Ignoring state update - AI is stopped");
             return;
         }
 
-        // Always store latest state
         this.latestBoard = board;
         this.latestPlayers = players;
         this.latestTurnInfo = turnInfo;
 
         if (!aiModeEnabled.get()) {
-            return; // AI mode not enabled
+            return; 
         }
 
         if (board == null || players == null || turnInfo == null) {
@@ -159,20 +154,17 @@ public class AiController {
             return;
         }
 
-        // Check if it's the local player's turn
         if (localPlayerId == null || !localPlayerId.equals(turnInfo.getCurrentPlayerId())) {
             System.out.println("[AI Controller] Not my turn. Local: " + localPlayerId + ", Current: " + turnInfo.getCurrentPlayerId());
             return;
         }
 
-        // Find the local player
         Player localPlayer = findPlayerById(localPlayerId, players);
         if (localPlayer == null) {
             System.out.println("[AI Controller] Local player not found in players list");
             return;
         }
 
-        // Trigger AI if not already in progress
         if (aiTurnInProgress.compareAndSet(false, true)) {
             System.out.println("[AI Controller] Auto-triggering AI for: " + localPlayer.getName() + " (State: " + turnInfo.getState() + ")");
             executeAiTurn(board, localPlayer, turnInfo.getState() == TurnState.WAITING_FOR_PUSH);
@@ -186,10 +178,8 @@ public class AiController {
      * Called after AI completes a move to check if it's still our turn.
      */
     private void retriggerIfStillMyTurn() {
-        // Check if stopped (game ended) or AI mode disabled
         if (stopped.get() || !aiModeEnabled.get()) return;
 
-        // Small delay to let server state update arrive
         executor.submit(() -> {
             try {
                 Thread.sleep(500);
@@ -197,7 +187,6 @@ public class AiController {
                 return;
             }
 
-            // Re-check stopped flag after sleep (game may have ended while waiting)
             if (stopped.get()) {
                 System.out.println("[AI Controller] Re-trigger cancelled - AI is stopped");
                 return;
@@ -213,7 +202,6 @@ public class AiController {
             Player localPlayer = findPlayerById(localPlayerId, players);
             if (localPlayer == null) return;
 
-            // Check if we need to do something (still our turn, e.g., need to move after push)
             if (aiTurnInProgress.compareAndSet(false, true)) {
                 System.out.println("[AI Controller] Re-triggering AI - still my turn (State: " + turnInfo.getState() + ")");
                 executeAiTurn(board, localPlayer, turnInfo.getState() == TurnState.WAITING_FOR_PUSH);
@@ -231,34 +219,27 @@ public class AiController {
     private void executeAiTurn(Board board, Player player, boolean needsShift) {
         executor.submit(() -> {
             try {
-                // Check if stopped before starting
                 if (stopped.get()) {
                     System.out.println("[AI] Turn cancelled - AI is stopped");
                     return;
                 }
 
-                // Notify UI that AI is thinking
                 notifyThinkingStart();
 
                 System.out.println("[AI] Starting turn for: " + player.getName() + " (needsShift: " + needsShift + ")");
 
                 if (needsShift) {
-                    // Phase 1: Compute and execute shift
                     executeShiftPhase(board, player);
 
-                    // Wait for server to process and send new state
                     Thread.sleep(400);
 
-                    // After shift, we need to move - but server will send new state
-                    // Set flag to false so new state update can trigger move
                     aiTurnInProgress.set(false);
                     notifyThinkingEnd();
 
                     System.out.println("[AI] Shift done, waiting for server state update for move phase");
-                    return; // Let onGameStateUpdate handle the move phase
+                    return; 
                 }
 
-                // Phase 2: Execute move (only if no shift needed, i.e., already in WAITING_FOR_MOVE state)
                 executeMovePhase(board, player, latestPlayers);
 
                 System.out.println("[AI] Turn completed for: " + player.getName());
@@ -270,17 +251,14 @@ public class AiController {
                 aiTurnInProgress.set(false);
                 notifyThinkingEnd();
 
-                // Check if it's still our turn (e.g., game might loop back to us)
                 retriggerIfStillMyTurn();
             }
         });
     }
 
-    // Store the current decision for bonus handling in move phase
     private volatile AiDecision currentDecision;
 
     private void executeShiftPhase(Board board, Player player) throws InterruptedException {
-        // Compute best move with all players info
         AiDecision decision;
         if (strategy instanceof SimpleAiStrategy simpleStrategy) {
             decision = simpleStrategy.computeBestMove(board, player, latestPlayers);
@@ -290,46 +268,37 @@ public class AiController {
 
         if (decision == null) {
             System.out.println("[AI] No valid move found, using fallback");
-            // Fallback: push row 1 to the right
             client.sendPushTile(1, labyrinth.contracts.models.Direction.RIGHT);
             currentDecision = null;
             return;
         }
 
-        // Store decision for move phase (bonus handling)
         currentDecision = decision;
 
-        // Check if BEAM or SWAP is used - these REPLACE the push entirely
         if (decision.bonusAction() != null) {
             BonusType bonusType = decision.bonusAction().bonusType();
 
             if (bonusType == BonusType.BEAM) {
-                // BEAM replaces push - teleport to target position
                 Position beamTarget = decision.bonusAction().targetPosition();
                 System.out.println("[AI] Using BEAM (replaces push) to " + beamTarget.getRow() + "/" + beamTarget.getColumn());
                 client.sendUseBeam(beamTarget.getRow(), beamTarget.getColumn());
-                return; // No shift needed - BEAM replaces it
+                return; 
             }
 
             if (bonusType == BonusType.SWAP) {
-                // SWAP replaces push - swap with target player
                 String targetPlayerId = decision.bonusAction().targetPlayerId();
                 System.out.println("[AI] Using SWAP (replaces push) with player " + targetPlayerId);
                 client.sendUseSwap(targetPlayerId);
-                return; // No shift needed - SWAP replaces it
+                return; 
             }
         }
 
-        // Normal push flow (or with PUSH_TWICE/PUSH_FIXED modifiers)
-
-        // Check if we need to activate PUSH_TWICE before the shift
         if (decision.bonusAction() != null && decision.bonusAction().bonusType() == BonusType.PUSH_TWICE) {
             System.out.println("[AI] Activating PUSH_TWICE bonus");
             client.sendUsePushTwice();
             Thread.sleep(300);
         }
 
-        // Apply rotations first
         if (decision.rotations() > 0) {
             System.out.println("[AI] Rotating extra tile " + decision.rotations() + " times");
             for (int i = 0; i < decision.rotations(); i++) {
@@ -338,24 +307,20 @@ public class AiController {
             }
         }
 
-        // Small delay for natural feel
         Thread.sleep(150);
 
-        // Execute shift (only if we have a shift operation)
         if (decision.shift() != null) {
             System.out.println("[AI] Shifting " + (decision.shift().isRow() ? "row" : "column") +
                     " " + decision.shift().index() + " " + decision.shift().direction());
             client.sendPushTile(decision.shift().index(), decision.shift().direction());
         }
 
-        // Handle PUSH_TWICE second shift
         if (decision.bonusAction() != null && decision.bonusAction().bonusType() == BonusType.PUSH_TWICE) {
-            Thread.sleep(400); // Wait for first shift to complete
+            Thread.sleep(400); 
 
             SimulationResult.BonusAction bonus = decision.bonusAction();
             ShiftOperation secondOp = bonus.secondPush();
 
-            // Apply rotations for second push
             if (bonus.secondPushRotations() > 0) {
                 System.out.println("[AI] Rotating for second push " + bonus.secondPushRotations() + " times");
                 for (int i = 0; i < bonus.secondPushRotations(); i++) {
@@ -371,7 +336,6 @@ public class AiController {
             client.sendPushTile(secondOp.index(), secondOp.direction());
         }
 
-        // Handle PUSH_FIXED bonus - this IS the push (not after a normal push)
         if (decision.bonusAction() != null && decision.bonusAction().bonusType() == BonusType.PUSH_FIXED) {
             SimulationResult.BonusAction bonus = decision.bonusAction();
             ShiftOperation fixedOp = bonus.pushFixedOp();
@@ -384,9 +348,6 @@ public class AiController {
 
     private void executeMovePhase(Board board, Player player, List<Player> allPlayers) throws InterruptedException {
         AiDecision decision = currentDecision;
-
-        // Note: BEAM and SWAP are now handled in shift phase (they replace the push)
-        // So we just need to move here
 
         BoardSimulator sim = new BoardSimulator(board, player, allPlayers);
         java.util.Set<Position> reachable = sim.getReachableUnblockedPositions();
