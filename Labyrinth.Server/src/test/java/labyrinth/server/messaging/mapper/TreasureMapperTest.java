@@ -11,7 +11,7 @@ class TreasureMapperTest {
 
     @Test
     void mapsTreasureCard() {
-        var card = new TreasureCard(1, "Gold", "/img/gold.png");
+        var card = new TreasureCard(1, "Gold");
         var dto = mapper.toDto(card);
         assertEquals("Gold", dto.getName());
         assertEquals(1, dto.getId());

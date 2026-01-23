@@ -37,11 +37,12 @@ class GameStartTest {
 
     @BeforeEach
     void setUp() {
+        aiStrategy = mock(AiStrategy.class);
         game = createGame(mock(IGameTimer.class), aiStrategy, new GameLogger());
         gameConfig = GameConfig.getDefault();
         board = new labyrinth.server.game.factories.BoardFactory().createBoard(7, 7);
         treasureCards = new ArrayList<>();
-        IntStream.range(0, 24).forEach(i -> treasureCards.add(new TreasureCard(i, "Card" + i, "img")));
+        IntStream.range(0, 24).forEach(i -> treasureCards.add(new TreasureCard(i, "Card" + i)));
     }
 
     // Basic Game Start Tests

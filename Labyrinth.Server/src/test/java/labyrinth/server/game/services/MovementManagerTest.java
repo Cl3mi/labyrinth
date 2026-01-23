@@ -12,11 +12,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
-import java.util.EnumSet;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -54,7 +50,7 @@ class MovementManagerTest {
         @Test
         void shouldReturnTreasureWhenIsCurrentTarget() {
             // Arrange
-            TreasureCard treasure = new TreasureCard(1, "Gold", "gold.png");
+            TreasureCard treasure = new TreasureCard(1, "Gold");
             player.getAssignedTreasureCards().add(treasure);
             tile.setTreasureCard(treasure);
 
@@ -69,8 +65,8 @@ class MovementManagerTest {
         @Test
         void shouldNotReturnTreasureWhenNotCurrentTarget() {
             // Arrange
-            TreasureCard playerTreasure = new TreasureCard(1, "Gold", "gold.png");
-            TreasureCard tileTreasure = new TreasureCard(2, "Silver", "silver.png");
+            TreasureCard playerTreasure = new TreasureCard(1, "Gold");
+            TreasureCard tileTreasure = new TreasureCard(2, "Silver");
             player.getAssignedTreasureCards().add(playerTreasure);
             tile.setTreasureCard(tileTreasure);
 
@@ -110,7 +106,7 @@ class MovementManagerTest {
         @Test
         void shouldReturnBothTreasureAndBonus() {
             // Arrange
-            TreasureCard treasure = new TreasureCard(1, "Gold", "gold.png");
+            TreasureCard treasure = new TreasureCard(1, "Gold");
             player.getAssignedTreasureCards().add(treasure);
             tile.setTreasureCard(treasure);
             tile.setBonus(BonusTypes.SWAP);
@@ -127,7 +123,7 @@ class MovementManagerTest {
         @Test
         void shouldNotMutateTileOrPlayer() {
             // Arrange
-            TreasureCard treasure = new TreasureCard(1, "Gold", "gold.png");
+            TreasureCard treasure = new TreasureCard(1, "Gold");
             player.getAssignedTreasureCards().add(treasure);
             tile.setTreasureCard(treasure);
             tile.setBonus(BonusTypes.BEAM);
@@ -162,7 +158,7 @@ class MovementManagerTest {
         @Test
         void shouldCollectTreasureWhenIsCurrentTarget() {
             // Arrange
-            TreasureCard treasure = new TreasureCard(1, "Gold", "gold.png");
+            TreasureCard treasure = new TreasureCard(1, "Gold");
             player.getAssignedTreasureCards().add(treasure);
             tile.setTreasureCard(treasure);
 
@@ -177,7 +173,7 @@ class MovementManagerTest {
         @Test
         void shouldIncreaseScoreWhenCollectingTreasure() {
             // Arrange
-            TreasureCard treasure = new TreasureCard(1, "Gold", "gold.png");
+            TreasureCard treasure = new TreasureCard(1, "Gold");
             player.getAssignedTreasureCards().add(treasure);
             tile.setTreasureCard(treasure);
             int initialScore = player.getStatistics().getScore();
@@ -192,7 +188,7 @@ class MovementManagerTest {
         @Test
         void shouldIncreaseTreasuresCollectedStat() {
             // Arrange
-            TreasureCard treasure = new TreasureCard(1, "Gold", "gold.png");
+            TreasureCard treasure = new TreasureCard(1, "Gold");
             player.getAssignedTreasureCards().add(treasure);
             tile.setTreasureCard(treasure);
 
@@ -206,8 +202,8 @@ class MovementManagerTest {
         @Test
         void shouldNotCollectTreasureWhenNotCurrentTarget() {
             // Arrange
-            TreasureCard playerTreasure = new TreasureCard(1, "Gold", "gold.png");
-            TreasureCard tileTreasure = new TreasureCard(2, "Silver", "silver.png");
+            TreasureCard playerTreasure = new TreasureCard(1, "Gold");
+            TreasureCard tileTreasure = new TreasureCard(2, "Silver");
             player.getAssignedTreasureCards().add(playerTreasure);
             tile.setTreasureCard(tileTreasure);
 
@@ -250,7 +246,7 @@ class MovementManagerTest {
         @Test
         void shouldCollectBothTreasureAndBonus() {
             // Arrange
-            TreasureCard treasure = new TreasureCard(1, "Gold", "gold.png");
+            TreasureCard treasure = new TreasureCard(1, "Gold");
             player.getAssignedTreasureCards().add(treasure);
             tile.setTreasureCard(treasure);
             tile.setBonus(BonusTypes.SWAP);
@@ -399,7 +395,7 @@ class MovementManagerTest {
         @Test
         void shouldNotCollectAlreadyCollectedTreasure() {
             // Arrange
-            TreasureCard treasure = new TreasureCard(1, "Gold", "gold.png");
+            TreasureCard treasure = new TreasureCard(1, "Gold");
             treasure.collect(); // Already collected
             player.getAssignedTreasureCards().add(treasure);
             tile.setTreasureCard(treasure);
@@ -415,8 +411,8 @@ class MovementManagerTest {
         @Test
         void shouldCollectSecondTreasureAfterFirstIsCollected() {
             // Arrange
-            TreasureCard treasure1 = new TreasureCard(1, "Gold", "gold.png");
-            TreasureCard treasure2 = new TreasureCard(2, "Silver", "silver.png");
+            TreasureCard treasure1 = new TreasureCard(1, "Gold");
+            TreasureCard treasure2 = new TreasureCard(2, "Silver");
             treasure1.collect(); // First one already collected
             player.getAssignedTreasureCards().add(treasure1);
             player.getAssignedTreasureCards().add(treasure2);

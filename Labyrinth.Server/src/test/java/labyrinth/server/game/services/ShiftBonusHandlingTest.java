@@ -37,6 +37,7 @@ class ShiftBonusHandlingTest {
 
     @BeforeEach
     void setUp() throws Exception{
+        aiStrategy = mock(AiStrategy.class);
         var bonusFactory = new BonusFactory();
         var distributionService = new TreasureBonusDistributionService(bonusFactory);
         var gameInitializer = new GameInitializerService(distributionService);
@@ -46,7 +47,7 @@ class ShiftBonusHandlingTest {
         game.join("Player2");
 
         List<TreasureCard> cards = new ArrayList<>();
-        IntStream.range(0, 24).forEach(i -> cards.add(new TreasureCard(i, "Card" + i, "img")));
+        IntStream.range(0, 24).forEach(i -> cards.add(new TreasureCard(i, "Card" + i)));
         Board board = new labyrinth.server.game.factories.BoardFactory().createBoard(7, 7);
 
         game.startGame(GameConfig.getDefault(), cards, board);

@@ -103,7 +103,6 @@ public class TurnController implements ITurnController {
             Consumer<Player> aiTurnExecutor
     ) {
         guardForRoomState(roomState, RoomState.IN_GAME);
-        turnTimer.stop();
 
         currentPlayerIndex++;
         if (currentPlayerIndex >= players.size()) {
@@ -111,21 +110,54 @@ public class TurnController implements ITurnController {
         }
 
         Player nextPlayer = getCurrentPlayer(players);
-        gameLogger.log(GameLogType.NEXT_TURN, "New Player to move: " + nextPlayer.getUsername(), nextPlayer, null);
+        beginTurn(nextPlayer, "New Player to move: " + nextPlayer.getUsername(), players, roomState, gameConfig, aiTurnExecutor);
+    }
+
+
+    private void beginTurn(
+            Player player,
+            String logMessage,
+            List<Player> players,
+            RoomState roomState,
+            GameConfig gameConfig,
+            Consumer<Player> aiTurnExecutor
+    ) {
+        guardForRoomState(roomState, RoomState.IN_GAME);
+        // Ensure any previous timer is stopped
+        turnTimer.stop();
+
+        gameLogger.log(GameLogType.NEXT_TURN, logMessage, player, null);
         currentMoveState = MoveState.PLACE_TILE;
         bonusUsedThisTurn = false;
 
-        onNextPlayerCallback.accept(nextPlayer);
+        if (onNextPlayerCallback != null) {
+            onNextPlayerCallback.accept(player);
+        }
 
-        if (nextPlayer.shouldMoveBePerformedByAi()) {
-            aiTurnExecutor.accept(nextPlayer);
+        if (player.shouldMoveBePerformedByAi()) {
+            aiTurnExecutor.accept(player);
         } else {
             turnTimer.start(gameConfig.turnTimeInSeconds(), () -> {
-                log.warn("[TurnController] Turn timer exceeded for player: {}. Advancing to next player.", nextPlayer.getUsername());
-                gameLogger.log(GameLogType.NEXT_TURN, "Turn timer exceeded - auto-advancing", nextPlayer, null);
+                log.warn("[TurnController] Turn timer exceeded for player: {}. Advancing to next player.", player.getUsername());
+                gameLogger.log(GameLogType.NEXT_TURN, "Turn timer exceeded - auto-advancing", player, null);
                 advanceToNextPlayer(players, roomState, gameConfig, aiTurnExecutor);
             });
         }
+    }
+
+    /**
+     * Starts the turn handling for the current player (without advancing the index).
+     * Used when a game starts to begin the first player's timer or trigger AI.
+     */
+    @Override
+    public void startTurn(
+            List<Player> players,
+            RoomState roomState,
+            GameConfig gameConfig,
+            Consumer<Player> aiTurnExecutor
+    ) {
+        Player currentPlayer = getCurrentPlayer(players);
+        beginTurn(currentPlayer, "Starting turn for player: " + currentPlayer.getUsername(), players, roomState, gameConfig, aiTurnExecutor);
     }
 
     /**

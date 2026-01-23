@@ -49,7 +49,7 @@ class GameIntegrationTest {
         board = new BoardFactory().createBoard(7, 7);
         treasureCards = new ArrayList<>();
         IntStream.range(0, 24).forEach(i ->
-                treasureCards.add(new TreasureCard(i, "Treasure" + i, "img" + i + ".png")));
+                treasureCards.add(new TreasureCard(i, "Treasure" + i)));
     }
 
     @Nested

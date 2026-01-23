@@ -40,7 +40,7 @@ class GameOverConditionTest {
         board = new labyrinth.server.game.factories.BoardFactory().createBoard(7, 7);
         treasureCards = new ArrayList<>();
         // Create minimal treasure cards for testing (1 per player)
-        IntStream.range(0, 4).forEach(i -> treasureCards.add(new TreasureCard(i, "Card" + i, "img")));
+        IntStream.range(0, 4).forEach(i -> treasureCards.add(new TreasureCard(i, "Card" + i)));
     }
 
     @Test

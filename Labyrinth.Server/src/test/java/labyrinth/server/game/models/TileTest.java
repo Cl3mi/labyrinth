@@ -255,7 +255,7 @@ class TileTest {
         @Test
         void shouldSetAndGetTreasureCard() {
             // Arrange
-            TreasureCard treasure = new TreasureCard(1, "Gold", "gold.png");
+            TreasureCard treasure = new TreasureCard(1, "Gold");
 
             // Act
             tile.setTreasureCard(treasure);
@@ -276,7 +276,7 @@ class TileTest {
         @Test
         void shouldAllowClearingTreasureCard() {
             // Arrange
-            tile.setTreasureCard(new TreasureCard(1, "Gold", "gold.png"));
+            tile.setTreasureCard(new TreasureCard(1, "Gold"));
 
             // Act
             tile.setTreasureCard(null);
@@ -336,7 +336,7 @@ class TileTest {
             // Arrange
             Tile original = new Tile(EnumSet.of(Direction.UP, Direction.RIGHT));
             original.setIsFixed(true);
-            original.setTreasureCard(new TreasureCard(1, "Gold", "gold.png"));
+            original.setTreasureCard(new TreasureCard(1, "Gold"));
 
             // Act
             Tile copy = original.copy();

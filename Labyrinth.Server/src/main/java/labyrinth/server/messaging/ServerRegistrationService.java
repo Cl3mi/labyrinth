@@ -13,8 +13,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpClientErrorException;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -115,6 +117,14 @@ public class ServerRegistrationService {
                 var gameServerUpdate = getGameServerUpdate();
                 serversApi.updateServer(currentServer.getId(), gameServerUpdate);
             } catch (Exception e) {
+
+                if(e instanceof HttpClientErrorException httpEx && httpEx.getStatusCode() == HttpStatusCode.valueOf(404)) {
+                    log.error("Server not found in Management API. Re-registering...");
+                    gameServer = null;
+                    registerServer();
+                    return;
+                }
+
                 log.error("Failed to send heartbeat to Management API.", e);
                 tries++;
 
