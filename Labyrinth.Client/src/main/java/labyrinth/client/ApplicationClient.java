@@ -1,15 +1,13 @@
 package labyrinth.client;
 import labyrinth.client.models.LabyrinthApplication;
 
-
 public class ApplicationClient {
-    public static void main(String[] args) throws Exception {
-        startOnline();
+    static void main() throws Exception {
+        startLabyrinth();
     }
 
-    private static void startOnline() throws Exception {
+    private static void startLabyrinth() throws Exception {
         LabyrinthApplication app = new LabyrinthApplication();
         app.start();
     }
-
 }

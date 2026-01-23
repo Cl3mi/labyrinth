@@ -240,8 +240,8 @@ public class StyledTooltipManager {
         }
 
         private void calculateSize() {
-            FontMetrics titleFm = getFontMetrics(FontManager.getSmallUIBold());
-            FontMetrics descFm = getFontMetrics(FontManager.getSmallUI());
+            FontMetrics titleFm = getFontMetrics(FontManager.getBodySmall(Font.BOLD));
+            FontMetrics descFm = getFontMetrics(FontManager.getBodySmall());
 
             int width = PADDING * 2;
             int height = PADDING * 2;
@@ -277,7 +277,7 @@ public class StyledTooltipManager {
             int h = getHeight();
 
             // Shadow
-            g2.setColor(new Color(0, 0, 0, 80));
+            g2.setColor(ThemeEffects.withAlpha(GameTheme.Colors.shadow(), 80));
             g2.fill(new RoundRectangle2D.Float(3, 3, w - 3, h - 3, ARC, ARC));
 
             // Background
@@ -291,14 +291,14 @@ public class StyledTooltipManager {
             g2.draw(new RoundRectangle2D.Float(1, 1, w - 5, h - 5, ARC, ARC));
 
             // Inner highlight
-            g2.setColor(ThemeEffects.withAlpha(Color.WHITE, 20));
+            g2.setColor(ThemeEffects.withAlpha(GameTheme.Colors.textLight(), 20));
             g2.drawLine(PADDING, 3, w - PADDING - 3, 3);
 
             // Draw text
             int y = PADDING;
 
             if (title != null && !title.isEmpty()) {
-                g2.setFont(FontManager.getSmallUIBold());
+                g2.setFont(FontManager.getBodySmall(Font.BOLD));
                 g2.setColor(GameTheme.Colors.ACCENT_GOLD);
                 FontMetrics fm = g2.getFontMetrics();
                 g2.drawString(title, PADDING, y + fm.getAscent());
@@ -306,7 +306,7 @@ public class StyledTooltipManager {
             }
 
             if (description != null && !description.isEmpty()) {
-                g2.setFont(FontManager.getSmallUI());
+                g2.setFont(FontManager.getBodySmall());
                 g2.setColor(ThemeManager.getInstance().getTextPrimary());
                 FontMetrics fm = g2.getFontMetrics();
 

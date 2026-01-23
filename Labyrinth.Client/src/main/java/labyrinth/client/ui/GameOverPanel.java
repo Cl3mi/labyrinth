@@ -1,6 +1,7 @@
 package labyrinth.client.ui;
 
 import labyrinth.client.audio.AudioPlayer;
+import labyrinth.client.ui.Styles.StyledButton;
 import labyrinth.client.ui.Styles.StyledContextMenu;
 import labyrinth.client.ui.Styles.StyledTooltipManager;
 import labyrinth.client.ui.theme.FontManager;
@@ -26,8 +27,6 @@ public class GameOverPanel extends JPanel {
     private final JLabel winnerLabel;
     private final JTable leaderboardTable;
     private final DefaultTableModel tableModel;
-    private final JButton backToLobbyButton;
-    // private final JButton startNewRoundButton;  // Auskommentiert - noch nicht genehmigt
     private final JScrollPane scrollPane;
     private final JPanel achievementsPanel;
 
@@ -35,14 +34,9 @@ public class GameOverPanel extends JPanel {
     private int animationFrame = 0;
     private Timer animationTimer;
 
-    // Track achievements per player
     private final Map<String, List<String>> playerAchievements = new HashMap<>();
-
-    // Player ID to Name mapping (set before updateGameOver is called)
     private final Map<String, String> playerIdToName = new HashMap<>();
 
-    // Callback for starting a new round
-    private Runnable onStartNewRound;
 
     public GameOverPanel(Runnable onBackToLobby) {
         loadBackgroundImage();
@@ -84,7 +78,7 @@ public class GameOverPanel extends JPanel {
         header.setPreferredSize(new Dimension(0, 180));
 
         JLabel titleLabel = new JLabel("QUEST COMPLETE", SwingConstants.CENTER);
-        titleLabel.setFont(FontManager.getDisplayFont(48, Font.BOLD));
+        titleLabel.setFont(FontManager.getHeadingLarge());
         titleLabel.setForeground(GameTheme.Colors.ACCENT_GOLD);
         titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         titleLabel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 60));
@@ -113,12 +107,12 @@ public class GameOverPanel extends JPanel {
                 super.paintComponent(g);
             }
         };
-        trophyLabel.setFont(new Font("Serif", Font.PLAIN, 48));
+        trophyLabel.setFont(FontManager.getHeadingLarge());
         trophyLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         trophyLabel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 60));
 
         winnerLabel = new JLabel("", SwingConstants.CENTER);
-        winnerLabel.setFont(FontManager.getMediumDisplay()); // Increased size
+        winnerLabel.setFont(FontManager.getBodyLarge(Font.BOLD)); // Increased size
         winnerLabel.setForeground(GameTheme.Colors.TEXT_PRIMARY);
         winnerLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         winnerLabel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
@@ -166,13 +160,13 @@ public class GameOverPanel extends JPanel {
                 }
 
                 // Increase font size for better readability
-                comp.setFont(FontManager.getLargeUI());
+                comp.setFont(FontManager.getBodyLarge());
 
                 return comp;
             }
         };
 
-        leaderboardTable.setFont(FontManager.getLargeUI()); // Larger font
+        leaderboardTable.setFont(FontManager.getBodyLarge()); // Larger font
         leaderboardTable.setRowHeight(55); // Taller rows for larger font
         leaderboardTable.setShowGrid(true);
         leaderboardTable.setGridColor(ThemeEffects.withAlpha(GameTheme.Colors.ACCENT_COPPER, 100));
@@ -181,7 +175,7 @@ public class GameOverPanel extends JPanel {
         leaderboardTable.setIntercellSpacing(new Dimension(10, 5));
 
         // Header styling
-        leaderboardTable.getTableHeader().setFont(FontManager.getMediumDisplay()); // Larger header font
+        leaderboardTable.getTableHeader().setFont(FontManager.getHeadingMedium()); // Larger header font
         leaderboardTable.getTableHeader().setBackground(GameTheme.Colors.BACKGROUND_SECONDARY);
         leaderboardTable.getTableHeader().setForeground(GameTheme.Colors.ACCENT_GOLD);
         leaderboardTable.getTableHeader().setReorderingAllowed(false);
@@ -197,7 +191,7 @@ public class GameOverPanel extends JPanel {
                 // Don't override the prepareRenderer background/foreground
                 // Just set alignment and font
                 setHorizontalAlignment(SwingConstants.CENTER);
-                setFont(FontManager.getLargeUI());
+                setFont(FontManager.getBodyLarge());
 
                 return comp;
             }
@@ -252,92 +246,12 @@ public class GameOverPanel extends JPanel {
         scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
 
         // ===== Footer =====
-        JPanel footer = new JPanel() {
-            @Override
-            protected void paintComponent(Graphics g) {
-                super.paintComponent(g);
-            }
-        };
+        JPanel footer = new JPanel();
         footer.setOpaque(false);
         footer.setLayout(new FlowLayout(FlowLayout.CENTER, 20, 20));
 
-        backToLobbyButton = new JButton("Return to Tavern") {
-            private boolean isFocused = false;
-            {
-                addFocusListener(new java.awt.event.FocusAdapter() {
-                    @Override
-                    public void focusGained(java.awt.event.FocusEvent e) {
-                        isFocused = true;
-                        repaint();
-                    }
-                    @Override
-                    public void focusLost(java.awt.event.FocusEvent e) {
-                        isFocused = false;
-                        repaint();
-                    }
-                });
-            }
-
-            @Override
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g;
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-
-                // Wood texture background
-                GradientPaint woodGradient = new GradientPaint(
-                        0, 0, GameTheme.Colors.SURFACE_PRIMARY,
-                        0, getHeight(), GameTheme.Colors.SURFACE_SECONDARY
-                );
-                g2.setPaint(woodGradient);
-                g2.fillRoundRect(0, 0, getWidth(), getHeight(),
-                        GameTheme.Spacing.RADIUS_MEDIUM, GameTheme.Spacing.RADIUS_MEDIUM);
-
-                // Embossed button effect
-                ThemeEffects.drawEmbossedButton(g2, 0, 0, getWidth(), getHeight(),
-                        getModel().isPressed());
-
-                // Copper border
-                g2.setColor(GameTheme.Colors.ACCENT_COPPER);
-                g2.setStroke(new BasicStroke(2f));
-                g2.drawRoundRect(1, 1, getWidth() - 3, getHeight() - 3,
-                        GameTheme.Spacing.RADIUS_MEDIUM, GameTheme.Spacing.RADIUS_MEDIUM);
-
-                // Focus indicator
-                if (isFocused) {
-                    g2.setColor(new Color(255, 215, 0, 80));
-                    g2.setStroke(new BasicStroke(4f));
-                    g2.drawRoundRect(-1, -1, getWidth() + 1, getHeight() + 1,
-                            GameTheme.Spacing.RADIUS_MEDIUM + 4, GameTheme.Spacing.RADIUS_MEDIUM + 4);
-                    g2.setColor(new Color(255, 215, 0, 200));
-                    g2.setStroke(new BasicStroke(2f));
-                    g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1,
-                            GameTheme.Spacing.RADIUS_MEDIUM + 2, GameTheme.Spacing.RADIUS_MEDIUM + 2);
-                }
-
-                // Text with shadow
-                g2.setFont(FontManager.getLargeUI());
-                FontMetrics fm = g2.getFontMetrics();
-                String text = getText();
-                int textX = (getWidth() - fm.stringWidth(text)) / 2;
-                int textY = (getHeight() + fm.getAscent() - fm.getDescent()) / 2;
-
-                // Shadow
-                g2.setColor(ThemeEffects.withAlpha(Color.BLACK, 100));
-                g2.drawString(text, textX + 2, textY + 2);
-
-                // Main text
-                g2.setColor(GameTheme.Colors.TEXT_PRIMARY);
-                g2.drawString(text, textX, textY);
-            }
-        };
-
-        backToLobbyButton.setFont(FontManager.getLargeUI());
+        StyledButton backToLobbyButton = new StyledButton("Return to Tavern", StyledButton.Style.PRIMARY);
         backToLobbyButton.setPreferredSize(new Dimension(280, 60));
-        backToLobbyButton.setContentAreaFilled(false);
-        backToLobbyButton.setFocusPainted(false);
-        backToLobbyButton.setBorderPainted(false);
-        backToLobbyButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        backToLobbyButton.setFocusable(true);
         backToLobbyButton.addActionListener(e -> {
             if (onBackToLobby != null) {
                 onBackToLobby.run();
@@ -345,96 +259,6 @@ public class GameOverPanel extends JPanel {
         });
         StyledTooltipManager.setTooltip(backToLobbyButton, "Zurück zur Lobby", "Kehre zur Lobby zurück, um ein neues Spiel zu konfigurieren");
         StyledContextMenu.attachTo(backToLobbyButton);
-
-        // ===== Start New Round Button ===== (Auskommentiert - noch nicht genehmigt)
-        /*
-        startNewRoundButton = new JButton("Neue Runde starten") {
-            private boolean isFocused = false;
-            {
-                addFocusListener(new java.awt.event.FocusAdapter() {
-                    @Override
-                    public void focusGained(java.awt.event.FocusEvent e) {
-                        isFocused = true;
-                        repaint();
-                    }
-                    @Override
-                    public void focusLost(java.awt.event.FocusEvent e) {
-                        isFocused = false;
-                        repaint();
-                    }
-                });
-            }
-
-            @Override
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g;
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-
-                // Green gradient background for primary action
-                GradientPaint greenGradient = new GradientPaint(
-                        0, 0, new Color(60, 120, 60),
-                        0, getHeight(), new Color(40, 90, 40)
-                );
-                g2.setPaint(greenGradient);
-                g2.fillRoundRect(0, 0, getWidth(), getHeight(),
-                        GameTheme.Spacing.RADIUS_MEDIUM, GameTheme.Spacing.RADIUS_MEDIUM);
-
-                // Embossed button effect
-                ThemeEffects.drawEmbossedButton(g2, 0, 0, getWidth(), getHeight(),
-                        getModel().isPressed());
-
-                // Golden border
-                g2.setColor(GameTheme.Colors.ACCENT_GOLD);
-                g2.setStroke(new BasicStroke(2f));
-                g2.drawRoundRect(1, 1, getWidth() - 3, getHeight() - 3,
-                        GameTheme.Spacing.RADIUS_MEDIUM, GameTheme.Spacing.RADIUS_MEDIUM);
-
-                // Focus indicator
-                if (isFocused) {
-                    g2.setColor(new Color(255, 215, 0, 80));
-                    g2.setStroke(new BasicStroke(4f));
-                    g2.drawRoundRect(-1, -1, getWidth() + 1, getHeight() + 1,
-                            GameTheme.Spacing.RADIUS_MEDIUM + 4, GameTheme.Spacing.RADIUS_MEDIUM + 4);
-                    g2.setColor(new Color(255, 215, 0, 200));
-                    g2.setStroke(new BasicStroke(2f));
-                    g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1,
-                            GameTheme.Spacing.RADIUS_MEDIUM + 2, GameTheme.Spacing.RADIUS_MEDIUM + 2);
-                }
-
-                // Text with shadow
-                g2.setFont(FontManager.getLargeUI());
-                FontMetrics fm = g2.getFontMetrics();
-                String text = getText();
-                int textX = (getWidth() - fm.stringWidth(text)) / 2;
-                int textY = (getHeight() + fm.getAscent() - fm.getDescent()) / 2;
-
-                // Shadow
-                g2.setColor(ThemeEffects.withAlpha(Color.BLACK, 100));
-                g2.drawString(text, textX + 2, textY + 2);
-
-                // Main text
-                g2.setColor(GameTheme.Colors.TEXT_LIGHT);
-                g2.drawString(text, textX, textY);
-            }
-        };
-
-        startNewRoundButton.setFont(FontManager.getLargeUI());
-        startNewRoundButton.setPreferredSize(new Dimension(280, 60));
-        startNewRoundButton.setContentAreaFilled(false);
-        startNewRoundButton.setFocusPainted(false);
-        startNewRoundButton.setBorderPainted(false);
-        startNewRoundButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        startNewRoundButton.setFocusable(true);
-        startNewRoundButton.addActionListener(e -> {
-            if (onStartNewRound != null) {
-                onStartNewRound.run();
-            }
-        });
-        StyledTooltipManager.setTooltip(startNewRoundButton, "Neue Runde", "Startet sofort ein neues Spiel mit gleichen Einstellungen");
-        StyledContextMenu.attachTo(startNewRoundButton);
-
-        footer.add(startNewRoundButton);
-        */
         footer.add(backToLobbyButton);
 
         // ===== Achievements Panel =====
@@ -462,14 +286,12 @@ public class GameOverPanel extends JPanel {
     }
 
     public void updateGameOver(GameOverEventPayload payload) {
-        // Stop any existing animation
         if (animationTimer != null && animationTimer.isRunning()) {
             animationTimer.stop();
         }
 
         AudioPlayer.getInstance().playGameOverSequence();
 
-        // Build player ID to name mapping
         Map<String, String> playerIdToName = new HashMap<>();
         if (payload.getRanking() != null) {
             for (RankingEntry entry : payload.getRanking()) {
@@ -565,7 +387,7 @@ public class GameOverPanel extends JPanel {
 
         // Title
         JLabel achievementTitle = new JLabel("Errungenschaften", SwingConstants.CENTER);
-        achievementTitle.setFont(FontManager.getMediumDisplay());
+        achievementTitle.setFont(FontManager.getHeadingSmall());
         achievementTitle.setForeground(GameTheme.Colors.ACCENT_GOLD);
         achievementTitle.setAlignmentX(Component.CENTER_ALIGNMENT);
         achievementTitle.setBorder(new EmptyBorder(5, 0, 10, 0));
@@ -692,7 +514,7 @@ public class GameOverPanel extends JPanel {
 
         // Title
         JLabel achievementTitle = new JLabel("Errungenschaften", SwingConstants.CENTER);
-        achievementTitle.setFont(FontManager.getMediumDisplay());
+        achievementTitle.setFont(FontManager.getHeadingSmall());
         achievementTitle.setForeground(GameTheme.Colors.ACCENT_GOLD);
         achievementTitle.setAlignmentX(Component.CENTER_ALIGNMENT);
         achievementTitle.setBorder(new EmptyBorder(5, 0, 10, 0));
@@ -718,6 +540,8 @@ public class GameOverPanel extends JPanel {
         achievementsPanel.revalidate();
         achievementsPanel.repaint();
     }
+
+
 
     private JPanel createPlayerAchievementCard(String playerName, List<String> achievements) {
         JPanel card = new JPanel() {
@@ -745,7 +569,7 @@ public class GameOverPanel extends JPanel {
 
         // Player name
         JLabel nameLabel = new JLabel(playerName + ": ");
-        nameLabel.setFont(FontManager.getMediumUI());
+        nameLabel.setFont(FontManager.getBodyMedium(Font.BOLD));
         nameLabel.setForeground(GameTheme.Colors.TEXT_PRIMARY);
         card.add(nameLabel);
 
@@ -763,7 +587,7 @@ public class GameOverPanel extends JPanel {
         String displayName = formatAchievementName(achievementName);
 
         JLabel badge = new JLabel(icon + " " + displayName);
-        badge.setFont(new Font("SansSerif", Font.BOLD, 12));
+        badge.setFont(FontManager.getBodySmall(Font.BOLD));
         badge.setForeground(GameTheme.Colors.ACCENT_GOLD);
         badge.setOpaque(true);
         badge.setBackground(ThemeEffects.withAlpha(GameTheme.Colors.ACCENT_GOLD, 30));
@@ -795,7 +619,6 @@ public class GameOverPanel extends JPanel {
      * Set the callback for starting a new round.
      */
     public void setOnStartNewRound(Runnable callback) {
-        this.onStartNewRound = callback;
     }
 
     /**

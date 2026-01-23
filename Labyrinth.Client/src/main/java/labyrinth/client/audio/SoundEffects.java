@@ -1,29 +1,22 @@
 package labyrinth.client.audio;
 
+import lombok.Getter;
+
 import javax.sound.sampled.*;
 
 /**
  * Simple sound effects system for game actions.
  * Uses programmatically generated tones for feedback when sound files aren't available.
  */
+@Getter
 public class SoundEffects {
 
     private static final float SAMPLE_RATE = 8000f;
-    private boolean enabled = true;
-    private float volume = 0.7f; // Default 70% volume
 
-    /**
-     * Set the volume for sound effects (0.0 to 1.0)
-     */
+    private boolean enabled = true;
+    private float volume = 0.7f;
     public void setVolume(float volume) {
         this.volume = Math.max(0f, Math.min(1f, volume));
-    }
-
-    /**
-     * Get the current volume (0.0 to 1.0)
-     */
-    public float getVolume() {
-        return volume;
     }
 
     /**
@@ -81,19 +74,6 @@ public class SoundEffects {
         }).start();
     }
 
-    /**
-     * Enable or disable sound effects
-     */
-    public void setEnabled(boolean enabled) {
-        this.enabled = enabled;
-    }
-
-    /**
-     * Check if sound effects are enabled
-     */
-    public boolean isEnabled() {
-        return enabled;
-    }
 
     /**
      * Play a tone asynchronously (non-blocking)
@@ -110,18 +90,17 @@ public class SoundEffects {
         try {
             byte[] buffer = new byte[(int) (SAMPLE_RATE * durationMs / 1000)];
 
-            // Generate sine wave with volume control
+
             for (int i = 0; i < buffer.length; i++) {
                 double angle = 2.0 * Math.PI * i * frequency / SAMPLE_RATE;
                 buffer[i] = (byte) (Math.sin(angle) * 127 * volume); // Apply volume
             }
 
-            // Create audio format and clip
+
             AudioFormat audioFormat = new AudioFormat(SAMPLE_RATE, 8, 1, true, false);
             DataLine.Info info = new DataLine.Info(Clip.class, audioFormat);
 
             if (!AudioSystem.isLineSupported(info)) {
-                // Fallback to system beep if audio not supported
                 java.awt.Toolkit.getDefaultToolkit().beep();
                 return;
             }
@@ -129,8 +108,7 @@ public class SoundEffects {
             Clip clip = (Clip) AudioSystem.getLine(info);
             clip.open(audioFormat, buffer, 0, buffer.length);
             clip.start();
-
-            // Clean up after playing
+            
             clip.addLineListener(event -> {
                 if (event.getType() == LineEvent.Type.STOP) {
                     clip.close();
@@ -138,8 +116,6 @@ public class SoundEffects {
             });
 
         } catch (Exception e) {
-            // Silently fail - sound effects are non-critical
-            // Optionally fallback to system beep
             try {
                 java.awt.Toolkit.getDefaultToolkit().beep();
             } catch (Exception ignored) {}

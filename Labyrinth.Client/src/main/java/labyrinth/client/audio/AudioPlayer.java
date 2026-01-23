@@ -8,57 +8,40 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
-/**
- * Zentraler Audio-Manager (Singleton) fuer Musik & Soundeffekte.
- *
- * Anforderungen:
- * - Globale Lautstaerken (Music/SFX)
- * - Hintergrundmusik im MainMenu (Playlist: RiddleSound1, RiddleSound2, ...)
- * - Beim GameOver: Applaus einmal abspielen, danach wieder MainMenu-Playlist
- * - Alle Audio-Logik ist in dieser Klasse gekapselt
- */
+
 public final class AudioPlayer {
 
-    /** First track of the menu playlist (used as fallback). */
+
     public static final String MENU_MUSIC_PATH = "/sounds/BackgroundSound1.wav";
     public static final String GAMEOVER_APPLAUSE_PATH = "/sounds/Applause.wav";
 
-    /**
-     * Automatically built playlist: /sounds/BackgroundSound1.wav, /sounds/BackgroundSound2.wav, ...
-     * Stops at the first missing resource. (Max 99 tracks to avoid endless loops.)
-     */
+
     private static final String[] MENU_PLAYLIST =
             buildSequentialPlaylist("/sounds/BackgroundSound", 1, ".wav", 99);
 
     private static AudioPlayer instance;
 
-    // Background music
+
     private Clip musicClip;
 
-    // Music state
+
     private enum MusicMode { NONE, SINGLE, PLAYLIST }
     private MusicMode musicMode = MusicMode.NONE;
 
-    // Single-track state
     private String currentMusicPath;
     private boolean currentMusicLoop;
 
-    // Playlist state
     private String[] currentPlaylist;
     private int playlistIndex;
     private boolean playlistLoop;
 
-    /**
-     * Music token used to invalidate LineListener callbacks when music is stopped/overridden.
-     * Every stop/replace increments the token; listeners only act if their token is still current.
-     */
+
     private final AtomicLong musicToken = new AtomicLong(0);
 
-    // Global volumes (0..1)
+
     private float musicVolume = 1.0f;
     private float sfxVolume = 1.0f;
 
-    // Used to cancel delayed resumes (e.g., if stopAll() is called while a SFX is playing)
     private final AtomicLong resumeToken = new AtomicLong(0);
 
     private AudioPlayer() {}
@@ -68,9 +51,6 @@ public final class AudioPlayer {
         return instance;
     }
 
-    // ========================= HIGH LEVEL =========================
-
-    /** Starts the menu background music playlist (RiddleSound1, RiddleSound2, ...) in a loop. */
     public void playMenuMusic() {
         if (MENU_PLAYLIST.length > 0) {
             playMusicPlaylist(MENU_PLAYLIST, true);
@@ -80,40 +60,24 @@ public final class AudioPlayer {
         }
     }
 
-    /**
-     * GameOver behaviour:
-     * - stop current music (if any)
-     * - play applause once
-     * - after applause finishes, start menu music playlist looping
-     */
     public void playGameOverSequence() {
         final long token = resumeToken.incrementAndGet();
-
-        // Always stop music for a clean applause moment.
         stopMusic();
 
         playSfxOnceInternal(GAMEOVER_APPLAUSE_PATH,getSfxVolume(), () -> {
-            // Only resume if nothing newer cancelled/overrode this sequence.
             if (resumeToken.get() != token) return;
             playMenuMusic();
         });
     }
 
-    // ========================= MUSIC =========================
-
-    /**
-     * Plays a single music track. If {@code loop} is true, it loops continuously.
-     */
     public synchronized void playMusic(String path, boolean loop) {
         System.out.println("[AudioPlayer] playMusic called: " + path + ", loop=" + loop);
 
-        // No-op if already playing the same track with same loop mode.
         if (musicMode == MusicMode.SINGLE
                 && musicClip != null && musicClip.isOpen()
                 && path != null && path.equals(currentMusicPath)
                 && loop == currentMusicLoop) {
 
-            // Ensure it is actually running (could have been stopped externally)
             if (!musicClip.isRunning()) {
                 System.out.println("[AudioPlayer] Resuming existing clip");
                 if (loop) musicClip.loop(Clip.LOOP_CONTINUOUSLY);
@@ -124,10 +88,8 @@ public final class AudioPlayer {
             return;
         }
 
-        // Stop any current music + invalidate old listeners.
         invalidateAndStopMusicLocked();
 
-        // Establish state for single-track mode.
         musicMode = MusicMode.SINGLE;
         currentMusicPath = path;
         currentMusicLoop = loop;
@@ -143,10 +105,6 @@ public final class AudioPlayer {
         }
     }
 
-    /**
-     * Plays a playlist sequentially (track 0, then 1, ...).
-     * When {@code loopPlaylist} is true, it continues from the beginning after the last track.
-     */
     public synchronized void playMusicPlaylist(String[] paths, boolean loopPlaylist) {
         System.out.println("[AudioPlayer] playMusicPlaylist called: "
                 + (paths == null ? "null" : Arrays.toString(paths))
@@ -157,7 +115,6 @@ public final class AudioPlayer {
             return;
         }
 
-        // No-op if already playing the same playlist with same loop mode.
         if (musicMode == MusicMode.PLAYLIST
                 && currentPlaylist != null
                 && Arrays.equals(currentPlaylist, paths)
@@ -172,11 +129,8 @@ public final class AudioPlayer {
             }
             return;
         }
-
-        // Stop any current music + invalidate old listeners.
         invalidateAndStopMusicLocked();
 
-        // Establish playlist state.
         musicMode = MusicMode.PLAYLIST;
         currentPlaylist = Arrays.copyOf(paths, paths.length);
         playlistLoop = loopPlaylist;
@@ -197,23 +151,12 @@ public final class AudioPlayer {
         System.out.println("[AudioPlayer] Music stopped");
     }
 
-    /** Stops music and cancels any pending "resume after SFX" operations. */
-    public void stopAll() {
-        resumeToken.incrementAndGet();
-        stopMusic();
-        // Note: SFX clips are short-lived and self-closing; they are not tracked globally here.
-    }
 
     public synchronized void setMusicVolume(float v) {
         musicVolume = clamp(v);
         applyVolume(musicClip, musicVolume);
     }
 
-    public synchronized float getMusicVolume() {
-        return musicVolume;
-    }
-
-    // ========================= SFX =========================
 
     public synchronized void setSfxVolume(float v) {
         sfxVolume = clamp(v);
@@ -249,7 +192,6 @@ public final class AudioPlayer {
                 applyVolume(clipRef, volume);
                 unmute(clipRef);
 
-                // Close + callback after the sound finished.
                 c.addLineListener(ev -> {
                     if (ev.getType() == LineEvent.Type.STOP) {
                         try { clipRef.close(); } catch (Exception ignored) {}
@@ -269,10 +211,9 @@ public final class AudioPlayer {
         }, "SfxThread").start();
     }
 
-    // ========================= INTERNAL =========================
+
 
     private synchronized void invalidateAndStopMusicLocked() {
-        // Invalidate all existing music listeners immediately.
         musicToken.incrementAndGet();
 
         if (musicClip != null) {
@@ -307,7 +248,6 @@ public final class AudioPlayer {
         applyVolume(musicClip, musicVolume);
         unmute(musicClip);
 
-        // For playlist mode, attach a listener to advance to the next track after natural end.
         if (playlistToken != null) {
             final long token = playlistToken;
             final int finishedIndex = playlistTrackIndex;
@@ -316,13 +256,10 @@ public final class AudioPlayer {
             clipRef.addLineListener(ev -> {
                 if (ev.getType() != LineEvent.Type.STOP) return;
 
-                // Only act if this callback still belongs to the active music session.
                 if (musicToken.get() != token) return;
 
-                // Ignore STOP events that are not the natural end (e.g., manual stop or interruptions).
                 if (clipRef.getFramePosition() < clipRef.getFrameLength()) return;
 
-                // Advance in a separate thread to avoid doing heavy work on the audio event thread.
                 new Thread(() -> advancePlaylistAfterTrackEnd(token, finishedIndex), "MusicPlaylistThread").start();
             });
         }
@@ -352,7 +289,6 @@ public final class AudioPlayer {
 
             playlistIndex = nextIndex;
 
-            // Close the finished clip without invalidating the token (same session).
             if (musicClip != null) {
                 try { musicClip.close(); } catch (Exception ignored) {}
                 musicClip = null;
@@ -390,11 +326,10 @@ public final class AudioPlayer {
         if (clip == null) return;
         float v = clamp(volume);
 
-        // MASTER_GAIN is the most widely supported control in Java Sound.
+
         if (clip.isControlSupported(FloatControl.Type.MASTER_GAIN)) {
             FloatControl g = (FloatControl) clip.getControl(FloatControl.Type.MASTER_GAIN);
 
-            // Convert linear volume (0..1) to dB. 1.0 => 0 dB.
             if (v == 0f) {
                 g.setValue(g.getMinimum());
             } else {

@@ -13,18 +13,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-/**
- * Factory / Mapper für Boards und Spielerzustände vom Server.
- *
- * - Board kommt vollständig vom Server (GameBoard)
- * - spareTile (ExtraTile) wird aus GameBoard übernommen
- */
+
 public class BoardFactory  {
-
-    // =================================================================================
-    // Mapping: GameBoard (Contracts) -> Board (Client)
-    // =================================================================================
-
     public static Board fromContracts(GameBoard gb) {
         if (gb == null) {
             throw new IllegalArgumentException("GameBoard is null");
@@ -57,21 +47,14 @@ public class BoardFactory  {
             }
         }
 
-        //spareTile direkt übernehmen (Server liefert sie im GameBoard)
+
         Tile extraTile = gb.getSpareTile();
-
-        // Board-Konstruktor: (width=cols, height=rows, tiles, extraTile)
         Board board = new Board(cols, rows, tiles, extraTile);
-
-        // lastPush übernehmen (für AI: verbotener Gegenzug)
         board.setLastPush(gb.getLastPush());
 
         return board;
     }
 
-    // =================================================================================
-    // Mapping: PlayerState[] (Contracts) -> List<Player> (Client)
-    // =================================================================================
 
     public static List<Player> playersFromState(PlayerState[] states) {
         List<Player> list = new ArrayList<>();
@@ -85,7 +68,6 @@ public class BoardFactory  {
 
             Player p = new Player(id, name);
 
-            // Position
             Coordinates currentPos = s.getCurrentPosition();
             if (currentPos != null) {
                 p.setCurrentPosition(new Position(currentPos.getRow(), currentPos.getColumn()));
@@ -96,7 +78,6 @@ public class BoardFactory  {
                 p.setHomePosition(new Position(homePos.getRow(), homePos.getColumn()));
             }
 
-            // Player info fields
             if (s.getPlayerInfo().getColor() != null) {
                 p.setColor(s.getPlayerInfo().getColor());
             }
@@ -110,7 +91,6 @@ public class BoardFactory  {
             Boolean isAiControlled = s.getPlayerInfo().getIsAiControlled();
             p.setAiControlled(isAiControlled != null && isAiControlled);
 
-            // Treasures found
             if (s.getTreasuresFound() != null) {
                 p.getTreasuresFound().clear();
                 for (labyrinth.contracts.models.Treasure treasure : s.getTreasuresFound()) {
@@ -120,12 +100,10 @@ public class BoardFactory  {
                 }
             }
 
-            // Remaining treasure count
             if (s.getRemainingTreasureCount() != null) {
                 p.setRemainingTreasureCount(s.getRemainingTreasureCount());
             }
 
-            // Available bonuses from server
             BonusType[] bonuses = s.getAvailableBonuses();
             if (bonuses != null && bonuses.length > 0) {
                 p.setAvailableBonuses(Arrays.asList(bonuses));
@@ -144,15 +122,10 @@ public class BoardFactory  {
     }
 
 
-    // =================================================================================
-    // Turn info mapping: CurrentTurnInfo (Contracts) -> Board fields (Client)
-    // =================================================================================
-
     public static void applyTurnInfo(Board board, List<Player> players,
                                       labyrinth.contracts.models.CurrentTurnInfo turnInfo) {
         if (board == null || turnInfo == null) return;
 
-        // Map TurnState to MoveState
         if (turnInfo.getState() != null) {
             labyrinth.client.enums.MoveState moveState = switch (turnInfo.getState()) {
                 case WAITING_FOR_PUSH -> labyrinth.client.enums.MoveState.PLACE_TILE;
@@ -161,7 +134,6 @@ public class BoardFactory  {
             board.setCurrentMoveState(moveState);
         }
 
-        // Find current player index by ID
         if (turnInfo.getCurrentPlayerId() != null && players != null) {
             for (int i = 0; i < players.size(); i++) {
                 if (players.get(i).getId().equals(turnInfo.getCurrentPlayerId())) {

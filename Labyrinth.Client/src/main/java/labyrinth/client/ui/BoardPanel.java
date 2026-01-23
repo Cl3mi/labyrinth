@@ -6,15 +6,19 @@ import labyrinth.client.messaging.GameClient;
 import labyrinth.client.models.Board;
 import labyrinth.client.models.Player;
 import labyrinth.client.models.extensions.TreasureUtils;
+import labyrinth.client.ui.Styles.StyledButton;
 import labyrinth.client.ui.Styles.StyledContextMenu;
 import labyrinth.client.ui.Styles.StyledDialog;
 import labyrinth.client.ui.Styles.StyledTooltipManager;
 import labyrinth.client.ui.theme.ThemeManager;
+import labyrinth.client.ui.theme.FontManager;
+import labyrinth.client.ui.theme.GameTheme;
 import labyrinth.contracts.models.BonusType;
 import labyrinth.contracts.models.Direction;
 import labyrinth.contracts.models.Tile;
 import labyrinth.contracts.models.Treasure;
 import lombok.Getter;
+import lombok.Setter;
 
 import javax.swing.*;
 import java.awt.*;
@@ -28,60 +32,24 @@ import java.awt.image.BufferedImage;
 import java.util.*;
 import java.util.List;
 
-/**
- * Server-autoratives BoardPanel:
- * - Rendert den letzten State vom Server.
- * - User-Input sendet ausschließlich Commands (MOVE_PAWN, PUSH_TILE).
- * - Keine lokale Spielzustands-Mutation.
- */
+
 public class BoardPanel extends JPanel {
 
-    private JButton optionsButton;
-
     private static final int PANEL_PADDING = 20;
+
+
     private static final int ARROW_MARGIN = 5;
 
-    private static final Font DEBUG_INFO_FONT = new Font("Arial", Font.BOLD, 16);
-    private static final Font PLAYER_MARKER_FONT = new Font("Arial", Font.BOLD, 30);
-    private static final Font COORDINATE_FONT = new Font("Arial", Font.PLAIN, 10);
-
-    private static final Font FONT_SANSSERIF_BOLD_20 = new Font("SansSerif", Font.BOLD, 20);
-    private static final Font FONT_SANSSERIF_BOLD_14 = new Font("SansSerif", Font.BOLD, 14);
-    private static final Font FONT_SANSSERIF_BOLD_12 = new Font("SansSerif", Font.BOLD, 12);
-    private static final Font FONT_SANSSERIF_PLAIN_14 = new Font("SansSerif", Font.PLAIN, 14);
-    private static final Font FONT_SANSSERIF_PLAIN_12 = new Font("SansSerif", Font.PLAIN, 12);
-    private static final Font FONT_ARIAL_BOLD_18 = new Font("Arial", Font.BOLD, 18);
-    private static final Font FONT_ARIAL_BOLD_16 = new Font("Arial", Font.BOLD, 16);
-    private static final Font FONT_ARIAL_BOLD_15 = new Font("Arial", Font.BOLD, 15);
-    private static final Font FONT_ARIAL_BOLD_11 = new Font("Arial", Font.BOLD, 11);
-    private static final Font FONT_ARIAL_BOLD_10 = new Font("Arial", Font.BOLD, 10);
-    private static final Font FONT_ARIAL_BOLD_9 = new Font("Arial", Font.BOLD, 9);
-    private static final Font FONT_ARIAL_PLAIN_14 = new Font("Arial", Font.PLAIN, 14);
-    private static final Font FONT_ARIAL_PLAIN_12 = new Font("Arial", Font.PLAIN, 12);
-    private static final Font FONT_ARIAL_PLAIN_11 = new Font("Arial", Font.PLAIN, 11);
-    private static final Font FONT_ARIAL_PLAIN_10 = new Font("Arial", Font.PLAIN, 10);
-    private static final Font FONT_ARIAL_ITALIC_12 = new Font("Arial", Font.ITALIC, 12);
-    private static final Font FONT_ARIAL_ITALIC_10 = new Font("Arial", Font.ITALIC, 10);
-    private static final Font FONT_SERIF_BOLD_24 = new Font("Serif", Font.BOLD, 24);
-    private static final Font FONT_SERIF_BOLD_16 = new Font("Serif", Font.BOLD, 16);
-
-    private static final Map<String, Font> fontCache = new HashMap<>();
-
-    private static Font getCachedFont(String family, int style, int size) {
-        String key = family + "_" + style + "_" + size;
-        return fontCache.computeIfAbsent(key, k -> new Font(family, style, size));
-    }
-
-    private static final Color BACKGROUND_COLOR = Color.DARK_GRAY;
-    private static final Color CORRIDOR_COLOR = new Color(235, 235, 220);
-    private static final Color WALL_COLOR = new Color(50, 50, 50);
-    private static final Color FIXED_TILE_BACKGROUND_COLOR = new Color(160, 160, 0);
-    private static final Color ARROW_COLOR = new Color(70, 130, 180);
-    private static final Color ARROW_COLOR_HOVER = new Color(120, 180, 230);
+    private static final Color BACKGROUND_COLOR = GameTheme.Colors.backgroundPrimary();
+    private static final Color CORRIDOR_COLOR = GameTheme.Colors.cardBackground();
+    private static final Color WALL_COLOR = GameTheme.Colors.stoneDark();
+    private static final Color FIXED_TILE_BACKGROUND_COLOR = GameTheme.Colors.PRIMARY_GOLD;
+    private static final Color ARROW_COLOR = GameTheme.Colors.ACCENT_COPPER;
+    private static final Color ARROW_COLOR_HOVER = GameTheme.Colors.ACCENT_GOLD;
 
     private static final Color[] PLAYER_COLORS = {
-            new Color(200, 80, 80), new Color(80, 180, 80),
-            new Color(80, 120, 200), new Color(230, 200, 80)
+            GameTheme.Colors.getPlayerColor(0), GameTheme.Colors.getPlayerColor(1),
+            GameTheme.Colors.getPlayerColor(2), GameTheme.Colors.getPlayerColor(3)
     };
 
     private final GameClient client;
@@ -103,7 +71,6 @@ public class BoardPanel extends JPanel {
     private static final long PUSH_HIGHLIGHT_DURATION = 2000; // 2 seconds
 
     private int lastTargetTreasureId = -1;
-    private boolean showTargetBanner = false;
 
     private int selectedRow = 0;
     private int selectedCol = 0;
@@ -119,12 +86,6 @@ public class BoardPanel extends JPanel {
     private final Map<String, BufferedImage> tileImages = new HashMap<>();
     private BufferedImage bonusBagImage;
 
-    /**
-     * Reachable Tiles kommen vom Server (optional).
-     * Wenn du (noch) nichts vom Server bekommst, bleibt es leer -> kein Highlighting.
-     */
-    private final Set<Tile> reachableTiles = new HashSet<>();
-
     private final List<ArrowButton> arrowButtons = new ArrayList<>();
     private ArrowButton hoveredArrow = null;
 
@@ -133,9 +94,8 @@ public class BoardPanel extends JPanel {
     private int size;
     private int arrowSize = 30;
 
-    private final Random random = new Random();
 
-    private AudioPlayer backgroundMusic;
+    private final AudioPlayer backgroundMusic;
 
     private boolean inputLocked = false;
 
@@ -152,14 +112,14 @@ public class BoardPanel extends JPanel {
     private boolean aiMoveButtonHovered = false;
     private boolean aiModeEnabled = false;
     private boolean aiThinking = false;
+
+
+    @Setter
     private Runnable onAiToggleRequested;
 
-    // Animation timer for smooth effects (60fps when animations are active)
-    private javax.swing.Timer animationTimer;
     private static final int ANIMATION_FPS = 60;
     private static final int ANIMATION_INTERVAL = 1000 / ANIMATION_FPS; // ~16ms
 
-    private static final String EXTRA_KEY = "EXTRA";
 
     public BoardPanel(GameClient client, Board board, Player currentPlayer, List<Player> players) {
         this.client = Objects.requireNonNull(client, "client must not be null");
@@ -172,7 +132,6 @@ public class BoardPanel extends JPanel {
         loadTreasureImages();
         loadPlayerIcons();
 
-        // Listen for theme changes
         ThemeManager.getInstance().addThemeChangeListener(() -> {
             loadBackgroundImage();
             repaint();
@@ -181,19 +140,18 @@ public class BoardPanel extends JPanel {
         setBackground(BACKGROUND_COLOR);
         setPreferredSize(new Dimension(1920, 1080));
 
-        setLayout(null); // Overlay-Button
+        setLayout(null);
 
-        optionsButton = createStyledOptionsButton();
+        StyledButton optionsButton = createStyledOptionsButton();
         add(optionsButton);
 
-        // Initialize toast manager and sound effects
+
         this.toastManager = new ToastManager(this);
         this.soundEffects = new SoundEffects();
 
         setupMouseListener();
         setupKeyboardListener();
 
-        // Add resize listener for layout cache invalidation
         addComponentListener(new ComponentAdapter() {
             @Override
             public void componentResized(ComponentEvent e) {
@@ -201,14 +159,13 @@ public class BoardPanel extends JPanel {
             }
         });
 
-        // Lade gespeicherte Lautstärke
         java.util.prefs.Preferences prefs = java.util.prefs.Preferences.userNodeForPackage(getClass());
         int savedMusicVolume = prefs.getInt("musicVolume", 50);
         int savedSfxVolume = prefs.getInt("sfxVolume", 70);
 
         backgroundMusic = AudioPlayer.getInstance();
 
-        // Apply persisted global music volume and ensure background music is running
+
         backgroundMusic.setMusicVolume(savedMusicVolume / 100.0f);
         backgroundMusic.playMenuMusic();
 
@@ -216,13 +173,12 @@ public class BoardPanel extends JPanel {
 
         javax.swing.Timer sidebarTimer = new javax.swing.Timer(1000, e -> {
             if (gameEndTime != null || turnEndTime != null) {
-                // Only repaint the sidebar region for timer updates (avoid full repaint)
                 repaintSidebarRegion();
             }
         });
         sidebarTimer.start();
 
-        animationTimer = new javax.swing.Timer(ANIMATION_INTERVAL, e -> {
+        var animationTimer = new javax.swing.Timer(ANIMATION_INTERVAL, e -> {
             if (needsAnimationUpdate()) {
                 repaint();
             }
@@ -261,18 +217,8 @@ public class BoardPanel extends JPanel {
         return false;
     }
 
+    @Setter
     private Runnable onExitGame;
-
-    public void setOnExitGame(Runnable callback) {
-        this.onExitGame = callback;
-    }
-
-    /**
-     * Sets the callback for when the AI toggle button is clicked.
-     */
-    public void setOnAiToggleRequested(Runnable callback) {
-        this.onAiToggleRequested = callback;
-    }
 
     /**
      * Sets whether AI mode is enabled (toggle state).
@@ -293,58 +239,10 @@ public class BoardPanel extends JPanel {
         repaint();
     }
 
-    private JButton createStyledOptionsButton() {
-        JButton btn = new JButton("⚙") {
-            private boolean isHovered = false;
-
-            {
-                addMouseListener(new MouseAdapter() {
-                    @Override
-                    public void mouseEntered(MouseEvent e) { isHovered = true; repaint(); }
-                    @Override
-                    public void mouseExited(MouseEvent e) { isHovered = false; repaint(); }
-                });
-            }
-
-            @Override
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-
-                int w = getWidth();
-                int h = getHeight();
-
-                // Background
-                if (isHovered) {
-                    g2.setColor(new Color(80, 70, 55, 220));
-                } else {
-                    g2.setColor(new Color(50, 45, 40, 200));
-                }
-                g2.fillRoundRect(0, 0, w, h, 10, 10);
-
-                // Border
-                g2.setColor(new Color(180, 150, 100, isHovered ? 255 : 180));
-                g2.setStroke(new BasicStroke(2));
-                g2.drawRoundRect(1, 1, w - 2, h - 2, 10, 10);
-
-                // Icon
-                g2.setFont(FONT_SANSSERIF_BOLD_20);
-                g2.setColor(new Color(255, 215, 0));
-                FontMetrics fm = g2.getFontMetrics();
-                String text = "⚙";
-                int textX = (w - fm.stringWidth(text)) / 2;
-                int textY = (h + fm.getAscent() - fm.getDescent()) / 2;
-                g2.drawString(text, textX, textY);
-
-                g2.dispose();
-            }
-        };
+    private StyledButton createStyledOptionsButton() {
+        StyledButton btn = new StyledButton("⚙", StyledButton.Style.SECONDARY);
+        btn.setPreferredSize(new Dimension(45, 40));
         btn.setBounds(10, 10, 45, 40);
-        btn.setOpaque(false);
-        btn.setContentAreaFilled(false);
-        btn.setBorderPainted(false);
-        btn.setFocusPainted(false);
-        btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
         btn.addActionListener(e -> showOptionsDialog());
         StyledTooltipManager.setTooltip(btn, "Optionen", "Einstellungen öffnen (Esc/P)");
         StyledContextMenu.attachTo(btn);
@@ -412,7 +310,6 @@ public class BoardPanel extends JPanel {
         treasureFileMapping.put(23, "Jug");
         treasureFileMapping.put(24, "Mouse");
 
-        // Load each treasure image
         for (var entry : treasureFileMapping.entrySet()) {
             var treasureId = entry.getKey();
             var fileName = entry.getValue();
@@ -431,16 +328,11 @@ public class BoardPanel extends JPanel {
     }
 
 
-    /**
-     * Lädt ALLE Varianten in tileVariants und initialisiert die tileBags.
-     */
     private void loadTileImages() {
-        // Nur noch je 1 Bild pro Typ
         tileImages.put("I", loadImage("/images/tiles/I_tile.png"));
         tileImages.put("L", loadImage("/images/tiles/L_tile.png"));
         tileImages.put("T", loadImage("/images/tiles/T_tile.png"));
 
-        // Bonus bag image
         bonusBagImage = loadImage("/images/tiles/BonusBag.png");
 
         System.out.println("Loaded tile images:");
@@ -493,13 +385,11 @@ public class BoardPanel extends JPanel {
         EnumSet<Direction> dirs = EnumSet.noneOf(Direction.class);
         Collections.addAll(dirs, entrancesArray);
 
-        // I
         if (dirs.size() == 2) {
             if (dirs.contains(Direction.UP) && dirs.contains(Direction.DOWN)) return new TileImageInfo("I", 0);
             if (dirs.contains(Direction.LEFT) && dirs.contains(Direction.RIGHT)) return new TileImageInfo("I", 90);
         }
 
-        // L
         if (dirs.size() == 2) {
             if (dirs.contains(Direction.UP) && dirs.contains(Direction.RIGHT)) return new TileImageInfo("L", 0);
             if (dirs.contains(Direction.RIGHT) && dirs.contains(Direction.DOWN)) return new TileImageInfo("L", 90);
@@ -507,7 +397,6 @@ public class BoardPanel extends JPanel {
             if (dirs.contains(Direction.LEFT) && dirs.contains(Direction.UP)) return new TileImageInfo("L", 270);
         }
 
-        // T
         if (dirs.size() == 3) {
             if (!dirs.contains(Direction.DOWN)) return new TileImageInfo("T", 0);
             if (!dirs.contains(Direction.LEFT)) return new TileImageInfo("T", 90);
@@ -583,15 +472,6 @@ public class BoardPanel extends JPanel {
         g2.fillOval(cx - dotSize / 2, cy - dotSize / 2, dotSize, dotSize);
     }
 
-    private void drawTileHighlight(Graphics2D g2, int x, int y) {
-        g2.setColor(new Color(255, 255, 0, 120));
-        g2.fillRoundRect(x - 4, y - 4, size + 8, size + 8, 15, 15);
-    }
-
-    // =================================================================================
-    // INPUT (SERVER-AUTORITATIV)
-    // =================================================================================
-
     private void setupMouseListener() {
         addMouseListener(new MouseAdapter() {
             @Override
@@ -600,7 +480,6 @@ public class BoardPanel extends JPanel {
                 if (inputLocked) return;
                 if (board == null) return;
 
-                // Right-click to cancel bonus mode
                 if (e.getButton() == MouseEvent.BUTTON3) {
                     if (activeBonusMode != null) {
                         cancelBonusMode();
@@ -608,13 +487,9 @@ public class BoardPanel extends JPanel {
                     return;
                 }
 
-                // Check bonus button clicks first
                 if (handleBonusButtonClick(e.getPoint())) return;
-
-                // Check AI Move button click
                 if (handleAiButtonClick(e.getPoint())) return;
 
-                // Handle active bonus mode clicks
                 if (activeBonusMode != null) {
                     if (handleActiveBonusModeClick(e.getPoint())) return;
                 }
@@ -635,7 +510,6 @@ public class BoardPanel extends JPanel {
                     }
                 }
 
-                // Track hovered bonus button
                 hoveredBonusIndex = -1;
                 for (int i = 0; i < bonusButtonBounds.size(); i++) {
                     if (bonusButtonBounds.get(i).contains(e.getPoint())) {
@@ -644,16 +518,13 @@ public class BoardPanel extends JPanel {
                     }
                 }
 
-                // Track hovered AI button
                 aiMoveButtonHovered = aiMoveButtonBounds != null && aiMoveButtonBounds.contains(e.getPoint());
-
                 repaint();
             }
         });
     }
 
     private void setupKeyboardListener() {
-        // Make panel focusable to receive keyboard events
         setFocusable(true);
         requestFocusInWindow();
 
@@ -665,7 +536,6 @@ public class BoardPanel extends JPanel {
             }
         });
 
-        // Request focus when clicked
         addMouseListener(new MouseAdapter() {
             @Override
             public void mousePressed(MouseEvent e) {
@@ -679,29 +549,21 @@ public class BoardPanel extends JPanel {
         if (board == null) return;
 
         switch (e.getKeyCode()) {
-            // Rotation controls
             case java.awt.event.KeyEvent.VK_R, java.awt.event.KeyEvent.VK_E -> {
-                // Rotate spare tile clockwise
                 if (currentTurnState == labyrinth.contracts.models.TurnState.WAITING_FOR_PUSH) {
                     soundEffects.playRotate();
                     client.sendRotateTile();
-                    showTargetBanner = false; // Hide banner after first action
-                    toastManager.showInfo("ROTATE", "Extra-Tile gedreht", "R/E: im Uhrzeigersinn, Q: gegen Uhrzeigersinn");
                     inputLocked = true;
                 }
             }
             case java.awt.event.KeyEvent.VK_Q -> {
-                // Rotate spare tile counter-clockwise (3 times clockwise = 1 counter-clockwise)
                 if (currentTurnState == labyrinth.contracts.models.TurnState.WAITING_FOR_PUSH) {
                     soundEffects.playRotate();
-                    // Send 3 rotate commands for counter-clockwise
                     client.sendRotateTile();
                     try { Thread.sleep(50); } catch (InterruptedException ignored) {}
                     client.sendRotateTile();
                     try { Thread.sleep(50); } catch (InterruptedException ignored) {}
                     client.sendRotateTile();
-                    showTargetBanner = false; // Hide banner after first action
-                    toastManager.showInfo("ROTATE", "Extra-Tile gedreht", "Gegen Uhrzeigersinn gedreht");
                     inputLocked = true;
                 }
             }
@@ -732,7 +594,6 @@ public class BoardPanel extends JPanel {
             case java.awt.event.KeyEvent.VK_ENTER, java.awt.event.KeyEvent.VK_SPACE -> {
                 if (keyboardNavigationActive && currentTurnState == labyrinth.contracts.models.TurnState.WAITING_FOR_MOVE) {
                     client.sendMovePawn(selectedRow, selectedCol);
-                    showTargetBanner = false; // Hide banner after first action
                     inputLocked = true;
                     keyboardNavigationActive = false;
                 } else if (currentTurnState == labyrinth.contracts.models.TurnState.WAITING_FOR_PUSH) {
@@ -802,7 +663,6 @@ public class BoardPanel extends JPanel {
 
                 // Send command to server
                 client.sendPushTile(arrow.index, arrow.direction);
-                showTargetBanner = false; // Hide banner after first action
                 inputLocked = true;
                 return true;
             }
@@ -820,7 +680,6 @@ public class BoardPanel extends JPanel {
                 if (tileRect.contains(p)) {
                     soundEffects.playMove();
                     client.sendMovePawn(row, col);
-                    showTargetBanner = false; // Hide banner after first action
                     inputLocked = true;
                     break outer;
                 }
@@ -1053,7 +912,7 @@ public class BoardPanel extends JPanel {
 
         // Title
         JLabel titleLabel = new JLabel("Mit wem tauschen?", SwingConstants.CENTER);
-        titleLabel.setFont(new Font("Arial", Font.BOLD, 18));
+        titleLabel.setFont(FontManager.getBodyMedium(Font.BOLD));
         titleLabel.setForeground(new Color(220, 220, 240));
         mainPanel.add(titleLabel, BorderLayout.NORTH);
 
@@ -1075,7 +934,7 @@ public class BoardPanel extends JPanel {
 
         // Cancel button
         JButton cancelBtn = new JButton("Abbrechen");
-        cancelBtn.setFont(new Font("Arial", Font.PLAIN, 14));
+        cancelBtn.setFont(FontManager.getBodyMedium());
         cancelBtn.setForeground(Color.WHITE);
         cancelBtn.setBackground(new Color(80, 80, 100));
         cancelBtn.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
@@ -1135,7 +994,7 @@ public class BoardPanel extends JPanel {
 
                 // Player initial
                 g2.setColor(playerColor.darker());
-                g2.setFont(FONT_ARIAL_BOLD_16);
+                g2.setFont(FontManager.getHeadingMedium());
                 String initial = player.getName().substring(0, 1).toUpperCase();
                 FontMetrics fm = g2.getFontMetrics();
                 int textX = 15 + (30 - fm.stringWidth(initial)) / 2;
@@ -1144,12 +1003,12 @@ public class BoardPanel extends JPanel {
 
                 // Player name
                 g2.setColor(Color.WHITE);
-                g2.setFont(FONT_ARIAL_BOLD_15);
+                g2.setFont(FontManager.getBodyMedium(Font.BOLD));
                 g2.drawString(player.getName(), 55, getHeight() / 2 + 5);
 
                 // Position info
                 if (player.getCurrentPosition() != null) {
-                    g2.setFont(FONT_ARIAL_PLAIN_11);
+                    g2.setFont(FontManager.getBodySmall());
                     g2.setColor(new Color(255, 255, 255, 180));
                     String posText = "Position: " + player.getCurrentPosition().getRow() + "/" + player.getCurrentPosition().getColumn();
                     g2.drawString(posText, getWidth() - 100, getHeight() / 2 + 5);
@@ -1282,7 +1141,7 @@ public class BoardPanel extends JPanel {
 
         // Scaled font
         int fontSize = Math.round(12 * scale);
-        g2.setFont(getCachedFont("SansSerif", Font.BOLD, fontSize));
+        g2.setFont(FontManager.getFontForSize((float) fontSize, Font.BOLD));
         g2.setColor(Color.WHITE);
         String text = "DEIN ZUG";
         FontMetrics fm = g2.getFontMetrics();
@@ -1400,10 +1259,6 @@ public class BoardPanel extends JPanel {
 
                 if (keyboardNavigationActive && row == selectedRow && col == selectedCol) {
                     drawKeyboardSelectionHighlight(g2, x, y);
-                }
-
-                if (reachableTiles.contains(tile)) {
-                    drawTileHighlight(g2, x, y);
                 }
 
                 drawTileAt(g2, tile, x, y, row, col, true);
@@ -1549,23 +1404,16 @@ public class BoardPanel extends JPanel {
         }
 
         if (drawDetails) {
-            // Treasure zeichnen
             if (tile.getTreasure() != null) {
                 int cx = x + size / 2;
                 int cy = y + size / 2;
                 drawTreasureOnTile(g2, tile.getTreasure(), cx, cy);
             }
 
-            // Bonus zeichnen (wenn vorhanden und kein Treasure)
             if (tile.getBonus() != null && tile.getTreasure() == null) {
                 int cx = x + size / 2;
                 int cy = y + size / 2;
                 drawBonusOnTile(g2, tile.getBonus(), cx, cy);
-            }
-
-            // Koordinaten nur bei gültigen row/col
-            if (row >= 0 && col >= 0) {
-                drawCoordinates(g2, x, y, row, col);
             }
         }
     }
@@ -1573,19 +1421,19 @@ public class BoardPanel extends JPanel {
     private void drawBonusOnTile(Graphics2D g2, BonusType bonus, int centerX, int centerY) {
         if (bonus == null) return;
 
-        int imgSize = (int) (size * 0.5);  // 50% der Tile-Groesse
+        int imgSize = (int) (size * 0.5);
         int imgX = centerX - imgSize / 2;
         int imgY = centerY - imgSize / 2;
 
         if (bonusBagImage != null) {
-            // Zeichne das BonusBag-Bild
+
             g2.drawImage(bonusBagImage, imgX, imgY, imgSize, imgSize, null);
         } else {
-            // Fallback: Farbiger Kreis mit Text
+
             g2.setColor(new Color(255, 215, 0, 200));  // Gold
             g2.fillOval(imgX, imgY, imgSize, imgSize);
             g2.setColor(Color.BLACK);
-            g2.setFont(getCachedFont("Arial", Font.BOLD, imgSize / 3));
+            g2.setFont(FontManager.getFontForSize((float) (imgSize / 3), Font.BOLD));
             String label = switch (bonus) {
                 case BEAM -> "T";
                 case SWAP -> "S";
@@ -1649,7 +1497,7 @@ public class BoardPanel extends JPanel {
                 g2.drawOval(centerX - imgSize / 2 - 2, centerY - imgSize / 2 - 14, imgSize + 4, imgSize + 4);
             }
         } else {
-            // ⚠️ Fallback if image missing: Simple colored circle with first letter
+            // Fallback if image missing: Simple colored circle with first letter
             int fallbackSize = Math.min((int)(size * 0.4), 40);
 
             // Circle background
@@ -1662,7 +1510,7 @@ public class BoardPanel extends JPanel {
             g2.drawOval(centerX - fallbackSize / 2, centerY - fallbackSize / 2 - 12, fallbackSize, fallbackSize);
 
             // First letter
-            g2.setFont(getCachedFont("Arial", Font.BOLD, fallbackSize / 2));
+            g2.setFont(FontManager.getFontForSize((float) (fallbackSize / 2), Font.BOLD));
             g2.setColor(Color.WHITE);
             String letter = TreasureUtils.getLocalName(treasure.getId()).substring(0, 1);
             FontMetrics fm = g2.getFontMetrics();
@@ -1673,7 +1521,7 @@ public class BoardPanel extends JPanel {
         }
 
         // Draw treasure name UNDER the image with background
-        g2.setFont(isCurrentTarget ? FONT_ARIAL_BOLD_11 : FONT_ARIAL_BOLD_9);
+        g2.setFont(isCurrentTarget ? FontManager.getBodySmall(Font.BOLD) : FontManager.getBodyTiny());
         FontMetrics fm = g2.getFontMetrics();
         String displayName = TreasureUtils.getLocalName(treasure.getId());
 
@@ -1737,17 +1585,6 @@ public class BoardPanel extends JPanel {
         }
     }
 
-    private void drawCoordinates(Graphics2D g2, int x, int y, int row, int col) {
-        if (row < 0 || col < 0) return;
-
-        String coords = "(" + row + "," + col + ")";
-        g2.setColor(Color.WHITE);
-
-        Font oldFont = g2.getFont();
-        g2.setFont(COORDINATE_FONT);
-        g2.drawString(coords, x + 3, y + size - 3);
-        g2.setFont(oldFont);
-    }
 
     private void drawPlayersOnTile(Graphics2D g2, int row, int col) {
         // First, collect all players on this tile
@@ -1842,7 +1679,7 @@ public class BoardPanel extends JPanel {
             } else {
                 g2.setColor(PLAYER_COLORS[i % PLAYER_COLORS.length]);
                 Font oldFont = g2.getFont();
-                Font scaledFont = count > 1 ? PLAYER_MARKER_FONT.deriveFont(20f) : PLAYER_MARKER_FONT;
+                Font scaledFont = count > 1 ? FontManager.getFontForSize(20f, Font.BOLD) : FontManager.getFontForSize(30f, Font.BOLD);
                 g2.setFont(scaledFont);
 
                 FontMetrics fm = g2.getFontMetrics();
@@ -1866,7 +1703,7 @@ public class BoardPanel extends JPanel {
         boolean pushFixedActive = activeBonusMode == BonusType.PUSH_FIXED;
 
         for (int row = 0; row < rows; row++) {
-            // Normal: nur ungerade Reihen (1, 3, 5) sind schiebbar
+            // Normal: nur ungerade Reihen (1, 3, 5) sind schiebar
             // Push Fixed: alle Reihen außer den äußersten (0 und rows-1)
             boolean isNormalPushable = row % 2 == 1;
             boolean isPushFixedPushable = pushFixedActive && row > 0 && row < rows - 1;
@@ -1888,15 +1725,13 @@ public class BoardPanel extends JPanel {
         }
 
         for (int col = 0; col < cols; col++) {
-            // Normal: nur ungerade Spalten (1, 3, 5) sind schiebbar
-            // Push Fixed: alle Spalten außer den äußersten (0 und cols-1)
             boolean isNormalPushable = col % 2 == 1;
             boolean isPushFixedPushable = pushFixedActive && col > 0 && col < cols - 1;
 
             if (!isNormalPushable && !isPushFixedPushable) continue;
 
             int x = xOffset + col * size + (size - arrowSize) / 2;
-            boolean isFixedCol = col % 2 == 0; // gerade Indices sind fixierte Spalten
+            boolean isFixedCol = col % 2 == 0;
 
             Rectangle upBounds = new Rectangle(x, yOffset - arrowSize - ARROW_MARGIN, arrowSize, arrowSize);
             ArrowButton upArrow = new ArrowButton(upBounds, Direction.DOWN, col, false, isFixedCol);
@@ -1910,7 +1745,7 @@ public class BoardPanel extends JPanel {
         }
     }
 
-    private static final Color ARROW_COLOR_FIXED = new Color(200, 140, 50);       // Gold für fixierte Reihen
+   private static final Color ARROW_COLOR_FIXED = new Color(200, 140, 50);       // Gold für fixierte Reihen
     private static final Color ARROW_COLOR_FIXED_HOVER = new Color(230, 170, 80); // Helles Gold bei Hover
 
     private void drawArrowButton(Graphics2D g2, ArrowButton arrow) {
@@ -1947,12 +1782,9 @@ public class BoardPanel extends JPanel {
         int x = cachedExtraTileX;
         int y = cachedExtraTileY;
 
-        // Scale font size based on tile size
-        int labelFontSize = Math.max(10, Math.min(14, size / 7));
-        int hintFontSize = Math.max(8, Math.min(10, size / 9));
 
         // Label above the tile
-        g2.setFont(getCachedFont("Arial", Font.BOLD, labelFontSize));
+        g2.setFont(FontManager.getFontForSize(12f, Font.BOLD));
         g2.setColor(ThemeManager.getInstance().getTextLight());
         g2.drawString("Schiebekarte", x, y - 8);
 
@@ -1961,7 +1793,7 @@ public class BoardPanel extends JPanel {
             // Debug: Fallback wenn null
             g2.setColor(new Color(255, 0, 0, 140));
             g2.drawRect(x, y, size, size);
-            g2.setFont(FONT_ARIAL_PLAIN_12);
+            g2.setFont(FontManager.getBodyMedium());
             g2.drawString("NULL", x + 5, y + 15);
             return;
         }
@@ -1971,7 +1803,7 @@ public class BoardPanel extends JPanel {
 
         // Optional hint text that it can be rotated
         if (currentTurnState == labyrinth.contracts.models.TurnState.WAITING_FOR_PUSH) {
-            g2.setFont(getCachedFont("Arial", Font.ITALIC, hintFontSize));
+            g2.setFont(FontManager.getFontForSize(10f, Font.ITALIC));
             g2.setColor(new Color(255, 255, 255, 200));
             g2.drawString("R/Q/E: Drehen", x, y + size + 15);
         }
@@ -2038,7 +1870,7 @@ public class BoardPanel extends JPanel {
         int currentY = sidebarY + padding;
 
         // Header
-        g2.setFont(getCachedFont("Arial", Font.BOLD, headerFontSize));
+        g2.setFont(FontManager.getFontForSize((float) headerFontSize, Font.BOLD));
         g2.setColor(new Color(255, 215, 0)); // Gold color
         currentY += Math.round(35 * sidebarScale);
 
@@ -2047,7 +1879,7 @@ public class BoardPanel extends JPanel {
             drawSectionHeader(g2, "SPIEL-TIMER", sidebarX + padding, currentY, sidebarScale);
             currentY += Math.round(22 * sidebarScale);
 
-            g2.setFont(getCachedFont("Arial", Font.BOLD, timerFontSize));
+            g2.setFont(FontManager.getFontForSize((float) timerFontSize, Font.BOLD));
             g2.setColor(new Color(255, 200, 100));
             String timeRemaining = formatTimeRemaining(gameEndTime);
             g2.drawString(timeRemaining, sidebarX + padding + scaledPadding, currentY);
@@ -2069,7 +1901,7 @@ public class BoardPanel extends JPanel {
             currentY += Math.round(25 * sidebarScale);
 
             // Player name with larger font
-            g2.setFont(getCachedFont("Arial", Font.BOLD, playerNameFontSize));
+            g2.setFont(FontManager.getFontForSize((float) playerNameFontSize, Font.BOLD));
             g2.setColor(new Color(255, 255, 150));
             String turnText = currentTurnPlayer.getName();
             if (currentTurnPlayer.isAiControlled()) {
@@ -2079,13 +1911,13 @@ public class BoardPanel extends JPanel {
             currentY += Math.round(28 * sidebarScale);
 
             // Turn state - use server TurnState if available, otherwise client MoveState
-            g2.setFont(getCachedFont("Arial", Font.PLAIN, stateFontSize));
+            g2.setFont(FontManager.getFontForSize((float) stateFontSize, Font.PLAIN));
             g2.setColor(new Color(180, 180, 200));
             String stateText;
             if (currentTurnState != null) {
                 stateText = switch (currentTurnState) {
-                    case WAITING_FOR_PUSH -> "Waiting for tile push";
-                    case WAITING_FOR_MOVE -> "Waiting for pawn move";
+                    case WAITING_FOR_PUSH -> "Warten auf Schieben";
+                    case WAITING_FOR_MOVE -> "Warten auf Zug";
                 };
             } else {
                 stateText = board.getCurrentMoveState() == null ? "WAITING" :
@@ -2097,20 +1929,12 @@ public class BoardPanel extends JPanel {
             // Turn timer
             if (turnEndTime != null) {
                 String turnTime = formatTimeRemaining(turnEndTime);
-                g2.setFont(getCachedFont("Arial", Font.BOLD, turnTimerFontSize));
+                g2.setFont(FontManager.getFontForSize((float) turnTimerFontSize, Font.BOLD));
                 g2.setColor(new Color(255, 150, 150));
                 g2.drawString("Zeit: " + turnTime, sidebarX + padding + scaledPadding, currentY);
                 currentY += Math.round(20 * sidebarScale);
             } else {
                 currentY += Math.round(7 * sidebarScale);
-            }
-
-            // Hint for staying in place
-            if (currentTurnState != null && currentTurnState == labyrinth.contracts.models.TurnState.WAITING_FOR_MOVE) {
-                g2.setFont(getCachedFont("Arial", Font.ITALIC, hintFontSize));
-                g2.setColor(new Color(150, 150, 170));
-                g2.drawString("(Click your tile to stay in place)", sidebarX + padding + scaledPadding, currentY);
-                currentY += Math.round(15 * sidebarScale);
             }
         }
 
@@ -2172,7 +1996,7 @@ public class BoardPanel extends JPanel {
             g2.drawRoundRect(sidebarX + padding + 5, currentY - Math.round(15 * sidebarScale), sidebarWidth - 2 * padding - 10, boxHeight, 10, 10);
 
             // "AKTUELLES ZIEL" label
-            g2.setFont(getCachedFont("Arial", Font.BOLD, Math.round(10 * sidebarScale)));
+            g2.setFont(FontManager.getFontForSize((float) Math.round(10 * sidebarScale), Font.BOLD));
             g2.setColor(new Color(100, 70, 0));
             g2.drawString("AKTUELLES ZIEL:", sidebarX + padding + Math.round(15 * sidebarScale), currentY - 2);
 
@@ -2191,7 +2015,7 @@ public class BoardPanel extends JPanel {
             }
 
             // Current target name next to image
-            g2.setFont(getCachedFont("Arial", Font.BOLD, Math.round(16 * sidebarScale)));
+            g2.setFont(FontManager.getFontForSize((float) Math.round(16 * sidebarScale), Font.BOLD));
             g2.setColor(new Color(0, 0, 0));
             g2.drawString(TreasureUtils.getLocalName(currentTarget.getId()), imgX + imgSize + Math.round(10 * sidebarScale), imgY + imgSize / 2 + 5);
 
@@ -2204,8 +2028,8 @@ public class BoardPanel extends JPanel {
         drawDivider(g2, sidebarX + padding, sidebarX + sidebarWidth - padding, currentY);
         currentY += Math.round(15 * sidebarScale);
 
-        g2.setFont(getCachedFont("Arial", Font.ITALIC, hintFontSize));
-        currentY += Math.round(15 * sidebarScale);
+        g2.setFont(FontManager.getFontForSize((float) hintFontSize, Font.ITALIC));
+        g2.setColor(new Color(255, 255, 255, 200));
         g2.drawString("R/Q/E: Tile drehen", sidebarX + padding, currentY);
     }
 
@@ -2266,7 +2090,7 @@ public class BoardPanel extends JPanel {
 
         // Button text - scaled font
         int fontSize = Math.round(14 * scale);
-        g2.setFont(getCachedFont("Arial", Font.BOLD, fontSize));
+        g2.setFont(FontManager.getFontForSize((float) fontSize, Font.BOLD));
         String buttonText;
         if (aiThinking) {
             buttonText = "AI Denkt...";
@@ -2345,7 +2169,7 @@ public class BoardPanel extends JPanel {
             String bonusIcon = getBonusIcon(bonus);
 
             int fontSize = Math.round(14 * scale);
-            g2.setFont(getCachedFont("Arial", Font.BOLD, fontSize));
+            g2.setFont(FontManager.getFontForSize((float) fontSize, Font.BOLD));
             g2.setColor(isActive ? new Color(220, 255, 220) : new Color(255, 255, 255));
             g2.drawString(bonusIcon + " " + bonusName, buttonX + Math.round(10 * scale), buttonY + Math.round(26 * scale));
 
@@ -2355,7 +2179,7 @@ public class BoardPanel extends JPanel {
         // Show hint if a bonus mode is active
         if (activeBonusMode != null) {
             int hintFontSize = Math.round(10 * scale);
-            g2.setFont(getCachedFont("Arial", Font.ITALIC, hintFontSize));
+            g2.setFont(FontManager.getFontForSize((float) hintFontSize, Font.ITALIC));
             g2.setColor(new Color(150, 255, 150));
             String hint = switch (activeBonusMode) {
                 case BEAM -> "Klicke auf ein Zielfeld...";
@@ -2457,7 +2281,7 @@ public class BoardPanel extends JPanel {
      */
     private void drawSectionHeader(Graphics2D g2, String text, int x, int y, float scale) {
         int fontSize = Math.round(13 * scale);
-        g2.setFont(getCachedFont("Arial", Font.BOLD, fontSize));
+        g2.setFont(FontManager.getFontForSize((float) fontSize, Font.BOLD));
         g2.setColor(new Color(180, 200, 255));
         g2.drawString(text, x, y);
     }
@@ -2534,7 +2358,7 @@ public class BoardPanel extends JPanel {
 
         // Player name - scaled font
         int nameFontSize = Math.round(14 * scale);
-        g2.setFont(getCachedFont("Arial", Font.BOLD, nameFontSize));
+        g2.setFont(FontManager.getFontForSize((float) nameFontSize, Font.BOLD));
         g2.setColor(Color.WHITE);
         String name = player.getName();
         if (name.length() > 15) {
@@ -2545,7 +2369,7 @@ public class BoardPanel extends JPanel {
         // Badges (admin, AI, disconnected) - scaled
         int badgeFontSize = Math.round(10 * scale);
         int badgeX = x + width - padding - Math.round(20 * scale);
-        g2.setFont(getCachedFont("Arial", Font.PLAIN, badgeFontSize));
+        g2.setFont(FontManager.getFontForSize((float) badgeFontSize, Font.PLAIN));
 
         // Show AI badge or OFFLINE badge (but not both - AI bots don't need connections)
         if (player.isAiControlled()) {
@@ -2568,9 +2392,9 @@ public class BoardPanel extends JPanel {
         int totalTreasures = treasuresFound + player.getRemainingTreasureCount();
 
         int scoreFontSize = Math.round(12 * scale);
-        g2.setFont(getCachedFont("Arial", Font.PLAIN, scoreFontSize));
+        g2.setFont(FontManager.getFontForSize((float) scoreFontSize, Font.PLAIN));
         g2.setColor(new Color(200, 200, 220));
-        g2.drawString("Treasures: " + treasuresFound + "/" + totalTreasures, x + padding + Math.round(24 * scale), currentY);
+        g2.drawString("Schätze: " + treasuresFound + "/" + totalTreasures, x + padding + Math.round(24 * scale), currentY);
         currentY += Math.round(18 * scale);
 
         // Progress bar - scaled
@@ -2770,70 +2594,12 @@ public class BoardPanel extends JPanel {
         return board;
     }
 
-    public void setPlayers(List<Player> players) {
-        this.players = players != null ? players : List.of();
-        System.out.println("[BoardPanel] setPlayers called with " + this.players.size() + " players:");
-        for (int i = 0; i < this.players.size(); i++) {
-            Player p = this.players.get(i);
-            System.out.println("  [" + i + "] " + p.getName() + " at " + p.getCurrentPosition());
-        }
-        repaint();
-    }
-
-    public void setCurrentPlayer(Player currentPlayer) {
-        this.currentPlayer = currentPlayer;
-
-        // Initialize keyboard selection to current player's position
-        if (currentPlayer != null && currentPlayer.getCurrentPosition() != null) {
-            selectedRow = currentPlayer.getCurrentPosition().getRow();
-            selectedCol = currentPlayer.getCurrentPosition().getColumn();
-        }
-
-        // Check if target treasure has changed and show toast
-        if (currentPlayer != null && currentPlayer.getCurrentTargetTreasure() != null) {
-            Treasure currentTarget = currentPlayer.getCurrentTargetTreasure();
-            var currentTreasureId = currentTarget.getId();
-
-            if (lastTargetTreasureId == -1 || lastTargetTreasureId != currentTreasureId) {
-                // Target changed or first time - show toast and banner
-                showNewTargetToast(TreasureUtils.getLocalName(currentTarget.getId()));
-                lastTargetTreasureId = currentTreasureId;
-                showTargetBanner = true; // Show banner until first action
-            }
-        }
-
-        repaint();
-    }
-
     private void showNewTargetToast(String treasureName) {
         String message = "Bewege dich zum Feld mit diesem Schatz!";
         toastManager.showInfo("TARGET", "Dein Ziel: " + treasureName, message);
     }
 
-    /**
-     * Reachable Tiles werden idealerweise aus einem Server-Payload gesetzt.
-     * Du musst dazu deine Event-Payloads erweitern (z.B. GAME_STATE_UPDATE).
-     */
-    public void setReachableTiles(Collection<Tile> tiles) {
-        reachableTiles.clear();
-        if (tiles != null) reachableTiles.addAll(tiles);
-        repaint();
-    }
 
-    public void setGameEndTime(java.time.OffsetDateTime gameEndTime) {
-        this.gameEndTime = gameEndTime;
-        repaint();
-    }
-
-    public void setTurnEndTime(java.time.OffsetDateTime turnEndTime) {
-        this.turnEndTime = turnEndTime;
-        repaint();
-    }
-
-    public void setCurrentTurnState(labyrinth.contracts.models.TurnState currentTurnState) {
-        this.currentTurnState = currentTurnState;
-        repaint();
-    }
 
     /**
      * Unlocks input after an error occurs.
@@ -2881,27 +2647,22 @@ public class BoardPanel extends JPanel {
             if (lastTargetTreasureId == -1 || lastTargetTreasureId != currentTreasureId) {
                 showNewTargetToast(TreasureUtils.getLocalName(currentTarget.getId()));
                 lastTargetTreasureId = currentTreasureId;
-                showTargetBanner = true;
             }
         }
 
-        // Update timers and turn state
         this.gameEndTime = gameEndTime;
         this.turnEndTime = turnEndTime;
         this.currentTurnState = turnState;
 
-        // Single repaint for all updates
         repaint();
     }
 
     private void showOptionsDialog() {
-        // Farben
         Color CARD_BG = new Color(35, 32, 28, 240);
         Color CARD_BORDER = new Color(100, 85, 60);
         Color PRIMARY_GOLD = new Color(218, 165, 32);
         Color PRIMARY_GOLD_LIGHT = new Color(255, 215, 0);
         Color TEXT_LIGHT = new Color(255, 248, 230);
-        Color TEXT_MUTED = new Color(180, 170, 155);
         Color STONE_DARK = new Color(45, 42, 38);
 
         JDialog dialog = new JDialog(
@@ -2936,13 +2697,13 @@ public class BoardPanel extends JPanel {
                 super.paintComponent(g);
             }
         };
-        mainPanel.setOpaque(false);
         mainPanel.setLayout(new BorderLayout(0, 15));
         mainPanel.setBorder(BorderFactory.createEmptyBorder(25, 30, 25, 30));
+        mainPanel.setOpaque(false);
 
         // Title
         JLabel titleLabel = new JLabel("⚙ Optionen");
-        titleLabel.setFont(new Font("Serif", Font.BOLD, 24));
+        titleLabel.setFont(FontManager.getBodyMedium(Font.BOLD));
         titleLabel.setForeground(PRIMARY_GOLD_LIGHT);
         titleLabel.setHorizontalAlignment(SwingConstants.CENTER);
         mainPanel.add(titleLabel, BorderLayout.NORTH);
@@ -2969,7 +2730,7 @@ public class BoardPanel extends JPanel {
         // Music Volume
         gbc.gridx = 0; gbc.gridy = 0; gbc.weightx = 0.3;
         JLabel musicLabel = new JLabel("Musik:");
-        musicLabel.setFont(new Font("SansSerif", Font.BOLD, 14));
+        musicLabel.setFont(FontManager.getBodyMedium(Font.BOLD));
         musicLabel.setForeground(TEXT_LIGHT);
         audioContent.add(musicLabel, gbc);
 
@@ -2981,7 +2742,7 @@ public class BoardPanel extends JPanel {
 
         gbc.gridx = 2; gbc.weightx = 0.2;
         JLabel musicValueLabel = new JLabel(currentMusicVolume + "%");
-        musicValueLabel.setFont(new Font("SansSerif", Font.BOLD, 14));
+        musicValueLabel.setFont(FontManager.getBodyMedium(Font.BOLD));
         musicValueLabel.setForeground(PRIMARY_GOLD);
         musicValueLabel.setHorizontalAlignment(SwingConstants.RIGHT);
         audioContent.add(musicValueLabel, gbc);
@@ -2995,7 +2756,7 @@ public class BoardPanel extends JPanel {
         // SFX Volume
         gbc.gridx = 0; gbc.gridy = 1;
         JLabel sfxLabel = new JLabel("Effekte:");
-        sfxLabel.setFont(new Font("SansSerif", Font.BOLD, 14));
+        sfxLabel.setFont(FontManager.getBodyMedium(Font.BOLD));
         sfxLabel.setForeground(TEXT_LIGHT);
         audioContent.add(sfxLabel, gbc);
 
@@ -3007,7 +2768,7 @@ public class BoardPanel extends JPanel {
 
         gbc.gridx = 2;
         JLabel sfxValueLabel = new JLabel(currentSfxVolume + "%");
-        sfxValueLabel.setFont(new Font("SansSerif", Font.BOLD, 14));
+        sfxValueLabel.setFont(FontManager.getBodyMedium(Font.BOLD));
         sfxValueLabel.setForeground(PRIMARY_GOLD);
         sfxValueLabel.setHorizontalAlignment(SwingConstants.RIGHT);
         audioContent.add(sfxValueLabel, gbc);
@@ -3028,7 +2789,7 @@ public class BoardPanel extends JPanel {
         themeContent.setOpaque(false);
 
         JLabel themeLabel = new JLabel("Theme:");
-        themeLabel.setFont(new Font("SansSerif", Font.BOLD, 14));
+        themeLabel.setFont(FontManager.getBodyMedium(Font.BOLD));
         themeLabel.setForeground(TEXT_LIGHT);
         themeContent.add(themeLabel);
 
@@ -3047,7 +2808,7 @@ public class BoardPanel extends JPanel {
                 int knobX = isSelected() ? w - knobSize - 3 : 3;
                 g2.setColor(isSelected() ? new Color(100, 100, 140) : new Color(255, 220, 120));
                 g2.fillOval(knobX, 3, knobSize, knobSize);
-                g2.setFont(new Font("SansSerif", Font.PLAIN, 12));
+                g2.setFont(FontManager.getBodyMedium(Font.BOLD));
                 g2.setColor(TEXT_LIGHT);
                 g2.drawString(isSelected() ? "🌙" : "☀", knobX + 4, h - 7);
                 g2.dispose();
@@ -3062,7 +2823,7 @@ public class BoardPanel extends JPanel {
         themeContent.add(themeToggle);
 
         JLabel themeStatusLabel = new JLabel(darkTheme ? "Dunkel" : "Hell");
-        themeStatusLabel.setFont(new Font("SansSerif", Font.PLAIN, 14));
+        themeStatusLabel.setFont(FontManager.getBodyMedium());
         themeStatusLabel.setForeground(TEXT_LIGHT);
         themeContent.add(themeStatusLabel);
 
@@ -3081,7 +2842,7 @@ public class BoardPanel extends JPanel {
         buttonPanel.setOpaque(false);
 
         // Exit Button
-        JButton exitButton = createStyledDialogButton("🚪 Spiel beenden", new Color(120, 50, 50), new Color(180, 80, 80));
+        StyledButton exitButton = new StyledButton("🚪 Spiel beenden", StyledButton.Style.DIALOG_DANGER);
         exitButton.addActionListener(e -> {
             boolean confirmed = StyledDialog.showConfirm(dialog,
                     "Spiel beenden?",
@@ -3096,7 +2857,7 @@ public class BoardPanel extends JPanel {
         buttonPanel.add(exitButton);
 
         // Save & Close Button
-        JButton saveButton = createStyledDialogButton("💾 Speichern & Schließen", new Color(60, 100, 60), new Color(100, 160, 100));
+        StyledButton saveButton = new StyledButton("💾 Speichern & Schließen", StyledButton.Style.DIALOG_PRIMARY);
         saveButton.addActionListener(e -> {
             // Einstellungen speichern
             prefs.putInt("musicVolume", musicSlider.getValue());
@@ -3108,7 +2869,7 @@ public class BoardPanel extends JPanel {
         buttonPanel.add(saveButton);
 
         // Close Button
-        JButton closeButton = createStyledDialogButton("✕ Schließen", STONE_DARK, new Color(90, 80, 70));
+        StyledButton closeButton = new StyledButton("✕ Schließen", StyledButton.Style.DIALOG_SECONDARY);
         closeButton.addActionListener(e -> dialog.dispose());
         buttonPanel.add(closeButton);
 
@@ -3140,54 +2901,11 @@ public class BoardPanel extends JPanel {
         section.setBorder(BorderFactory.createEmptyBorder(12, 15, 12, 15));
 
         JLabel titleLabel = new JLabel(title);
-        titleLabel.setFont(new Font("Serif", Font.BOLD, 16));
+        titleLabel.setFont(FontManager.getBodyMedium(Font.BOLD));
         titleLabel.setForeground(titleColor);
         section.add(titleLabel, BorderLayout.NORTH);
 
         return section;
-    }
-
-    private JButton createStyledDialogButton(String text, Color bgColor, Color borderColor) {
-        JButton btn = new JButton(text) {
-            private boolean isHovered = false;
-            {
-                addMouseListener(new MouseAdapter() {
-                    @Override
-                    public void mouseEntered(MouseEvent e) { isHovered = true; repaint(); }
-                    @Override
-                    public void mouseExited(MouseEvent e) { isHovered = false; repaint(); }
-                });
-            }
-            @Override
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                int w = getWidth(), h = getHeight();
-
-                Color bg = isHovered ? borderColor : bgColor;
-                g2.setColor(bg);
-                g2.fillRoundRect(0, 0, w, h, 8, 8);
-
-                g2.setColor(borderColor);
-                g2.setStroke(new BasicStroke(2));
-                g2.drawRoundRect(1, 1, w - 2, h - 2, 8, 8);
-
-                g2.setFont(new Font("SansSerif", Font.BOLD, 12));
-                g2.setColor(new Color(255, 248, 230));
-                FontMetrics fm = g2.getFontMetrics();
-                int textX = (w - fm.stringWidth(getText())) / 2;
-                int textY = (h + fm.getAscent() - fm.getDescent()) / 2;
-                g2.drawString(getText(), textX, textY);
-                g2.dispose();
-            }
-        };
-        btn.setPreferredSize(new Dimension(170, 38));
-        btn.setOpaque(false);
-        btn.setContentAreaFilled(false);
-        btn.setBorderPainted(false);
-        btn.setFocusPainted(false);
-        btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        return btn;
     }
 
     /**
