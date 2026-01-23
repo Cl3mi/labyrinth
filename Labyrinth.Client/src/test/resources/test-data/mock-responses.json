@@ -1,0 +1,197 @@
+{
+  "description": "Mock server responses for testing",
+  "responses": {
+    "serverInfo": {
+      "type": "SERVER_INFO",
+      "message": "Welcome to Labyrinth Server",
+      "version": "1.0.0"
+    },
+    "connectAck": {
+      "type": "CONNECT_ACK",
+      "playerId": "player-uuid-12345",
+      "identifierToken": "reconnect-token-abc123",
+      "username": "TestPlayer"
+    },
+    "lobbyState": {
+      "type": "LOBBY_STATE",
+      "players": [
+        {
+          "id": "player-1",
+          "name": "Player1",
+          "isAdmin": true,
+          "isConnected": true,
+          "color": "RED"
+        },
+        {
+          "id": "player-2",
+          "name": "Player2",
+          "isAdmin": false,
+          "isConnected": true,
+          "color": "BLUE"
+        }
+      ],
+      "maxPlayers": 4,
+      "minPlayers": 2
+    },
+    "gameStarted": {
+      "type": "GAME_STARTED",
+      "payload": {
+        "currentPlayerId": "player-1",
+        "moveState": "PLACE_TILE",
+        "players": [
+          {
+            "id": "player-1",
+            "name": "Player1",
+            "color": "RED",
+            "position": {"row": 0, "column": 0},
+            "homePosition": {"row": 0, "column": 0}
+          },
+          {
+            "id": "player-2",
+            "name": "Player2",
+            "color": "BLUE",
+            "position": {"row": 6, "column": 6},
+            "homePosition": {"row": 6, "column": 6}
+          }
+        ],
+        "board": {
+          "width": 7,
+          "height": 7
+        }
+      }
+    },
+    "gameStateUpdate": {
+      "type": "GAME_STATE_UPDATE",
+      "payload": {
+        "currentPlayerId": "player-2",
+        "moveState": "PLACE_TILE",
+        "turnNumber": 2
+      }
+    },
+    "actionError_notYourTurn": {
+      "type": "ACTION_ERROR",
+      "errorCode": "NOT_YOUR_TURN",
+      "message": "It is not your turn to play"
+    },
+    "actionError_invalidMove": {
+      "type": "ACTION_ERROR",
+      "errorCode": "INVALID_MOVE",
+      "message": "You cannot move to that position"
+    },
+    "actionError_invalidPush": {
+      "type": "ACTION_ERROR",
+      "errorCode": "INVALID_PUSH",
+      "message": "Cannot push in this direction"
+    },
+    "actionError_gameNotStarted": {
+      "type": "ACTION_ERROR",
+      "errorCode": "GAME_NOT_STARTED",
+      "message": "The game has not started yet"
+    },
+    "nextTreasure": {
+      "type": "NEXT_TREASURE",
+      "playerId": "player-1",
+      "treasure": {
+        "id": 5,
+        "name": "Crown"
+      }
+    },
+    "playerUpdated": {
+      "type": "PLAYER_UPDATED",
+      "playerId": "player-1",
+      "treasuresCollected": 3,
+      "remainingTreasures": 2
+    },
+    "achievementUnlocked": {
+      "type": "ACHIEVEMENT_UNLOCKED",
+      "playerId": "player-1",
+      "achievementId": "first_treasure",
+      "achievementName": "First Blood",
+      "description": "Collected your first treasure"
+    },
+    "gameOver": {
+      "type": "GAME_OVER",
+      "winnerId": "player-1",
+      "winnerName": "Player1",
+      "reason": "ALL_TREASURES_COLLECTED",
+      "finalScores": [
+        {"playerId": "player-1", "score": 12, "treasuresCollected": 12},
+        {"playerId": "player-2", "score": 8, "treasuresCollected": 8}
+      ]
+    }
+  },
+  "commands": {
+    "connect": {
+      "type": "CONNECT",
+      "username": "TestPlayer"
+    },
+    "reconnect": {
+      "type": "CONNECT",
+      "identifierToken": "reconnect-token-abc123"
+    },
+    "disconnect": {
+      "type": "DISCONNECT"
+    },
+    "startGame": {
+      "type": "START_GAME",
+      "boardSize": "MEDIUM",
+      "treasureCardCount": 12,
+      "totalBonusCount": 4,
+      "gameDurationInSeconds": 3600,
+      "turnTimeInSeconds": 30
+    },
+    "rotateTile": {
+      "type": "ROTATE_TILE"
+    },
+    "pushTile": {
+      "type": "PUSH_TILE",
+      "rowOrColIndex": 3,
+      "direction": "RIGHT"
+    },
+    "movePawn": {
+      "type": "MOVE_PAWN",
+      "targetCoordinates": {
+        "row": 3,
+        "column": 5
+      }
+    },
+    "useBeam": {
+      "type": "USE_BEAM",
+      "targetCoordinates": {
+        "row": 2,
+        "column": 4
+      }
+    },
+    "useSwap": {
+      "type": "USE_SWAP",
+      "targetPlayerId": "player-2"
+    },
+    "usePushFixed": {
+      "type": "USE_PUSH_FIXED",
+      "rowOrColIndex": 2,
+      "direction": "DOWN"
+    },
+    "usePushTwice": {
+      "type": "USE_PUSH_TWICE"
+    }
+  },
+  "errorScenarios": {
+    "serverUnavailable": {
+      "description": "Server not responding",
+      "expectedBehavior": "Client should show connection error and retry"
+    },
+    "timeout": {
+      "description": "Server response timeout",
+      "expectedBehavior": "Client should show timeout message"
+    },
+    "connectionLost": {
+      "description": "WebSocket connection dropped unexpectedly",
+      "expectedBehavior": "Client should attempt reconnection"
+    },
+    "invalidJson": {
+      "description": "Server sends malformed JSON",
+      "message": "{ this is not valid json }",
+      "expectedBehavior": "Client should handle gracefully and log error"
+    }
+  }
+}

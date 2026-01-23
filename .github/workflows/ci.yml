@@ -42,9 +42,48 @@ jobs:
         run: mvn -B clean test
         working-directory: Labyrinth.Server
 
-      - name: Build and test Client module
-        run: mvn -B clean test
+      - name: Build and test Client module with coverage
+        run: mvn -B clean test jacoco:report
         working-directory: Labyrinth.Client
+
+      - name: Generate Client Coverage Summary
+        run: |
+          echo "## Client Test Coverage Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Check if JaCoCo report exists
+          if [ -f "Labyrinth.Client/target/site/jacoco/jacoco.csv" ]; then
+            # Parse coverage from CSV
+            echo "| Package | Class Coverage | Line Coverage |" >> $GITHUB_STEP_SUMMARY
+            echo "|---------|----------------|---------------|" >> $GITHUB_STEP_SUMMARY
+
+            # Skip header and summarize by package
+            tail -n +2 Labyrinth.Client/target/site/jacoco/jacoco.csv | \
+            awk -F',' '{
+              pkg=$1;
+              missed_lines+=$8;
+              covered_lines+=$9;
+            }
+            END {
+              if (missed_lines + covered_lines > 0) {
+                line_cov = (covered_lines * 100) / (missed_lines + covered_lines);
+                printf "| Total | - | %.1f%% |\n", line_cov;
+              }
+            }' >> $GITHUB_STEP_SUMMARY
+
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Full report available in artifacts." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "Coverage report not generated." >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Upload Client Coverage Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: client-coverage-report
+          path: Labyrinth.Client/target/site/jacoco/
+          retention-days: 7
 
       - name: Count Java lines of code
         run: |
