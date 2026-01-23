@@ -135,7 +135,7 @@ public class PlayerRegistry implements IPlayerRegistry {
     public boolean anyPlayerActive() {
 
         return players.stream()
-                .anyMatch(p -> !p.isAiActive() || !p.isDisconnected());
+                .anyMatch(p -> !p.isBot());
     }
 
 

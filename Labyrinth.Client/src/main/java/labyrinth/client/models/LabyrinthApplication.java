@@ -579,35 +579,8 @@ public class LabyrinthApplication {
     private void exitGameToLobby() {
         System.out.println("[" + PROFILE + "] exitGameToLobby() - Returning to lobby");
         exitGameCleanup();
-
-        // Disconnect from server and reconnect to reset game state
-        if (client != null && client.isOpen()) {
-            System.out.println("[" + PROFILE + "] Disconnecting to reset game state...");
-            client.disconnectCleanly();
-
-            // Reconnect after a short delay
-            new Thread(() -> {
-                try {
-                    Thread.sleep(500);
-                    SwingUtilities.invokeLater(() -> {
-                        System.out.println("[" + PROFILE + "] Reconnecting to server...");
-                        connectToServer();
-                        showLobby();
-                        System.out.println("[" + PROFILE + "] Returned to lobby");
-                    });
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                }
-            }).start();
-        } else {
-            // Not connected - just show lobby
-            SwingUtilities.invokeLater(() -> {
-                lobbyPanel.setConnected(false);
-                lobbyPanel.setStatusText("Nicht verbunden", new Color(170, 120, 0));
-            });
-            showLobby();
-            System.out.println("[" + PROFILE + "] Returned to lobby");
-        }
+        showLobby();
+        System.out.println("[" + PROFILE + "] Returned to lobby");
     }
 
     private void exitToMainMenu() {
@@ -720,7 +693,6 @@ public class LabyrinthApplication {
     }
 
     private void showLobby() {
-        // Use CardLayout to switch to lobby
         CardLayout cl = (CardLayout) mainPanel.getLayout();
         cl.show(mainPanel, "lobby");
     }

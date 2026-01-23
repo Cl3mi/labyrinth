@@ -374,14 +374,22 @@ public class Game {
         gameLogger.log(GameLogType.RETURN_TO_LOBBY, "Current state: " + this.roomState);
         gameLogger.log(GameLogType.RETURN_TO_LOBBY, "Return to lobby");
 
+        removeBots();
         this.roomState = RoomState.LOBBY;
 
+        gameLogger.log(GameLogType.RETURN_TO_LOBBY, "Return to lobby complete.");
+    }
+
+    private void removeBots() {
+        var toRemove = new ArrayList<Player>();
         for (Player player : playerRegistry.getPlayers()) {
-            if (player.isAiActive()) {
-                playerRegistry.removePlayer(player);
+            if (player.isBot()) {
+                toRemove.add(player);
             }
         }
-        gameLogger.log(GameLogType.RETURN_TO_LOBBY, "Return to lobby complete.");
+        for (Player player : toRemove) {
+            playerRegistry.removePlayer(player);
+        }
     }
 
     private synchronized void nextPlayer() {
