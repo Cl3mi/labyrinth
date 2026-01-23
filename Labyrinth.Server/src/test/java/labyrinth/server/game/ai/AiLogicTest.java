@@ -43,7 +43,7 @@ class AiLogicTest {
         GameConfig config = GameConfig.getDefault();
         List<TreasureCard> cards = new ArrayList<>();
         for (int i = 0; i < 24; i++) {
-            cards.add(new TreasureCard(i, "C" + i, "img"));
+            cards.add(new TreasureCard(i, "C" + i));
         }
 
         Board board = new BoardFactory().createBoard(7, 7);
@@ -85,7 +85,7 @@ class AiLogicTest {
         GameConfig config = GameConfig.getDefault();
         List<TreasureCard> cards = new ArrayList<>();
         for (int i = 0; i < 24; i++) {
-            cards.add(new TreasureCard(i, "C" + i, "img"));
+            cards.add(new TreasureCard(i, "C" + i));
         }
 
         Board board = new BoardFactory().createBoard(7, 7);
@@ -114,7 +114,7 @@ class AiLogicTest {
         GameConfig config = GameConfig.getDefault();
         List<TreasureCard> cards = new ArrayList<>();
         for (int i = 0; i < 24; i++) {
-            cards.add(new TreasureCard(i, "C" + i, "img"));
+            cards.add(new TreasureCard(i, "C" + i));
         }
 
         Board board = new BoardFactory().createBoard(7, 7);

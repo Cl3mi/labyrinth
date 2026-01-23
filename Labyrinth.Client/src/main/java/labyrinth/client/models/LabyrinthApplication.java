@@ -584,6 +584,10 @@ public class LabyrinthApplication {
         loginSent = false;
         connectAckReceived = false;
 
+        // Clear token to force a fresh CONNECT with username instead of RECONNECT
+        // The token may be stale after game over
+        ClientIdentityStore.clearToken();
+
         // Disconnect from server and reconnect to reset game state
         if (client != null && client.isOpen()) {
             System.out.println("[" + PROFILE + "] Disconnecting to reset game state...");
@@ -667,6 +671,9 @@ public class LabyrinthApplication {
         loginSent = false;
         connectAckReceived = false;
 
+        // Clear token to force fresh CONNECT with username (token may be stale after game)
+        ClientIdentityStore.clearToken();
+
         // BoardPanel entfernen und zurücksetzen
         if (boardPanel != null) {
             mainPanel.remove(boardPanel);
@@ -731,7 +738,6 @@ public class LabyrinthApplication {
     }
 
     private void showLobby() {
-        // Use CardLayout to switch to lobby
         CardLayout cl = (CardLayout) mainPanel.getLayout();
         cl.show(mainPanel, "lobby");
     }

@@ -34,7 +34,7 @@ class AiHomeReturnTest {
 
         List<TreasureCard> treasureCards = new ArrayList<>();
         for (int i = 0; i < 4; i++) {
-            treasureCards.add(new TreasureCard(i, "Treasure" + i, "img"));
+            treasureCards.add(new TreasureCard(i, "Treasure" + i));
         }
 
         game.join("TestPlayer");
@@ -86,7 +86,7 @@ class AiHomeReturnTest {
 
         List<TreasureCard> treasureCards = new ArrayList<>();
         for (int i = 0; i < 4; i++) {
-            treasureCards.add(new TreasureCard(i, "Treasure" + i, "img"));
+            treasureCards.add(new TreasureCard(i, "Treasure" + i));
         }
 
         Player player = game.join("TestPlayer");

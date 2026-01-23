@@ -98,7 +98,7 @@ public class GameService {
 
             if (!game.anyPlayerActive()) {
                 log.info("No human players left, resetting game to LOBBY");
-                game.returnToLobby();
+                returnToLobbyNoLock();
             }
 
             publishEvent(new PlayerLeftEvent());
@@ -160,8 +160,8 @@ public class GameService {
             int playersCount = game.getPlayers().size();
 
             var board = boardFactory.createBoard(gameConfig.boardWidth(), gameConfig.boardHeight());
-            // Multiply treasures per player by actual player count (after AI fill)
-            int totalTreasures = gameConfig.treasureCardCount() * playersCount;
+
+            int totalTreasures = gameConfig.treasureCardCount();
             var treasureCards = treasureCardFactory.createTreasureCards(totalTreasures, playersCount);
 
             game.startGame(gameConfig, treasureCards, board);
@@ -204,7 +204,7 @@ public class GameService {
                 var players = getPlayers();
 
                 publishEvent(new GameOverEvent(players));
-                game.returnToLobby();
+                returnToLobbyNoLock();
                 return true;
             }
 
@@ -260,7 +260,7 @@ public class GameService {
 
             if (!game.anyPlayerActive()) {
                 log.info("No human players left, resetting game to LOBBY");
-                game.returnToLobby();
+                returnToLobbyNoLock();
             }
             else {
                 publishEvent(new PlayerUpdatedEvent(player));
@@ -342,6 +342,12 @@ public class GameService {
     }
 
 
+    private void returnToLobbyNoLock() {
+        game.returnToLobby();
+        publishEvent(new ReturnedToLobbyEvent());
+    }
+
+
     // Generic helper: run a function under the Game read-lock. Keeps locking
     // centralized
     // while avoiding coupling the Game layer to messaging/contract DTO types.
@@ -367,4 +373,6 @@ public class GameService {
     public MoveState getCurrentMoveState() {
         return game.getCurrentMoveState();
     }
+
 }
+

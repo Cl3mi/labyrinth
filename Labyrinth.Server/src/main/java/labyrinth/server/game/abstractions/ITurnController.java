@@ -79,6 +79,23 @@ public interface ITurnController {
     );
 
     /**
+     * Starts the turn handling for the current player. This should be called when a game
+     * transitions into IN_GAME (e.g. right after startGame) to start the turn timer or
+     * invoke AI for the current player.
+     *
+     * @param players        the list of players
+     * @param roomState      the current room state (must be IN_GAME)
+     * @param gameConfig     the game configuration
+     * @param aiTurnExecutor callback to execute AI turn if current player is AI
+     */
+    void startTurn(
+            List<Player> players,
+            RoomState roomState,
+            GameConfig gameConfig,
+            Consumer<Player> aiTurnExecutor
+    );
+
+    /**
      * Guards that the current move state matches the expected state.
      *
      * @param board    the board (to check freeRoam mode)

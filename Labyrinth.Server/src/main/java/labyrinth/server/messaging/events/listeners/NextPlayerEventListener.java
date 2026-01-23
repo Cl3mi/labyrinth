@@ -1,6 +1,7 @@
 package labyrinth.server.messaging.events.listeners;
 
 import labyrinth.server.game.GameService;
+import labyrinth.server.game.events.NextPlayerEvent;
 import labyrinth.server.messaging.MessageService;
 import labyrinth.server.messaging.mapper.GameMapper;
 import lombok.RequiredArgsConstructor;
@@ -19,7 +20,7 @@ public class NextPlayerEventListener {
     private final GameMapper gameMapper;
 
     @EventListener
-    public void onEvent(NextPlayerEventListener ignoredEvent) {
+    public void onEvent(NextPlayerEvent ignoredEvent) {
         try {
 
             var gameState = gameService.withGameReadLock(gameMapper::toGameStateDto);

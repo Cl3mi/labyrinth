@@ -123,8 +123,8 @@ class PlayerTest {
         @Test
         void shouldReturnFirstUncollectedTreasureCard() {
             // Arrange
-            TreasureCard card1 = new TreasureCard(1, "Gold", "gold.png");
-            TreasureCard card2 = new TreasureCard(2, "Silver", "silver.png");
+            TreasureCard card1 = new TreasureCard(1, "Gold");
+            TreasureCard card2 = new TreasureCard(2, "Silver");
             player.getAssignedTreasureCards().add(card1);
             player.getAssignedTreasureCards().add(card2);
 
@@ -138,8 +138,8 @@ class PlayerTest {
         @Test
         void shouldReturnSecondCardAfterFirstIsCollected() {
             // Arrange
-            TreasureCard card1 = new TreasureCard(1, "Gold", "gold.png");
-            TreasureCard card2 = new TreasureCard(2, "Silver", "silver.png");
+            TreasureCard card1 = new TreasureCard(1, "Gold");
+            TreasureCard card2 = new TreasureCard(2, "Silver");
             player.getAssignedTreasureCards().add(card1);
             player.getAssignedTreasureCards().add(card2);
 
@@ -154,8 +154,8 @@ class PlayerTest {
         @Test
         void shouldReturnNullWhenAllTreasuresCollected() {
             // Arrange
-            TreasureCard card1 = new TreasureCard(1, "Gold", "gold.png");
-            TreasureCard card2 = new TreasureCard(2, "Silver", "silver.png");
+            TreasureCard card1 = new TreasureCard(1, "Gold");
+            TreasureCard card2 = new TreasureCard(2, "Silver");
             player.getAssignedTreasureCards().add(card1);
             player.getAssignedTreasureCards().add(card2);
 
@@ -171,9 +171,9 @@ class PlayerTest {
         @Test
         void shouldSkipCollectedCardsInTheMiddle() {
             // Arrange
-            TreasureCard card1 = new TreasureCard(1, "Gold", "gold.png");
-            TreasureCard card2 = new TreasureCard(2, "Silver", "silver.png");
-            TreasureCard card3 = new TreasureCard(3, "Bronze", "bronze.png");
+            TreasureCard card1 = new TreasureCard(1, "Gold");
+            TreasureCard card2 = new TreasureCard(2, "Silver");
+            TreasureCard card3 = new TreasureCard(3, "Bronze");
             player.getAssignedTreasureCards().add(card1);
             player.getAssignedTreasureCards().add(card2);
             player.getAssignedTreasureCards().add(card3);
@@ -307,7 +307,7 @@ class PlayerTest {
         @BeforeEach
         void setUpPlayerState() {
             // Set up player with state
-            player.getAssignedTreasureCards().add(new TreasureCard(1, "Gold", "gold.png"));
+            player.getAssignedTreasureCards().add(new TreasureCard(1, "Gold"));
             player.getBonuses().add(BonusTypes.BEAM);
             player.setCurrentTile(new Tile(EnumSet.of(Direction.UP, Direction.DOWN)));
             player.setHomeTile(new Tile(EnumSet.of(Direction.LEFT, Direction.RIGHT)));
@@ -409,7 +409,7 @@ class PlayerTest {
             player.setAiActive(true);
             player.setAdmin(true);
             player.setColor(PlayerColor.BLUE);
-            player.getAssignedTreasureCards().add(new TreasureCard(1, "Gold", "gold.png"));
+            player.getAssignedTreasureCards().add(new TreasureCard(1, "Gold"));
             player.getStatistics().increaseScore(50);
         }
 

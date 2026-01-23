@@ -642,7 +642,7 @@ public class MultiplayerLobbyPanel extends JPanel {
 
         try {
             System.out.println("START clicked -> sending START_GAME with " + configBonusCount + " bonuses");
-            client.sendStartGame(bs, configTreasuresToWin, configBonusCount, configGameDurationMinutes * 60, configTurnTimeSeconds);
+            client.sendStartGame(bs, configTreasuresToWin * playerCount, configBonusCount, configGameDurationMinutes * 60, configTurnTimeSeconds);
         } catch (Exception ex) {
             ex.printStackTrace();
             SwingUtilities.invokeLater(() -> {

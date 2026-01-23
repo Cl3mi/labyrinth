@@ -30,6 +30,7 @@ class GameLoggingTest {
 
     @BeforeEach
     void setUp() {
+        aiStrategy = mock(AiStrategy.class);
         game = createGame(mock(IGameTimer.class), aiStrategy,
                 new labyrinth.server.game.services.GameLogger());
     }
@@ -40,7 +41,7 @@ class GameLoggingTest {
         game.join("P1");
         game.join("P2");
         List<TreasureCard> cards = new ArrayList<>();
-        IntStream.range(0, 24).forEach(i -> cards.add(new TreasureCard(i, "Card" + i, "img")));
+        IntStream.range(0, 24).forEach(i -> cards.add(new TreasureCard(i, "Card" + i)));
 
         Board board = new labyrinth.server.game.factories.BoardFactory().createBoard(7, 7);
 
@@ -63,7 +64,7 @@ class GameLoggingTest {
         game.join("P1");
         game.join("P2");
         List<TreasureCard> cards = new ArrayList<>();
-        IntStream.range(0, 24).forEach(i -> cards.add(new TreasureCard(i, "Card" + i, "img")));
+        IntStream.range(0, 24).forEach(i -> cards.add(new TreasureCard(i, "Card" + i)));
         Board board = new labyrinth.server.game.factories.BoardFactory().createBoard(7, 7);
         game.startGame(GameConfig.getDefault(), cards, board);
 
