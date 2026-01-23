@@ -1,6 +1,7 @@
 package labyrinth.client.models;
 
 import labyrinth.client.ai.AiController;
+import labyrinth.client.enums.PanelName;
 import labyrinth.client.messaging.ServerClientFactory;
 import labyrinth.client.models.extensions.TreasureUtils;
 import labyrinth.client.ui.*;
@@ -124,18 +125,18 @@ public class LabyrinthApplication {
         mainMenuPanel.setOnMultiplayerClicked(this::showServerBrowser);
         mainMenuPanel.setOnOptionsClicked(this::showOptions);
         mainMenuPanel.setOnExitClicked(this::shutdownAndExit);
-        mainPanel.add(mainMenuPanel, "mainmenu");
+        mainPanel.add(mainMenuPanel, PanelName.MAIN_MENU.getCardName());
 
 
         var serversApi = ServerClientFactory.create(OptionsPanel.loadServerUrlFromPreferences());
         serverBrowserPanel = new ServerBrowserPanel(serversApi);
         serverBrowserPanel.setOnBackToMenu(this::showMainMenu);
         serverBrowserPanel.setOnServerSelected(this::setUsername);
-        mainPanel.add(serverBrowserPanel, "serverbrowser");
+        mainPanel.add(serverBrowserPanel, PanelName.SERVER_BROWSER.getCardName());
 
         lobbyPanel = new MultiplayerLobbyPanel(null);
         lobbyPanel.setOnBackToMenu(this::showMainMenu);
-        mainPanel.add(lobbyPanel, "lobby");
+        mainPanel.add(lobbyPanel, PanelName.LOBBY.getCardName());
 
 
         optionsPanel = new OptionsPanel();
@@ -157,11 +158,11 @@ public class LabyrinthApplication {
                 }
             }
         });
-        mainPanel.add(optionsPanel, "options");
+        mainPanel.add(optionsPanel, PanelName.OPTIONS.getCardName());
 
         gameOverPanel = new GameOverPanel(this::exitGameToLobby);
         gameOverPanel.setOnStartNewRound(this::startNewRound);
-        mainPanel.add(gameOverPanel, "gameover");
+        mainPanel.add(gameOverPanel, PanelName.GAME_OVER.getCardName());
 
         frame.setContentPane(mainPanel);
         frame.setVisible(true);
@@ -196,12 +197,12 @@ public class LabyrinthApplication {
         }
 
         CardLayout cl = (CardLayout) mainPanel.getLayout();
-        cl.show(mainPanel, "mainmenu");
+        cl.show(mainPanel, PanelName.MAIN_MENU.getCardName());
     }
 
     private void showOptions() {
         CardLayout cl = (CardLayout) mainPanel.getLayout();
-        cl.show(mainPanel, "options");
+        cl.show(mainPanel, PanelName.OPTIONS.getCardName());
     }
 
     private void applySettings() {
@@ -219,10 +220,10 @@ public class LabyrinthApplication {
         serverBrowserPanel.setOnServerSelected(this::setUsername);
 
         mainPanel.remove(serverBrowserPanel);
-        mainPanel.add(serverBrowserPanel, "serverbrowser");
+        mainPanel.add(serverBrowserPanel, PanelName.SERVER_BROWSER.getCardName());
 
         CardLayout cl = (CardLayout) mainPanel.getLayout();
-        cl.show(mainPanel, "serverbrowser");
+        cl.show(mainPanel, PanelName.SERVER_BROWSER.getCardName());
 
         serverBrowserPanel.onShow();
     }
@@ -282,9 +283,8 @@ public class LabyrinthApplication {
             if (pendingMultiplayerJoin) {
                 pendingMultiplayerJoin = false;
                 SwingUtilities.invokeLater(() -> {
-                    JOptionPane.showMessageDialog(frame,
-                            "Verbindung zum Server fehlgeschlagen.",
-                            "Verbindungsfehler", JOptionPane.ERROR_MESSAGE);
+                    DialogFactory.showError(frame, "Verbindungsfehler",
+                            "Verbindung zum Server fehlgeschlagen.");
                     showMainMenu();
                 });
                 return;
@@ -471,7 +471,7 @@ public class LabyrinthApplication {
     private void switchToGameView() {
         if (gameOverPanel != null) gameOverPanel.cleanup();
         CardLayout cl = (CardLayout) mainPanel.getLayout();
-        cl.show(mainPanel, "game");
+        cl.show(mainPanel, PanelName.BOARD.getCardName());
     }
 
     private void ensureBoardPanel(Board board, Player currentPlayer, List<Player> allPlayers,
@@ -513,7 +513,7 @@ public class LabyrinthApplication {
                 );
             }
 
-            mainPanel.add(boardPanel, "game");
+            mainPanel.add(boardPanel, PanelName.BOARD.getCardName());
         }
 
         // Always update game state to ensure turnState is set (fixes rotation on first turn)
@@ -617,18 +617,15 @@ public class LabyrinthApplication {
             } catch (Exception ex) {
                 ex.printStackTrace();
                 SwingUtilities.invokeLater(() -> {
-                    JOptionPane.showMessageDialog(frame,
-                            "Konnte neues Spiel nicht starten: " + ex.getMessage(),
-                            "Fehler", JOptionPane.ERROR_MESSAGE);
-                    // Fall back to lobby on error
+                    DialogFactory.showError(frame, "Fehler",
+                            "Konnte neues Spiel nicht starten: " + ex.getMessage());
                     exitGameToLobby();
                 });
             }
         } else {
             SwingUtilities.invokeLater(() -> {
-                JOptionPane.showMessageDialog(frame,
-                        "Keine Verbindung zum Server. Kehre zur Lobby zurück.",
-                        "Verbindungsfehler", JOptionPane.WARNING_MESSAGE);
+                DialogFactory.showWarning(frame, "Verbindungsfehler",
+                        "Keine Verbindung zum Server. Kehre zur Lobby zurück.");
                 exitGameToLobby();
             });
         }
@@ -636,7 +633,7 @@ public class LabyrinthApplication {
 
     private void showLobby() {
         CardLayout cl = (CardLayout) mainPanel.getLayout();
-        cl.show(mainPanel, "lobby");
+        cl.show(mainPanel, PanelName.LOBBY.getCardName());
     }
 
     private Player resolveLocalPlayer(List<Player> players) {
@@ -785,7 +782,7 @@ public class LabyrinthApplication {
                     gameViewShown = false;
 
                     CardLayout cl = (CardLayout) mainPanel.getLayout();
-                    cl.show(mainPanel, "gameover");
+                    cl.show(mainPanel, PanelName.GAME_OVER.getCardName());
                     System.out.println("[" + PROFILE + "] Switched to gameover view");
 
                     gameOverPanel.setVisible(true);
@@ -813,14 +810,13 @@ public class LabyrinthApplication {
                     System.out.println("[" + PROFILE + "] Session already connected - ignoring: " + msg);
                 } else if (pendingMultiplayerJoin) {
                     pendingMultiplayerJoin = false;
-                    JOptionPane.showMessageDialog(frame, msg, "Verbindungsfehler", JOptionPane.ERROR_MESSAGE);
+                    DialogFactory.showError(frame, "Verbindungsfehler", msg);
                     showMainMenu();
                 } else {
                     if (boardPanel != null && gameViewShown) {
                         handleErrorWithToast(msg);
                     } else {
-                        JOptionPane.showMessageDialog(frame, msg, "Fehler", JOptionPane.ERROR_MESSAGE);
-                        // Re-enable start button in lobby after an error
+                        DialogFactory.showError(frame, "Fehler", msg);
                         if (lobbyPanel != null) {
                             lobbyPanel.forceEnableStartButton();
                         }
@@ -938,16 +934,14 @@ public class LabyrinthApplication {
 
     public void showManualReconnectDialog() {
         SwingUtilities.invokeLater(() -> {
-            int choice = JOptionPane.showConfirmDialog(frame,
-                    "Automatische Wiederverbindung fehlgeschlagen.\nMöchten Sie es manuell erneut versuchen?",
-                    "Verbindung unterbrochen", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
-            if (choice == JOptionPane.YES_OPTION) {
+            boolean retry = DialogFactory.showConfirm(frame, "Verbindung unterbrochen",
+                    "Automatische Wiederverbindung fehlgeschlagen.\nMöchten Sie es manuell erneut versuchen?");
+            if (retry) {
                 String token = ClientIdentityStore.loadToken();
                 if (token != null) {
                     lobbyPanel.setStatusText("Manueller Wiederverbindungsversuch...", new Color(170, 120, 0));
                     reconnectionManager.startAutoReconnect();
                 } else {
-                    // Username aus MainMenuPanel verwenden
                     String reconnectUsername = mainMenuPanel.getMultiplayerUsername();
                     if (reconnectUsername == null || reconnectUsername.isBlank()) {
                         reconnectUsername = username != null ? username : "Player";
