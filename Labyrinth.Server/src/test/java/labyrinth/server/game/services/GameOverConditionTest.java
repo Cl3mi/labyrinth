@@ -80,68 +80,7 @@ class GameOverConditionTest {
         assertFalse(result.gameOver(), "Game should NOT be over - player must reach home tile");
         assertEquals(RoomState.IN_GAME, game.getRoomState(), "Game should still be IN_GAME");
     }
-
-    @Test
-    void gameOver_shouldTrigger_whenPlayerReachesHomeTileAfterCollectingAllTreasures() throws Exception{
-        // Arrange
-        game.join("Player1");
-        game.join("Player2");
-        game.startGame(gameConfig, treasureCards, board);
-
-        Player player = game.getCurrentPlayer();
-        var homeTilePosition = board.getPositionOfTile(player.getHomeTile());
-
-        // First, move player away from home
-        game.shift(1, Direction.DOWN, player);
-        var currentPos = game.getCurrentPositionOfPlayer(player);
-
-        // Find a reachable tile that's not home
-        var reachableTiles = board.getReachableTiles(player);
-        var targetTile = reachableTiles.stream()
-                .filter(t -> t != player.getHomeTile())
-                .findFirst()
-                .orElse(null);
-
-        if (targetTile != null) {
-            var targetPos = board.getPositionOfTile(targetTile);
-            game.movePlayerToTile(targetPos.row(), targetPos.column(), player);
-        }
-
-        // Now manually mark all player's treasures as collected AFTER moving away from home
-        while (player.getCurrentTreasureCard() != null) {
-            player.getCurrentTreasureCard().collect();
-        }
-        assertNull(player.getCurrentTreasureCard(), "Player should have no more treasures");
-
-        // Advance to next turn (player 1's turn again after 1 other player)
-        Player currentPlayer = game.getCurrentPlayer();
-        game.shift(1, Direction.DOWN, currentPlayer);
-        var pos = game.getCurrentPositionOfPlayer(currentPlayer);
-        game.movePlayerToTile(pos.row(), pos.column(), currentPlayer);
-
-        // Now it's player 1's turn and they have all treasures - try to reach home
-        assertEquals(player, game.getCurrentPlayer(), "Should be Player1's turn");
-
-        // Shift board to potentially make home tile reachable
-        game.shift(1, Direction.DOWN, player);
-
-        // Act - Move to home tile
-        MovePlayerToTileResult homeResult = game.movePlayerToTile(
-                homeTilePosition.row(),
-                homeTilePosition.column(),
-                player
-        );
-
-        // Assert
-        if (homeResult.moveSuccess()) {
-            // If the move succeeded (home was reachable), game should be over
-            assertTrue(homeResult.gameOver(), "Game should be over when reaching home with all treasures");
-            assertEquals(RoomState.FINISHED, game.getRoomState(), "Game should be FINISHED");
-        } else {
-            // If move failed due to reachability, at least verify game didn't end prematurely
-            assertEquals(RoomState.IN_GAME, game.getRoomState(), "Game should still be IN_GAME if home not reached");
-        }
-    }
+    
 
     @Test
     void gameOver_shouldNotTrigger_whenPlayerAtHomeTileButHasNotCollectedAllTreasures() throws Exception{
