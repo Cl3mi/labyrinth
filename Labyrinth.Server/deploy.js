@@ -43,7 +43,6 @@ async function main() {
         const blob = new Blob([fileBuffer], { type: 'application/java-archive' });
         formData.append('file', blob, 'app.jar');
 
-        // Append count query param
         const deployUrlWithParams = `${CONFIG.DEPLOY_URL}?count=${CONFIG.COUNT}`;
 
         const response = await fetch(deployUrlWithParams, {
