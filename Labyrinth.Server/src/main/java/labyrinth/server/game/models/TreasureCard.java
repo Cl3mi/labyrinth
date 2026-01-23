@@ -13,7 +13,6 @@ public class TreasureCard {
 
     private final int id;
     private final String treasureName;
-    private final String treasureImagePath;
     private boolean collected;
 
     /**
@@ -21,12 +20,10 @@ public class TreasureCard {
      *
      * @param id                unique identifier of the card
      * @param treasureName      display name of the treasure
-     * @param treasureImagePath path to the image resource
      */
-    public TreasureCard(int id, String treasureName, String treasureImagePath) {
+    public TreasureCard(int id, String treasureName) {
         this.id = id;
         this.treasureName = treasureName;
-        this.treasureImagePath = treasureImagePath;
         this.collected = false;
     }
 
