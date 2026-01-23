@@ -16,10 +16,11 @@ import java.util.*;
  * 2. Try to reach treasure with any valid push + rotation
  * 3. Use SWAP if opponent stands on our treasure
  * 4. Use BEAM/SWAP to collect two treasures in one turn
- * 5. Try to reach a bonus tile
- * 6. Try using owned bonuses to reach treasure
+ * 5. Use owned bonuses to reach treasure (treasure > bonus collection)
+ * 6. Try to reach a bonus tile (only if can't get treasure)
  * 7. Try to block opponents or push treasure closer
  * 8. Move as close to treasure as possible while maximizing steps
+ * 9. Stuck detection: if would stay on same tile, move far away
  */
 public class SimpleAiStrategy implements AiStrategy {
 
@@ -97,22 +98,21 @@ public class SimpleAiStrategy implements AiStrategy {
             }
         }
 
-        // Try to reach a bonus tile - ALWAYS prefer bonus over just moving closer
-        if (!goingHome) {
-            SimulationResult bonusResult = findBestBonusMove(board, player, candidates);
-            if (bonusResult != null && bonusResult.score() == SimulationResult.SCORE_BONUS_REACHABLE) {
-                // Always collect bonus if we can't reach treasure directly
-                System.out.println("[AI] Collecting bonus (always preferred over moving closer)");
-                return AiDecision.from(bonusResult);
-            }
-        }
-
-        // Try using bonuses to reach target
+        // Try using bonuses to reach target - PREFER getting treasure over collecting more bonuses
         if (!goingHome && !player.getAvailableBonuses().isEmpty()) {
             SimulationResult bonusUseResult = tryUsingBonusesToReachTarget(board, player, candidates);
             if (bonusUseResult != null && bonusUseResult.score() >= SimulationResult.SCORE_TARGET_WITH_BONUS) {
-                System.out.println("[AI] Using bonus to reach target!");
+                System.out.println("[AI] Using bonus to reach treasure!");
                 return AiDecision.from(bonusUseResult);
+            }
+        }
+
+        // Try to reach a bonus tile - only if we can't use bonuses to get treasure
+        if (!goingHome) {
+            SimulationResult bonusResult = findBestBonusMove(board, player, candidates);
+            if (bonusResult != null && bonusResult.score() == SimulationResult.SCORE_BONUS_REACHABLE) {
+                System.out.println("[AI] Collecting bonus (can't reach treasure)");
+                return AiDecision.from(bonusResult);
             }
         }
 
