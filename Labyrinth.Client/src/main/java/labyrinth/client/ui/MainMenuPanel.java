@@ -201,8 +201,6 @@ public class MainMenuPanel extends JPanel {
     private Image backgroundImage;
     private Image logoImage;
 
-    private JLabel subtitleLabel;
-
     public MainMenuPanel() {
         loadResources();
         initMusic();
@@ -210,7 +208,6 @@ public class MainMenuPanel extends JPanel {
 
         ThemeManager.getInstance().addThemeChangeListener(() -> {
             loadBackgroundImage();
-            subtitleLabel.setForeground(ThemeManager.getInstance().getSubtitleColor());
             repaint();
         });
     }
@@ -293,23 +290,6 @@ public class MainMenuPanel extends JPanel {
         contentPanel.add(logoPanel);
 
         contentPanel.add(Box.createVerticalStrut(15));
-
-        subtitleLabel = new JLabel("Das mystische Abenteuer beginnt... DiBSE 2025") {
-            @Override
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2d = (Graphics2D) g.create();
-                g2d.setColor(ThemeManager.getInstance().getSubtitleColor());
-                g2d.fillRoundRect(0, 0, getWidth(), getHeight(), 8, 8);
-                g2d.dispose();
-                super.paintComponent(g);
-            }
-        };
-        subtitleLabel.setFont(FontManager.getBodyLarge(Font.BOLD));
-        subtitleLabel.setForeground(ThemeManager.getInstance().getSubtitleColor());
-        subtitleLabel.setBorder(BorderFactory.createEmptyBorder(4, 12, 4, 12));
-        subtitleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
-        contentPanel.add(subtitleLabel);
-
         contentPanel.add(Box.createVerticalStrut(30));
 
         JPanel buttonContainer = createButtonPanel();

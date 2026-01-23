@@ -1983,14 +1983,6 @@ public class BoardPanel extends JPanel {
             } else {
                 currentY += Math.round(7 * sidebarScale);
             }
-
-            // Hint for staying in place
-            if (currentTurnState != null && currentTurnState == labyrinth.contracts.models.TurnState.WAITING_FOR_MOVE) {
-                g2.setFont(FontManager.getFontForSize(10f, Font.ITALIC));
-                g2.setColor(new Color(150, 150, 170));
-                g2.drawString("(Click your tile to stay in place)", sidebarX + padding + scaledPadding, currentY);
-                currentY += Math.round(15 * sidebarScale);
-            }
         }
 
         // Divider
