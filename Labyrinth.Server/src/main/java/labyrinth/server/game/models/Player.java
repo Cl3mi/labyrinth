@@ -84,7 +84,7 @@ public class Player {
      * Returns true if the player is an AI bot OR if they are temporarily disconnected.
      */
     public boolean shouldMoveBePerformedByAi(){
-        return isAiActive && isDisconnected;
+        return isBot();
     }
     /**
      * Resets the player's state for a new game.
@@ -97,6 +97,10 @@ public class Player {
         this.currentTile = null;
         this.homeTile = null;
         this.statistics = new PlayerStatistics();
+    }
+
+    public boolean isBot() {
+        return isAiActive && isDisconnected;
     }
 
     @Override
