@@ -160,8 +160,8 @@ public class GameService {
             int playersCount = game.getPlayers().size();
 
             var board = boardFactory.createBoard(gameConfig.boardWidth(), gameConfig.boardHeight());
-            // Multiply treasures per player by actual player count (after AI fill)
-            int totalTreasures = gameConfig.treasureCardCount() * playersCount;
+
+            int totalTreasures = gameConfig.treasureCardCount();
             var treasureCards = treasureCardFactory.createTreasureCards(totalTreasures, playersCount);
 
             game.startGame(gameConfig, treasureCards, board);
