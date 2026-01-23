@@ -580,6 +580,10 @@ public class LabyrinthApplication {
         System.out.println("[" + PROFILE + "] exitGameToLobby() - Returning to lobby");
         exitGameCleanup();
 
+        // Reset login flags BEFORE reconnecting to ensure fresh connection
+        loginSent = false;
+        connectAckReceived = false;
+
         // Disconnect from server and reconnect to reset game state
         if (client != null && client.isOpen()) {
             System.out.println("[" + PROFILE + "] Disconnecting to reset game state...");
@@ -590,6 +594,9 @@ public class LabyrinthApplication {
                 try {
                     Thread.sleep(500);
                     SwingUtilities.invokeLater(() -> {
+                        // Reset flags again to ensure clean state after disconnect
+                        loginSent = false;
+                        connectAckReceived = false;
                         System.out.println("[" + PROFILE + "] Reconnecting to server...");
                         connectToServer();
                         showLobby();
@@ -655,6 +662,10 @@ public class LabyrinthApplication {
         pendingMultiplayerJoin = false;
         isGameOverCleanup = false;
         exitedToLobby = true;  // Block GAME_STATE_UPDATE from showing game again
+
+        // Reset login flags to ensure fresh connection when rejoining
+        loginSent = false;
+        connectAckReceived = false;
 
         // BoardPanel entfernen und zurücksetzen
         if (boardPanel != null) {

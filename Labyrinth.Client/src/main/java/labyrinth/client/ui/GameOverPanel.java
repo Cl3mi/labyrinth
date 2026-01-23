@@ -35,6 +35,11 @@ public class GameOverPanel extends JPanel {
     private int animationFrame = 0;
     private Timer animationTimer;
 
+    // Cached paint objects for better performance
+    private RadialGradientPaint cachedVignette;
+    private int cachedWidth = -1;
+    private int cachedHeight = -1;
+
     // Track achievements per player
     private final Map<String, List<String>> playerAchievements = new HashMap<>();
 
@@ -48,6 +53,7 @@ public class GameOverPanel extends JPanel {
         loadBackgroundImage();
 
         setOpaque(false);
+        setDoubleBuffered(true);
         setLayout(new BorderLayout(20, 20));
         setBorder(new EmptyBorder(40, 60, 40, 60));
 
@@ -491,25 +497,30 @@ public class GameOverPanel extends JPanel {
 
         // Animate winner announcement with subtle pulsing
         final String winnerNameFinal = winnerName;
+        final String winnerText = ">> " + winnerNameFinal + " gewinnt! <<";
+        final Color blendedColor = ThemeEffects.blendColors(
+                GameTheme.Colors.ACCENT_GOLD,
+                GameTheme.Colors.TEXT_PRIMARY,
+                0.3f
+        );
         animationFrame = 0;
+        winnerLabel.setText(winnerText);
         animationTimer = new Timer(150, e -> {
             animationFrame++;
+            // Only update color, not text, to minimize repaints
             if (animationFrame % 2 == 0) {
-                winnerLabel.setText(">> " + winnerNameFinal + " gewinnt! <<");
                 winnerLabel.setForeground(GameTheme.Colors.ACCENT_GOLD);
             } else {
-                winnerLabel.setText(">> " + winnerNameFinal + " gewinnt! <<");
-                winnerLabel.setForeground(ThemeEffects.blendColors(
-                        GameTheme.Colors.ACCENT_GOLD,
-                        GameTheme.Colors.TEXT_PRIMARY,
-                        0.3f
-                ));
+                winnerLabel.setForeground(blendedColor);
             }
+            // Only repaint the label, not the entire panel
+            winnerLabel.repaint();
             if (animationFrame > 8) {
                 ((Timer) e.getSource()).stop();
                 winnerLabel.setForeground(GameTheme.Colors.ACCENT_GOLD);
             }
         });
+        animationTimer.setCoalesce(true); // Coalesce multiple pending events
         animationTimer.start();
 
         // Update leaderboard
@@ -626,38 +637,50 @@ public class GameOverPanel extends JPanel {
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
-        Graphics2D g2 = (Graphics2D) g;
-        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-        g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
-        g2.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+        Graphics2D g2 = (Graphics2D) g.create();
+        try {
+            // Use faster rendering hints for better responsiveness
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+            g2.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_SPEED);
 
-        if (backgroundImage != null) {
-            // Darken background image slightly for better contrast
-            g2.drawImage(backgroundImage, 0, 0, getWidth(), getHeight(), this);
-            g2.setColor(ThemeEffects.withAlpha(GameTheme.Colors.BACKGROUND_PRIMARY, 100));
-            g2.fillRect(0, 0, getWidth(), getHeight());
-        } else {
-            // Fallback: Dark earthy gradient background
-            GradientPaint gradient = new GradientPaint(
-                    0, 0, GameTheme.Colors.BACKGROUND_PRIMARY,
-                    0, getHeight(), GameTheme.Colors.BACKGROUND_SECONDARY
-            );
-            g2.setPaint(gradient);
-            g2.fillRect(0, 0, getWidth(), getHeight());
+            int w = getWidth();
+            int h = getHeight();
+
+            if (backgroundImage != null) {
+                // Darken background image slightly for better contrast
+                g2.drawImage(backgroundImage, 0, 0, w, h, this);
+                g2.setColor(ThemeEffects.withAlpha(GameTheme.Colors.BACKGROUND_PRIMARY, 100));
+                g2.fillRect(0, 0, w, h);
+            } else {
+                // Fallback: Dark earthy gradient background
+                GradientPaint gradient = new GradientPaint(
+                        0, 0, GameTheme.Colors.BACKGROUND_PRIMARY,
+                        0, h, GameTheme.Colors.BACKGROUND_SECONDARY
+                );
+                g2.setPaint(gradient);
+                g2.fillRect(0, 0, w, h);
+            }
+
+            // Cache vignette effect for better performance
+            if (cachedVignette == null || cachedWidth != w || cachedHeight != h) {
+                cachedWidth = w;
+                cachedHeight = h;
+                cachedVignette = new RadialGradientPaint(
+                        w / 2f, h / 2f,
+                        Math.max(w, h) * 0.8f,
+                        new float[]{0.0f, 1.0f},
+                        new Color[]{
+                                ThemeEffects.withAlpha(GameTheme.Colors.BACKGROUND_PRIMARY, 0),
+                                ThemeEffects.withAlpha(GameTheme.Colors.BACKGROUND_PRIMARY, 150)
+                        }
+                );
+            }
+            g2.setPaint(cachedVignette);
+            g2.fillRect(0, 0, w, h);
+        } finally {
+            g2.dispose();
         }
-
-        // Subtle vignette effect
-        RadialGradientPaint vignette = new RadialGradientPaint(
-                getWidth() / 2f, getHeight() / 2f,
-                Math.max(getWidth(), getHeight()) * 0.8f,
-                new float[]{0.0f, 1.0f},
-                new Color[]{
-                        ThemeEffects.withAlpha(GameTheme.Colors.BACKGROUND_PRIMARY, 0),
-                        ThemeEffects.withAlpha(GameTheme.Colors.BACKGROUND_PRIMARY, 150)
-                }
-        );
-        g2.setPaint(vignette);
-        g2.fillRect(0, 0, getWidth(), getHeight());
     }
 
     public void cleanup() {
@@ -807,5 +830,27 @@ public class GameOverPanel extends JPanel {
         if (idToNameMap != null) {
             this.playerIdToName.putAll(idToNameMap);
         }
+    }
+
+    @Override
+    public void addNotify() {
+        super.addNotify();
+        // Request focus on the back button when the panel is shown
+        SwingUtilities.invokeLater(() -> {
+            if (backToLobbyButton != null) {
+                backToLobbyButton.requestFocusInWindow();
+            }
+        });
+    }
+
+    /**
+     * Invalidate cached paint objects when the panel is resized.
+     */
+    @Override
+    public void setBounds(int x, int y, int width, int height) {
+        if (width != cachedWidth || height != cachedHeight) {
+            cachedVignette = null; // Invalidate cache on resize
+        }
+        super.setBounds(x, y, width, height);
     }
 }
