@@ -1,7 +1,8 @@
 package labyrinth.client.models;
 
 import labyrinth.client.ai.AiController;
-import labyrinth.client.util.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import labyrinth.client.enums.PanelName;
 import labyrinth.client.messaging.ServerClientFactory;
 import labyrinth.client.models.extensions.TreasureUtils;
@@ -26,7 +27,7 @@ import java.util.prefs.Preferences;
 
 public class LabyrinthApplication {
 
-    private static final Logger log = Logger.getLogger(LabyrinthApplication.class);
+    private static final Logger log = LoggerFactory.getLogger(LabyrinthApplication.class);
     private volatile boolean loginSent = false;
     private volatile boolean connectAckReceived = false;
 
@@ -192,7 +193,7 @@ public class LabyrinthApplication {
             try {
                 client.disconnectCleanly();
             } catch (Exception e) {
-                log.error("Error disconnecting when returning to main menu: %s", e.getMessage());
+                log.error("Error disconnecting when returning to main menu: {}", e.getMessage());
             } finally {
                 isGameOverCleanup = false;
             }
@@ -209,10 +210,10 @@ public class LabyrinthApplication {
 
     private void applySettings() {
         log.info("Settings applied:");
-        log.info("  Music Volume: %d%%", optionsPanel.getMusicVolume());
-        log.info("  SFX Volume: %d%%", optionsPanel.getSfxVolume());
-        log.info("  Server URL: %s", optionsPanel.getServerUrl());
-        log.info("  Dark Theme: %s", optionsPanel.isDarkTheme());
+        log.info("  Music Volume: {}%", optionsPanel.getMusicVolume());
+        log.info("  SFX Volume: {}%", optionsPanel.getSfxVolume());
+        log.info("  Server URL: {}", optionsPanel.getServerUrl());
+        log.info("  Dark Theme: {}", optionsPanel.isDarkTheme());
     }
 
     private void showServerBrowser() {
@@ -253,7 +254,7 @@ public class LabyrinthApplication {
 
                 Thread.sleep(200);
             } catch (Exception e) {
-                log.error("Error disconnecting before reconnect: %s", e.getMessage());
+                log.error("Error disconnecting before reconnect: {}", e.getMessage());
             } finally {
                 isGameOverCleanup = false;
             }
@@ -299,7 +300,7 @@ public class LabyrinthApplication {
         });
 
         client.setOnAchievementUnlocked(achievement -> {
-            log.info("[%s] Achievement unlocked: %s for player %s", PROFILE, achievement.getAchievement(), achievement.getPlayerId());
+            log.info("[{}] Achievement unlocked: {} for player {}", PROFILE, achievement.getAchievement(), achievement.getPlayerId());
 
             if (gameOverPanel != null) {
                 String achievementName = achievement.getAchievement() != null
@@ -321,11 +322,11 @@ public class LabyrinthApplication {
             var treasure = nextTreasure.getTreasure();
 
             if (treasure == null) {
-                log.info("[%s] Next treasure is null", PROFILE);
+                log.info("[{}] Next treasure is null", PROFILE);
                 return;
             }
 
-            log.info("[%s] Next treasure: %s", PROFILE, treasure);
+            log.info("[{}] Next treasure: {}", PROFILE, treasure);
             SwingUtilities.invokeLater(() -> {
                 var player = resolveLocalPlayer(currentPlayers);
                 player.setCurrentTargetTreasure(treasure);
@@ -395,7 +396,7 @@ public class LabyrinthApplication {
             String storedUsername = ClientIdentityStore.loadUsername();
 
             if (token != null) {
-                log.info("[%s] onOpen -> RECONNECT with token", PROFILE);
+                log.info("[{}] onOpen -> RECONNECT with token", PROFILE);
                 client.sendReconnect(token);
             } else {
                 username = mainMenuPanel.getMultiplayerUsername();
@@ -403,7 +404,7 @@ public class LabyrinthApplication {
                     username = storedUsername != null ? storedUsername : "Player";
                 }
                 lobbyPanel.setLocalUsername(username);
-                log.info("[%s] onOpen -> CONNECT username=%s", PROFILE, username);
+                log.info("[{}] onOpen -> CONNECT username={}", PROFILE, username);
                 client.sendConnect(username);
             }
 
@@ -418,7 +419,7 @@ public class LabyrinthApplication {
                 SwingUtilities.invokeLater(() -> {
                     String t = ClientIdentityStore.loadToken();
                     if (t != null) {
-                        log.info("[%s] No CONNECT_ACK after reconnect -> token invalid", PROFILE);
+                        log.info("[{}] No CONNECT_ACK after reconnect -> token invalid", PROFILE);
                         ClientIdentityStore.clearToken();
                     }
                     if (username == null || username.isBlank()) {
@@ -429,7 +430,7 @@ public class LabyrinthApplication {
                         lobbyPanel.setLocalUsername(username);
                     }
                     if (!connectAckReceived) {
-                        log.info("[%s] Fallback -> CONNECT username=%s", PROFILE, username);
+                        log.info("[{}] Fallback -> CONNECT username={}", PROFILE, username);
                         client.sendConnect(username);
                     }
                 });
@@ -536,7 +537,7 @@ public class LabyrinthApplication {
             try {
                 client.disconnectCleanly();
             } catch (Exception e) {
-                log.error("Error sending DISCONNECT: %s", e.getMessage());
+                log.error("Error sending DISCONNECT: {}", e.getMessage());
             }
         }
 
@@ -560,10 +561,10 @@ public class LabyrinthApplication {
     }
 
     private void exitGameToLobby() {
-        log.info("[%s] exitGameToLobby() - Returning to lobby", PROFILE);
+        log.info("[{}] exitGameToLobby() - Returning to lobby", PROFILE);
         exitGameCleanup();
         showLobby();
-        log.info("[%s] Returned to lobby", PROFILE);
+        log.info("[{}] Returned to lobby", PROFILE);
     }
 
 
@@ -585,7 +586,7 @@ public class LabyrinthApplication {
     }
 
     private void startNewRound() {
-        log.info("[%s] startNewRound() - Starting new game", PROFILE);
+        log.info("[{}] startNewRound() - Starting new game", PROFILE);
 
         if (gameOverPanel != null) {
             gameOverPanel.cleanup();
@@ -613,7 +614,7 @@ public class LabyrinthApplication {
                 int gameDurationSeconds = 30 * 60;
                 int turnTimeSeconds = 30;
 
-                log.info("[%s] Sending START_GAME for new round with %d bonuses", PROFILE, bonusCount);
+                log.info("[{}] Sending START_GAME for new round with {} bonuses", PROFILE, bonusCount);
                 client.sendStartGame(bs, treasuresToWin, bonusCount, gameDurationSeconds, turnTimeSeconds);
             } catch (Exception ex) {
                 ex.printStackTrace();
@@ -651,7 +652,7 @@ public class LabyrinthApplication {
         client.setOnConnectAck(ack -> {
             connectAckReceived = true;
             sessionResetPending = false;
-            log.info("[%s] CONNECT_ACK playerId=%s identifierToken=%s", PROFILE, ack.getPlayerId(), ack.getIdentifierToken());
+            log.info("[{}] CONNECT_ACK playerId={} identifierToken={}", PROFILE, ack.getPlayerId(), ack.getIdentifierToken());
             ClientIdentityStore.saveToken(ack.getIdentifierToken());
             ClientIdentityStore.savePlayerId(ack.getPlayerId());
             ClientIdentityStore.saveUsername(username);
@@ -677,7 +678,7 @@ public class LabyrinthApplication {
                 SwingUtilities.invokeLater(() -> lobbyPanel.updateLobby(lobby)));
 
         client.setOnGameStarted(started -> {
-            log.info("[%s] Received GAME_STARTED", PROFILE);
+            log.info("[{}] Received GAME_STARTED", PROFILE);
             exitedToLobby = false;  // Reset flag - neues Spiel startet
 
             if (aiController != null) {
@@ -688,7 +689,7 @@ public class LabyrinthApplication {
             Board board = BoardFactory.fromContracts(started.getBoard());
             List<Player> players = BoardFactory.convertPlayerStates(started.getPlayers());
             board.setPlayers(players);
-            log.info("%s", board);
+            log.info("{}", board);
             BoardFactory.applyTurnInfo(board, players, started.getCurrentTurnInfo());
 
             currentBoard = board;
@@ -703,10 +704,10 @@ public class LabyrinthApplication {
         });
 
         client.setOnGameStateUpdate(state -> {
-            log.info("[%s] Received GAME_STATE_UPDATE", PROFILE);
+            log.info("[{}] Received GAME_STATE_UPDATE", PROFILE);
 
             if (exitedToLobby) {
-                log.info("[%s] Ignoring GAME_STATE_UPDATE - player exited to lobby", PROFILE);
+                log.info("[{}] Ignoring GAME_STATE_UPDATE - player exited to lobby", PROFILE);
                 return;
             }
 
@@ -724,7 +725,7 @@ public class LabyrinthApplication {
             }
 
             board.setPlayers(players);
-            log.info("%s", board);
+            log.info("{}", board);
             BoardFactory.applyTurnInfo(board, players, state.getCurrentTurnInfo());
 
             currentBoard = board;
@@ -739,7 +740,7 @@ public class LabyrinthApplication {
         });
 
         client.setOnGameOver(gameOver -> {
-            log.info("[%s] *** GAME_OVER EVENT RECEIVED *** Winner: %s", PROFILE, gameOver.getWinnerId());
+            log.info("[{}] *** GAME_OVER EVENT RECEIVED *** Winner: {}", PROFILE, gameOver.getWinnerId());
 
             isGameOver = true;
 
@@ -752,7 +753,7 @@ public class LabyrinthApplication {
 
             SwingUtilities.invokeLater(() -> {
                 try {
-                    log.info("[%s] GAME_OVER UI update starting on EDT...", PROFILE);
+                    log.info("[{}] GAME_OVER UI update starting on EDT...", PROFILE);
 
                     if (boardPanel != null) {
                         boardPanel.setGameOver(true);
@@ -761,7 +762,7 @@ public class LabyrinthApplication {
                     if (boardPanel != null) {
                         mainPanel.remove(boardPanel);
                         boardPanel = null;
-                        log.info("[%s] BoardPanel removed", PROFILE);
+                        log.info("[{}] BoardPanel removed", PROFILE);
                     }
 
                     if (currentPlayers != null) {
@@ -772,18 +773,18 @@ public class LabyrinthApplication {
                             }
                         }
                         gameOverPanel.setPlayerNames(playerNames);
-                        log.info("[%s] Set player names for GameOverPanel: %s", PROFILE, playerNames);
+                        log.info("[{}] Set player names for GameOverPanel: {}", PROFILE, playerNames);
                     }
 
                     gameOverPanel.updateGameOver(gameOver);
-                    log.info("[%s] GameOverPanel updated", PROFILE);
+                    log.info("[{}] GameOverPanel updated", PROFILE);
 
                     if (mainMenuPanel != null) mainMenuPanel.stopMusic();
                     gameViewShown = false;
 
                     CardLayout cl = (CardLayout) mainPanel.getLayout();
                     cl.show(mainPanel, PanelName.GAME_OVER.getCardName());
-                    log.info("[%s] Switched to gameover view", PROFILE);
+                    log.info("[{}] Switched to gameover view", PROFILE);
 
                     gameOverPanel.setVisible(true);
                     mainPanel.revalidate();
@@ -791,23 +792,23 @@ public class LabyrinthApplication {
                     frame.revalidate();
                     frame.repaint();
                     gameOverPanel.requestFocusInWindow();
-                    log.info("[%s] GAME_OVER UI update complete", PROFILE);
+                    log.info("[{}] GAME_OVER UI update complete", PROFILE);
                 } catch (Exception e) {
-                    log.error("[%s] Error in GAME_OVER UI update: %s", PROFILE, e.getMessage());
+                    log.error("[{}] Error in GAME_OVER UI update: {}", PROFILE, e.getMessage());
                     e.printStackTrace();
                 }
 
-                log.info("[%s] GAME_OVER complete - staying connected for lobby", PROFILE);
+                log.info("[{}] GAME_OVER complete - staying connected for lobby", PROFILE);
             });
         });
 
         client.setOnErrorMessage(msg -> {
             SwingUtilities.invokeLater(() -> {
                 if (msg != null && msg.contains("PLAYER_NOT_FOUND")) {
-                    log.info("[%s] PLAYER_NOT_FOUND - ignoring (token already cleared)", PROFILE);
+                    log.info("[{}] PLAYER_NOT_FOUND - ignoring (token already cleared)", PROFILE);
                     ClientIdentityStore.clearToken();
                 } else if (msg != null && msg.contains("already connected")) {
-                    log.info("[%s] Session already connected - ignoring: %s", PROFILE, msg);
+                    log.info("[{}] Session already connected - ignoring: {}", PROFILE, msg);
                 } else if (pendingMultiplayerJoin) {
                     pendingMultiplayerJoin = false;
                     DialogFactory.showError(frame, "Verbindungsfehler", msg);
@@ -919,7 +920,7 @@ public class LabyrinthApplication {
     private void showGame(Board board, java.time.OffsetDateTime gameEndTime,
                           labyrinth.contracts.models.CurrentTurnInfo turnInfo) {
         if (isGameOver || isGameOverCleanup) {
-            log.info("[%s] showGame() ignored - game is over", PROFILE);
+            log.info("[{}] showGame() ignored - game is over", PROFILE);
             return;
         }
         if (board == null || board.getPlayers() == null) return;

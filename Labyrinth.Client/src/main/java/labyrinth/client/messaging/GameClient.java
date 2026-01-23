@@ -3,7 +3,8 @@ package labyrinth.client.messaging;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import labyrinth.client.util.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import labyrinth.contracts.models.*;
 import lombok.Setter;
 import org.java_websocket.client.WebSocketClient;
@@ -16,7 +17,7 @@ import java.util.function.Consumer;
 
 public class GameClient extends WebSocketClient {
 
-    private static final Logger log = Logger.getLogger(GameClient.class);
+    private static final Logger log = LoggerFactory.getLogger(GameClient.class);
     private final ObjectMapper mapper;
 
     private volatile ConnectionState connectionState = ConnectionState.DISCONNECTED;
@@ -65,7 +66,7 @@ public class GameClient extends WebSocketClient {
     @Override
     public void onMessage(String message) {
         try {
-            log.info("WS IN: %s", message);
+            log.info("WS IN: {}", message);
 
             JsonNode root = mapper.readTree(message);
             JsonNode typeNode = root.get("type");
@@ -122,7 +123,7 @@ public class GameClient extends WebSocketClient {
                 case GAME_OVER -> {
                     log.info("GAME_OVER message received, parsing payload...");
                     GameOverEventPayload payload = mapper.treeToValue(payloadNode, GameOverEventPayload.class);
-                    log.info("GAME_OVER payload parsed, winner: %s, callback registered: %s", payload.getWinnerId(), onGameOver != null);
+                    log.info("GAME_OVER payload parsed, winner: {}, callback registered: {}", payload.getWinnerId(), onGameOver != null);
                     if (onGameOver != null) {
                         log.info("Calling onGameOver callback...");
                         runOnUiThread(() -> onGameOver.accept(payload));
@@ -143,10 +144,10 @@ public class GameClient extends WebSocketClient {
 
                 case SERVER_INFO -> {
                     // ServerInfoEventPayload payload = mapper.treeToValue(payloadNode, ServerInfoEventPayload.class);
-                    log.info("SERVER_INFO received: %s", payloadNode);
+                    log.info("SERVER_INFO received: {}", payloadNode);
                 }
 
-                default -> log.info("Unhandled event type: %s raw=%s", type, message);
+                default -> log.info("Unhandled event type: {} raw={}", type, message);
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -158,7 +159,7 @@ public class GameClient extends WebSocketClient {
 
     @Override
     public void onClose(int code, String reason, boolean remote) {
-        log.info("WebSocket closed. code=%d remote=%s reason=%s", code, remote, reason);
+        log.info("WebSocket closed. code={} remote={} reason={}", code, remote, reason);
         ConnectionState previousState = connectionState;
 
         if (connectionState == ConnectionState.DISCONNECTING) {
@@ -225,7 +226,7 @@ public class GameClient extends WebSocketClient {
             payload.setType(CommandType.CONNECT);
             payload.setIdentifierToken(identifierToken);
             send(mapper.writeValueAsString(payload));
-            log.info("sendReconnect -> %s", mapper.writeValueAsString(payload));
+            log.info("sendReconnect -> {}", mapper.writeValueAsString(payload));
         } catch (Exception e) {
             e.printStackTrace();
             runOnUiThread(() -> {
@@ -239,7 +240,7 @@ public class GameClient extends WebSocketClient {
             DisconnectCommandPayload payload = new DisconnectCommandPayload();
             payload.setType(CommandType.DISCONNECT);
             send(mapper.writeValueAsString(payload));
-            log.info("sendDisconnect -> %s", mapper.writeValueAsString(payload));
+            log.info("sendDisconnect -> {}", mapper.writeValueAsString(payload));
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -264,8 +265,8 @@ public class GameClient extends WebSocketClient {
             payload.setAdditionalProperties(additionalProps);
 
             String json = mapper.writeValueAsString(payload);
-            log.info("sendStartGame isOpen=%s isClosing=%s isClosed=%s", isOpen(), isClosing(), isClosed());
-            log.info("sendStartGame -> %s", json);
+            log.info("sendStartGame isOpen={} isClosing={} isClosed={}", isOpen(), isClosing(), isClosed());
+            log.info("sendStartGame -> {}", json);
             send(json);
             log.info(">>> START_GAME sent, waiting for response...");
 
@@ -273,7 +274,7 @@ public class GameClient extends WebSocketClient {
                 try {
                     Thread.sleep(3000);
                     log.info(">>> 3 seconds passed - no GAME_STARTED received");
-                    log.info(">>> Connection still open: %s", isOpen());
+                    log.info(">>> Connection still open: {}", isOpen());
                 } catch (InterruptedException ignored) {}
             }).start();
         } catch (Exception e) {
@@ -290,7 +291,7 @@ public class GameClient extends WebSocketClient {
             payload.setType(CommandType.ROTATE_TILE);
 
             String json = mapper.writeValueAsString(payload);
-            log.info("sendRotateTile -> %s", json);
+            log.info("sendRotateTile -> {}", json);
             send(json);
         } catch (Exception e) {
             e.printStackTrace();
@@ -313,7 +314,7 @@ public class GameClient extends WebSocketClient {
             payload.setTargetCoordinates(coords);
 
             String json = mapper.writeValueAsString(payload);
-            log.info("sendMovePawn -> %s", json);
+            log.info("sendMovePawn -> {}", json);
             send(json);
         } catch (Exception e) {
             e.printStackTrace();
@@ -333,7 +334,7 @@ public class GameClient extends WebSocketClient {
             payload.setDirection(direction);
 
             String json = mapper.writeValueAsString(payload);
-            log.info("sendPushTile -> %s", json);
+            log.info("sendPushTile -> {}", json);
             send(json);
         } catch (Exception e) {
             e.printStackTrace();
@@ -360,7 +361,7 @@ public class GameClient extends WebSocketClient {
             payload.setTargetCoordinates(coords);
 
             String json = mapper.writeValueAsString(payload);
-            log.info("sendUseBeam -> %s", json);
+            log.info("sendUseBeam -> {}", json);
             send(json);
         } catch (Exception e) {
             e.printStackTrace();
@@ -381,7 +382,7 @@ public class GameClient extends WebSocketClient {
             payload.setTargetPlayerId(targetPlayerId);
 
             String json = mapper.writeValueAsString(payload);
-            log.info("sendUseSwap -> %s", json);
+            log.info("sendUseSwap -> {}", json);
             send(json);
         } catch (Exception e) {
             e.printStackTrace();
@@ -404,7 +405,7 @@ public class GameClient extends WebSocketClient {
             payload.setDirection(direction);
 
             String json = mapper.writeValueAsString(payload);
-            log.info("sendUsePushFixed -> %s", json);
+            log.info("sendUsePushFixed -> {}", json);
             send(json);
         } catch (Exception e) {
             e.printStackTrace();
@@ -424,7 +425,7 @@ public class GameClient extends WebSocketClient {
             payload.setType(CommandType.USE_PUSH_TWICE);
 
             String json = mapper.writeValueAsString(payload);
-            log.info("sendUsePushTwice -> %s", json);
+            log.info("sendUsePushTwice -> {}", json);
             send(json);
         } catch (Exception e) {
             e.printStackTrace();

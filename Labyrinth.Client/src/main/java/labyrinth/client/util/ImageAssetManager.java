@@ -1,7 +1,8 @@
 package labyrinth.client.util;
 
 import labyrinth.client.ui.theme.ThemeManager;
-import labyrinth.client.util.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.imageio.ImageIO;
 import javax.swing.*;
@@ -16,7 +17,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public final class ImageAssetManager {
 
-    private static final Logger log = Logger.getLogger(ImageAssetManager.class);
+    private static final Logger log = LoggerFactory.getLogger(ImageAssetManager.class);
     private static final ImageAssetManager INSTANCE = new ImageAssetManager();
 
     private final Map<String, Image> backgroundCache = new ConcurrentHashMap<>();

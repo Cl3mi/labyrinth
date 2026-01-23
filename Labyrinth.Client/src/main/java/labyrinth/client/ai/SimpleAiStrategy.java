@@ -1,7 +1,8 @@
 package labyrinth.client.ai;
 
 import labyrinth.client.models.Board;
-import labyrinth.client.util.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import labyrinth.client.models.Player;
 import labyrinth.client.models.Position;
 import labyrinth.contracts.models.BonusType;
@@ -25,7 +26,7 @@ import java.util.*;
  */
 public class SimpleAiStrategy implements AiStrategy {
 
-    private static final Logger log = Logger.getLogger(SimpleAiStrategy.class);
+    private static final Logger log = LoggerFactory.getLogger(SimpleAiStrategy.class);
     private static final double DISTANCE_WEIGHT = 3.0;
     private static final double STEPS_WEIGHT = 1.0;
 

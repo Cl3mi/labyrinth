@@ -1,7 +1,8 @@
 package labyrinth.client.ai;
 
 import labyrinth.client.messaging.GameClient;
-import labyrinth.client.util.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import labyrinth.client.models.Board;
 import labyrinth.client.models.Player;
 import labyrinth.client.models.Position;
@@ -23,7 +24,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 public class AiController {
 
-    private static final Logger log = Logger.getLogger(AiController.class);
+    private static final Logger log = LoggerFactory.getLogger(AiController.class);
     private final GameClient client;
     private final AiStrategy strategy;
     private final ExecutorService executor;

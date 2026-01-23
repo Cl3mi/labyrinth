@@ -1,7 +1,8 @@
 package labyrinth.client.messaging;
 
 import labyrinth.client.models.LabyrinthApplication;
-import labyrinth.client.util.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import labyrinth.client.models.LabyrinthApplication.ClientIdentityStore;
 
 import java.util.concurrent.*;
@@ -20,7 +21,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class ReconnectionManager {
 
-    private static final Logger log = Logger.getLogger(ReconnectionManager.class);
+    private static final Logger log = LoggerFactory.getLogger(ReconnectionManager.class);
     private final GameClient client;
     private final LabyrinthApplication application;
     private final ScheduledExecutorService scheduler;

@@ -1,7 +1,8 @@
 package labyrinth.client.ui;
 
 import labyrinth.client.audio.AudioPlayer;
-import labyrinth.client.util.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import labyrinth.client.ui.Styles.StyledButton;
 import labyrinth.client.ui.Styles.StyledContextMenu;
 import labyrinth.client.ui.Styles.StyledTooltipManager;
@@ -23,7 +24,7 @@ import java.util.function.Consumer;
  */
 public class MainMenuPanel extends ThemedPanel {
 
-    private static final Logger log = Logger.getLogger(MainMenuPanel.class);
+    private static final Logger log = LoggerFactory.getLogger(MainMenuPanel.class);
 
     @Setter
     private Runnable onMultiplayerClicked;

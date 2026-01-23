@@ -1,6 +1,7 @@
 package labyrinth.client.audio;
 
-import labyrinth.client.util.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.sound.sampled.*;
 import java.io.BufferedInputStream;
@@ -13,7 +14,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 public final class AudioPlayer {
 
-    private static final Logger log = Logger.getLogger(AudioPlayer.class);
+    private static final Logger log = LoggerFactory.getLogger(AudioPlayer.class);
 
     public static final String MENU_MUSIC_PATH = "/sounds/BackgroundSound1.wav";
     public static final String GAMEOVER_APPLAUSE_PATH = "/sounds/Applause.wav";
@@ -181,7 +182,7 @@ public final class AudioPlayer {
             try {
                 URL url = getClass().getResource(path);
                 if (url == null) {
-                    log.error("SFX not found: %s", path);
+                    log.error("SFX not found: {}", path);
                     return;
                 }
 

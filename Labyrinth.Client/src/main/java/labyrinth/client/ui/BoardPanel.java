@@ -1,7 +1,8 @@
 package labyrinth.client.ui;
 
 import labyrinth.client.audio.AudioPlayer;
-import labyrinth.client.util.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import labyrinth.client.audio.SoundEffects;
 import labyrinth.client.messaging.GameClient;
 import labyrinth.client.models.Board;
@@ -36,7 +37,7 @@ import java.util.List;
 
 public class BoardPanel extends JPanel {
 
-    private static final Logger log = Logger.getLogger(BoardPanel.class);
+    private static final Logger log = LoggerFactory.getLogger(BoardPanel.class);
     private static final int PANEL_PADDING = 20;
 
 
@@ -261,12 +262,12 @@ public class BoardPanel extends JPanel {
             var url = getClass().getResource(imagePath);
             if (url != null) {
                 backgroundImage = new ImageIcon(url).getImage();
-                log.info("[BoardPanel] Loaded background: %s", imagePath);
+                log.info("[BoardPanel] Loaded background: {}", imagePath);
             } else {
-                log.error("Background image not found: %s", imagePath);
+                log.error("Background image not found: {}", imagePath);
             }
         } catch (Exception e) {
-            log.error("Error loading background image: %s", e.getMessage());
+            log.error("Error loading background image: {}", e.getMessage());
         }
     }
 
@@ -274,12 +275,12 @@ public class BoardPanel extends JPanel {
         try {
             var url = getClass().getResource(path);
             if (url == null) {
-                log.error("Image not found on classpath: %s", path);
+                log.error("Image not found on classpath: {}", path);
                 return null;
             }
             return javax.imageio.ImageIO.read(url);
         } catch (Exception e) {
-            log.error("Error loading image: %s -> %s", path, e.getMessage());
+            log.error("Error loading image: {} -> {}", path, e.getMessage());
             return null;
         }
     }
@@ -320,13 +321,13 @@ public class BoardPanel extends JPanel {
 
             if (img != null) {
                 treasureImages.put(treasureId, img);
-                log.info("Loaded treasure: %d -> %s", treasureId, fileName);
+                log.info("Loaded treasure: {} -> {}", treasureId, fileName);
             } else {
-                log.error("Failed to load treasure: %d (file: %s)", treasureId, fileName);
+                log.error("Failed to load treasure: {} (file: {})", treasureId, fileName);
             }
         }
 
-        log.info("Loaded %d/24 treasure images", treasureImages.size());
+        log.info("Loaded {}/24 treasure images", treasureImages.size());
     }
 
 
@@ -340,9 +341,9 @@ public class BoardPanel extends JPanel {
         log.info("Loaded tile images:");
         tileImages.forEach((type, img) -> {
             if (img != null) {
-                log.info("  %s tile", type);
+                log.info("  {} tile", type);
             } else {
-                log.error("  %s tile FEHLT!", type);
+                log.error("  {} tile FEHLT!", type);
             }
         });
         if (bonusBagImage != null) {
@@ -1519,7 +1520,7 @@ public class BoardPanel extends JPanel {
             int letterWidth = fm.stringWidth(letter);
             g2.drawString(letter, centerX - letterWidth / 2, centerY + fm.getAscent() / 2 - 12);
 
-            log.error("Using fallback for treasure: %s", TreasureUtils.getLocalName(treasure.getId()));
+            log.error("Using fallback for treasure: {}", TreasureUtils.getLocalName(treasure.getId()));
         }
 
         // Draw treasure name UNDER the image with background
