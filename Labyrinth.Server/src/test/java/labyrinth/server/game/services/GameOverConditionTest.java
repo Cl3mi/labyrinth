@@ -80,7 +80,7 @@ class GameOverConditionTest {
         assertFalse(result.gameOver(), "Game should NOT be over - player must reach home tile");
         assertEquals(RoomState.IN_GAME, game.getRoomState(), "Game should still be IN_GAME");
     }
-    
+
 
     @Test
     void gameOver_shouldNotTrigger_whenPlayerAtHomeTileButHasNotCollectedAllTreasures() throws Exception{
