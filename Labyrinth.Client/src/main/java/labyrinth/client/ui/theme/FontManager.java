@@ -61,35 +61,35 @@ public final class FontManager {
     }
 
     public static Font getHeadingSmall() {
-        return makeHeading(22f);
+        return makeHeading(24f);
     }
 
     public static Font getBodyLarge() {
         return getBodyLarge(Font.PLAIN);
     }
     public static Font getBodyLarge(int style) {
-        return makeBody(18f, style);
+        return makeBody(22f, style);
     }
 
     public static Font getBodyMedium() {
         return getBodyMedium(Font.PLAIN);
     }
     public static Font getBodyMedium(int style) {
-        return makeBody(14f, style);
+        return makeBody(18f, style);
     }
 
     public static Font getBodySmall() {
         return getBodySmall(Font.PLAIN);
     }
     public static Font getBodySmall(int style) {
-        return makeBody(12f, style);
+        return makeBody(16f, style);
     }
 
     public static Font getBodyTiny() {
         return getBodyTiny(Font.PLAIN);
     }
     public static Font getBodyTiny(int style) {
-        return makeBody(10f, style);
+        return makeBody(14f, style);
     }
 
 
