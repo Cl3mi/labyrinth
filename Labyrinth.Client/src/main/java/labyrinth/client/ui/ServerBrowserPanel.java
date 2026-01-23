@@ -88,7 +88,7 @@ public class ServerBrowserPanel extends JPanel {
         headerTitle.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         statusLabel = new JLabel("Lade Server...");
-        statusLabel.setFont(FontManager.getBodyMedium(Font.PLAIN));
+        statusLabel.setFont(FontManager.getBodyMedium());
         statusLabel.setForeground(GameTheme.Colors.PRIMARY_GOLD_LIGHT);
         statusLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
@@ -328,7 +328,7 @@ public class ServerBrowserPanel extends JPanel {
             nameLabel.setForeground(GameTheme.Colors.TEXT_LIGHT);
             nameLabel.setHorizontalAlignment(SwingConstants.CENTER);
 
-            playersLabel.setFont(FontManager.getBodySmall(Font.PLAIN));
+            playersLabel.setFont(FontManager.getBodySmall());
             playersLabel.setForeground(GameTheme.Colors.TEXT_MUTED);
             playersLabel.setHorizontalAlignment(SwingConstants.CENTER);
 

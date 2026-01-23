@@ -241,7 +241,7 @@ public class StyledTooltipManager {
 
         private void calculateSize() {
             FontMetrics titleFm = getFontMetrics(FontManager.getBodySmall(Font.BOLD));
-            FontMetrics descFm = getFontMetrics(FontManager.getBodySmall(Font.PLAIN));
+            FontMetrics descFm = getFontMetrics(FontManager.getBodySmall());
 
             int width = PADDING * 2;
             int height = PADDING * 2;
@@ -306,7 +306,7 @@ public class StyledTooltipManager {
             }
 
             if (description != null && !description.isEmpty()) {
-                g2.setFont(FontManager.getBodySmall(Font.PLAIN));
+                g2.setFont(FontManager.getBodySmall());
                 g2.setColor(ThemeManager.getInstance().getTextPrimary());
                 FontMetrics fm = g2.getFontMetrics();
 

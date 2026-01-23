@@ -83,7 +83,6 @@ public class OptionsPanel extends JPanel {
         onMusicVolumeChanged = v -> AudioPlayer.getInstance().setMusicVolume(v / 100f);
         onSfxVolumeChanged   = v -> AudioPlayer.getInstance().setSfxVolume(v / 100f);
 
-        FontManager.initFonts();
         loadSettings();
         loadBackgroundImage();
         setupUI();
@@ -165,7 +164,7 @@ public class OptionsPanel extends JPanel {
 
         // title
         JLabel titleLabel = new JLabel("Einstellungen");
-        titleLabel.setFont(FontManager.titleFont);
+        titleLabel.setFont(FontManager.getHeadingMedium());
         titleLabel.setForeground(GameTheme.Colors.PRIMARY_GOLD_LIGHT);
         titleLabel.setHorizontalAlignment(SwingConstants.CENTER);
         header.add(titleLabel, BorderLayout.CENTER);
@@ -246,7 +245,7 @@ public class OptionsPanel extends JPanel {
 
         // title
         JLabel titleLabel = new JLabel(title);
-        titleLabel.setFont(FontManager.titleFont);
+        titleLabel.setFont(FontManager.getHeadingMedium());
         titleLabel.setForeground(GameTheme.Colors.PRIMARY_GOLD_LIGHT);
         card.add(titleLabel, BorderLayout.NORTH);
 
@@ -347,7 +346,7 @@ public class OptionsPanel extends JPanel {
         gbc.gridx = 0; gbc.gridy = 1; gbc.gridwidth = 3;
         gbc.insets = new Insets(5, 5, 0, 5);
         JLabel hintLabel = new JLabel("Format: https://mgmt.dvl.spalx.dev");
-        hintLabel.setFont(FontManager.getBodySmall(Font.PLAIN));
+        hintLabel.setFont(FontManager.getBodySmall());
         hintLabel.setForeground(GameTheme.Colors.TEXT_MUTED);
         panel.add(hintLabel, gbc);
 
@@ -375,7 +374,7 @@ public class OptionsPanel extends JPanel {
         themePanel.add(themeToggle);
 
         JLabel themeStatusLabel = new JLabel(darkTheme ? "Dunkel" : "Hell");
-        themeStatusLabel.setFont(FontManager.labelFont);
+        themeStatusLabel.setFont(FontManager.getBodyMedium());
         themeStatusLabel.setForeground(GameTheme.Colors.TEXT_LIGHT);
         themePanel.add(themeStatusLabel);
 
@@ -407,7 +406,7 @@ public class OptionsPanel extends JPanel {
         gbc.gridx = 0; gbc.gridy = 2; gbc.gridwidth = 2;
         gbc.insets = new Insets(5, 5, 0, 5);
         JLabel hintLabel = new JLabel("Änderungen werden nach dem speichern übernommen.");
-        hintLabel.setFont(FontManager.getBodySmall(Font.PLAIN));
+        hintLabel.setFont(FontManager.getBodySmall());
         hintLabel.setForeground(GameTheme.Colors.TEXT_MUTED);
         panel.add(hintLabel, gbc);
 
@@ -437,7 +436,7 @@ public class OptionsPanel extends JPanel {
 
     private JLabel createStyledLabel(String text) {
         JLabel label = new JLabel(text);
-        label.setFont(FontManager.labelFont);
+        label.setFont(FontManager.getBodyMedium());
         label.setForeground(GameTheme.Colors.TEXT_LIGHT);
         return label;
     }
@@ -479,7 +478,7 @@ public class OptionsPanel extends JPanel {
 
     private JTextField createStyledTextField(String text) {
         JTextField field = new JTextField(text);
-        field.setFont(FontManager.getMediumMono());
+        field.setFont(FontManager.getBodyMedium());
         field.setBackground(GameTheme.Colors.STONE_DARK);
         field.setForeground(GameTheme.Colors.TEXT_LIGHT);
         field.setCaretColor(GameTheme.Colors.PRIMARY_GOLD_LIGHT);
@@ -493,7 +492,7 @@ public class OptionsPanel extends JPanel {
 
     private JComboBox<String> createStyledComboBox() {
         JComboBox<String> combo = new JComboBox<>();
-        combo.setFont(FontManager.getBodySmall(Font.PLAIN));
+        combo.setFont(FontManager.getBodySmall());
         combo.setBackground(GameTheme.Colors.STONE_DARK);
         combo.setForeground(GameTheme.Colors.TEXT_LIGHT);
         combo.setPreferredSize(new Dimension(150, 30));
@@ -544,7 +543,7 @@ public class OptionsPanel extends JPanel {
                 g2.fillOval(knobX, 3, knobSize, knobSize);
 
                 // Icon
-                g2.setFont(FontManager.getBodySmall(Font.PLAIN));
+                g2.setFont(FontManager.getBodySmall());
                 g2.setColor(GameTheme.Colors.TEXT_LIGHT);
                 if (isSelected()) {
                     g2.drawString("🌙", knobX + 4, h - 7);
@@ -727,7 +726,7 @@ public class OptionsPanel extends JPanel {
             super(text);
             this.style = style;
 
-            setFont(FontManager.buttonFont);
+            setFont(FontManager.getBodyMedium());
             setForeground(GameTheme.Colors.TEXT_LIGHT);
             setFocusPainted(false);
             setBorderPainted(false);

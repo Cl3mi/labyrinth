@@ -62,7 +62,6 @@ public class MultiplayerLobbyPanel extends JPanel {
     public MultiplayerLobbyPanel(String localPlayerId) {
         this.localPlayerId = localPlayerId;
 
-        FontManager.initFonts();
         loadBackgroundImage();
         setupUI();
 
@@ -136,7 +135,7 @@ public class MultiplayerLobbyPanel extends JPanel {
         lobbyTitleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         connectionLabel = new JLabel("Verbindung wird aufgebaut...");
-        connectionLabel.setFont(FontManager.getBodyMedium(Font.PLAIN));
+        connectionLabel.setFont(FontManager.getBodyMedium());
         connectionLabel.setForeground(GameTheme.Colors.PRIMARY_GOLD_LIGHT);
         connectionLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
@@ -318,7 +317,7 @@ public class MultiplayerLobbyPanel extends JPanel {
         gbc.gridx = 0; gbc.gridy = 6; gbc.gridwidth = 2;
         gbc.insets = new Insets(15, 5, 5, 5);
         JLabel hintLabel = new JLabel("Nur der Admin kann Einstellungen ändern");
-        hintLabel.setFont(FontManager.getBodySmall(Font.PLAIN));
+        hintLabel.setFont(FontManager.getBodySmall());
         hintLabel.setForeground(GameTheme.Colors.TEXT_MUTED);
         settingsGrid.add(hintLabel, gbc);
 
@@ -410,14 +409,14 @@ public class MultiplayerLobbyPanel extends JPanel {
 
     private JLabel createStyledLabel(String text) {
         JLabel label = new JLabel(text);
-        label.setFont(FontManager.labelFont);
+        label.setFont(FontManager.getBodyMedium());
         label.setForeground(GameTheme.Colors.TEXT_LIGHT);
         return label;
     }
 
     private JComboBox<String> createStyledComboBox() {
         JComboBox<String> combo = new JComboBox<>();
-        combo.setFont(FontManager.getBodySmall(Font.PLAIN));
+        combo.setFont(FontManager.getBodySmall());
         combo.setBackground(GameTheme.Colors.STONE_MEDIUM);
         combo.setForeground(GameTheme.Colors.TEXT_LIGHT);
         combo.setPreferredSize(new Dimension(150, 30));
@@ -439,7 +438,7 @@ public class MultiplayerLobbyPanel extends JPanel {
 
     private JTextField createStyledTextField(String defaultText) {
         JTextField textField = new JTextField(defaultText, 15);
-        textField.setFont(FontManager.getBodySmall(Font.PLAIN));
+        textField.setFont(FontManager.getBodySmall());
         textField.setBackground(GameTheme.Colors.STONE_MEDIUM);
         textField.setForeground(GameTheme.Colors.TEXT_LIGHT);
         textField.setCaretColor(GameTheme.Colors.TEXT_LIGHT);

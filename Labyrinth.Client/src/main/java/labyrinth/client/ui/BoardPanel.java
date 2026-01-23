@@ -981,7 +981,7 @@ public class BoardPanel extends JPanel {
 
         // Cancel button
         JButton cancelBtn = new JButton("Abbrechen");
-        cancelBtn.setFont(FontManager.getBodyMedium(Font.PLAIN));
+        cancelBtn.setFont(FontManager.getBodyMedium());
         cancelBtn.setForeground(Color.WHITE);
         cancelBtn.setBackground(new Color(80, 80, 100));
         cancelBtn.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
@@ -1055,7 +1055,7 @@ public class BoardPanel extends JPanel {
 
                 // Position info
                 if (player.getCurrentPosition() != null) {
-                    g2.setFont(FontManager.getBodySmall(Font.PLAIN));
+                    g2.setFont(FontManager.getBodySmall());
                     g2.setColor(new Color(255, 255, 255, 180));
                     String posText = "Position: " + player.getCurrentPosition().getRow() + "/" + player.getCurrentPosition().getColumn();
                     g2.drawString(posText, getWidth() - 100, getHeight() / 2 + 5);
@@ -1568,7 +1568,7 @@ public class BoardPanel extends JPanel {
         }
 
         // Draw treasure name UNDER the image with background
-        g2.setFont(isCurrentTarget ? FontManager.getBodySmall(Font.BOLD) : FontManager.getBodyTiny(Font.PLAIN));
+        g2.setFont(isCurrentTarget ? FontManager.getBodySmall(Font.BOLD) : FontManager.getBodyTiny());
         FontMetrics fm = g2.getFontMetrics();
         String displayName = TreasureUtils.getLocalName(treasure.getId());
 
@@ -1840,7 +1840,7 @@ public class BoardPanel extends JPanel {
             // Debug: Fallback wenn null
             g2.setColor(new Color(255, 0, 0, 140));
             g2.drawRect(x, y, size, size);
-            g2.setFont(FontManager.getBodyMedium(Font.PLAIN));
+            g2.setFont(FontManager.getBodyMedium());
             g2.drawString("NULL", x + 5, y + 15);
             return;
         }
@@ -2878,7 +2878,7 @@ public class BoardPanel extends JPanel {
         themeContent.add(themeToggle);
 
         JLabel themeStatusLabel = new JLabel(darkTheme ? "Dunkel" : "Hell");
-        themeStatusLabel.setFont(FontManager.getBodyMedium(Font.PLAIN));
+        themeStatusLabel.setFont(FontManager.getBodyMedium());
         themeStatusLabel.setForeground(TEXT_LIGHT);
         themeContent.add(themeStatusLabel);
 

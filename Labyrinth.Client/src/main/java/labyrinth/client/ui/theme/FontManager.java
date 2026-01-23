@@ -2,26 +2,21 @@ package labyrinth.client.ui.theme;
 
 import java.awt.*;
 import java.io.InputStream;
+import java.util.Map;
 
 /**
  * Manages custom fonts for the medieval theme.
  * Loads fonts from resources with fallback to system fonts.
- *
  * Primary fonts:
  * - Cinzel (Display): Medieval serif for headers and titles
  * - Crimson Text (UI): Readable serif for body text
- * - JetBrains Mono (Monospace): For coordinates and debug info
  */
 public final class FontManager {
 
     private static Font cinzelBold;
     private static Font crimsonTextRegular;
     private static Font crimsonTextBold;
-    private static Font jetBrainsMonoRegular;
-
-    public static Font titleFont;
-    public static Font labelFont;
-    public static Font buttonFont;
+    private static final Map<String, Font> presetCache = new java.util.HashMap<>();
 
     static {
         loadFonts();
@@ -31,19 +26,11 @@ public final class FontManager {
         // Prevent instantiation
     }
 
-    public static void initFonts() {
-        // Use SansSerif as the default unified UI font
-        titleFont = new Font("SansSerif", Font.BOLD, 28);
-        labelFont = new Font("SansSerif", Font.PLAIN, 14);
-        buttonFont = new Font("SansSerif", Font.BOLD, 16);
-    }
-
 
     private static void loadFonts() {
         cinzelBold = loadFont("/fonts/Cinzel-Bold.ttf", "Serif", Font.BOLD);
         crimsonTextRegular = loadFont("/fonts/CrimsonText-Regular.ttf", "Serif", Font.PLAIN);
         crimsonTextBold = loadFont("/fonts/CrimsonText-Bold.ttf", "Serif", Font.BOLD);
-        jetBrainsMonoRegular = loadFont("/fonts/JetBrainsMono-Regular.ttf", "Monospaced", Font.PLAIN);
     }
 
 
@@ -66,47 +53,76 @@ public final class FontManager {
     }
 
     public static Font getHeadingLarge() {
-        return new Font("SansSerif", Font.BOLD, 36);
+        return makeHeading(36f);
     }
 
     public static Font getHeadingMedium() {
-        return new Font("SansSerif", Font.BOLD, 28);
+        return makeHeading(28f);
     }
 
     public static Font getHeadingSmall() {
-        return new Font("SansSerif", Font.BOLD, 22);
+        return makeHeading(22f);
     }
 
-    // ===== Body / UI fonts (style can be provided) =====
-    public static Font getBodyLarge(int style) { // e.g. headings in sidebars
-        return new Font("SansSerif", style, 18);
+    public static Font getBodyLarge() {
+        return getBodyLarge(Font.PLAIN);
+    }
+    public static Font getBodyLarge(int style) {
+        return makeBody(18f, style);
     }
 
+    public static Font getBodyMedium() {
+        return getBodyMedium(Font.PLAIN);
+    }
     public static Font getBodyMedium(int style) {
-        return new Font("SansSerif", style, 14);
+        return makeBody(14f, style);
     }
 
+    public static Font getBodySmall() {
+        return getBodySmall(Font.PLAIN);
+    }
     public static Font getBodySmall(int style) {
-        return new Font("SansSerif", style, 12);
+        return makeBody(12f, style);
     }
 
+    public static Font getBodyTiny() {
+        return getBodyTiny(Font.PLAIN);
+    }
     public static Font getBodyTiny(int style) {
-        return new Font("SansSerif", style, 10);
+        return makeBody(10f, style);
     }
 
-    public static Font getMediumMono() {
-        if (jetBrainsMonoRegular != null) return jetBrainsMonoRegular.deriveFont(12f);
-        return new Font("Monospaced", Font.PLAIN, 12);
+
+    private static Font makeHeading(float size) {
+        String key = "heading:" + Math.round(size);
+        return presetCache.computeIfAbsent(key, k -> {
+            if (cinzelBold != null) return cinzelBold.deriveFont(Font.BOLD, size);
+            return new Font("SansSerif", Font.BOLD, Math.round(size));
+        });
+    }
+
+
+    private static Font makeBody(float size, int style) {
+        String key = "body:" + Math.round(size) + ":" + style;
+        return presetCache.computeIfAbsent(key, k -> {
+            if (crimsonTextRegular != null) {
+                if ((style & Font.BOLD) != 0 && crimsonTextBold != null) {
+                    return crimsonTextBold.deriveFont(style, size);
+                }
+                return crimsonTextRegular.deriveFont(style, size);
+            }
+            return new Font("SansSerif", style, Math.round(size));
+        });
     }
 
     // Map a requested numeric size to one of the predefined presets.
     // Use this to replace ad-hoc float-based font creation across panels.
     public static Font getFontForSize(float size, int style) {
-        if (size >= 28f) return getHeadingLarge();
-        if (size >= 20f) return getHeadingMedium();
-        if (size >= 16f) return getBodyLarge(style);
-        if (size >= 12f) return getBodyMedium(style);
-        if (size >= 10f) return getBodySmall(style);
-        return getBodyTiny(style);
+        if (size >= 28f) return makeHeading(size);
+        if (size >= 20f) return makeHeading(size);
+        if (size >= 16f) return makeBody(size, style);
+        if (size >= 12f) return makeBody(size, style);
+        if (size >= 10f) return makeBody(size, style);
+        return makeBody(size, style);
     }
 }

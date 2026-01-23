@@ -62,7 +62,7 @@ public class StyledPlayerCardRenderer extends JPanel implements ListCellRenderer
         nameLabel.setForeground(GameTheme.Colors.TEXT_LIGHT);
 
         statusLabel = new JLabel();
-        statusLabel.setFont(FontManager.getBodySmall(Font.PLAIN));
+        statusLabel.setFont(FontManager.getBodySmall());
 
         infoPanel.add(nameLabel);
         infoPanel.add(Box.createVerticalStrut(3));

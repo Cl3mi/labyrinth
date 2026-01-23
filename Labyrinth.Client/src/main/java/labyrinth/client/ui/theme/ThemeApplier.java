@@ -28,12 +28,6 @@ public final class ThemeApplier {
      * Initialize fonts and load theme properties. Non-fatal on failure.
      */
     public static void initFontsAndResources() {
-        try {
-            FontManager.initFonts();
-        } catch (Exception e) {
-            System.err.println("[ThemeApplier] Failed to init fonts: " + e.getMessage());
-        }
-
         try (InputStream in = ThemeApplier.class.getResourceAsStream(THEME_PROPERTIES)) {
             if (in != null) {
                 props.load(in);
@@ -51,12 +45,12 @@ public final class ThemeApplier {
     public static void applyUIDefaults() {
         try {
             // Fonts
-            UIManager.put("Label.font", FontManager.getBodyMedium(Font.PLAIN));
+            UIManager.put("Label.font", FontManager.getBodyMedium());
             UIManager.put("Button.font", FontManager.getBodyMedium(Font.BOLD));
-            UIManager.put("TextField.font", FontManager.getBodyMedium(Font.PLAIN));
-            UIManager.put("TextArea.font", FontManager.getBodyMedium(Font.PLAIN));
-            UIManager.put("List.font", FontManager.getBodyMedium(Font.PLAIN));
-            UIManager.put("ComboBox.font", FontManager.getBodyMedium(Font.PLAIN));
+            UIManager.put("TextField.font", FontManager.getBodyMedium());
+            UIManager.put("TextArea.font", FontManager.getBodyMedium());
+            UIManager.put("List.font", FontManager.getBodyMedium());
+            UIManager.put("ComboBox.font", FontManager.getBodyMedium());
 
             // Colors
             UIManager.put("Panel.background", new javax.swing.plaf.ColorUIResource(GameTheme.Colors.backgroundPrimary()));
@@ -108,24 +102,24 @@ public final class ThemeApplier {
             } else if (c instanceof JLabel) {
                 JLabel l = (JLabel) c;
                 l.setForeground(GameTheme.Colors.textPrimary());
-                l.setFont(FontManager.getBodyMedium(Font.PLAIN));
+                l.setFont(FontManager.getBodyMedium());
             } else if (c instanceof JTextField) {
                 JTextField t = (JTextField) c;
                 t.setBackground(GameTheme.Colors.surfacePrimary());
                 t.setForeground(GameTheme.Colors.textPrimary());
-                t.setFont(FontManager.getBodyMedium(Font.PLAIN));
+                t.setFont(FontManager.getBodyMedium());
                 t.setBorder(createInputBorder());
             } else if (c instanceof JPasswordField) {
                 JPasswordField p = (JPasswordField) c;
                 p.setBackground(GameTheme.Colors.surfacePrimary());
                 p.setForeground(GameTheme.Colors.textPrimary());
-                p.setFont(FontManager.getBodyMedium(Font.PLAIN));
+                p.setFont(FontManager.getBodyMedium());
                 p.setBorder(createInputBorder());
             } else if (c instanceof JList) {
                 JList<?> list = (JList<?>) c;
                 list.setBackground(GameTheme.Colors.backgroundSecondary());
                 list.setForeground(GameTheme.Colors.textPrimary());
-                list.setFont(FontManager.getBodyMedium(Font.PLAIN));
+                list.setFont(FontManager.getBodyMedium());
             } else if (c instanceof JScrollPane) {
                 JScrollPane sp = (JScrollPane) c;
                 sp.getViewport().setBackground(GameTheme.Colors.backgroundPrimary());
@@ -133,7 +127,7 @@ public final class ThemeApplier {
                 JToolTip tip = (JToolTip) c;
                 tip.setBackground(GameTheme.Colors.cardBackground());
                 tip.setForeground(GameTheme.Colors.textPrimary());
-                tip.setFont(FontManager.getBodySmall(Font.PLAIN));
+                tip.setFont(FontManager.getBodySmall());
             }
         } catch (Exception e) {
             System.err.println("[ThemeApplier] Failed to apply to component " + c.getClass().getName() + ": " + e.getMessage());

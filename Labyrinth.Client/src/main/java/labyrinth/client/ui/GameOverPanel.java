@@ -159,13 +159,13 @@ public class GameOverPanel extends JPanel {
                 }
 
                 // Increase font size for better readability
-                comp.setFont(FontManager.getBodyLarge(Font.PLAIN));
+                comp.setFont(FontManager.getBodyLarge());
 
                 return comp;
             }
         };
 
-        leaderboardTable.setFont(FontManager.getBodyLarge(Font.PLAIN)); // Larger font
+        leaderboardTable.setFont(FontManager.getBodyLarge()); // Larger font
         leaderboardTable.setRowHeight(55); // Taller rows for larger font
         leaderboardTable.setShowGrid(true);
         leaderboardTable.setGridColor(ThemeEffects.withAlpha(GameTheme.Colors.ACCENT_COPPER, 100));
@@ -190,7 +190,7 @@ public class GameOverPanel extends JPanel {
                 // Don't override the prepareRenderer background/foreground
                 // Just set alignment and font
                 setHorizontalAlignment(SwingConstants.CENTER);
-                setFont(FontManager.getBodyLarge(Font.PLAIN));
+                setFont(FontManager.getBodyLarge());
 
                 return comp;
             }
@@ -327,7 +327,7 @@ public class GameOverPanel extends JPanel {
             }
         };
 
-        backToLobbyButton.setFont(FontManager.getBodyLarge(Font.PLAIN));
+        backToLobbyButton.setFont(FontManager.getBodyLarge());
         backToLobbyButton.setPreferredSize(new Dimension(280, 60));
         backToLobbyButton.setContentAreaFilled(false);
         backToLobbyButton.setFocusPainted(false);

@@ -213,7 +213,7 @@ public class StyledDialog extends JDialog {
 
         // Message
         JLabel messageLabel = new JLabel("<html><center>" + message.replace("\n", "<br>") + "</center></html>");
-        messageLabel.setFont(FontManager.getBodyMedium(Font.PLAIN));
+        messageLabel.setFont(FontManager.getBodyMedium());
         messageLabel.setForeground(ThemeManager.getInstance().getTextPrimary());
         messageLabel.setHorizontalAlignment(SwingConstants.CENTER);
         panel.add(messageLabel, BorderLayout.CENTER);

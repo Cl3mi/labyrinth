@@ -137,7 +137,7 @@ public class ToastManager {
         leftPanel.add(iconLabel, BorderLayout.WEST);
 
         JLabel idLabel = new JLabel(toast.type.prefix + "-" + toast.id);
-        idLabel.setFont(FontManager.getBodyTiny(Font.PLAIN));
+        idLabel.setFont(FontManager.getBodyTiny());
         idLabel.setForeground(GameTheme.Colors.textMuted());
         leftPanel.add(idLabel, BorderLayout.SOUTH);
 
@@ -153,7 +153,7 @@ public class ToastManager {
         centerPanel.add(titleLabel, BorderLayout.NORTH);
 
         JLabel messageLabel = new JLabel("<html><body style='width: 280px'>" + toast.message + "</body></html>");
-        messageLabel.setFont(FontManager.getBodySmall(Font.PLAIN));
+        messageLabel.setFont(FontManager.getBodySmall());
         messageLabel.setForeground(GameTheme.Colors.textLight());
         centerPanel.add(messageLabel, BorderLayout.CENTER);
 

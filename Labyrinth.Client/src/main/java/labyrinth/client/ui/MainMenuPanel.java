@@ -108,7 +108,7 @@ public class MainMenuPanel extends JPanel {
         gbc.gridx = 1;
         gbc.weightx = 0.7;
         JTextField usernameField = new JTextField(multiplayerUsername, 15);
-        usernameField.setFont(FontManager.getBodyMedium(Font.PLAIN));
+        usernameField.setFont(FontManager.getBodyMedium());
         usernameField.setBackground(ThemeManager.getInstance().getSurfaceSecondary());
         usernameField.setForeground(ThemeManager.getInstance().getTextPrimary());
         usernameField.setCaretColor(ThemeManager.getInstance().getTextPrimary());
@@ -193,7 +193,7 @@ public class MainMenuPanel extends JPanel {
 
     private JLabel createDialogLabel(String text) {
         JLabel label = new JLabel(text);
-        label.setFont(FontManager.getBodyMedium(Font.PLAIN));
+        label.setFont(FontManager.getBodyMedium());
         label.setForeground(ThemeManager.getInstance().getTextPrimary());
         return label;
     }
@@ -462,7 +462,7 @@ public class MainMenuPanel extends JPanel {
         panel.setOpaque(false);
 
         JLabel versionLabel = new JLabel("Version 1.0  |  © 2025 Gruppe 1");
-        versionLabel.setFont(FontManager.getBodySmall(Font.PLAIN));
+        versionLabel.setFont(FontManager.getBodySmall());
         versionLabel.setForeground(ThemeEffects.withAlpha(GameTheme.Colors.TEXT_MUTED, 150));
         panel.add(versionLabel);
 
@@ -674,7 +674,7 @@ public class MainMenuPanel extends JPanel {
 
             // subtitle
             if (subtitle != null && !subtitle.isEmpty()) {
-                g2.setFont(FontManager.getBodySmall(Font.PLAIN));
+                g2.setFont(FontManager.getBodySmall());
                 fm = g2.getFontMetrics();
                 int subWidth = fm.stringWidth(subtitle);
                 g2.setColor(ThemeEffects.withAlpha(GameTheme.Colors.textMuted(), (int) (140 + 40 * hoverProgress)));

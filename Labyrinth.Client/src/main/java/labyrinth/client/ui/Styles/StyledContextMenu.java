@@ -77,7 +77,7 @@ public class StyledContextMenu extends JPopupMenu {
 
             {
                 setOpaque(false);
-                setFont(FontManager.getBodyMedium(Font.PLAIN));
+                setFont(FontManager.getBodyMedium());
                 setForeground(ThemeManager.getInstance().getTextPrimary());
                 setBorder(new EmptyBorder(8, 12, 8, 12));
                 setCursor(new Cursor(Cursor.HAND_CURSOR));

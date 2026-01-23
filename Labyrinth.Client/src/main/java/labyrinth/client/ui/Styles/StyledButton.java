@@ -29,7 +29,7 @@ public class StyledButton extends JButton {
         super(text);
         this.style = style;
 
-        setFont(FontManager.buttonFont);
+        setFont(FontManager.getBodyMedium());
         setForeground(GameTheme.Colors.TEXT_LIGHT);
         setFocusPainted(false);
         setBorderPainted(false);
