@@ -7,6 +7,7 @@ import labyrinth.client.ui.Styles.StyledTooltipManager;
 import labyrinth.client.ui.theme.FontManager;
 import labyrinth.client.ui.theme.GameTheme;
 import labyrinth.client.ui.theme.ThemeManager;
+import labyrinth.client.ui.theme.ThemeEffects;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -22,7 +23,6 @@ import java.util.function.Consumer;
 
 public class MainMenuPanel extends JPanel {
 
-    // Callbacks für Button-Aktionen
     @Setter
     private Runnable onMultiplayerClicked;
     @Setter
@@ -30,7 +30,6 @@ public class MainMenuPanel extends JPanel {
     @Setter
     private Runnable onExitClicked;
 
-    // Multiplayer Username
     @Getter
     private String multiplayerUsername = "Player";
 
@@ -89,7 +88,7 @@ public class MainMenuPanel extends JPanel {
 
 
         JLabel titleLabel = new JLabel("Gib deinen Spielernamen ein", SwingConstants.CENTER);
-        titleLabel.setFont(FontManager.getMediumDisplay());
+        titleLabel.setFont(FontManager.getHeadingMedium());
         titleLabel.setForeground(GameTheme.Colors.ACCENT_GOLD);
         mainPanel.add(titleLabel, BorderLayout.NORTH);
 
@@ -109,7 +108,7 @@ public class MainMenuPanel extends JPanel {
         gbc.gridx = 1;
         gbc.weightx = 0.7;
         JTextField usernameField = new JTextField(multiplayerUsername, 15);
-        usernameField.setFont(FontManager.getMediumUI());
+        usernameField.setFont(FontManager.getBodyMedium(Font.PLAIN));
         usernameField.setBackground(ThemeManager.getInstance().getSurfaceSecondary());
         usernameField.setForeground(ThemeManager.getInstance().getTextPrimary());
         usernameField.setCaretColor(ThemeManager.getInstance().getTextPrimary());
@@ -194,32 +193,17 @@ public class MainMenuPanel extends JPanel {
 
     private JLabel createDialogLabel(String text) {
         JLabel label = new JLabel(text);
-        label.setFont(new Font("Arial", Font.BOLD, 14));
+        label.setFont(FontManager.getBodyMedium(Font.PLAIN));
         label.setForeground(ThemeManager.getInstance().getTextPrimary());
         return label;
     }
 
-
     private Image backgroundImage;
     private Image logoImage;
-
-
-    private static final Color PRIMARY_GOLD_LIGHT = new Color(255, 215, 0);
-    private static final Color PRIMARY_GOLD_DARK = new Color(184, 134, 11);
-    private static final Color STONE_DARK = new Color(45, 42, 38);
-    private static final Color STONE_MEDIUM = new Color(82, 75, 66);
-    private static final Color TEXT_LIGHT = new Color(255, 248, 230);
-    private static final Color SHADOW_COLOR = new Color(0, 0, 0, 120);
-
-
-    private Font titleFont;
-    private Font buttonFont;
-    private Font subtitleFont;
 
     private JLabel subtitleLabel;
 
     public MainMenuPanel() {
-        initFonts();
         loadResources();
         initMusic();
         setupUI();
@@ -240,36 +224,8 @@ public class MainMenuPanel extends JPanel {
     }
 
 
-    private void initFonts() {
-        try {
-            titleFont = new Font("Serif", Font.BOLD, 48);
-            buttonFont = new Font("Serif", Font.BOLD, 20);
-            subtitleFont = new Font("Serif", Font.ITALIC, 14);
 
-            if (isFontAvailable("Cinzel")) {
-                titleFont = new Font("Cinzel", Font.BOLD, 48);
-                buttonFont = new Font("Cinzel", Font.BOLD, 20);
-            }
-            if (isFontAvailable("Lora")) {
-                subtitleFont = new Font("Lora", Font.ITALIC, 14);
-            }
-        } catch (Exception e) {
-            titleFont = new Font("Serif", Font.BOLD, 48);
-            buttonFont = new Font("Serif", Font.BOLD, 20);
-            subtitleFont = new Font("Serif", Font.ITALIC, 14);
-        }
-    }
 
-    private boolean isFontAvailable(String fontName) {
-        GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
-        String[] fontFamilies = ge.getAvailableFontFamilyNames();
-        for (String family : fontFamilies) {
-            if (family.equalsIgnoreCase(fontName)) {
-                return true;
-            }
-        }
-        return false;
-    }
 
     private void loadResources() {
         loadBackgroundImage();
@@ -342,13 +298,13 @@ public class MainMenuPanel extends JPanel {
             @Override
             protected void paintComponent(Graphics g) {
                 Graphics2D g2d = (Graphics2D) g.create();
-                g2d.setColor(new Color(50, 50, 50, 150));
+                g2d.setColor(ThemeManager.getInstance().getSubtitleColor());
                 g2d.fillRoundRect(0, 0, getWidth(), getHeight(), 8, 8);
                 g2d.dispose();
                 super.paintComponent(g);
             }
         };
-        subtitleLabel.setFont(new Font("SansSerif", Font.BOLD, 24));
+        subtitleLabel.setFont(FontManager.getBodyLarge(Font.BOLD));
         subtitleLabel.setForeground(ThemeManager.getInstance().getSubtitleColor());
         subtitleLabel.setBorder(BorderFactory.createEmptyBorder(4, 12, 4, 12));
         subtitleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
@@ -422,32 +378,31 @@ public class MainMenuPanel extends JPanel {
                 String title = "Das Verrückte";
                 String title2 = "LABYRINTH";
 
-                g2.setFont(titleFont.deriveFont(32f));
+                g2.setFont(FontManager.getHeadingLarge());
                 FontMetrics fm = g2.getFontMetrics();
                 int titleWidth = fm.stringWidth(title);
 
-                g2.setColor(SHADOW_COLOR);
+                g2.setColor(GameTheme.Colors.shadow());
                 g2.drawString(title, centerX - titleWidth / 2 + 3, 43);
-                g2.setColor(PRIMARY_GOLD_LIGHT);
+                g2.setColor(GameTheme.Colors.PRIMARY_GOLD_LIGHT);
                 g2.drawString(title, centerX - titleWidth / 2, 40);
 
-                g2.setFont(titleFont.deriveFont(52f));
                 fm = g2.getFontMetrics();
                 int title2Width = fm.stringWidth(title2);
 
                 for (int i = 8; i > 0; i--) {
                     float alpha = 0.04f * i;
-                    g2.setColor(new Color(255, 215, 0, (int) (alpha * 255)));
+                    g2.setColor(new Color(GameTheme.Colors.PRIMARY_GOLD_LIGHT.getRed(), GameTheme.Colors.PRIMARY_GOLD_LIGHT.getGreen(), GameTheme.Colors.PRIMARY_GOLD_LIGHT.getBlue(), (int) (alpha * 255)));
                     g2.drawString(title2, centerX - title2Width / 2 - i / 2, 105);
                     g2.drawString(title2, centerX - title2Width / 2 + i / 2, 105);
                 }
 
-                g2.setColor(SHADOW_COLOR);
+                g2.setColor(GameTheme.Colors.shadow());
                 g2.drawString(title2, centerX - title2Width / 2 + 4, 109);
 
                 GradientPaint goldGradient = new GradientPaint(
-                        centerX - title2Width / 2, 60, PRIMARY_GOLD_LIGHT,
-                        centerX + title2Width / 2, 115, PRIMARY_GOLD_DARK
+                        centerX - title2Width / 2, 60, GameTheme.Colors.PRIMARY_GOLD_LIGHT,
+                        centerX + title2Width / 2, 115, GameTheme.Colors.PRIMARY_GOLD_DARK
                 );
                 g2.setPaint(goldGradient);
                 g2.drawString(title2, centerX - title2Width / 2, 105);
@@ -507,21 +462,18 @@ public class MainMenuPanel extends JPanel {
         panel.setOpaque(false);
 
         JLabel versionLabel = new JLabel("Version 1.0  |  © 2025 Gruppe 1");
-        versionLabel.setFont(new Font("SansSerif", Font.PLAIN, 11));
-        versionLabel.setForeground(new Color(200, 190, 170, 150));
+        versionLabel.setFont(FontManager.getBodySmall(Font.PLAIN));
+        versionLabel.setForeground(ThemeEffects.withAlpha(GameTheme.Colors.TEXT_MUTED, 150));
         panel.add(versionLabel);
 
         return panel;
     }
-
-
 
     public void setMultiplayerUsername(String username) {
         if (username != null && !username.isBlank()) {
             this.multiplayerUsername = username;
         }
     }
-
 
     @Override
     protected void paintComponent(Graphics g) {
@@ -537,16 +489,14 @@ public class MainMenuPanel extends JPanel {
             g2.drawImage(backgroundImage, 0, 0, w, h, this);
         } else {
             GradientPaint gradient = new GradientPaint(
-                    0, 0, STONE_DARK,
-                    0, h, new Color(75, 45, 90)
+                    0, 0, GameTheme.Colors.stoneDark(),
+                    0, h, GameTheme.Colors.stoneMedium()
             );
             g2.setPaint(gradient);
             g2.fillRect(0, 0, w, h);
         }
 
-        g2.setColor(ThemeManager.getInstance().isDarkMode()
-            ? new Color(0, 0, 0, 60)
-            : new Color(0, 0, 0, 20));
+        g2.setColor(ThemeManager.getInstance().getShadow());
         g2.fillRect(0, 0, w, h);
 
         drawVignette(g2, w, h);
@@ -566,8 +516,8 @@ public class MainMenuPanel extends JPanel {
                 new float[]{0.3f, 0.7f, 1.0f},
                 new Color[]{
                         new Color(0, 0, 0, 0),
-                        new Color(0, 0, 0, 50),
-                        new Color(0, 0, 0, 130)
+                        ThemeEffects.withAlpha(GameTheme.Colors.shadow(), 50),
+                        ThemeEffects.withAlpha(GameTheme.Colors.shadow(), 130)
                 }
         );
         g2.setPaint(vignette);
@@ -576,7 +526,8 @@ public class MainMenuPanel extends JPanel {
 
     private void drawDecorativeCorners(Graphics2D g2, int w, int h) {
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-        g2.setColor(new Color(218, 165, 32, 50));
+        Color gold = GameTheme.Colors.PRIMARY_GOLD_LIGHT;
+        g2.setColor(new Color(gold.getRed(), gold.getGreen(), gold.getBlue(), 50));
         g2.setStroke(new BasicStroke(2f));
 
         int size = 50;
@@ -614,8 +565,8 @@ public class MainMenuPanel extends JPanel {
             super(text);
             this.subtitle = subtitle;
 
-            setFont(buttonFont);
-            setForeground(TEXT_LIGHT);
+            setFont(FontManager.getBodyMedium(Font.BOLD));
+            setForeground(GameTheme.Colors.textLight());
             setFocusPainted(false);
             setBorderPainted(false);
             setContentAreaFilled(false);
@@ -674,18 +625,18 @@ public class MainMenuPanel extends JPanel {
             int arc = 10;
 
             // shadow
-            g2.setColor(new Color(0, 0, 0, (int) (70 + 30 * hoverProgress)));
+            g2.setColor(ThemeEffects.withAlpha(GameTheme.Colors.shadow(), (int) (70 + 30 * hoverProgress)));
             g2.fill(new RoundRectangle2D.Float(4, 5, w - 8, h - 7, arc, arc));
 
             // background
-            Color bgStart = interpolateColor(STONE_DARK, new Color(65, 50, 35), hoverProgress);
-            Color bgEnd = interpolateColor(STONE_MEDIUM, new Color(95, 70, 45), hoverProgress);
+            Color bgStart = interpolateColor(GameTheme.Colors.stoneDark(), GameTheme.Colors.stoneDark().darker(), hoverProgress);
+            Color bgEnd = interpolateColor(GameTheme.Colors.stoneMedium(), GameTheme.Colors.stoneMedium().darker(), hoverProgress);
             GradientPaint bgGradient = new GradientPaint(0, 0, bgStart, 0, h, bgEnd);
             g2.setPaint(bgGradient);
             g2.fill(new RoundRectangle2D.Float(2, 2, w - 4, h - 4, arc, arc));
 
             // golden border
-            Color borderColor = interpolateColor(PRIMARY_GOLD_DARK, PRIMARY_GOLD_LIGHT, hoverProgress);
+            Color borderColor = interpolateColor(GameTheme.Colors.PRIMARY_GOLD_DARK, GameTheme.Colors.PRIMARY_GOLD_LIGHT, hoverProgress);
             g2.setColor(borderColor);
             g2.setStroke(new BasicStroke(2f + hoverProgress * 0.5f));
             g2.draw(new RoundRectangle2D.Float(2, 2, w - 5, h - 5, arc, arc));
@@ -693,40 +644,40 @@ public class MainMenuPanel extends JPanel {
             // Focus indicator - glowing outline
             if (isFocused) {
                 // Outer glow
-                g2.setColor(new Color(255, 215, 0, 80));
+                g2.setColor(new Color(GameTheme.Colors.PRIMARY_GOLD_LIGHT.getRed(), GameTheme.Colors.PRIMARY_GOLD_LIGHT.getGreen(), GameTheme.Colors.PRIMARY_GOLD_LIGHT.getBlue(), 80));
                 g2.setStroke(new BasicStroke(4f));
                 g2.draw(new RoundRectangle2D.Float(0, 0, w - 1, h - 1, arc + 4, arc + 4));
                 // Inner bright ring
-                g2.setColor(new Color(255, 215, 0, 200));
+                g2.setColor(new Color(GameTheme.Colors.PRIMARY_GOLD_LIGHT.getRed(), GameTheme.Colors.PRIMARY_GOLD_LIGHT.getGreen(), GameTheme.Colors.PRIMARY_GOLD_LIGHT.getBlue(), 200));
                 g2.setStroke(new BasicStroke(2f));
                 g2.draw(new RoundRectangle2D.Float(1, 1, w - 3, h - 3, arc + 2, arc + 2));
             }
 
             // glow
-            g2.setColor(new Color(255, 255, 255, (int) (15 + 20 * hoverProgress)));
+            g2.setColor(ThemeEffects.withAlpha(GameTheme.Colors.textLight(), (int) (15 + 20 * hoverProgress)));
             g2.fill(new RoundRectangle2D.Float(4, 4, w - 8, (h - 8) / 3f, arc - 2, arc - 2));
 
             // text
-            g2.setFont(buttonFont);
+            g2.setFont(FontManager.getBodyMedium(Font.BOLD));
             FontMetrics fm = g2.getFontMetrics();
             String text = getText();
             int textWidth = fm.stringWidth(text);
             int textX = (w - textWidth) / 2;
             int textY = h / 2 - 3;
 
-            g2.setColor(SHADOW_COLOR);
+            g2.setColor(GameTheme.Colors.shadow());
             g2.drawString(text, textX + 2, textY + 2);
 
-            Color textColor = interpolateColor(TEXT_LIGHT, PRIMARY_GOLD_LIGHT, hoverProgress * 0.4f);
+            Color textColor = interpolateColor(GameTheme.Colors.textLight(), GameTheme.Colors.PRIMARY_GOLD_LIGHT, hoverProgress * 0.4f);
             g2.setColor(textColor);
             g2.drawString(text, textX, textY);
 
             // subtitle
             if (subtitle != null && !subtitle.isEmpty()) {
-                g2.setFont(subtitleFont.deriveFont(11f));
+                g2.setFont(FontManager.getBodySmall(Font.PLAIN));
                 fm = g2.getFontMetrics();
                 int subWidth = fm.stringWidth(subtitle);
-                g2.setColor(new Color(200, 190, 170, (int) (140 + 40 * hoverProgress)));
+                g2.setColor(ThemeEffects.withAlpha(GameTheme.Colors.textMuted(), (int) (140 + 40 * hoverProgress)));
                 g2.drawString(subtitle, (w - subWidth) / 2, textY + 18);
             }
 
@@ -750,8 +701,8 @@ public class MainMenuPanel extends JPanel {
 
         public ExitButton(String text) {
             super(text);
-            setFont(new Font("SansSerif", Font.BOLD, 13));
-            setForeground(new Color(200, 100, 100));
+            setFont(FontManager.getBodySmall(Font.BOLD));
+            setForeground(GameTheme.Colors.PLAYER_RED);
             setFocusPainted(false);
             setBorderPainted(false);
             setContentAreaFilled(false);
@@ -799,29 +750,32 @@ public class MainMenuPanel extends JPanel {
             int h = getHeight();
 
             if (isHovered) {
-                g2.setColor(new Color(140, 50, 50, 180));
+                Color red = GameTheme.Colors.PLAYER_RED;
+                g2.setColor(new Color(red.getRed(), red.getGreen(), red.getBlue(), 180));
                 g2.fillRoundRect(0, 0, w, h, 8, 8);
-                g2.setColor(new Color(255, 17, 17));
+                g2.setColor(new Color(GameTheme.Colors.PLAYER_RED.getRed(), GameTheme.Colors.PLAYER_RED.getGreen(), GameTheme.Colors.PLAYER_RED.getBlue()));
                 g2.setStroke(new BasicStroke(2));
                 g2.drawRoundRect(1, 1, w - 2, h - 2, 8, 8);
-                g2.setColor(new Color(255, 200, 200));
+                g2.setColor(new Color(GameTheme.Colors.PLAYER_RED.getRed(), GameTheme.Colors.PLAYER_RED.getGreen(), GameTheme.Colors.PLAYER_RED.getBlue(), 200));
             } else {
-                g2.setColor(new Color(80, 40, 40, 120));
+                Color base = GameTheme.Colors.stoneDark();
+                g2.setColor(ThemeEffects.withAlpha(base, 120));
                 g2.fillRoundRect(0, 0, w, h, 8, 8);
-                g2.setColor(new Color(150, 80, 80));
+                g2.setColor(GameTheme.Colors.PLAYER_RED);
                 g2.setStroke(new BasicStroke(1.5f));
                 g2.drawRoundRect(1, 1, w - 2, h - 2, 8, 8);
-                g2.setColor(new Color(200, 130, 130));
+                g2.setColor(ThemeEffects.withAlpha(GameTheme.Colors.PLAYER_RED, 200));
             }
 
             // Focus indicator - glowing outline
             if (isFocused) {
                 // Outer glow (red-tinted for exit button)
-                g2.setColor(new Color(255, 100, 100, 80));
+                Color red = GameTheme.Colors.PLAYER_RED;
+                g2.setColor(new Color(red.getRed(), red.getGreen(), red.getBlue(), 80));
                 g2.setStroke(new BasicStroke(4f));
                 g2.drawRoundRect(-1, -1, w + 1, h + 1, 12, 12);
                 // Inner bright ring
-                g2.setColor(new Color(255, 150, 150, 200));
+                g2.setColor(new Color(red.getRed(), red.getGreen(), red.getBlue(), 200));
                 g2.setStroke(new BasicStroke(2f));
                 g2.drawRoundRect(0, 0, w - 1, h - 1, 10, 10);
             }
@@ -837,3 +791,4 @@ public class MainMenuPanel extends JPanel {
         }
     }
 }
+

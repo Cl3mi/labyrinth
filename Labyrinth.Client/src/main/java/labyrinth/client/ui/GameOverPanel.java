@@ -77,7 +77,7 @@ public class GameOverPanel extends JPanel {
         header.setPreferredSize(new Dimension(0, 180));
 
         JLabel titleLabel = new JLabel("QUEST COMPLETE", SwingConstants.CENTER);
-        titleLabel.setFont(FontManager.getDisplayFont(48, Font.BOLD));
+        titleLabel.setFont(FontManager.getHeadingLarge());
         titleLabel.setForeground(GameTheme.Colors.ACCENT_GOLD);
         titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         titleLabel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 60));
@@ -106,12 +106,12 @@ public class GameOverPanel extends JPanel {
                 super.paintComponent(g);
             }
         };
-        trophyLabel.setFont(new Font("Serif", Font.PLAIN, 48));
+        trophyLabel.setFont(FontManager.getHeadingLarge());
         trophyLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         trophyLabel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 60));
 
         winnerLabel = new JLabel("", SwingConstants.CENTER);
-        winnerLabel.setFont(FontManager.getMediumDisplay()); // Increased size
+        winnerLabel.setFont(FontManager.getBodyLarge(Font.BOLD)); // Increased size
         winnerLabel.setForeground(GameTheme.Colors.TEXT_PRIMARY);
         winnerLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         winnerLabel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
@@ -159,13 +159,13 @@ public class GameOverPanel extends JPanel {
                 }
 
                 // Increase font size for better readability
-                comp.setFont(FontManager.getLargeUI());
+                comp.setFont(FontManager.getBodyLarge(Font.PLAIN));
 
                 return comp;
             }
         };
 
-        leaderboardTable.setFont(FontManager.getLargeUI()); // Larger font
+        leaderboardTable.setFont(FontManager.getBodyLarge(Font.PLAIN)); // Larger font
         leaderboardTable.setRowHeight(55); // Taller rows for larger font
         leaderboardTable.setShowGrid(true);
         leaderboardTable.setGridColor(ThemeEffects.withAlpha(GameTheme.Colors.ACCENT_COPPER, 100));
@@ -174,7 +174,7 @@ public class GameOverPanel extends JPanel {
         leaderboardTable.setIntercellSpacing(new Dimension(10, 5));
 
         // Header styling
-        leaderboardTable.getTableHeader().setFont(FontManager.getMediumDisplay()); // Larger header font
+        leaderboardTable.getTableHeader().setFont(FontManager.getHeadingMedium()); // Larger header font
         leaderboardTable.getTableHeader().setBackground(GameTheme.Colors.BACKGROUND_SECONDARY);
         leaderboardTable.getTableHeader().setForeground(GameTheme.Colors.ACCENT_GOLD);
         leaderboardTable.getTableHeader().setReorderingAllowed(false);
@@ -190,7 +190,7 @@ public class GameOverPanel extends JPanel {
                 // Don't override the prepareRenderer background/foreground
                 // Just set alignment and font
                 setHorizontalAlignment(SwingConstants.CENTER);
-                setFont(FontManager.getLargeUI());
+                setFont(FontManager.getBodyLarge(Font.PLAIN));
 
                 return comp;
             }
@@ -311,7 +311,7 @@ public class GameOverPanel extends JPanel {
                 }
 
                 // Text with shadow
-                g2.setFont(FontManager.getLargeUI());
+                g2.setFont(FontManager.getHeadingMedium());
                 FontMetrics fm = g2.getFontMetrics();
                 String text = getText();
                 int textX = (getWidth() - fm.stringWidth(text)) / 2;
@@ -327,7 +327,7 @@ public class GameOverPanel extends JPanel {
             }
         };
 
-        backToLobbyButton.setFont(FontManager.getLargeUI());
+        backToLobbyButton.setFont(FontManager.getBodyLarge(Font.PLAIN));
         backToLobbyButton.setPreferredSize(new Dimension(280, 60));
         backToLobbyButton.setContentAreaFilled(false);
         backToLobbyButton.setFocusPainted(false);
@@ -469,7 +469,7 @@ public class GameOverPanel extends JPanel {
 
         // Title
         JLabel achievementTitle = new JLabel("Errungenschaften", SwingConstants.CENTER);
-        achievementTitle.setFont(FontManager.getMediumDisplay());
+        achievementTitle.setFont(FontManager.getHeadingSmall());
         achievementTitle.setForeground(GameTheme.Colors.ACCENT_GOLD);
         achievementTitle.setAlignmentX(Component.CENTER_ALIGNMENT);
         achievementTitle.setBorder(new EmptyBorder(5, 0, 10, 0));
@@ -596,7 +596,7 @@ public class GameOverPanel extends JPanel {
 
         // Title
         JLabel achievementTitle = new JLabel("Errungenschaften", SwingConstants.CENTER);
-        achievementTitle.setFont(FontManager.getMediumDisplay());
+        achievementTitle.setFont(FontManager.getHeadingSmall());
         achievementTitle.setForeground(GameTheme.Colors.ACCENT_GOLD);
         achievementTitle.setAlignmentX(Component.CENTER_ALIGNMENT);
         achievementTitle.setBorder(new EmptyBorder(5, 0, 10, 0));
@@ -649,7 +649,7 @@ public class GameOverPanel extends JPanel {
 
         // Player name
         JLabel nameLabel = new JLabel(playerName + ": ");
-        nameLabel.setFont(FontManager.getMediumUI());
+        nameLabel.setFont(FontManager.getBodyMedium(Font.BOLD));
         nameLabel.setForeground(GameTheme.Colors.TEXT_PRIMARY);
         card.add(nameLabel);
 
@@ -667,7 +667,7 @@ public class GameOverPanel extends JPanel {
         String displayName = formatAchievementName(achievementName);
 
         JLabel badge = new JLabel(icon + " " + displayName);
-        badge.setFont(new Font("SansSerif", Font.BOLD, 12));
+        badge.setFont(FontManager.getBodySmall(Font.BOLD));
         badge.setForeground(GameTheme.Colors.ACCENT_GOLD);
         badge.setOpaque(true);
         badge.setBackground(ThemeEffects.withAlpha(GameTheme.Colors.ACCENT_GOLD, 30));
@@ -712,3 +712,4 @@ public class GameOverPanel extends JPanel {
         }
     }
 }
+

@@ -5,6 +5,9 @@ import java.awt.*;
 import java.util.ArrayList;
 import java.util.List;
 
+import labyrinth.client.ui.theme.GameTheme;
+import labyrinth.client.ui.theme.FontManager;
+
 /**
  * Toast notification system for displaying temporary messages.
  * Supports INFO, SUCCESS, WARNING, ERROR types with auto-dismiss.
@@ -12,10 +15,10 @@ import java.util.List;
 public class ToastManager {
 
     public enum ToastType {
-        INFO("I", new Color(52, 152, 219), "[i]"),      // Blue - ASCII fallback
-        SUCCESS("S", new Color(46, 204, 113), "[OK]"),  // Green - ASCII fallback
-        WARNING("W", new Color(241, 196, 15), "[!]"),   // Yellow - ASCII fallback
-        ERROR("E", new Color(231, 76, 60), "[X]");      // Red - ASCII fallback
+        INFO("I", GameTheme.Colors.PLAYER_BLUE, "[i]"),      // Blue - ASCII fallback
+        SUCCESS("S", GameTheme.Colors.PLAYER_GREEN, "[OK]"),  // Green - ASCII fallback
+        WARNING("W", GameTheme.Colors.PLAYER_YELLOW, "[!]"),   // Yellow - ASCII fallback
+        ERROR("E", GameTheme.Colors.PLAYER_RED, "[X]");      // Red - ASCII fallback
 
         public final String prefix;
         public final Color color;
@@ -117,7 +120,7 @@ public class ToastManager {
     private JPanel createToastPanel(Toast toast) {
         JPanel panel = new JPanel();
         panel.setLayout(new BorderLayout(10, 5));
-        panel.setBackground(new Color(40, 40, 50, 240));
+        panel.setBackground(GameTheme.Colors.cardBackground());
         panel.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createLineBorder(toast.type.color, 2),
             BorderFactory.createEmptyBorder(12, 15, 12, 15)
@@ -129,13 +132,13 @@ public class ToastManager {
         leftPanel.setOpaque(false);
 
         JLabel iconLabel = new JLabel(toast.type.icon);
-        iconLabel.setFont(new Font("SansSerif", Font.BOLD, 16));
+        iconLabel.setFont(FontManager.getBodyMedium(Font.BOLD));
         iconLabel.setForeground(toast.type.color);
         leftPanel.add(iconLabel, BorderLayout.WEST);
 
         JLabel idLabel = new JLabel(toast.type.prefix + "-" + toast.id);
-        idLabel.setFont(new Font("Monospaced", Font.PLAIN, 5));
-        idLabel.setForeground(new Color(150, 150, 170));
+        idLabel.setFont(FontManager.getBodyTiny(Font.PLAIN));
+        idLabel.setForeground(GameTheme.Colors.textMuted());
         leftPanel.add(idLabel, BorderLayout.SOUTH);
 
         panel.add(leftPanel, BorderLayout.WEST);
@@ -145,13 +148,13 @@ public class ToastManager {
         centerPanel.setOpaque(false);
 
         JLabel titleLabel = new JLabel(toast.title);
-        titleLabel.setFont(new Font("Arial", Font.BOLD, 14));
-        titleLabel.setForeground(Color.WHITE);
+        titleLabel.setFont(FontManager.getBodyMedium(Font.BOLD));
+        titleLabel.setForeground(GameTheme.Colors.textPrimary());
         centerPanel.add(titleLabel, BorderLayout.NORTH);
 
         JLabel messageLabel = new JLabel("<html><body style='width: 280px'>" + toast.message + "</body></html>");
-        messageLabel.setFont(new Font("SansSerif", Font.PLAIN, 12));
-        messageLabel.setForeground(new Color(200, 200, 220));
+        messageLabel.setFont(FontManager.getBodySmall(Font.PLAIN));
+        messageLabel.setForeground(GameTheme.Colors.textLight());
         centerPanel.add(messageLabel, BorderLayout.CENTER);
 
         panel.add(centerPanel, BorderLayout.CENTER);

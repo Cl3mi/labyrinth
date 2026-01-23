@@ -347,7 +347,7 @@ public class OptionsPanel extends JPanel {
         gbc.gridx = 0; gbc.gridy = 1; gbc.gridwidth = 3;
         gbc.insets = new Insets(5, 5, 0, 5);
         JLabel hintLabel = new JLabel("Format: https://mgmt.dvl.spalx.dev");
-        hintLabel.setFont(new Font("SansSerif", Font.ITALIC, 11));
+        hintLabel.setFont(FontManager.getBodySmall(Font.PLAIN));
         hintLabel.setForeground(GameTheme.Colors.TEXT_MUTED);
         panel.add(hintLabel, gbc);
 
@@ -407,7 +407,7 @@ public class OptionsPanel extends JPanel {
         gbc.gridx = 0; gbc.gridy = 2; gbc.gridwidth = 2;
         gbc.insets = new Insets(5, 5, 0, 5);
         JLabel hintLabel = new JLabel("Änderungen werden nach dem speichern übernommen.");
-        hintLabel.setFont(new Font("SansSerif", Font.ITALIC, 11));
+        hintLabel.setFont(FontManager.getBodySmall(Font.PLAIN));
         hintLabel.setForeground(GameTheme.Colors.TEXT_MUTED);
         panel.add(hintLabel, gbc);
 
@@ -479,7 +479,7 @@ public class OptionsPanel extends JPanel {
 
     private JTextField createStyledTextField(String text) {
         JTextField field = new JTextField(text);
-        field.setFont(new Font("Monospaced", Font.PLAIN, 13));
+        field.setFont(FontManager.getMediumMono());
         field.setBackground(GameTheme.Colors.STONE_DARK);
         field.setForeground(GameTheme.Colors.TEXT_LIGHT);
         field.setCaretColor(GameTheme.Colors.PRIMARY_GOLD_LIGHT);
@@ -493,7 +493,7 @@ public class OptionsPanel extends JPanel {
 
     private JComboBox<String> createStyledComboBox() {
         JComboBox<String> combo = new JComboBox<>();
-        combo.setFont(new Font("SansSerif", Font.PLAIN, 13));
+        combo.setFont(FontManager.getBodySmall(Font.PLAIN));
         combo.setBackground(GameTheme.Colors.STONE_DARK);
         combo.setForeground(GameTheme.Colors.TEXT_LIGHT);
         combo.setPreferredSize(new Dimension(150, 30));
@@ -526,9 +526,9 @@ public class OptionsPanel extends JPanel {
 
                 // Background
                 if (isSelected()) {
-                    g2.setColor(new Color(60, 60, 80));
+                    g2.setColor(GameTheme.Colors.STONE_DARK);
                 } else {
-                    g2.setColor(new Color(200, 180, 140));
+                    g2.setColor(GameTheme.Colors.PRIMARY_GOLD_LIGHT);
                 }
                 g2.fillRoundRect(0, 0, w, h, h, h);
 
@@ -540,11 +540,11 @@ public class OptionsPanel extends JPanel {
                 // Knob
                 int knobSize = h - 6;
                 int knobX = isSelected() ? w - knobSize - 3 : 3;
-                g2.setColor(isSelected() ? new Color(100, 100, 140) : new Color(255, 220, 120));
+                g2.setColor(isSelected() ? GameTheme.Colors.STONE_MEDIUM : GameTheme.Colors.PRIMARY_GOLD_LIGHT);
                 g2.fillOval(knobX, 3, knobSize, knobSize);
 
                 // Icon
-                g2.setFont(new Font("SansSerif", Font.PLAIN, 12));
+                g2.setFont(FontManager.getBodySmall(Font.PLAIN));
                 g2.setColor(GameTheme.Colors.TEXT_LIGHT);
                 if (isSelected()) {
                     g2.drawString("🌙", knobX + 4, h - 7);
@@ -595,7 +595,8 @@ public class OptionsPanel extends JPanel {
             protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(new Color(60, 120, 60, 230));
+                Color green = GameTheme.Colors.PLAYER_GREEN;
+                g2.setColor(new Color(green.getRed(), green.getGreen(), green.getBlue(), 230));
                 g2.fill(new RoundRectangle2D.Float(0, 0, getWidth(), getHeight(), 10, 10));
                 g2.dispose();
                 super.paintComponent(g);
@@ -605,8 +606,8 @@ public class OptionsPanel extends JPanel {
         toastPanel.setBorder(new EmptyBorder(12, 20, 12, 20));
 
         JLabel toastLabel = new JLabel("[OK] Einstellungen gespeichert");
-        toastLabel.setFont(new Font("SansSerif", Font.BOLD, 14));
-        toastLabel.setForeground(Color.WHITE);
+        toastLabel.setFont(FontManager.getBodyMedium(Font.BOLD));
+        toastLabel.setForeground(GameTheme.Colors.TEXT_LIGHT);
         toastPanel.add(toastLabel);
 
         toast.setContentPane(toastPanel);
@@ -664,8 +665,8 @@ public class OptionsPanel extends JPanel {
 
         // Overlay
         g2.setColor(ThemeManager.getInstance().isDarkMode()
-            ? new Color(0, 0, 0, 80)
-            : new Color(0, 0, 0, 30));
+            ? ThemeManager.getInstance().getShadow()
+            : ThemeManager.getInstance().getShadow());
         g2.fillRect(0, 0, w, h);
 
         // Vignette
@@ -692,6 +693,8 @@ public class OptionsPanel extends JPanel {
     private void drawDecorativeCorners(Graphics2D g2, int w, int h) {
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
         g2.setColor(new Color(218, 165, 32, 50));
+        Color gold = GameTheme.Colors.PRIMARY_GOLD_LIGHT;
+        g2.setColor(new Color(gold.getRed(), gold.getGreen(), gold.getBlue(), 50));
         g2.setStroke(new BasicStroke(2f));
 
         int size = 50;
@@ -762,18 +765,18 @@ public class OptionsPanel extends JPanel {
             Color bgStart, bgEnd, borderColor;
             switch (style) {
                 case PRIMARY -> {
-                    bgStart = interpolate(new Color(60, 100, 60), new Color(80, 130, 80), hoverProgress);
-                    bgEnd = interpolate(new Color(40, 70, 40), new Color(60, 100, 60), hoverProgress);
-                    borderColor = interpolate(new Color(100, 160, 100), new Color(130, 200, 130), hoverProgress);
+                    bgStart = interpolate(GameTheme.Colors.PLAYER_GREEN.darker(), GameTheme.Colors.PLAYER_GREEN, hoverProgress);
+                    bgEnd = interpolate(GameTheme.Colors.PLAYER_GREEN, GameTheme.Colors.PLAYER_GREEN.brighter(), hoverProgress);
+                    borderColor = interpolate(GameTheme.Colors.PRIMARY_GOLD_DARK, GameTheme.Colors.PRIMARY_GOLD_LIGHT, hoverProgress);
                 }
                 case DANGER -> {
-                    bgStart = interpolate(new Color(120, 50, 50), new Color(150, 70, 70), hoverProgress);
-                    bgEnd = interpolate(new Color(80, 30, 30), new Color(100, 50, 50), hoverProgress);
-                    borderColor = interpolate(new Color(180, 80, 80), new Color(220, 100, 100), hoverProgress);
+                    bgStart = interpolate(GameTheme.Colors.PLAYER_RED.darker(), GameTheme.Colors.PLAYER_RED, hoverProgress);
+                    bgEnd = interpolate(GameTheme.Colors.PLAYER_RED, GameTheme.Colors.PLAYER_RED.brighter(), hoverProgress);
+                    borderColor = interpolate(GameTheme.Colors.PRIMARY_GOLD_DARK, GameTheme.Colors.PRIMARY_GOLD_LIGHT, hoverProgress);
                 }
                 default -> {
-                    bgStart = interpolate(GameTheme.Colors.STONE_DARK, new Color(65, 55, 45), hoverProgress);
-                    bgEnd = interpolate(GameTheme.Colors.STONE_MEDIUM, new Color(90, 75, 60), hoverProgress);
+                    bgStart = interpolate(GameTheme.Colors.STONE_DARK, GameTheme.Colors.STONE_DARK.darker(), hoverProgress);
+                    bgEnd = interpolate(GameTheme.Colors.STONE_MEDIUM, GameTheme.Colors.STONE_MEDIUM.brighter(), hoverProgress);
                     borderColor = interpolate(GameTheme.Colors.PRIMARY_GOLD_DARK, GameTheme.Colors.PRIMARY_GOLD_LIGHT, hoverProgress);
                 }
             }
@@ -812,3 +815,4 @@ public class OptionsPanel extends JPanel {
         }
     }
 }
+

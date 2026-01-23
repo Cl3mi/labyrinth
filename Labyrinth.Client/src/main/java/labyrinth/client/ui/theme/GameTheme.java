@@ -17,33 +17,19 @@ public final class GameTheme {
      * Color palette - All colors WCAG AA compliant
      */
     public static final class Colors {
-
-        // Background colors
         public static final Color BACKGROUND_PRIMARY = new Color(26, 20, 16); // #1A1410 - Deep Brown/Black
         public static final Color BACKGROUND_SECONDARY = new Color(43, 35, 24); // #2B2318 - Dark Brown
-
-        // Surface colors (panels, cards)
         public static final Color SURFACE_PRIMARY = new Color(74, 63, 47); // #4A3F2F - Weathered Wood
         public static final Color SURFACE_SECONDARY = new Color(92, 77, 58); // #5C4D3A - Aged Wood
-
-        // Accent colors (earthy, natural)
         public static final Color ACCENT_GOLD = new Color(212, 175, 55); // #D4AF37 - Old Gold [4.8:1 contrast on SURFACE_PRIMARY]
         public static final Color ACCENT_COPPER = new Color(184, 115, 51); // #B87333 - Copper [4.5:1 contrast]
-
-        // Text colors (WCAG AA compliant)
         public static final Color TEXT_PRIMARY = new Color(245, 240, 232); // #F5F0E8 - Parchment White [12.1:1 contrast on BACKGROUND_PRIMARY]
-
-
-        // Player colors (vibrant but medieval)
         public static final Color PLAYER_RED = new Color(200, 90, 84); // #C85A54 - Rustic Red [4.6:1]
         public static final Color PLAYER_GREEN = new Color(95, 166, 127); // #5FA67F - Medieval Green [5.3:1]
         public static final Color PLAYER_BLUE = new Color(91, 127, 161); // #5B7FA1 - Knight Blue [4.8:1]
         public static final Color PLAYER_YELLOW = new Color(212, 175, 55); // #D4AF37 - Royal Gold [7.8:1]
-
-        // Overlay & Shadow colors
         public static final Color SHADOW = new Color(0, 0, 0, 150); // rgba(0, 0, 0, 0.6) - Drop shadow
         public static final Color GLOW_GOLD = new Color(212, 175, 55, 100); // rgba(212, 175, 55, 0.4) - Golden glow
-
         public static final Color PRIMARY_GOLD = new Color(218, 165, 32);
         public static final Color PRIMARY_GOLD_LIGHT = new Color(255, 215, 0);
         public static final Color PRIMARY_GOLD_DARK = new Color(184, 134, 11);
@@ -67,8 +53,7 @@ public final class GameTheme {
             return colors[index % colors.length];
         }
 
-        // ==================== DYNAMIC COLOR GETTERS ====================
-        // These methods return colors based on the current theme
+
 
         public static Color backgroundPrimary() {
             return ThemeManager.getInstance().getBackgroundPrimary();

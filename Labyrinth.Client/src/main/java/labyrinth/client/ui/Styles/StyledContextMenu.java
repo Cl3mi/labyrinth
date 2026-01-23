@@ -52,7 +52,7 @@ public class StyledContextMenu extends JPopupMenu {
         int arc = 10;
 
         // Shadow
-        g2.setColor(new Color(0, 0, 0, 80));
+        g2.setColor(ThemeEffects.withAlpha(GameTheme.Colors.shadow(), 80));
         g2.fill(new RoundRectangle2D.Float(4, 4, w - 4, h - 4, arc, arc));
 
         // Background
@@ -65,7 +65,7 @@ public class StyledContextMenu extends JPopupMenu {
         g2.draw(new RoundRectangle2D.Float(1, 1, w - 6, h - 6, arc, arc));
 
         // Inner highlight
-        g2.setColor(ThemeEffects.withAlpha(Color.WHITE, 15));
+        g2.setColor(ThemeEffects.withAlpha(GameTheme.Colors.textLight(), 15));
         g2.drawLine(10, 3, w - 14, 3);
 
         g2.dispose();
@@ -77,7 +77,7 @@ public class StyledContextMenu extends JPopupMenu {
 
             {
                 setOpaque(false);
-                setFont(FontManager.getMediumUI());
+                setFont(FontManager.getBodyMedium(Font.PLAIN));
                 setForeground(ThemeManager.getInstance().getTextPrimary());
                 setBorder(new EmptyBorder(8, 12, 8, 12));
                 setCursor(new Cursor(Cursor.HAND_CURSOR));

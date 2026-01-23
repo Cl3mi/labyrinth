@@ -3,7 +3,9 @@ package labyrinth.client.ui;
 import labyrinth.client.ui.Styles.StyledButton;
 import labyrinth.client.ui.Styles.StyledContextMenu;
 import labyrinth.client.ui.Styles.StyledTooltipManager;
+import labyrinth.client.ui.theme.FontManager;
 import labyrinth.client.ui.theme.GameTheme;
+import labyrinth.client.ui.theme.ThemeEffects;
 import labyrinth.client.ui.theme.ThemeManager;
 import labyrinth.managementclient.api.ServersApi;
 import labyrinth.managementclient.model.GameServer;
@@ -36,7 +38,7 @@ public class ServerBrowserPanel extends JPanel {
     private final JList<GameServer> serverList;
     private final JLabel statusLabel;
 
-    private final Font nameFont = new Font("SansSerif", Font.BOLD, 15);
+    private final Font nameFont = FontManager.getBodyMedium(Font.BOLD);
 
     private ScheduledExecutorService poller;
     private final DateTimeFormatter timeFmt = DateTimeFormatter.ofPattern("HH:mm:ss");
@@ -81,15 +83,13 @@ public class ServerBrowserPanel extends JPanel {
         centerPanel.setOpaque(false);
 
         JLabel headerTitle = new JLabel("Verfügbare Server");
-        Font titleFont = new Font("Serif", Font.BOLD, 28);
-        headerTitle.setFont(titleFont);
+        headerTitle.setFont(FontManager.getHeadingSmall());
         headerTitle.setForeground(GameTheme.Colors.PRIMARY_GOLD_LIGHT);
         headerTitle.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         statusLabel = new JLabel("Lade Server...");
-        Font labelFont = new Font("Serif", Font.PLAIN, 14);
-        statusLabel.setFont(labelFont);
-        statusLabel.setForeground(new Color(200, 160, 60));
+        statusLabel.setFont(FontManager.getBodyMedium(Font.PLAIN));
+        statusLabel.setForeground(GameTheme.Colors.PRIMARY_GOLD_LIGHT);
         statusLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         centerPanel.add(Box.createVerticalStrut(5));
@@ -157,7 +157,7 @@ public class ServerBrowserPanel extends JPanel {
         JPanel listCard = getListPanel();
 
         JLabel listTitle = new JLabel("📡 Verfügbare Server");
-        listTitle.setFont(new Font("Serif", Font.BOLD, 18));
+        listTitle.setFont(FontManager.getBodyLarge(Font.BOLD));
         listTitle.setForeground(GameTheme.Colors.PRIMARY_GOLD_LIGHT);
         listCard.add(listTitle, BorderLayout.NORTH);
 
@@ -185,7 +185,7 @@ public class ServerBrowserPanel extends JPanel {
                 g2.setStroke(new BasicStroke(2));
                 g2.draw(new RoundRectangle2D.Float(1, 1, getWidth() - 2, getHeight() - 2, 15, 15));
 
-                g2.setColor(new Color(255, 255, 255, 10));
+                g2.setColor(ThemeEffects.withAlpha(GameTheme.Colors.textLight(), 10));
                 g2.fill(new RoundRectangle2D.Float(2, 2, getWidth() - 4, 40, 13, 13));
 
                 g2.dispose();
@@ -306,10 +306,10 @@ public class ServerBrowserPanel extends JPanel {
         private final JPanel avatarPanel = new JPanel();
 
         private static final Color[] SERVER_COLORS = {
-                new Color(200, 70, 70),
-                new Color(70, 160, 70),
-                new Color(70, 130, 200),
-                new Color(200, 180, 70)
+                GameTheme.Colors.getPlayerColor(0),
+                GameTheme.Colors.getPlayerColor(1),
+                GameTheme.Colors.getPlayerColor(2),
+                GameTheme.Colors.getPlayerColor(3)
         };
 
         public ServerListRenderer() {
@@ -328,7 +328,7 @@ public class ServerBrowserPanel extends JPanel {
             nameLabel.setForeground(GameTheme.Colors.TEXT_LIGHT);
             nameLabel.setHorizontalAlignment(SwingConstants.CENTER);
 
-            playersLabel.setFont(new Font("SansSerif", Font.BOLD, 13));
+            playersLabel.setFont(FontManager.getBodySmall(Font.PLAIN));
             playersLabel.setForeground(GameTheme.Colors.TEXT_MUTED);
             playersLabel.setHorizontalAlignment(SwingConstants.CENTER);
 
@@ -350,7 +350,7 @@ public class ServerBrowserPanel extends JPanel {
 
             if (isSelected) {
                 setOpaque(true);
-                setBackground(new Color(255, 255, 255, 20));
+                setBackground(ThemeEffects.withAlpha(GameTheme.Colors.textLight(), 20));
             } else {
                 setOpaque(false);
             }
@@ -381,7 +381,7 @@ public class ServerBrowserPanel extends JPanel {
             int ay = (h - 46) / 2;
             g2.setColor(avatarPanel.getBackground());
             g2.fillOval(ax, ay, 46, 46);
-            g2.setColor(new Color(255, 255, 255, 60));
+            g2.setColor(ThemeEffects.withAlpha(GameTheme.Colors.textLight(), 60));
             g2.setStroke(new BasicStroke(2));
             g2.drawOval(ax, ay, 46, 46);
 

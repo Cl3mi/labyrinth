@@ -42,10 +42,8 @@ public class LabyrinthApplication {
     private OptionsPanel optionsPanel;
     private BoardPanel boardPanel;
     private GameOverPanel gameOverPanel;
-    private JPanel gamePanel;
 
     private String username;
-    private String identifierToken;
 
     private ReconnectionManager reconnectionManager;
     private AiController aiController;
@@ -673,7 +671,6 @@ public class LabyrinthApplication {
             ClientIdentityStore.saveToken(ack.getIdentifierToken());
             ClientIdentityStore.savePlayerId(ack.getPlayerId());
             ClientIdentityStore.saveUsername(username);
-            this.identifierToken = ack.getIdentifierToken();
             if (reconnectionManager != null) reconnectionManager.reset();
 
             if (aiController != null) {

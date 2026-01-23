@@ -6,6 +6,7 @@ package labyrinth.client.ui.Styles;
 
 import labyrinth.client.ui.theme.FontManager;
 import labyrinth.client.ui.theme.GameTheme;
+import labyrinth.client.ui.theme.ThemeManager;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -80,30 +81,30 @@ public class StyledButton extends JButton {
         Color bgStart, bgEnd, borderColor;
         switch (style) {
             case PRIMARY -> {
-                bgStart = interpolate(new Color(60, 100, 60), new Color(80, 130, 80), hoverProgress);
-                bgEnd = interpolate(new Color(40, 70, 40), new Color(60, 100, 60), hoverProgress);
-                borderColor = interpolate(new Color(100, 160, 100), new Color(130, 200, 130), hoverProgress);
+                bgStart = interpolate(GameTheme.Colors.PLAYER_GREEN.darker(), GameTheme.Colors.PLAYER_GREEN, hoverProgress);
+                bgEnd = interpolate(GameTheme.Colors.PLAYER_GREEN, GameTheme.Colors.PLAYER_GREEN.brighter(), hoverProgress);
+                borderColor = interpolate(GameTheme.Colors.PRIMARY_GOLD_DARK, GameTheme.Colors.PRIMARY_GOLD_LIGHT, hoverProgress);
             }
             case DANGER -> {
-                bgStart = interpolate(new Color(120, 50, 50), new Color(150, 70, 70), hoverProgress);
-                bgEnd = interpolate(new Color(80, 30, 30), new Color(100, 50, 50), hoverProgress);
-                borderColor = interpolate(new Color(180, 80, 80), new Color(220, 100, 100), hoverProgress);
+                bgStart = interpolate(GameTheme.Colors.PLAYER_RED.darker(), GameTheme.Colors.PLAYER_RED, hoverProgress);
+                bgEnd = interpolate(GameTheme.Colors.PLAYER_RED, GameTheme.Colors.PLAYER_RED.brighter(), hoverProgress);
+                borderColor = interpolate(GameTheme.Colors.PRIMARY_GOLD_DARK, GameTheme.Colors.PRIMARY_GOLD_LIGHT, hoverProgress);
             }
             default -> {
-                bgStart = interpolate(GameTheme.Colors.STONE_DARK, new Color(65, 55, 45), hoverProgress);
-                bgEnd = interpolate(GameTheme.Colors.STONE_MEDIUM, new Color(90, 75, 60), hoverProgress);
+                bgStart = interpolate(GameTheme.Colors.STONE_DARK, GameTheme.Colors.STONE_DARK.darker(), hoverProgress);
+                bgEnd = interpolate(GameTheme.Colors.STONE_MEDIUM, GameTheme.Colors.STONE_MEDIUM.brighter(), hoverProgress);
                 borderColor = interpolate(GameTheme.Colors.PRIMARY_GOLD_DARK, GameTheme.Colors.PRIMARY_GOLD_LIGHT, hoverProgress);
             }
         }
 
         if (!isEnabled()) {
-            bgStart = new Color(60, 60, 60);
-            bgEnd = new Color(50, 50, 50);
-            borderColor = new Color(80, 80, 80);
+            bgStart = GameTheme.Colors.STONE_MEDIUM.darker();
+            bgEnd = GameTheme.Colors.STONE_MEDIUM;
+            borderColor = GameTheme.Colors.STONE_DARK;
         }
 
         // Shadow
-        g2.setColor(new Color(0, 0, 0, 60));
+        g2.setColor(ThemeManager.getInstance().getShadow());
         g2.fill(new RoundRectangle2D.Float(3, 4, w - 6, h - 6, arc, arc));
 
         // Background
@@ -118,11 +119,9 @@ public class StyledButton extends JButton {
         // Focus indicator - glowing outline
         if (isFocused && isEnabled()) {
             Color focusColor = GameTheme.Colors.ACCENT_GOLD;
-            // Outer glow
             g2.setColor(new Color(focusColor.getRed(), focusColor.getGreen(), focusColor.getBlue(), 80));
             g2.setStroke(new BasicStroke(4f));
             g2.draw(new RoundRectangle2D.Float(-1, -1, w + 1, h + 1, arc + 4, arc + 4));
-            // Inner bright ring
             g2.setColor(new Color(focusColor.getRed(), focusColor.getGreen(), focusColor.getBlue(), 200));
             g2.setStroke(new BasicStroke(2f));
             g2.draw(new RoundRectangle2D.Float(0, 0, w - 1, h - 1, arc + 2, arc + 2));
@@ -134,7 +133,7 @@ public class StyledButton extends JButton {
         int textX = (w - fm.stringWidth(getText())) / 2;
         int textY = (h + fm.getAscent() - fm.getDescent()) / 2;
 
-        g2.setColor(isEnabled() ? getForeground() : new Color(120, 120, 120));
+        g2.setColor(isEnabled() ? getForeground() : GameTheme.Colors.TEXT_MUTED);
         g2.drawString(getText(), textX, textY);
 
         g2.dispose();
@@ -148,5 +147,3 @@ public class StyledButton extends JButton {
         );
     }
 }
-
-

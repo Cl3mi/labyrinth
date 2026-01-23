@@ -81,8 +81,8 @@ public class StyledDialog extends JDialog {
 
     public enum MessageType {
         INFO("", GameTheme.Colors.ACCENT_GOLD),       // ASCII fallback
-        WARNING("!", new Color(241, 196, 15)),         // ASCII fallback
-        ERROR("X", new Color(231, 76, 60));            // ASCII fallback
+        WARNING("!", GameTheme.Colors.PRIMARY_GOLD_LIGHT),
+        ERROR("X", GameTheme.Colors.PLAYER_RED);            // ASCII fallback
 
         final String icon;
         final Color color;
@@ -200,12 +200,12 @@ public class StyledDialog extends JDialog {
         titlePanel.setOpaque(false);
 
         JLabel iconLabel = new JLabel(type.icon);
-        iconLabel.setFont(FontManager.getLargeDisplay());
+        iconLabel.setFont(FontManager.getHeadingMedium());
         iconLabel.setForeground(type.color);
         titlePanel.add(iconLabel);
 
         JLabel titleLabel = new JLabel(title);
-        titleLabel.setFont(FontManager.getMediumDisplay());
+        titleLabel.setFont(FontManager.getHeadingSmall());
         titleLabel.setForeground(type.color);
         titlePanel.add(titleLabel);
 
@@ -213,7 +213,7 @@ public class StyledDialog extends JDialog {
 
         // Message
         JLabel messageLabel = new JLabel("<html><center>" + message.replace("\n", "<br>") + "</center></html>");
-        messageLabel.setFont(FontManager.getMediumUI());
+        messageLabel.setFont(FontManager.getBodyMedium(Font.PLAIN));
         messageLabel.setForeground(ThemeManager.getInstance().getTextPrimary());
         messageLabel.setHorizontalAlignment(SwingConstants.CENTER);
         panel.add(messageLabel, BorderLayout.CENTER);
@@ -265,7 +265,7 @@ public class StyledDialog extends JDialog {
                 setContentAreaFilled(false);
                 setBorderPainted(false);
                 setFocusPainted(false);
-                setFont(FontManager.getMediumUIBold());
+                setFont(FontManager.getBodyMedium(Font.BOLD));
                 setCursor(new Cursor(Cursor.HAND_CURSOR));
                 setPreferredSize(new Dimension(100, 40));
 

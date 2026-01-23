@@ -8,6 +8,7 @@ import labyrinth.client.ui.Styles.StyledPlayerCardRenderer;
 import labyrinth.client.ui.Styles.StyledTooltipManager;
 import labyrinth.client.ui.theme.FontManager;
 import labyrinth.client.ui.theme.GameTheme;
+import labyrinth.client.ui.theme.ThemeEffects;
 import labyrinth.client.ui.theme.ThemeManager;
 import labyrinth.contracts.models.BoardSize;
 import labyrinth.contracts.models.LobbyStateEventPayload;
@@ -130,13 +131,13 @@ public class MultiplayerLobbyPanel extends JPanel {
 
 
         var lobbyTitleLabel = new JLabel("Multiplayer Lobby");
-        lobbyTitleLabel.setFont(FontManager.titleFont);
+        lobbyTitleLabel.setFont(FontManager.getHeadingMedium());
         lobbyTitleLabel.setForeground(GameTheme.Colors.PRIMARY_GOLD_LIGHT);
         lobbyTitleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         connectionLabel = new JLabel("Verbindung wird aufgebaut...");
-        connectionLabel.setFont(FontManager.labelFont);
-        connectionLabel.setForeground(new Color(200, 160, 60));
+        connectionLabel.setFont(FontManager.getBodyMedium(Font.PLAIN));
+        connectionLabel.setForeground(GameTheme.Colors.PRIMARY_GOLD_LIGHT);
         connectionLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         centerPanel.add(Box.createVerticalStrut(5));
@@ -196,7 +197,7 @@ public class MultiplayerLobbyPanel extends JPanel {
                 g2.draw(new RoundRectangle2D.Float(1, 1, getWidth() - 2, getHeight() - 2, 15, 15));
 
                 // Inner glow
-                g2.setColor(new Color(255, 255, 255, 10));
+                g2.setColor(ThemeEffects.withAlpha(GameTheme.Colors.textLight(), 10));
                 g2.fill(new RoundRectangle2D.Float(2, 2, getWidth() - 4, 40, 13, 13));
 
                 g2.dispose();
@@ -209,7 +210,7 @@ public class MultiplayerLobbyPanel extends JPanel {
 
         // title
         JLabel titleLabel = new JLabel("⚙ Spiel-Einstellungen");
-        titleLabel.setFont(new Font("Serif", Font.BOLD, 18));
+        titleLabel.setFont(FontManager.getBodyLarge(Font.BOLD));
         titleLabel.setForeground(GameTheme.Colors.PRIMARY_GOLD_LIGHT);
         card.add(titleLabel, BorderLayout.NORTH);
 
@@ -317,7 +318,7 @@ public class MultiplayerLobbyPanel extends JPanel {
         gbc.gridx = 0; gbc.gridy = 6; gbc.gridwidth = 2;
         gbc.insets = new Insets(15, 5, 5, 5);
         JLabel hintLabel = new JLabel("Nur der Admin kann Einstellungen ändern");
-        hintLabel.setFont(new Font("SansSerif", Font.ITALIC, 11));
+        hintLabel.setFont(FontManager.getBodySmall(Font.PLAIN));
         hintLabel.setForeground(GameTheme.Colors.TEXT_MUTED);
         settingsGrid.add(hintLabel, gbc);
 
@@ -340,7 +341,7 @@ public class MultiplayerLobbyPanel extends JPanel {
                 g2.setStroke(new BasicStroke(2));
                 g2.draw(new RoundRectangle2D.Float(1, 1, getWidth() - 2, getHeight() - 2, 15, 15));
 
-                g2.setColor(new Color(255, 255, 255, 10));
+                g2.setColor(ThemeEffects.withAlpha(GameTheme.Colors.textLight(), 10));
                 g2.fill(new RoundRectangle2D.Float(2, 2, getWidth() - 4, 40, 13, 13));
 
                 g2.dispose();
@@ -353,7 +354,7 @@ public class MultiplayerLobbyPanel extends JPanel {
 
         // title
         JLabel titleLabel = new JLabel("👥 Spieler in der Lobby");
-        titleLabel.setFont(new Font("Serif", Font.BOLD, 18));
+        titleLabel.setFont(FontManager.getBodyLarge(Font.BOLD));
         titleLabel.setForeground(GameTheme.Colors.PRIMARY_GOLD_LIGHT);
         card.add(titleLabel, BorderLayout.NORTH);
 
@@ -416,7 +417,7 @@ public class MultiplayerLobbyPanel extends JPanel {
 
     private JComboBox<String> createStyledComboBox() {
         JComboBox<String> combo = new JComboBox<>();
-        combo.setFont(new Font("SansSerif", Font.PLAIN, 13));
+        combo.setFont(FontManager.getBodySmall(Font.PLAIN));
         combo.setBackground(GameTheme.Colors.STONE_MEDIUM);
         combo.setForeground(GameTheme.Colors.TEXT_LIGHT);
         combo.setPreferredSize(new Dimension(150, 30));
@@ -438,7 +439,7 @@ public class MultiplayerLobbyPanel extends JPanel {
 
     private JTextField createStyledTextField(String defaultText) {
         JTextField textField = new JTextField(defaultText, 15);
-        textField.setFont(new Font("SansSerif", Font.PLAIN, 13));
+        textField.setFont(FontManager.getBodySmall(Font.PLAIN));
         textField.setBackground(GameTheme.Colors.STONE_MEDIUM);
         textField.setForeground(GameTheme.Colors.TEXT_LIGHT);
         textField.setCaretColor(GameTheme.Colors.TEXT_LIGHT);
@@ -615,9 +616,7 @@ public class MultiplayerLobbyPanel extends JPanel {
         }
 
         // Overlay
-        g2.setColor(ThemeManager.getInstance().isDarkMode()
-            ? new Color(0, 0, 0, 80)
-            : new Color(0, 0, 0, 30));
+        g2.setColor(ThemeManager.getInstance().getShadow());
         g2.fillRect(0, 0, w, h);
 
         // Vignette
@@ -635,7 +634,7 @@ public class MultiplayerLobbyPanel extends JPanel {
         RadialGradientPaint vignette = new RadialGradientPaint(
                 w / 2f, h / 2f, radius,
                 new float[]{0.3f, 0.7f, 1.0f},
-                new Color[]{new Color(0, 0, 0, 0), new Color(0, 0, 0, 50), new Color(0, 0, 0, 130)}
+                new Color[]{new Color(0, 0, 0, 0), ThemeEffects.withAlpha(GameTheme.Colors.SHADOW, 50), ThemeEffects.withAlpha(GameTheme.Colors.SHADOW, 130)}
         );
         g2.setPaint(vignette);
         g2.fillRect(0, 0, w, h);
@@ -643,7 +642,8 @@ public class MultiplayerLobbyPanel extends JPanel {
 
     private void drawDecorativeCorners(Graphics2D g2, int w, int h) {
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-        g2.setColor(new Color(218, 165, 32, 50));
+        Color gold = GameTheme.Colors.PRIMARY_GOLD_LIGHT;
+        g2.setColor(new Color(gold.getRed(), gold.getGreen(), gold.getBlue(), 50));
         g2.setStroke(new BasicStroke(2f));
 
         int size = 50;
@@ -666,3 +666,4 @@ public class MultiplayerLobbyPanel extends JPanel {
 
 
 }
+
