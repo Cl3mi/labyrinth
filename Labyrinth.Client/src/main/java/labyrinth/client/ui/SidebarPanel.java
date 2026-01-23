@@ -169,50 +169,6 @@ public class SidebarPanel extends JPanel {
         }
     }
 
-    // Update methods called by parent
-    public void updateGameState(Board board, Player currentPlayer, List<Player> players) {
-        this.board = board;
-        this.currentPlayer = currentPlayer;
-        this.players = players;
-        repaint();
-    }
-
-    public void setTimers(OffsetDateTime gameEndTime, OffsetDateTime turnEndTime) {
-        this.gameEndTime = gameEndTime;
-        this.turnEndTime = turnEndTime;
-    }
-
-    public void setTurnState(labyrinth.contracts.models.TurnState turnState) {
-        this.currentTurnState = turnState;
-        repaint();
-    }
-
-    public void setTreasureImages(Map<String, BufferedImage> images) {
-        this.treasureImages = images;
-    }
-
-    public void setAiModeEnabled(boolean enabled) {
-        this.aiModeEnabled = enabled;
-        repaint();
-    }
-
-    public void setAiThinking(boolean thinking) {
-        this.aiThinking = thinking;
-        repaint();
-    }
-
-    public void setActiveBonusMode(BonusType bonus) {
-        this.activeBonusMode = bonus;
-        repaint();
-    }
-
-    public void setOnAiToggleRequested(Runnable callback) {
-        this.onAiToggleRequested = callback;
-    }
-
-    public void setOnBonusClicked(Consumer<BonusType> callback) {
-        this.onBonusClicked = callback;
-    }
 
     public void dispose() {
         countdownTimer.stop();

@@ -17,11 +17,10 @@ public class GameClient extends WebSocketClient {
 
     private final ObjectMapper mapper;
 
-    // Connection state management
     private volatile ConnectionState connectionState = ConnectionState.DISCONNECTED;
     private volatile boolean intentionalDisconnect = false;
 
-    // Callbacks
+
     @Setter private Consumer<ConnectAckEventPayload> onConnectAck;
     @Setter private Consumer<LobbyStateEventPayload> onLobbyState;
     @Setter private Consumer<GameStateEventPayload> onGameStarted;
@@ -35,7 +34,6 @@ public class GameClient extends WebSocketClient {
     @Setter private Consumer<String> onErrorMessage;
     @Setter private Runnable onOpenHook;
 
-    // Reconnection callbacks
     @Setter private Runnable onConnectionLost;        // Triggered on unintentional disconnect
     @Setter private Consumer<String> onStatusUpdate;  // Status messages for UI
 
@@ -47,19 +45,16 @@ public class GameClient extends WebSocketClient {
     }
 
     @Override
-    public void onOpen(ServerHandshake handshakedata) {
+    public void onOpen(ServerHandshake handShake) {
         System.out.println("WebSocket connected");
 
-        // Update connection state
         connectionState = ConnectionState.CONNECTED;
         intentionalDisconnect = false; // Reset flag on successful connection
 
-        // Notify UI
         if (onStatusUpdate != null) {
             runOnUiThread(() -> onStatusUpdate.accept("Verbunden mit Server"));
         }
 
-        // Fire original hook for backward compatibility
         if (onOpenHook != null) {
             runOnUiThread(onOpenHook);
         }
@@ -89,7 +84,6 @@ public class GameClient extends WebSocketClient {
                 return;
             }
 
-            // Envelope support {type, payload}, fallback root
             JsonNode payloadNode = root.get("payload");
             if (payloadNode == null || payloadNode.isNull()) payloadNode = root;
 
@@ -457,30 +451,15 @@ public class GameClient extends WebSocketClient {
         connectionState = ConnectionState.DISCONNECTING;
 
         try {
-            // Send DISCONNECT command first
             sendDisconnect();
-
-            // Brief delay to allow message to flush (50ms should be enough)
             Thread.sleep(50);
-
-            // Close with NORMAL code (1000) to signal intentional disconnect
             closeConnection(1000, "Client disconnecting normally");
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            // Force close anyway
             closeConnection(1000, "Client disconnecting normally");
         }
     }
 
-    public void disconnectLogicalOnly() {
-        try {
-            if (isOpen()) {
-                sendDisconnect();   // NUR Command, KEIN close()
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
 
     /**
      * Attempts to reconnect to the server using stored credentials.
@@ -497,17 +476,13 @@ public class GameClient extends WebSocketClient {
 
         try {
             connectionState = ConnectionState.RECONNECTING;
-            intentionalDisconnect = false; // This is an intentional reconnect, not a disconnect
+            intentionalDisconnect = false;
 
-            // Close existing connection if any
             if (!isClosed()) {
                 closeBlocking();
             }
 
-            // Reconnect to server
-            reconnectBlocking(); // Blocking call to ensure socket is ready
-
-            // Send reconnect command
+            reconnectBlocking();
             sendReconnect(identifierToken);
             return true;
         } catch (Exception e) {
@@ -557,21 +532,19 @@ public class GameClient extends WebSocketClient {
         ReadyState rs = getReadyState();
 
         if (rs == ReadyState.OPEN) {
-            return; // alles gut
+            return;
         }
 
         if (rs == ReadyState.NOT_YET_CONNECTED) {
-            connect(); // nur 1x pro Instanz erlaubt
+            connect();
             return;
         }
 
         if (rs == ReadyState.CLOSED) {
-            reconnect(); // erneuter Verbindungsaufbau nach close
+            reconnect();
             return;
         }
 
-        // rs == CLOSING
-        // Robust: erst sauber zu Ende schließen, dann reconnect
         try {
             closeBlocking();
         } catch (InterruptedException e) {

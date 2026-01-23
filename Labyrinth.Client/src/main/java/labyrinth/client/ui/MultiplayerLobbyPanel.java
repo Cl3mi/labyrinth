@@ -19,10 +19,7 @@ import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.awt.geom.RoundRectangle2D;
 
-/**
- * Multiplayer-Lobby-Panel für das Labyrinth-Spiel.
- * Redesigned mit mystischem Labyrinth-Thema passend zum MainMenuPanel.
- */
+
 public class MultiplayerLobbyPanel extends JPanel {
 
     @Setter
@@ -34,39 +31,29 @@ public class MultiplayerLobbyPanel extends JPanel {
     @Setter
     private String localUsername;
 
-    // UI-Komponenten
     private JLabel connectionLabel;
-    private JLabel lobbyTitleLabel;
     private DefaultListModel<String> playerListModel;
-    private JList<String> playerList;
-    private JPanel settingsPanel;
     private StyledButton startButton;
     private StyledButton cancelReconnectButton;
-    private StyledButton backButton;
-
-    // Hintergrund
     private Image backgroundImage;
 
-    // Letzter Lobby-State
     private volatile LobbyStateEventPayload lastLobbyState;
 
-    // Game configuration state (defaults from AsyncAPI spec)
+
     private int configBoardSize = 7;
-    private int configTreasuresToWin = 6;  // 24 total / 4 players = 6 per player
+    private int configTreasuresToWin = 6;
     private int configBonusCount = 0;
     private int configTurnTimeSeconds = 30;
-    private int configGameDurationMinutes = 60;  // AsyncAPI default: 3600s = 60 min
+    private int configGameDurationMinutes = 60;
     private String configUsername = "Player";
 
-    // UI Components für Settings
     private JTextField usernameField;
     private JComboBox<String> boardSizeCombo;
     private JComboBox<String> treasureCombo;
     private JComboBox<String> bonusCombo;
-    //private JComboBox<String> turnTimeCombo;
     private JComboBox<String> durationCombo;
 
-    // Callbacks
+    @Setter
     private Runnable onBackToMenu;
 
 
@@ -78,15 +65,11 @@ public class MultiplayerLobbyPanel extends JPanel {
         loadBackgroundImage();
         setupUI();
 
-        // Theme-Änderungen überwachen
         ThemeManager.getInstance().addThemeChangeListener(() -> {
             loadBackgroundImage();
             repaint();
         });
     }
-
-
-
 
 
     private void loadBackgroundImage() {
@@ -107,13 +90,13 @@ public class MultiplayerLobbyPanel extends JPanel {
         setLayout(new BorderLayout(0, 15));
         setBorder(new EmptyBorder(20, 30, 20, 30));
 
-        // Header
+        // header
         add(createHeader(), BorderLayout.NORTH);
 
-        // Center - Settings und Spielerliste
+        // center
         add(createCenterPanel(), BorderLayout.CENTER);
 
-        // Footer - Buttons
+        // footer
         add(createFooter(), BorderLayout.SOUTH);
     }
 
@@ -121,8 +104,8 @@ public class MultiplayerLobbyPanel extends JPanel {
         JPanel header = new JPanel(new BorderLayout(20, 0));
         header.setOpaque(false);
 
-        // Zurück-Button
-        backButton = new StyledButton("Zurück", StyledButton.Style.SECONDARY);
+        // back button
+        var backButton = new StyledButton("Zurück", StyledButton.Style.SECONDARY);
         backButton.setPreferredSize(new Dimension(140, 40));
         backButton.addActionListener(e -> {
             boolean confirmed = StyledDialog.showConfirm(this,
@@ -140,12 +123,13 @@ public class MultiplayerLobbyPanel extends JPanel {
         leftPanel.add(backButton);
         header.add(leftPanel, BorderLayout.WEST);
 
-        // Titel und Status
+        // title
         JPanel centerPanel = new JPanel();
         centerPanel.setLayout(new BoxLayout(centerPanel, BoxLayout.Y_AXIS));
         centerPanel.setOpaque(false);
 
-        lobbyTitleLabel = new JLabel("Multiplayer Lobby");
+
+        var lobbyTitleLabel = new JLabel("Multiplayer Lobby");
         lobbyTitleLabel.setFont(FontManager.titleFont);
         lobbyTitleLabel.setForeground(GameTheme.Colors.PRIMARY_GOLD_LIGHT);
         lobbyTitleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
@@ -162,7 +146,7 @@ public class MultiplayerLobbyPanel extends JPanel {
 
         header.add(centerPanel, BorderLayout.CENTER);
 
-        // Platzhalter rechts
+        // placeholder right
         JPanel rightPanel = new JPanel();
         rightPanel.setOpaque(false);
         rightPanel.setPreferredSize(new Dimension(140, 40));
@@ -179,15 +163,15 @@ public class MultiplayerLobbyPanel extends JPanel {
         gbc.fill = GridBagConstraints.BOTH;
         gbc.insets = new Insets(10, 10, 10, 10);
 
-        // Settings Card (links)
+        // Settings Card
         gbc.gridx = 0;
         gbc.gridy = 0;
         gbc.weightx = 0.4;
         gbc.weighty = 1.0;
-        settingsPanel = createSettingsCard();
+        var settingsPanel = createSettingsCard();
         center.add(settingsPanel, gbc);
 
-        // Player List Card (rechts)
+        // Player List Card
         gbc.gridx = 1;
         gbc.weightx = 0.6;
         center.add(createPlayerListCard(), gbc);
@@ -196,7 +180,7 @@ public class MultiplayerLobbyPanel extends JPanel {
     }
 
     private JPanel createSettingsCard() {
-        JPanel card = new JPanel() {
+        var card = new JPanel() {
             @Override
             protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g.create();
@@ -223,13 +207,13 @@ public class MultiplayerLobbyPanel extends JPanel {
         card.setLayout(new BorderLayout(0, 15));
         card.setBorder(new EmptyBorder(20, 25, 20, 25));
 
-        // Titel
+        // title
         JLabel titleLabel = new JLabel("⚙ Spiel-Einstellungen");
         titleLabel.setFont(new Font("Serif", Font.BOLD, 18));
         titleLabel.setForeground(GameTheme.Colors.PRIMARY_GOLD_LIGHT);
         card.add(titleLabel, BorderLayout.NORTH);
 
-        // Settings Grid
+        // settings
         JPanel settingsGrid = new JPanel(new GridBagLayout());
         settingsGrid.setOpaque(false);
 
@@ -238,7 +222,7 @@ public class MultiplayerLobbyPanel extends JPanel {
         gbc.insets = new Insets(8, 5, 8, 5);
         gbc.anchor = GridBagConstraints.WEST;
 
-        // Spielername (nur Anzeige - wird im Hauptmenü festgelegt)
+        // username
         gbc.gridx = 0; gbc.gridy = 0; gbc.weightx = 0.4;
         settingsGrid.add(createStyledLabel("Spielername:"), gbc);
 
@@ -248,7 +232,7 @@ public class MultiplayerLobbyPanel extends JPanel {
         StyledTooltipManager.setTooltip(usernameField, "Spielername", "Dein Anzeigename im Spiel (wird im Hauptmenü festgelegt)");
         settingsGrid.add(usernameField, gbc);
 
-        // Spielfeldgröße
+        // game board size
         gbc.gridx = 0; gbc.gridy = 1; gbc.weightx = 0.4;
         settingsGrid.add(createStyledLabel("Spielfeldgröße:"), gbc);
 
@@ -267,7 +251,7 @@ public class MultiplayerLobbyPanel extends JPanel {
         StyledTooltipManager.setTooltip(boardSizeCombo, "Spielfeldgröße", "Größe des Spielfelds (Standardwert: 7×7)");
         settingsGrid.add(boardSizeCombo, gbc);
 
-        // Schätze
+        // treasures
         gbc.gridx = 0; gbc.gridy = 2;
         settingsGrid.add(createStyledLabel("Schätze pro Spieler:"), gbc);
 
@@ -286,7 +270,7 @@ public class MultiplayerLobbyPanel extends JPanel {
         StyledTooltipManager.setTooltip(treasureCombo, "Schätze", "Anzahl der Schätze, die jeder Spieler sammeln muss");
         settingsGrid.add(treasureCombo, gbc);
 
-        // Bonus-Anzahl
+        // bonus count
         gbc.gridx = 0; gbc.gridy = 3;
         settingsGrid.add(createStyledLabel("Bonus-Anzahl:"), gbc);
 
@@ -304,35 +288,13 @@ public class MultiplayerLobbyPanel extends JPanel {
         });
         StyledTooltipManager.setTooltip(bonusCombo, "Bonus", "Gesamtanzahl der Boni im Spiel");
         settingsGrid.add(bonusCombo, gbc);
-/*
-        // Runden-Zeit
-        gbc.gridx = 0; gbc.gridy = 4;
-        settingsGrid.add(createStyledLabel("Runden-Zeit:"), gbc);
 
-        gbc.gridx = 1;
-        turnTimeCombo = createStyledComboBox();
-        turnTimeCombo.addItem("15 Sekunden");
-        turnTimeCombo.addItem("30 Sekunden");
-        turnTimeCombo.addItem("45 Sekunden");
-        turnTimeCombo.addItem("60 Sekunden");
-        turnTimeCombo.addItem("90 Sekunden");
-        turnTimeCombo.addItem("120 Sekunden");
-        turnTimeCombo.setSelectedItem("30 Sekunden");
-        turnTimeCombo.addActionListener(e -> {
-            String selected = (String) turnTimeCombo.getSelectedItem();
-            if (selected != null) {
-                configTurnTimeSeconds = Integer.parseInt(selected.split(" ")[0]);
-            }
-        });
-        StyledTooltipManager.setTooltip(turnTimeCombo, "Runden-Zeit", "Zeitlimit pro Spielzug");
-        settingsGrid.add(turnTimeCombo, gbc);
-*/
-        // Spiel-Dauer
+
+        // game duration
         gbc.gridx = 0; gbc.gridy = 5;
         settingsGrid.add(createStyledLabel("Spiel-Dauer:"), gbc);
 
         gbc.gridx = 1;
-
 
         durationCombo = createStyledComboBox();
         durationCombo.addItem("10 Minuten");
@@ -351,9 +313,7 @@ public class MultiplayerLobbyPanel extends JPanel {
         StyledTooltipManager.setTooltip(durationCombo, "Spiel-Dauer", "Maximale Gesamtdauer des Spiels");
         settingsGrid.add(durationCombo, gbc);
 
-
-
-        // Hinweis
+        // hint
         gbc.gridx = 0; gbc.gridy = 6; gbc.gridwidth = 2;
         gbc.insets = new Insets(15, 5, 5, 5);
         JLabel hintLabel = new JLabel("Nur der Admin kann Einstellungen ändern");
@@ -367,7 +327,7 @@ public class MultiplayerLobbyPanel extends JPanel {
     }
 
     private JPanel createPlayerListCard() {
-        JPanel card = new JPanel() {
+        var card = new JPanel() {
             @Override
             protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g.create();
@@ -391,7 +351,7 @@ public class MultiplayerLobbyPanel extends JPanel {
         card.setLayout(new BorderLayout(0, 15));
         card.setBorder(new EmptyBorder(20, 25, 20, 25));
 
-        // Titel
+        // title
         JLabel titleLabel = new JLabel("👥 Spieler in der Lobby");
         titleLabel.setFont(new Font("Serif", Font.BOLD, 18));
         titleLabel.setForeground(GameTheme.Colors.PRIMARY_GOLD_LIGHT);
@@ -399,7 +359,7 @@ public class MultiplayerLobbyPanel extends JPanel {
 
         // Player List
         playerListModel = new DefaultListModel<>();
-        playerList = new JList<>(playerListModel);
+        var playerList = new JList<>(playerListModel);
         playerList.setCellRenderer(new StyledPlayerCardRenderer());
         playerList.setOpaque(false);
         playerList.setBackground(new Color(0, 0, 0, 0));
@@ -446,9 +406,6 @@ public class MultiplayerLobbyPanel extends JPanel {
         return footer;
     }
 
-    // --------------------------------------------------------------------------------
-    // Styled Components
-    // --------------------------------------------------------------------------------
 
     private JLabel createStyledLabel(String text) {
         JLabel label = new JLabel(text);
@@ -464,7 +421,6 @@ public class MultiplayerLobbyPanel extends JPanel {
         combo.setForeground(GameTheme.Colors.TEXT_LIGHT);
         combo.setPreferredSize(new Dimension(150, 30));
 
-        // Custom Renderer für plattformübergreifende Konsistenz (Mac/Linux)
         combo.setRenderer(new DefaultListCellRenderer() {
             @Override
             public Component getListCellRendererComponent(JList<?> list, Object value,
@@ -494,13 +450,6 @@ public class MultiplayerLobbyPanel extends JPanel {
         return textField;
     }
 
-    // --------------------------------------------------------------------------------
-    // Public API
-    // --------------------------------------------------------------------------------
-
-    public void setOnBackToMenu(Runnable callback) {
-        this.onBackToMenu = callback;
-    }
 
     public void setConnected(boolean connected) {
         SwingUtilities.invokeLater(() -> {
@@ -524,23 +473,6 @@ public class MultiplayerLobbyPanel extends JPanel {
         });
     }
 
-    public void setReconnecting(boolean reconnecting) {
-        SwingUtilities.invokeLater(() -> {
-            cancelReconnectButton.setVisible(reconnecting);
-            startButton.setVisible(!reconnecting);
-        });
-    }
-
-    /**
-     * Gibt den im Settings-Panel eingegebenen Username zurück.
-     */
-    public String getMultiplayerUsername() {
-        return configUsername;
-    }
-
-    /**
-     * Setzt den Username im Settings-Panel.
-     */
     public void setMultiplayerUsername(String username) {
         if (username != null && !username.isBlank()) {
             this.configUsername = username;
@@ -613,7 +545,6 @@ public class MultiplayerLobbyPanel extends JPanel {
         if (boardSizeCombo != null) boardSizeCombo.setEnabled(enabled);
         if (treasureCombo != null) treasureCombo.setEnabled(enabled);
         if (bonusCombo != null) bonusCombo.setEnabled(enabled);
-        //if (turnTimeCombo != null) turnTimeCombo.setEnabled(enabled);
         if (durationCombo != null) durationCombo.setEnabled(enabled);
     }
 
@@ -621,7 +552,6 @@ public class MultiplayerLobbyPanel extends JPanel {
         int playerCount = lastLobbyState != null && lastLobbyState.getPlayers() != null
                 ? lastLobbyState.getPlayers().length : 0;
 
-        // Zu wenig Spieler - nur Info-Dialog anzeigen
         if (playerCount < 2) {
             StyledDialog.showMessage(this, "Zu wenig Spieler", "Es müssen mindestens zwei Spieler in der Lobby sein, um ein Spiel zu starten.");
             return;
@@ -664,9 +594,6 @@ public class MultiplayerLobbyPanel extends JPanel {
         });
     }
 
-    // --------------------------------------------------------------------------------
-    // Hintergrund zeichnen
-    // --------------------------------------------------------------------------------
 
     @Override
     protected void paintComponent(Graphics g) {

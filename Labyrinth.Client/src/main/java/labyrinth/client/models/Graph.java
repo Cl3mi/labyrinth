@@ -5,10 +5,7 @@ import labyrinth.contracts.models.Tile;
 
 import java.util.*;
 
-/**
- * Repräsentiert die Konnektivität des Labyrinth-Bretts als Graph.
- * Arbeitet mit contracts.Tile und deren entrances[].
- */
+
 public class Graph {
 
     private final Map<Tile, Set<Tile>> adjacencyList;
@@ -25,13 +22,6 @@ public class Graph {
         adjacencyList.clear();
     }
 
-    /**
-     * Verbindet zwei Tiles, wenn sie über ihre Entrances in der angegebenen Richtung verbunden sind.
-     *
-     * @param tile1     Starttile
-     * @param tile2     Nachbartile
-     * @param direction Richtung von tile1 nach tile2
-     */
     public void connect(Tile tile1, Tile tile2, Direction direction) {
         if (tile1 == null || tile2 == null) return;
 
@@ -67,5 +57,4 @@ public class Graph {
         }
         return false;
     }
-
 }

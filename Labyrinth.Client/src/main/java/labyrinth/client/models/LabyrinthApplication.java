@@ -554,15 +554,12 @@ public class LabyrinthApplication {
             }
         }
 
-        // Token löschen, da der Server das Spiel zurücksetzt und der Token ungültig wird
         ClientIdentityStore.clearToken();
 
-        // Lokale Login-Flags zurücksetzen, damit beim nächsten Start wieder CONNECT/RECONNECT geschickt wird
         loginSent = false;
         connectAckReceived = false;
         pendingMultiplayerJoin = false;
 
-        // BoardPanel entfernen und zurücksetzen, damit beim nächsten Spiel ein frisches Panel erstellt wird
         if (boardPanel != null) {
             mainPanel.remove(boardPanel);
             boardPanel = null;
@@ -583,53 +580,18 @@ public class LabyrinthApplication {
         System.out.println("[" + PROFILE + "] Returned to lobby");
     }
 
-    private void exitToMainMenu() {
-        System.out.println("[" + PROFILE + "] exitToMainMenu() - Returning to main menu");
-        exitGameCleanup();
-
-        // Disconnect from server and reconnect to reset game state
-        if (client != null && client.isOpen()) {
-            System.out.println("[" + PROFILE + "] Disconnecting to reset game state...");
-            client.disconnectCleanly();
-
-            // Reconnect after a short delay
-            new Thread(() -> {
-                try {
-                    Thread.sleep(500);
-                    SwingUtilities.invokeLater(() -> {
-                        System.out.println("[" + PROFILE + "] Reconnecting to server...");
-                        connectToServer();
-                    });
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                }
-            }).start();
-        } else {
-            // Not connected - just show main menu
-            SwingUtilities.invokeLater(() -> {
-                lobbyPanel.setConnected(false);
-                lobbyPanel.setStatusText("Nicht verbunden", new Color(170, 120, 0));
-            });
-        }
-
-        showMainMenu();
-        System.out.println("[" + PROFILE + "] Returned to main menu");
-    }
 
     private void exitGameCleanup() {
-        // Cleanup game over panel
         if (gameOverPanel != null) {
             gameOverPanel.cleanup();
         }
 
-        // Reset game state flags
         gameViewShown = false;
         isGameOver = false;
         pendingMultiplayerJoin = false;
         isGameOverCleanup = false;
-        exitedToLobby = true;  // Block GAME_STATE_UPDATE from showing game again
+        exitedToLobby = true;
 
-        // BoardPanel entfernen und zurücksetzen
         if (boardPanel != null) {
             mainPanel.remove(boardPanel);
             boardPanel = null;
@@ -639,35 +601,30 @@ public class LabyrinthApplication {
     private void startNewRound() {
         System.out.println("[" + PROFILE + "] startNewRound() - Starting new game");
 
-        // Cleanup game over panel
         if (gameOverPanel != null) {
             gameOverPanel.cleanup();
         }
 
-        // Reset game state flags BEFORE sending start command
         gameViewShown = false;
         isGameOver = false;
         pendingMultiplayerJoin = false;
         isGameOverCleanup = false;
-        exitedToLobby = false;  // Allow GAME_STARTED event to be processed
+        exitedToLobby = false;
 
-        // BoardPanel entfernen und zurücksetzen
         if (boardPanel != null) {
             mainPanel.remove(boardPanel);
             boardPanel = null;
         }
 
-        // Send START_GAME command with default settings
         if (client != null && client.isOpen()) {
             try {
                 labyrinth.contracts.models.BoardSize bs = new labyrinth.contracts.models.BoardSize();
                 bs.setRows(7);
                 bs.setCols(7);
 
-                // Use default game settings with bonuses
                 int treasuresToWin = 4;
-                int bonusCount = 4;  // Include bonuses in new round
-                int gameDurationSeconds = 30 * 60; // 30 minutes
+                int bonusCount = 4;
+                int gameDurationSeconds = 30 * 60;
                 int turnTimeSeconds = 30;
 
                 System.out.println("[" + PROFILE + "] Sending START_GAME for new round with " + bonusCount + " bonuses");
@@ -719,7 +676,6 @@ public class LabyrinthApplication {
             this.identifierToken = ack.getIdentifierToken();
             if (reconnectionManager != null) reconnectionManager.reset();
 
-            // Set local player ID for AI controller
             if (aiController != null) {
                 aiController.setLocalPlayerId(ack.getPlayerId());
             }
@@ -729,7 +685,6 @@ public class LabyrinthApplication {
                 lobbyPanel.setLocalPlayerId(ack.getPlayerId());
                 lobbyPanel.setStatusText("Verbunden mit Server", new Color(0, 150, 0));
 
-                // Wenn Multiplayer-Join erfolgreich, zur Lobby wechseln
                 if (pendingMultiplayerJoin) {
                     pendingMultiplayerJoin = false;
                     showLobby();
@@ -744,7 +699,6 @@ public class LabyrinthApplication {
             System.out.println("[" + PROFILE + "] Received GAME_STARTED");
             exitedToLobby = false;  // Reset flag - neues Spiel startet
 
-            // Reset AI controller for new game (clears stopped flag and disables AI mode)
             if (aiController != null) {
                 aiController.reset();
                 aiController.setAiModeEnabled(false);
@@ -756,14 +710,12 @@ public class LabyrinthApplication {
             System.out.println(board);
             BoardFactory.applyTurnInfo(board, players, started.getCurrentTurnInfo());
 
-            // Store current state for AI
             currentBoard = board;
             currentPlayers = players;
             currentTurnInfo = started.getCurrentTurnInfo();
 
             showGame(board, started.getGameEndTime(), started.getCurrentTurnInfo());
 
-            // Trigger AI if enabled and it's local player's turn
             if (aiController != null) {
                 aiController.onGameStateUpdate(board, players, started.getCurrentTurnInfo());
             }
@@ -772,13 +724,10 @@ public class LabyrinthApplication {
         client.setOnGameStateUpdate(state -> {
             System.out.println("[" + PROFILE + "] Received GAME_STATE_UPDATE");
 
-            // Ignoriere Updates wenn der Spieler zur Lobby zurückgekehrt ist
             if (exitedToLobby) {
                 System.out.println("[" + PROFILE + "] Ignoring GAME_STATE_UPDATE - player exited to lobby");
                 return;
             }
-
-
 
             Optional<Treasure> currentPlayerNextTreasure = Optional.empty();
             var currentPlayer = resolveLocalPlayer(currentPlayers);
@@ -797,14 +746,12 @@ public class LabyrinthApplication {
             System.out.println(board);
             BoardFactory.applyTurnInfo(board, players, state.getCurrentTurnInfo());
 
-            // Store current state for AI
             currentBoard = board;
             currentPlayers = players;
             currentTurnInfo = state.getCurrentTurnInfo();
 
             showGame(board, state.getGameEndTime(), state.getCurrentTurnInfo());
 
-            // Trigger AI if enabled and it's local player's turn
             if (aiController != null && !isGameOver) {
                 aiController.onGameStateUpdate(board, players, state.getCurrentTurnInfo());
             }
@@ -813,44 +760,29 @@ public class LabyrinthApplication {
         client.setOnGameOver(gameOver -> {
             System.out.println("[" + PROFILE + "] *** GAME_OVER EVENT RECEIVED *** Winner: " + gameOver.getWinnerId());
 
-            // Sofort Flag setzen um weitere GAME_STATE_UPDATE Events zu ignorieren
             isGameOver = true;
 
-            // WICHTIG: AI Controller sofort stoppen um Endlosschleifen zu verhindern
             if (aiController != null) {
                 aiController.stop();
             }
 
-            // WICHTIG: Token NICHT löschen! Die Verbindung bleibt offen und der Spieler
-            // ist noch auf dem Server bekannt. Token nur löschen wenn wirklich disconnected wird.
-            // ClientIdentityStore.clearToken();  // REMOVED - causes player not recognized issue
-
-            // Flags NICHT zurücksetzen - die Verbindung ist noch aktiv!
-            // loginSent = false;           // REMOVED
-            // connectAckReceived = false;  // REMOVED
             pendingMultiplayerJoin = false;
-
-            // Flag setzen um ReconnectionManager zu blockieren
             isGameOverCleanup = true;
 
-            // UI-Updates auf dem EDT ausführen
             SwingUtilities.invokeLater(() -> {
                 try {
                     System.out.println("[" + PROFILE + "] GAME_OVER UI update starting on EDT...");
 
-                    // Prevent any further input on the board
                     if (boardPanel != null) {
                         boardPanel.setGameOver(true);
                     }
 
-                    // BoardPanel entfernen und zurücksetzen
                     if (boardPanel != null) {
                         mainPanel.remove(boardPanel);
                         boardPanel = null;
                         System.out.println("[" + PROFILE + "] BoardPanel removed");
                     }
 
-                    // Build player ID to name mapping from current players
                     if (currentPlayers != null) {
                         Map<String, String> playerNames = new HashMap<>();
                         for (Player p : currentPlayers) {
@@ -862,20 +794,16 @@ public class LabyrinthApplication {
                         System.out.println("[" + PROFILE + "] Set player names for GameOverPanel: " + playerNames);
                     }
 
-                    // GameOverPanel aktualisieren und anzeigen
                     gameOverPanel.updateGameOver(gameOver);
                     System.out.println("[" + PROFILE + "] GameOverPanel updated");
 
-                    // Musik stoppen
                     if (mainMenuPanel != null) mainMenuPanel.stopMusic();
                     gameViewShown = false;
 
-                    // Zum GameOver-Panel wechseln
                     CardLayout cl = (CardLayout) mainPanel.getLayout();
                     cl.show(mainPanel, "gameover");
                     System.out.println("[" + PROFILE + "] Switched to gameover view");
 
-                    // Panel sichtbar machen und neu zeichnen
                     gameOverPanel.setVisible(true);
                     mainPanel.revalidate();
                     mainPanel.repaint();
@@ -888,8 +816,6 @@ public class LabyrinthApplication {
                     e.printStackTrace();
                 }
 
-                // WICHTIG: NICHT disconnecten! Der Server sendet automatisch LOBBY_STATE
-                // und wir wollen in der Lobby bleiben um ein neues Spiel zu starten
                 System.out.println("[" + PROFILE + "] GAME_OVER complete - staying connected for lobby");
             });
         });
@@ -897,16 +823,11 @@ public class LabyrinthApplication {
         client.setOnErrorMessage(msg -> {
             SwingUtilities.invokeLater(() -> {
                 if (msg != null && msg.contains("PLAYER_NOT_FOUND")) {
-                    // Token wurde bereits gelöscht, ignoriere diese Meldung einfach
-                    // Das passiert wenn ein alter RECONNECT-Versuch den Server erreicht
                     System.out.println("[" + PROFILE + "] PLAYER_NOT_FOUND - ignoring (token already cleared)");
                     ClientIdentityStore.clearToken();
-                    // Kein Popup anzeigen, Benutzer soll einfach neu verbinden
                 } else if (msg != null && msg.contains("already connected")) {
-                    // Diese Meldung nur loggen, nicht als Popup anzeigen - passiert bei schnellem Wechsel
                     System.out.println("[" + PROFILE + "] Session already connected - ignoring: " + msg);
                 } else if (pendingMultiplayerJoin) {
-                    // Fehler beim Multiplayer-Join: zurück zum Hauptmenü
                     pendingMultiplayerJoin = false;
                     JOptionPane.showMessageDialog(frame, msg, "Verbindungsfehler", JOptionPane.ERROR_MESSAGE);
                     showMainMenu();
@@ -947,19 +868,16 @@ public class LabyrinthApplication {
                     errorTitle = "Ungültige Bewegung";
                 }
 
-                // Permission errors (200-299)
                 case "NOT_ADMIN" -> {
                     errorCode = "201";
                     errorTitle = "Keine Berechtigung";
                 }
 
-                // Bonus errors (300-399)
                 case "BONUS_NOT_AVAILABLE" -> {
                     errorCode = "301";
                     errorTitle = "Bonus nicht verfügbar";
                 }
 
-                // Lobby/Connection errors (400-499)
                 case "LOBBY_FULL" -> {
                     errorCode = "401";
                     errorTitle = "Lobby voll";
@@ -976,14 +894,11 @@ public class LabyrinthApplication {
                     errorCode = "404";
                     errorTitle = "Spieler nicht verbunden";
                 }
-
-                // Command errors (500-599)
                 case "INVALID_COMMAND" -> {
                     errorCode = "501";
                     errorTitle = "Ungültiger Befehl";
                 }
 
-                // General errors (999)
                 case "GENERAL" -> {
                     errorCode = "999";
                     errorTitle = "Allgemeiner Fehler";
@@ -1021,7 +936,6 @@ public class LabyrinthApplication {
 
     private void showGame(Board board, java.time.OffsetDateTime gameEndTime,
                           labyrinth.contracts.models.CurrentTurnInfo turnInfo) {
-        // Wenn das Spiel bereits beendet ist, keine Game-View mehr anzeigen
         if (isGameOver || isGameOverCleanup) {
             System.out.println("[" + PROFILE + "] showGame() ignored - game is over");
             return;
@@ -1072,7 +986,7 @@ public class LabyrinthApplication {
         });
     }
 
-    public final class ClientIdentityStore {
+    public static final class ClientIdentityStore {
         private static final Preferences PREFS = Preferences.userNodeForPackage(ClientIdentityStore.class);
         private static final String KEY_TOKEN = "identifierToken";
         private static final String KEY_PLAYER_ID = "playerId";
@@ -1084,7 +998,6 @@ public class LabyrinthApplication {
         }
         public static void clearToken() { PREFS.remove(KEY_TOKEN); }
 
-        public static String loadPlayerId() { return PREFS.get(KEY_PLAYER_ID, null); }
         public static void savePlayerId(String playerId) {
             if (playerId != null && !playerId.isBlank()) PREFS.put(KEY_PLAYER_ID, playerId);
         }
@@ -1093,6 +1006,5 @@ public class LabyrinthApplication {
         public static void saveUsername(String username) {
             if (username != null && !username.isBlank()) PREFS.put(KEY_USERNAME, username);
         }
-        public static void clearUsername() { PREFS.remove(KEY_USERNAME); }
     }
 }

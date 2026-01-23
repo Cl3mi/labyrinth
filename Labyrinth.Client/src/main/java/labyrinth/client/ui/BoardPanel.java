@@ -15,6 +15,7 @@ import labyrinth.contracts.models.Direction;
 import labyrinth.contracts.models.Tile;
 import labyrinth.contracts.models.Treasure;
 import lombok.Getter;
+import lombok.Setter;
 
 import javax.swing.*;
 import java.awt.*;
@@ -36,34 +37,20 @@ import java.util.List;
  */
 public class BoardPanel extends JPanel {
 
-    private JButton optionsButton;
-
     private static final int PANEL_PADDING = 20;
     private static final int ARROW_MARGIN = 5;
 
-    private static final Font DEBUG_INFO_FONT = new Font("Arial", Font.BOLD, 16);
     private static final Font PLAYER_MARKER_FONT = new Font("Arial", Font.BOLD, 30);
     private static final Font COORDINATE_FONT = new Font("Arial", Font.PLAIN, 10);
 
     private static final Font FONT_SANSSERIF_BOLD_20 = new Font("SansSerif", Font.BOLD, 20);
-    private static final Font FONT_SANSSERIF_BOLD_14 = new Font("SansSerif", Font.BOLD, 14);
-    private static final Font FONT_SANSSERIF_BOLD_12 = new Font("SansSerif", Font.BOLD, 12);
-    private static final Font FONT_SANSSERIF_PLAIN_14 = new Font("SansSerif", Font.PLAIN, 14);
-    private static final Font FONT_SANSSERIF_PLAIN_12 = new Font("SansSerif", Font.PLAIN, 12);
-    private static final Font FONT_ARIAL_BOLD_18 = new Font("Arial", Font.BOLD, 18);
     private static final Font FONT_ARIAL_BOLD_16 = new Font("Arial", Font.BOLD, 16);
     private static final Font FONT_ARIAL_BOLD_15 = new Font("Arial", Font.BOLD, 15);
     private static final Font FONT_ARIAL_BOLD_11 = new Font("Arial", Font.BOLD, 11);
-    private static final Font FONT_ARIAL_BOLD_10 = new Font("Arial", Font.BOLD, 10);
     private static final Font FONT_ARIAL_BOLD_9 = new Font("Arial", Font.BOLD, 9);
-    private static final Font FONT_ARIAL_PLAIN_14 = new Font("Arial", Font.PLAIN, 14);
     private static final Font FONT_ARIAL_PLAIN_12 = new Font("Arial", Font.PLAIN, 12);
     private static final Font FONT_ARIAL_PLAIN_11 = new Font("Arial", Font.PLAIN, 11);
-    private static final Font FONT_ARIAL_PLAIN_10 = new Font("Arial", Font.PLAIN, 10);
-    private static final Font FONT_ARIAL_ITALIC_12 = new Font("Arial", Font.ITALIC, 12);
-    private static final Font FONT_ARIAL_ITALIC_10 = new Font("Arial", Font.ITALIC, 10);
-    private static final Font FONT_SERIF_BOLD_24 = new Font("Serif", Font.BOLD, 24);
-    private static final Font FONT_SERIF_BOLD_16 = new Font("Serif", Font.BOLD, 16);
+
 
     private static final Map<String, Font> fontCache = new HashMap<>();
 
@@ -103,7 +90,6 @@ public class BoardPanel extends JPanel {
     private static final long PUSH_HIGHLIGHT_DURATION = 2000; // 2 seconds
 
     private int lastTargetTreasureId = -1;
-    private boolean showTargetBanner = false;
 
     private int selectedRow = 0;
     private int selectedCol = 0;
@@ -119,12 +105,7 @@ public class BoardPanel extends JPanel {
     private final Map<String, BufferedImage> tileImages = new HashMap<>();
     private BufferedImage bonusBagImage;
 
-    /**
-     * Reachable Tiles kommen vom Server (optional).
-     * Wenn du (noch) nichts vom Server bekommst, bleibt es leer -> kein Highlighting.
-     */
     private final Set<Tile> reachableTiles = new HashSet<>();
-
     private final List<ArrowButton> arrowButtons = new ArrayList<>();
     private ArrowButton hoveredArrow = null;
 
@@ -135,7 +116,7 @@ public class BoardPanel extends JPanel {
 
     private final Random random = new Random();
 
-    private AudioPlayer backgroundMusic;
+    private final AudioPlayer backgroundMusic;
 
     private boolean inputLocked = false;
 
@@ -152,14 +133,14 @@ public class BoardPanel extends JPanel {
     private boolean aiMoveButtonHovered = false;
     private boolean aiModeEnabled = false;
     private boolean aiThinking = false;
+
+
+    @Setter
     private Runnable onAiToggleRequested;
 
-    // Animation timer for smooth effects (60fps when animations are active)
-    private javax.swing.Timer animationTimer;
     private static final int ANIMATION_FPS = 60;
     private static final int ANIMATION_INTERVAL = 1000 / ANIMATION_FPS; // ~16ms
 
-    private static final String EXTRA_KEY = "EXTRA";
 
     public BoardPanel(GameClient client, Board board, Player currentPlayer, List<Player> players) {
         this.client = Objects.requireNonNull(client, "client must not be null");
@@ -172,7 +153,6 @@ public class BoardPanel extends JPanel {
         loadTreasureImages();
         loadPlayerIcons();
 
-        // Listen for theme changes
         ThemeManager.getInstance().addThemeChangeListener(() -> {
             loadBackgroundImage();
             repaint();
@@ -183,17 +163,16 @@ public class BoardPanel extends JPanel {
 
         setLayout(null); // Overlay-Button
 
-        optionsButton = createStyledOptionsButton();
+        JButton optionsButton = createStyledOptionsButton();
         add(optionsButton);
 
-        // Initialize toast manager and sound effects
+
         this.toastManager = new ToastManager(this);
         this.soundEffects = new SoundEffects();
 
         setupMouseListener();
         setupKeyboardListener();
 
-        // Add resize listener for layout cache invalidation
         addComponentListener(new ComponentAdapter() {
             @Override
             public void componentResized(ComponentEvent e) {
@@ -201,14 +180,13 @@ public class BoardPanel extends JPanel {
             }
         });
 
-        // Lade gespeicherte Lautstärke
         java.util.prefs.Preferences prefs = java.util.prefs.Preferences.userNodeForPackage(getClass());
         int savedMusicVolume = prefs.getInt("musicVolume", 50);
         int savedSfxVolume = prefs.getInt("sfxVolume", 70);
 
         backgroundMusic = AudioPlayer.getInstance();
 
-        // Apply persisted global music volume and ensure background music is running
+
         backgroundMusic.setMusicVolume(savedMusicVolume / 100.0f);
         backgroundMusic.playMenuMusic();
 
@@ -216,13 +194,12 @@ public class BoardPanel extends JPanel {
 
         javax.swing.Timer sidebarTimer = new javax.swing.Timer(1000, e -> {
             if (gameEndTime != null || turnEndTime != null) {
-                // Only repaint the sidebar region for timer updates (avoid full repaint)
                 repaintSidebarRegion();
             }
         });
         sidebarTimer.start();
 
-        animationTimer = new javax.swing.Timer(ANIMATION_INTERVAL, e -> {
+        var animationTimer = new javax.swing.Timer(ANIMATION_INTERVAL, e -> {
             if (needsAnimationUpdate()) {
                 repaint();
             }
@@ -261,18 +238,8 @@ public class BoardPanel extends JPanel {
         return false;
     }
 
+    @Setter
     private Runnable onExitGame;
-
-    public void setOnExitGame(Runnable callback) {
-        this.onExitGame = callback;
-    }
-
-    /**
-     * Sets the callback for when the AI toggle button is clicked.
-     */
-    public void setOnAiToggleRequested(Runnable callback) {
-        this.onAiToggleRequested = callback;
-    }
 
     /**
      * Sets whether AI mode is enabled (toggle state).
@@ -412,7 +379,6 @@ public class BoardPanel extends JPanel {
         treasureFileMapping.put(23, "Jug");
         treasureFileMapping.put(24, "Mouse");
 
-        // Load each treasure image
         for (var entry : treasureFileMapping.entrySet()) {
             var treasureId = entry.getKey();
             var fileName = entry.getValue();
@@ -431,16 +397,11 @@ public class BoardPanel extends JPanel {
     }
 
 
-    /**
-     * Lädt ALLE Varianten in tileVariants und initialisiert die tileBags.
-     */
     private void loadTileImages() {
-        // Nur noch je 1 Bild pro Typ
         tileImages.put("I", loadImage("/images/tiles/I_tile.png"));
         tileImages.put("L", loadImage("/images/tiles/L_tile.png"));
         tileImages.put("T", loadImage("/images/tiles/T_tile.png"));
 
-        // Bonus bag image
         bonusBagImage = loadImage("/images/tiles/BonusBag.png");
 
         System.out.println("Loaded tile images:");
@@ -493,13 +454,11 @@ public class BoardPanel extends JPanel {
         EnumSet<Direction> dirs = EnumSet.noneOf(Direction.class);
         Collections.addAll(dirs, entrancesArray);
 
-        // I
         if (dirs.size() == 2) {
             if (dirs.contains(Direction.UP) && dirs.contains(Direction.DOWN)) return new TileImageInfo("I", 0);
             if (dirs.contains(Direction.LEFT) && dirs.contains(Direction.RIGHT)) return new TileImageInfo("I", 90);
         }
 
-        // L
         if (dirs.size() == 2) {
             if (dirs.contains(Direction.UP) && dirs.contains(Direction.RIGHT)) return new TileImageInfo("L", 0);
             if (dirs.contains(Direction.RIGHT) && dirs.contains(Direction.DOWN)) return new TileImageInfo("L", 90);
@@ -507,7 +466,6 @@ public class BoardPanel extends JPanel {
             if (dirs.contains(Direction.LEFT) && dirs.contains(Direction.UP)) return new TileImageInfo("L", 270);
         }
 
-        // T
         if (dirs.size() == 3) {
             if (!dirs.contains(Direction.DOWN)) return new TileImageInfo("T", 0);
             if (!dirs.contains(Direction.LEFT)) return new TileImageInfo("T", 90);
@@ -588,9 +546,6 @@ public class BoardPanel extends JPanel {
         g2.fillRoundRect(x - 4, y - 4, size + 8, size + 8, 15, 15);
     }
 
-    // =================================================================================
-    // INPUT (SERVER-AUTORITATIV)
-    // =================================================================================
 
     private void setupMouseListener() {
         addMouseListener(new MouseAdapter() {
@@ -600,7 +555,6 @@ public class BoardPanel extends JPanel {
                 if (inputLocked) return;
                 if (board == null) return;
 
-                // Right-click to cancel bonus mode
                 if (e.getButton() == MouseEvent.BUTTON3) {
                     if (activeBonusMode != null) {
                         cancelBonusMode();
@@ -608,13 +562,9 @@ public class BoardPanel extends JPanel {
                     return;
                 }
 
-                // Check bonus button clicks first
                 if (handleBonusButtonClick(e.getPoint())) return;
-
-                // Check AI Move button click
                 if (handleAiButtonClick(e.getPoint())) return;
 
-                // Handle active bonus mode clicks
                 if (activeBonusMode != null) {
                     if (handleActiveBonusModeClick(e.getPoint())) return;
                 }
@@ -635,7 +585,6 @@ public class BoardPanel extends JPanel {
                     }
                 }
 
-                // Track hovered bonus button
                 hoveredBonusIndex = -1;
                 for (int i = 0; i < bonusButtonBounds.size(); i++) {
                     if (bonusButtonBounds.get(i).contains(e.getPoint())) {
@@ -644,16 +593,13 @@ public class BoardPanel extends JPanel {
                     }
                 }
 
-                // Track hovered AI button
                 aiMoveButtonHovered = aiMoveButtonBounds != null && aiMoveButtonBounds.contains(e.getPoint());
-
                 repaint();
             }
         });
     }
 
     private void setupKeyboardListener() {
-        // Make panel focusable to receive keyboard events
         setFocusable(true);
         requestFocusInWindow();
 
@@ -665,7 +611,6 @@ public class BoardPanel extends JPanel {
             }
         });
 
-        // Request focus when clicked
         addMouseListener(new MouseAdapter() {
             @Override
             public void mousePressed(MouseEvent e) {
@@ -679,29 +624,21 @@ public class BoardPanel extends JPanel {
         if (board == null) return;
 
         switch (e.getKeyCode()) {
-            // Rotation controls
             case java.awt.event.KeyEvent.VK_R, java.awt.event.KeyEvent.VK_E -> {
-                // Rotate spare tile clockwise
                 if (currentTurnState == labyrinth.contracts.models.TurnState.WAITING_FOR_PUSH) {
                     soundEffects.playRotate();
                     client.sendRotateTile();
-                    showTargetBanner = false; // Hide banner after first action
-                    toastManager.showInfo("ROTATE", "Extra-Tile gedreht", "R/E: im Uhrzeigersinn, Q: gegen Uhrzeigersinn");
                     inputLocked = true;
                 }
             }
             case java.awt.event.KeyEvent.VK_Q -> {
-                // Rotate spare tile counter-clockwise (3 times clockwise = 1 counter-clockwise)
                 if (currentTurnState == labyrinth.contracts.models.TurnState.WAITING_FOR_PUSH) {
                     soundEffects.playRotate();
-                    // Send 3 rotate commands for counter-clockwise
                     client.sendRotateTile();
                     try { Thread.sleep(50); } catch (InterruptedException ignored) {}
                     client.sendRotateTile();
                     try { Thread.sleep(50); } catch (InterruptedException ignored) {}
                     client.sendRotateTile();
-                    showTargetBanner = false; // Hide banner after first action
-                    toastManager.showInfo("ROTATE", "Extra-Tile gedreht", "Gegen Uhrzeigersinn gedreht");
                     inputLocked = true;
                 }
             }
@@ -732,7 +669,6 @@ public class BoardPanel extends JPanel {
             case java.awt.event.KeyEvent.VK_ENTER, java.awt.event.KeyEvent.VK_SPACE -> {
                 if (keyboardNavigationActive && currentTurnState == labyrinth.contracts.models.TurnState.WAITING_FOR_MOVE) {
                     client.sendMovePawn(selectedRow, selectedCol);
-                    showTargetBanner = false; // Hide banner after first action
                     inputLocked = true;
                     keyboardNavigationActive = false;
                 } else if (currentTurnState == labyrinth.contracts.models.TurnState.WAITING_FOR_PUSH) {
@@ -802,7 +738,6 @@ public class BoardPanel extends JPanel {
 
                 // Send command to server
                 client.sendPushTile(arrow.index, arrow.direction);
-                showTargetBanner = false; // Hide banner after first action
                 inputLocked = true;
                 return true;
             }
@@ -820,7 +755,6 @@ public class BoardPanel extends JPanel {
                 if (tileRect.contains(p)) {
                     soundEffects.playMove();
                     client.sendMovePawn(row, col);
-                    showTargetBanner = false; // Hide banner after first action
                     inputLocked = true;
                     break outer;
                 }
@@ -2798,7 +2732,6 @@ public class BoardPanel extends JPanel {
                 // Target changed or first time - show toast and banner
                 showNewTargetToast(TreasureUtils.getLocalName(currentTarget.getId()));
                 lastTargetTreasureId = currentTreasureId;
-                showTargetBanner = true; // Show banner until first action
             }
         }
 
@@ -2881,7 +2814,6 @@ public class BoardPanel extends JPanel {
             if (lastTargetTreasureId == -1 || lastTargetTreasureId != currentTreasureId) {
                 showNewTargetToast(TreasureUtils.getLocalName(currentTarget.getId()));
                 lastTargetTreasureId = currentTreasureId;
-                showTargetBanner = true;
             }
         }
 

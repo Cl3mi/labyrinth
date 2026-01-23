@@ -26,7 +26,7 @@ public class ReconnectionManager {
     private final AtomicBoolean cancelled;
     private volatile ScheduledFuture<?> currentReconnectTask;
 
-    // Configuration
+
     private static final int MAX_RECONNECT_ATTEMPTS = 5;
     private static final int BASE_DELAY_MS = 1000; // 1 second
     private static final int MAX_DELAY_MS = 16000; // 16 seconds
@@ -48,16 +48,13 @@ public class ReconnectionManager {
      * Resets attempt counter and schedules first attempt immediately.
      */
     public void startAutoReconnect() {
-        // Cancel any existing reconnection
         cancelReconnection();
 
-        // Reset state
         attemptCount.set(0);
         cancelled.set(false);
 
         System.out.println("[ReconnectionManager] Starting auto-reconnect sequence");
 
-        // Schedule first attempt with minimal delay (500ms to allow cleanup)
         currentReconnectTask = scheduler.schedule(
             this::performReconnectAttempt,
             500,
@@ -118,24 +115,20 @@ public class ReconnectionManager {
         int currentAttempt = attemptCount.incrementAndGet();
         System.out.println("[ReconnectionManager] Reconnection attempt " + currentAttempt + "/" + MAX_RECONNECT_ATTEMPTS);
 
-        // Get stored token
         String token = ClientIdentityStore.loadToken();
 
         if (token == null || token.isBlank()) {
             System.out.println("[ReconnectionManager] No token available - cannot auto-reconnect");
-            // Show manual reconnect dialog immediately
             application.showManualReconnectDialog();
             return;
         }
 
-        // Attempt reconnection
         boolean success = client.attemptReconnect(token);
 
         if (!success) {
-            // Reconnect attempt failed - schedule next or show dialog
             handleReconnectFailure(currentAttempt);
         }
-        // If success, onConnectAck will call reset() to stop further attempts
+
     }
 
     /**
@@ -151,13 +144,11 @@ public class ReconnectionManager {
             System.out.println("[ReconnectionManager] Max reconnect attempts reached - showing manual dialog");
             application.showManualReconnectDialog();
         } else {
-            // Schedule next attempt with exponential backoff
             int delayMs = calculateDelay(attemptNumber);
             int delaySeconds = delayMs / 1000;
 
             System.out.println("[ReconnectionManager] Scheduling next attempt in " + delaySeconds + "s");
 
-            // Update UI with countdown
             application.updateReconnectionStatus(attemptNumber, MAX_RECONNECT_ATTEMPTS, delaySeconds);
 
             currentReconnectTask = scheduler.schedule(

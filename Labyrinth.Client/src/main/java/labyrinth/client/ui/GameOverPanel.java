@@ -26,8 +26,6 @@ public class GameOverPanel extends JPanel {
     private final JLabel winnerLabel;
     private final JTable leaderboardTable;
     private final DefaultTableModel tableModel;
-    private final JButton backToLobbyButton;
-    // private final JButton startNewRoundButton;  // Auskommentiert - noch nicht genehmigt
     private final JScrollPane scrollPane;
     private final JPanel achievementsPanel;
 
@@ -35,14 +33,9 @@ public class GameOverPanel extends JPanel {
     private int animationFrame = 0;
     private Timer animationTimer;
 
-    // Track achievements per player
     private final Map<String, List<String>> playerAchievements = new HashMap<>();
-
-    // Player ID to Name mapping (set before updateGameOver is called)
     private final Map<String, String> playerIdToName = new HashMap<>();
 
-    // Callback for starting a new round
-    private Runnable onStartNewRound;
 
     public GameOverPanel(Runnable onBackToLobby) {
         loadBackgroundImage();
@@ -261,8 +254,10 @@ public class GameOverPanel extends JPanel {
         footer.setOpaque(false);
         footer.setLayout(new FlowLayout(FlowLayout.CENTER, 20, 20));
 
-        backToLobbyButton = new JButton("Return to Tavern") {
+
+        var backToLobbyButton = new JButton("Return to Tavern") {
             private boolean isFocused = false;
+
             {
                 addFocusListener(new java.awt.event.FocusAdapter() {
                     @Override
@@ -270,6 +265,7 @@ public class GameOverPanel extends JPanel {
                         isFocused = true;
                         repaint();
                     }
+
                     @Override
                     public void focusLost(java.awt.event.FocusEvent e) {
                         isFocused = false;
@@ -345,96 +341,6 @@ public class GameOverPanel extends JPanel {
         });
         StyledTooltipManager.setTooltip(backToLobbyButton, "Zurück zur Lobby", "Kehre zur Lobby zurück, um ein neues Spiel zu konfigurieren");
         StyledContextMenu.attachTo(backToLobbyButton);
-
-        // ===== Start New Round Button ===== (Auskommentiert - noch nicht genehmigt)
-        /*
-        startNewRoundButton = new JButton("Neue Runde starten") {
-            private boolean isFocused = false;
-            {
-                addFocusListener(new java.awt.event.FocusAdapter() {
-                    @Override
-                    public void focusGained(java.awt.event.FocusEvent e) {
-                        isFocused = true;
-                        repaint();
-                    }
-                    @Override
-                    public void focusLost(java.awt.event.FocusEvent e) {
-                        isFocused = false;
-                        repaint();
-                    }
-                });
-            }
-
-            @Override
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g;
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-
-                // Green gradient background for primary action
-                GradientPaint greenGradient = new GradientPaint(
-                        0, 0, new Color(60, 120, 60),
-                        0, getHeight(), new Color(40, 90, 40)
-                );
-                g2.setPaint(greenGradient);
-                g2.fillRoundRect(0, 0, getWidth(), getHeight(),
-                        GameTheme.Spacing.RADIUS_MEDIUM, GameTheme.Spacing.RADIUS_MEDIUM);
-
-                // Embossed button effect
-                ThemeEffects.drawEmbossedButton(g2, 0, 0, getWidth(), getHeight(),
-                        getModel().isPressed());
-
-                // Golden border
-                g2.setColor(GameTheme.Colors.ACCENT_GOLD);
-                g2.setStroke(new BasicStroke(2f));
-                g2.drawRoundRect(1, 1, getWidth() - 3, getHeight() - 3,
-                        GameTheme.Spacing.RADIUS_MEDIUM, GameTheme.Spacing.RADIUS_MEDIUM);
-
-                // Focus indicator
-                if (isFocused) {
-                    g2.setColor(new Color(255, 215, 0, 80));
-                    g2.setStroke(new BasicStroke(4f));
-                    g2.drawRoundRect(-1, -1, getWidth() + 1, getHeight() + 1,
-                            GameTheme.Spacing.RADIUS_MEDIUM + 4, GameTheme.Spacing.RADIUS_MEDIUM + 4);
-                    g2.setColor(new Color(255, 215, 0, 200));
-                    g2.setStroke(new BasicStroke(2f));
-                    g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1,
-                            GameTheme.Spacing.RADIUS_MEDIUM + 2, GameTheme.Spacing.RADIUS_MEDIUM + 2);
-                }
-
-                // Text with shadow
-                g2.setFont(FontManager.getLargeUI());
-                FontMetrics fm = g2.getFontMetrics();
-                String text = getText();
-                int textX = (getWidth() - fm.stringWidth(text)) / 2;
-                int textY = (getHeight() + fm.getAscent() - fm.getDescent()) / 2;
-
-                // Shadow
-                g2.setColor(ThemeEffects.withAlpha(Color.BLACK, 100));
-                g2.drawString(text, textX + 2, textY + 2);
-
-                // Main text
-                g2.setColor(GameTheme.Colors.TEXT_LIGHT);
-                g2.drawString(text, textX, textY);
-            }
-        };
-
-        startNewRoundButton.setFont(FontManager.getLargeUI());
-        startNewRoundButton.setPreferredSize(new Dimension(280, 60));
-        startNewRoundButton.setContentAreaFilled(false);
-        startNewRoundButton.setFocusPainted(false);
-        startNewRoundButton.setBorderPainted(false);
-        startNewRoundButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        startNewRoundButton.setFocusable(true);
-        startNewRoundButton.addActionListener(e -> {
-            if (onStartNewRound != null) {
-                onStartNewRound.run();
-            }
-        });
-        StyledTooltipManager.setTooltip(startNewRoundButton, "Neue Runde", "Startet sofort ein neues Spiel mit gleichen Einstellungen");
-        StyledContextMenu.attachTo(startNewRoundButton);
-
-        footer.add(startNewRoundButton);
-        */
         footer.add(backToLobbyButton);
 
         // ===== Achievements Panel =====
@@ -462,14 +368,12 @@ public class GameOverPanel extends JPanel {
     }
 
     public void updateGameOver(GameOverEventPayload payload) {
-        // Stop any existing animation
         if (animationTimer != null && animationTimer.isRunning()) {
             animationTimer.stop();
         }
 
         AudioPlayer.getInstance().playGameOverSequence();
 
-        // Build player ID to name mapping
         Map<String, String> playerIdToName = new HashMap<>();
         if (payload.getRanking() != null) {
             for (RankingEntry entry : payload.getRanking()) {
@@ -795,7 +699,6 @@ public class GameOverPanel extends JPanel {
      * Set the callback for starting a new round.
      */
     public void setOnStartNewRound(Runnable callback) {
-        this.onStartNewRound = callback;
     }
 
     /**

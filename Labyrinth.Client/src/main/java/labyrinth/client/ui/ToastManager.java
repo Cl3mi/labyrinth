@@ -125,7 +125,7 @@ public class ToastManager {
         panel.setSize(TOAST_WIDTH, TOAST_HEIGHT);
 
         // Left: Icon and ID
-        JPanel leftPanel = new JPanel(new BorderLayout(5, 0));
+        var leftPanel = new JPanel(new BorderLayout(5, 0));
         leftPanel.setOpaque(false);
 
         JLabel iconLabel = new JLabel(toast.type.icon);

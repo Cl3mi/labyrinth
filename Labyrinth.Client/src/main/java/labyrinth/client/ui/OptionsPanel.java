@@ -5,6 +5,8 @@ import labyrinth.client.ui.Styles.StyledDialog;
 import labyrinth.client.ui.theme.FontManager;
 import labyrinth.client.ui.theme.GameTheme;
 import labyrinth.client.ui.theme.ThemeManager;
+import lombok.Getter;
+import lombok.Setter;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -15,28 +17,23 @@ import java.awt.geom.RoundRectangle2D;
 import java.util.function.Consumer;
 import java.util.prefs.Preferences;
 
-/**
- * Options-Panel für das Labyrinth-Spiel.
- *
- * Einstellungen:
- * - Musik-Lautstärke
- * - Sound-Effekte-Lautstärke
- * - Server-Verbindungs-URL
- * - Theme (Dark/Light)
- */
+
 public class OptionsPanel extends JPanel {
 
-    // Callbacks
+    @Setter
     private Runnable onBackToMenu;
+    @Setter
     private Runnable onSettingsChanged;
+    @Setter
     private Consumer<Integer> onMusicVolumeChanged;
-    private Consumer<Integer> onSfxVolumeChanged;
+    private final Consumer<Integer> onSfxVolumeChanged;
+    @Setter
     private Consumer<int[]> onWindowSizeChanged;
 
-    // Hintergrund
+
     private Image backgroundImage;
 
-    // Settings Components
+
     private JSlider musicVolumeSlider;
     private JSlider sfxVolumeSlider;
     private JTextField serverUrlField;
@@ -44,10 +41,14 @@ public class OptionsPanel extends JPanel {
     private JLabel musicValueLabel;
     private JLabel sfxValueLabel;
 
-    // Current Settings
+
+    @Getter
     private int musicVolume = 10;
+    @Getter
     private int sfxVolume = 70;
+    @Getter
     private String serverUrl = DEFAULT_SERVER_URL;
+    @Getter
     private boolean darkTheme = true;
     private int windowSizeIndex = 1; // 0=1280x720, 1=1400x900, 2=1600x900, 3=1920x1080, 4=Maximiert
 
@@ -64,10 +65,10 @@ public class OptionsPanel extends JPanel {
             {1400, 900},
             {1600, 900},
             {1920, 1080},
-            {-1, -1} // -1 = maximiert
+            {-1, -1} // -1 = maximized
     };
 
-    // Preferences für persistente Speicherung
+
     private static final Preferences PREFS = Preferences.userNodeForPackage(OptionsPanel.class);
     private static final String PREF_MUSIC_VOLUME = "musicVolume";
     private static final String PREF_SFX_VOLUME = "sfxVolume";
@@ -75,7 +76,6 @@ public class OptionsPanel extends JPanel {
     private static final String PREF_DARK_THEME = "darkTheme";
     private static final String PREF_WINDOW_SIZE = "windowSize";
 
-    // Default Server URL - zentrale Konfiguration
     public static final String DEFAULT_SERVER_URL = "https://mgmt.dvl.spalx.dev";
 
     public OptionsPanel() {
@@ -88,20 +88,12 @@ public class OptionsPanel extends JPanel {
         loadBackgroundImage();
         setupUI();
 
-        // Theme-Änderungen überwachen
         ThemeManager.getInstance().addThemeChangeListener(() -> {
             loadBackgroundImage();
             repaint();
         });
     }
 
-    private boolean isFontAvailable(String fontName) {
-        GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
-        for (String family : ge.getAvailableFontFamilyNames()) {
-            if (family.equalsIgnoreCase(fontName)) return true;
-        }
-        return false;
-    }
 
     private void loadBackgroundImage() {
         try {
@@ -131,7 +123,6 @@ public class OptionsPanel extends JPanel {
         PREFS.putBoolean(PREF_DARK_THEME, darkTheme);
         PREFS.putInt(PREF_WINDOW_SIZE, windowSizeIndex);
 
-        // Fenstergröße sofort anwenden
         if (onWindowSizeChanged != null) {
             onWindowSizeChanged.accept(getWindowSize());
         }
@@ -146,13 +137,13 @@ public class OptionsPanel extends JPanel {
         setLayout(new BorderLayout(0, 20));
         setBorder(new EmptyBorder(30, 50, 30, 50));
 
-        // Header
+        // header
         add(createHeader(), BorderLayout.NORTH);
 
-        // Center - Settings Cards
+        // center
         add(createCenterPanel(), BorderLayout.CENTER);
 
-        // Footer - Buttons
+        // footer
         add(createFooter(), BorderLayout.SOUTH);
     }
 
@@ -160,7 +151,7 @@ public class OptionsPanel extends JPanel {
         JPanel header = new JPanel(new BorderLayout());
         header.setOpaque(false);
 
-        // Zurück-Button
+        // back button
         StyledButton backButton = new StyledButton("Zurück", StyledButton.Style.SECONDARY);
         backButton.setPreferredSize(new Dimension(140, 40));
         backButton.addActionListener(e -> {
@@ -172,14 +163,14 @@ public class OptionsPanel extends JPanel {
         leftPanel.add(backButton);
         header.add(leftPanel, BorderLayout.WEST);
 
-        // Titel
+        // title
         JLabel titleLabel = new JLabel("Einstellungen");
         titleLabel.setFont(FontManager.titleFont);
         titleLabel.setForeground(GameTheme.Colors.PRIMARY_GOLD_LIGHT);
         titleLabel.setHorizontalAlignment(SwingConstants.CENTER);
         header.add(titleLabel, BorderLayout.CENTER);
 
-        // Platzhalter rechts
+        // placeholder right
         JPanel rightPanel = new JPanel();
         rightPanel.setOpaque(false);
         rightPanel.setPreferredSize(new Dimension(140, 40));
@@ -212,7 +203,7 @@ public class OptionsPanel extends JPanel {
         appearanceCard.setAlignmentX(Component.CENTER_ALIGNMENT);
         center.add(appearanceCard);
 
-        // Wrapper für Zentrierung
+
         JPanel wrapper = new JPanel(new GridBagLayout());
         wrapper.setOpaque(false);
         wrapper.add(center);
@@ -248,12 +239,12 @@ public class OptionsPanel extends JPanel {
         card.setLayout(new BorderLayout(0, 15));
         card.setBorder(new EmptyBorder(20, 30, 25, 30));
 
-        // Größere Karten für bessere Lesbarkeit
+
         int cardHeight = content.getPreferredSize().height + 90;
         card.setPreferredSize(new Dimension(550, cardHeight));
         card.setMaximumSize(new Dimension(550, cardHeight));
 
-        // Titel
+        // title
         JLabel titleLabel = new JLabel(title);
         titleLabel.setFont(FontManager.titleFont);
         titleLabel.setForeground(GameTheme.Colors.PRIMARY_GOLD_LIGHT);
@@ -265,68 +256,62 @@ public class OptionsPanel extends JPanel {
     }
 
     private JPanel createAudioSettings() {
-        JPanel panel = new JPanel(new GridBagLayout());
+        var panel = new JPanel(new GridBagLayout());
         panel.setOpaque(false);
 
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.insets = new Insets(8, 5, 8, 5);
 
-        // Musik-Lautstärke
+        // music volume
         gbc.gridx = 0; gbc.gridy = 0; gbc.weightx = 0.3;
         panel.add(createStyledLabel("Musik:"), gbc);
 
         gbc.gridx = 1; gbc.weightx = 0.5;
         musicVolumeSlider = createStyledSlider(0, 100, musicVolume);
 
-        // Label VOR Listener erzeugen (sonst NPE / UI aktualisiert nicht korrekt)
+
         gbc.gridx = 2; gbc.weightx = 0.2;
         musicValueLabel = createStyledLabel(musicVolume + "%");
         musicValueLabel.setHorizontalAlignment(SwingConstants.RIGHT);
 
-        // Slider ins Layout
+
         gbc.gridx = 1; gbc.weightx = 0.5;
         panel.add(musicVolumeSlider, gbc);
 
-        // Label ins Layout
+
         gbc.gridx = 2; gbc.weightx = 0.2;
         panel.add(musicValueLabel, gbc);
 
-        // Listener erst nachdem Label existiert
+
         musicVolumeSlider.addChangeListener(e -> {
             musicVolume = musicVolumeSlider.getValue();
             musicValueLabel.setText(musicVolume + "%");
-            // Echtzeit-Update der Musik-Lautstärke
             if (onMusicVolumeChanged != null) {
                 onMusicVolumeChanged.accept(musicVolume);
             }
         });
 
-        // Sound-Effekte-Lautstärke
+
         gbc.gridx = 0; gbc.gridy = 1; gbc.weightx = 0.3;
         panel.add(createStyledLabel("Effekte:"), gbc);
 
         gbc.gridx = 1; gbc.weightx = 0.5;
         sfxVolumeSlider = createStyledSlider(0, 100, sfxVolume);
 
-        // Label VOR Listener erzeugen
         gbc.gridx = 2; gbc.weightx = 0.2;
         sfxValueLabel = createStyledLabel(sfxVolume + "%");
         sfxValueLabel.setHorizontalAlignment(SwingConstants.RIGHT);
 
-        // Slider ins Layout
         gbc.gridx = 1; gbc.weightx = 0.5;
         panel.add(sfxVolumeSlider, gbc);
 
-        // Label ins Layout
         gbc.gridx = 2; gbc.weightx = 0.2;
         panel.add(sfxValueLabel, gbc);
 
-        // Listener erst nachdem Label existiert
         sfxVolumeSlider.addChangeListener(e -> {
             sfxVolume = sfxVolumeSlider.getValue();
             sfxValueLabel.setText(sfxVolume + "%");
-            // Echtzeit-Update der Effekt-Lautstärke
             if (onSfxVolumeChanged != null) {
                 onSfxVolumeChanged.accept(sfxVolume);
             }
@@ -335,7 +320,6 @@ public class OptionsPanel extends JPanel {
         panel.setPreferredSize(new Dimension(480, 100));
         return panel;
     }
-
 
     private JPanel createConnectionSettings() {
         JPanel panel = new JPanel(new GridBagLayout());
@@ -360,7 +344,6 @@ public class OptionsPanel extends JPanel {
         });
         panel.add(serverUrlField, gbc);
 
-        // Hinweis
         gbc.gridx = 0; gbc.gridy = 1; gbc.gridwidth = 3;
         gbc.insets = new Insets(5, 5, 0, 5);
         JLabel hintLabel = new JLabel("Format: https://mgmt.dvl.spalx.dev");
@@ -373,7 +356,7 @@ public class OptionsPanel extends JPanel {
     }
 
     private JPanel createAppearanceSettings() {
-        JPanel panel = new JPanel(new GridBagLayout());
+        var panel = new JPanel(new GridBagLayout());
         panel.setOpaque(false);
 
         GridBagConstraints gbc = new GridBagConstraints();
@@ -399,7 +382,6 @@ public class OptionsPanel extends JPanel {
         themeToggle.addActionListener(e -> {
             darkTheme = themeToggle.isSelected();
             themeStatusLabel.setText(darkTheme ? "Dunkel" : "Hell");
-            // Update ThemeManager and notify all listeners
             ThemeManager.getInstance().setDarkMode(darkTheme);
         });
 
@@ -421,7 +403,7 @@ public class OptionsPanel extends JPanel {
         });
         panel.add(windowSizeCombo, gbc);
 
-        // Hinweis
+        // hint
         gbc.gridx = 0; gbc.gridy = 2; gbc.gridwidth = 2;
         gbc.insets = new Insets(5, 5, 0, 5);
         JLabel hintLabel = new JLabel("Änderungen werden nach dem speichern übernommen.");
@@ -452,10 +434,6 @@ public class OptionsPanel extends JPanel {
 
         return footer;
     }
-
-    // --------------------------------------------------------------------------------
-    // Styled Components
-    // --------------------------------------------------------------------------------
 
     private JLabel createStyledLabel(String text) {
         JLabel label = new JLabel(text);
@@ -608,7 +586,6 @@ public class OptionsPanel extends JPanel {
     }
 
     private void showSaveConfirmation() {
-        // Kurze Toast-Nachricht
         JDialog toast = new JDialog((Frame) SwingUtilities.getWindowAncestor(this));
         toast.setUndecorated(true);
         toast.setBackground(new Color(0, 0, 0, 0));
@@ -638,55 +615,11 @@ public class OptionsPanel extends JPanel {
 
         toast.setVisible(true);
 
-        // Nach 2 Sekunden ausblenden
         Timer timer = new Timer(2000, e -> toast.dispose());
         timer.setRepeats(false);
         timer.start();
     }
 
-    // --------------------------------------------------------------------------------
-    // Public API
-    // --------------------------------------------------------------------------------
-
-    public void setOnBackToMenu(Runnable callback) {
-        this.onBackToMenu = callback;
-    }
-
-    public void setOnSettingsChanged(Runnable callback) {
-        this.onSettingsChanged = callback;
-    }
-
-    public void setOnMusicVolumeChanged(java.util.function.Consumer<Integer> callback) {
-        this.onMusicVolumeChanged = callback;
-    }
-
-    public void setOnSfxVolumeChanged(java.util.function.Consumer<Integer> callback) {
-        this.onSfxVolumeChanged = callback;
-    }
-
-    public void setOnWindowSizeChanged(java.util.function.Consumer<int[]> callback) {
-        this.onWindowSizeChanged = callback;
-    }
-
-    public int getMusicVolume() {
-        return musicVolume;
-    }
-
-    public int getSfxVolume() {
-        return sfxVolume;
-    }
-
-    public String getServerUrl() {
-        return serverUrl;
-    }
-
-    public boolean isDarkTheme() {
-        return darkTheme;
-    }
-
-    public int getWindowSizeIndex() {
-        return windowSizeIndex;
-    }
 
     public int[] getWindowSize() {
         if (windowSizeIndex >= 0 && windowSizeIndex < WINDOW_SIZES.length) {
@@ -695,9 +628,6 @@ public class OptionsPanel extends JPanel {
         return WINDOW_SIZES[1]; // Default 1400x900
     }
 
-    /**
-     * Statische Methode zum Laden der Fenstergröße beim App-Start
-     */
     public static int[] loadWindowSizeFromPreferences() {
         Preferences prefs = Preferences.userNodeForPackage(OptionsPanel.class);
         int index = prefs.getInt(PREF_WINDOW_SIZE, 1);
@@ -707,18 +637,11 @@ public class OptionsPanel extends JPanel {
         return WINDOW_SIZES[1]; // Default 1400x900
     }
 
-    /**
-     * Statische Methode zum Laden der Server-URL beim App-Start.
-     * Gibt die gespeicherte URL oder die Default-URL zurück.
-     */
     public static String loadServerUrlFromPreferences() {
         Preferences prefs = Preferences.userNodeForPackage(OptionsPanel.class);
         return prefs.get(PREF_SERVER_URL, DEFAULT_SERVER_URL);
     }
 
-    // --------------------------------------------------------------------------------
-    // Hintergrund zeichnen
-    // --------------------------------------------------------------------------------
 
     @Override
     protected void paintComponent(Graphics g) {
@@ -789,11 +712,8 @@ public class OptionsPanel extends JPanel {
         g2.fillOval(w - 28, h - 28, 6, 6);
     }
 
-    // --------------------------------------------------------------------------------
-    // Styled Button (same as other panels)
-    // --------------------------------------------------------------------------------
 
-    private class StyledButton extends JButton {
+    private static class StyledButton extends JButton {
         enum Style { PRIMARY, SECONDARY, DANGER }
 
         private final Style style;

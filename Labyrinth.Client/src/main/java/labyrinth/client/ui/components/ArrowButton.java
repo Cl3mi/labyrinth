@@ -10,7 +10,7 @@ public class ArrowButton {
     public final Direction direction;
     public final int index;
     public final boolean isRow;
-    public final boolean isFixed; // true wenn es eine fixierte Reihe/Spalte ist
+    public final boolean isFixed;
     public final Path2D.Double arrowShape;
 
     public ArrowButton(Rectangle bounds, Direction direction, int index, boolean isRow, boolean isFixed) {

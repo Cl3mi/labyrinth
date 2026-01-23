@@ -7,6 +7,8 @@ import labyrinth.client.ui.Styles.StyledTooltipManager;
 import labyrinth.client.ui.theme.FontManager;
 import labyrinth.client.ui.theme.GameTheme;
 import labyrinth.client.ui.theme.ThemeManager;
+import lombok.Getter;
+import lombok.Setter;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -17,30 +19,22 @@ import java.awt.event.MouseEvent;
 import java.awt.geom.RoundRectangle2D;
 import java.util.function.Consumer;
 
-/**
- * Hauptmenü-Panel für das Labyrinth-Spiel.
- *
- * Features:
- * - Zentriertes Layout mit Logo oben
- * - Große, stilvolle Buttons: Spiel starten, Einstellungen
- * - Atmosphärischer Hintergrund mit Labyrinth-Textur
- * - Animierte Hover-Effekte
- * - Mystische Farbpalette passend zum "Verrückten Labyrinth"
- */
+
 public class MainMenuPanel extends JPanel {
 
     // Callbacks für Button-Aktionen
+    @Setter
     private Runnable onMultiplayerClicked;
+    @Setter
     private Runnable onOptionsClicked;
+    @Setter
     private Runnable onExitClicked;
 
     // Multiplayer Username
+    @Getter
     private String multiplayerUsername = "Player";
 
-    /**
-     * Zeigt einen einfachen Dialog zur Eingabe des Spielernamens für Multiplayer.
-     * Mit Focus Trap (abgedunkelter Hintergrund).
-     */
+
     public void showMultiplayerUsernameDialog(Consumer<String> onUsernameEntered) {
         Window ownerWindow = SwingUtilities.getWindowAncestor(this);
         JDialog dialog = new JDialog(ownerWindow, "Mehrspieler - Spielername", Dialog.ModalityType.APPLICATION_MODAL);
@@ -93,13 +87,12 @@ public class MainMenuPanel extends JPanel {
         mainPanel.setOpaque(false);
         mainPanel.setBorder(BorderFactory.createEmptyBorder(25, 30, 25, 30));
 
-        // Titel
+
         JLabel titleLabel = new JLabel("Gib deinen Spielernamen ein", SwingConstants.CENTER);
         titleLabel.setFont(FontManager.getMediumDisplay());
         titleLabel.setForeground(GameTheme.Colors.ACCENT_GOLD);
         mainPanel.add(titleLabel, BorderLayout.NORTH);
 
-        // Username Eingabe - zentriertes Panel
         JPanel inputPanel = new JPanel(new GridBagLayout());
         inputPanel.setOpaque(false);
 
@@ -156,7 +149,6 @@ public class MainMenuPanel extends JPanel {
             glassPane.setVisible(false);
             dialog.dispose();
 
-            // Callback aufrufen um zur Lobby zu wechseln
             if (onUsernameEntered != null) {
                 onUsernameEntered.accept(enteredUsername);
             }
@@ -168,10 +160,10 @@ public class MainMenuPanel extends JPanel {
         buttonPanel.add(joinButton);
         mainPanel.add(buttonPanel, BorderLayout.SOUTH);
 
-        // Enter-Taste soll auch "Beitreten" auslösen
+
         usernameField.addActionListener(e -> joinButton.doClick());
 
-        // Escape schließt den Dialog
+
         dialog.getRootPane().registerKeyboardAction(
                 e -> {
                     glassPane.setVisible(false);
@@ -181,7 +173,7 @@ public class MainMenuPanel extends JPanel {
                 JComponent.WHEN_IN_FOCUSED_WINDOW
         );
 
-        // Fokus auf das Textfeld setzen
+
         dialog.addWindowListener(new java.awt.event.WindowAdapter() {
             @Override
             public void windowOpened(java.awt.event.WindowEvent e) {
@@ -195,7 +187,7 @@ public class MainMenuPanel extends JPanel {
         });
 
         dialog.setContentPane(mainPanel);
-        dialog.setSize(520, 220);  // Größer für bessere Lesbarkeit
+        dialog.setSize(520, 220);
         dialog.setLocationRelativeTo(ownerWindow);
         dialog.setVisible(true);
     }
@@ -207,11 +199,11 @@ public class MainMenuPanel extends JPanel {
         return label;
     }
 
-    // Hintergrund & Musik
+
     private Image backgroundImage;
     private Image logoImage;
-    // Farben - Mystische Labyrinth-Palette
-    private static final Color PRIMARY_GOLD = new Color(218, 165, 32);
+
+
     private static final Color PRIMARY_GOLD_LIGHT = new Color(255, 215, 0);
     private static final Color PRIMARY_GOLD_DARK = new Color(184, 134, 11);
     private static final Color STONE_DARK = new Color(45, 42, 38);
@@ -219,12 +211,11 @@ public class MainMenuPanel extends JPanel {
     private static final Color TEXT_LIGHT = new Color(255, 248, 230);
     private static final Color SHADOW_COLOR = new Color(0, 0, 0, 120);
 
-    // Fonts
+
     private Font titleFont;
     private Font buttonFont;
     private Font subtitleFont;
 
-    // UI-Elemente für Theme-Updates
     private JLabel subtitleLabel;
 
     public MainMenuPanel() {
@@ -233,7 +224,6 @@ public class MainMenuPanel extends JPanel {
         initMusic();
         setupUI();
 
-        // Theme-Änderungen überwachen
         ThemeManager.getInstance().addThemeChangeListener(() -> {
             loadBackgroundImage();
             subtitleLabel.setForeground(ThemeManager.getInstance().getSubtitleColor());
@@ -249,9 +239,6 @@ public class MainMenuPanel extends JPanel {
         }
     }
 
-    // --------------------------------------------------------------------------------
-    // Initialisierung
-    // --------------------------------------------------------------------------------
 
     private void initFonts() {
         try {
@@ -287,7 +274,6 @@ public class MainMenuPanel extends JPanel {
     private void loadResources() {
         loadBackgroundImage();
 
-        // Logo laden
         try {
             var logoUrl = getClass().getResource("/images/ui/logo.png");
             if (logoUrl != null) {
@@ -301,7 +287,6 @@ public class MainMenuPanel extends JPanel {
     }
 
     private void loadBackgroundImage() {
-        // Hintergrundbild laden - je nach Theme
         try {
             String imagePath = ThemeManager.getInstance().getBackgroundImagePath();
             var url = getClass().getResource(imagePath);
@@ -327,9 +312,6 @@ public class MainMenuPanel extends JPanel {
     }
 
 
-    /**
-     * Setzt die Musik-Lautstärke (0-100).
-     */
     public void setMusicVolume(int volume) {
         float vol = Math.max(0, Math.min(100, volume)) / 100.0f;
         AudioPlayer.getInstance().setMusicVolume(vol);
@@ -348,17 +330,14 @@ public class MainMenuPanel extends JPanel {
         contentPanel.setOpaque(false);
         contentPanel.setBorder(new EmptyBorder(20, 40, 40, 40));
 
-        // Vertikaler Abstand oben (flexibel)
         contentPanel.add(Box.createVerticalGlue());
 
-        // Logo-Bereich
         JPanel logoPanel = createLogoPanel();
         logoPanel.setAlignmentX(Component.CENTER_ALIGNMENT);
         contentPanel.add(logoPanel);
 
         contentPanel.add(Box.createVerticalStrut(15));
 
-        // Untertitel mit sehr subtilem Hintergrund für bessere Lesbarkeit
         subtitleLabel = new JLabel("Das mystische Abenteuer beginnt... DiBSE 2025") {
             @Override
             protected void paintComponent(Graphics g) {
@@ -377,12 +356,10 @@ public class MainMenuPanel extends JPanel {
 
         contentPanel.add(Box.createVerticalStrut(30));
 
-        // Button-Bereich
         JPanel buttonContainer = createButtonPanel();
         buttonContainer.setAlignmentX(Component.CENTER_ALIGNMENT);
         contentPanel.add(buttonContainer);
 
-        // Vertikaler Abstand unten (flexibel)
         contentPanel.add(Box.createVerticalGlue());
 
         // Footer
@@ -390,7 +367,6 @@ public class MainMenuPanel extends JPanel {
         footerPanel.setAlignmentX(Component.CENTER_ALIGNMENT);
         contentPanel.add(footerPanel);
 
-        // GridBagConstraints für zentrierte Platzierung mit Skalierung
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.fill = GridBagConstraints.BOTH;
         gbc.weightx = 1.0;
@@ -398,9 +374,6 @@ public class MainMenuPanel extends JPanel {
         add(contentPanel, gbc);
     }
 
-    // --------------------------------------------------------------------------------
-    // UI-Komponenten erstellen
-    // --------------------------------------------------------------------------------
 
     private JPanel createLogoPanel() {
         JPanel panel = new JPanel() {
@@ -420,11 +393,9 @@ public class MainMenuPanel extends JPanel {
                     int originalHeight = logoImage.getHeight(null);
 
                     if (originalWidth > 0 && originalHeight > 0) {
-                        // Skaliere basierend auf Panel-Größe (responsive)
                         int panelWidth = getWidth();
                         int panelHeight = getHeight();
 
-                        // Logo soll ca. 80% der Panel-Breite nutzen, aber max 600px
                         int targetWidth = Math.min((int)(panelWidth * 0.8), 600);
                         int targetHeight = Math.min((int)(panelHeight * 0.9), 200);
 
@@ -438,7 +409,6 @@ public class MainMenuPanel extends JPanel {
                         int x = centerX - scaledWidth / 2;
                         int y = centerY - scaledHeight / 2;
 
-                        // Logo zeichnen (nur einmal)
                         g2.drawImage(logoImage, x, y, scaledWidth, scaledHeight, null);
                     }
                 } else {
@@ -484,7 +454,7 @@ public class MainMenuPanel extends JPanel {
             }
         };
         panel.setOpaque(false);
-        // Keine feste Größe - skaliert mit dem Fenster
+
         panel.setPreferredSize(new Dimension(600, 200));
         panel.setMinimumSize(new Dimension(300, 100));
         return panel;
@@ -495,7 +465,7 @@ public class MainMenuPanel extends JPanel {
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
         panel.setOpaque(false);
 
-        // Mehrspieler Button
+
         MenuButton multiplayerBtn = new MenuButton("Spiel starten", "Spiele alleine gegen KI oder online mit Freunden");
         multiplayerBtn.addActionListener(e -> onMultiplayerClicked.run());
         multiplayerBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
@@ -505,7 +475,6 @@ public class MainMenuPanel extends JPanel {
 
         panel.add(Box.createVerticalStrut(12));
 
-        // Einstellungen Button
         MenuButton optionsBtn = new MenuButton("Einstellungen", "Grafik, Audio & mehr");
         optionsBtn.addActionListener(e -> {
             if (onOptionsClicked != null) onOptionsClicked.run();
@@ -517,7 +486,6 @@ public class MainMenuPanel extends JPanel {
 
         panel.add(Box.createVerticalStrut(20));
 
-        // Beenden Button
         ExitButton exitBtn = new ExitButton("Beenden");
         exitBtn.addActionListener(e -> {
             if (onExitClicked != null) {
@@ -546,25 +514,7 @@ public class MainMenuPanel extends JPanel {
         return panel;
     }
 
-    // --------------------------------------------------------------------------------
-    // Callback Setter
-    // --------------------------------------------------------------------------------
 
-    public void setOnMultiplayerClicked(Runnable callback) {
-        this.onMultiplayerClicked = callback;
-    }
-
-    public void setOnOptionsClicked(Runnable callback) {
-        this.onOptionsClicked = callback;
-    }
-
-    public void setOnExitClicked(Runnable callback) {
-        this.onExitClicked = callback;
-    }
-
-    public String getMultiplayerUsername() {
-        return multiplayerUsername;
-    }
 
     public void setMultiplayerUsername(String username) {
         if (username != null && !username.isBlank()) {
@@ -572,9 +522,6 @@ public class MainMenuPanel extends JPanel {
         }
     }
 
-    // --------------------------------------------------------------------------------
-    // Hintergrund zeichnen
-    // --------------------------------------------------------------------------------
 
     @Override
     protected void paintComponent(Graphics g) {
@@ -597,16 +544,12 @@ public class MainMenuPanel extends JPanel {
             g2.fillRect(0, 0, w, h);
         }
 
-        // Overlay
         g2.setColor(ThemeManager.getInstance().isDarkMode()
             ? new Color(0, 0, 0, 60)
             : new Color(0, 0, 0, 20));
         g2.fillRect(0, 0, w, h);
 
-        // Vignette
         drawVignette(g2, w, h);
-
-        // Dekorative Ecken
         drawDecorativeCorners(g2, w, h);
 
         g2.dispose();
@@ -638,35 +581,32 @@ public class MainMenuPanel extends JPanel {
 
         int size = 50;
 
-        // Oben links
+        // up left
         g2.drawLine(25, 25, 25 + size, 25);
         g2.drawLine(25, 25, 25, 25 + size);
         g2.fillOval(22, 22, 6, 6);
 
-        // Oben rechts
+        // up right
         g2.drawLine(w - 25, 25, w - 25 - size, 25);
         g2.drawLine(w - 25, 25, w - 25, 25 + size);
         g2.fillOval(w - 28, 22, 6, 6);
 
-        // Unten links
+        // bottom left
         g2.drawLine(25, h - 25, 25 + size, h - 25);
         g2.drawLine(25, h - 25, 25, h - 25 - size);
         g2.fillOval(22, h - 28, 6, 6);
 
-        // Unten rechts
+        // bottom right
         g2.drawLine(w - 25, h - 25, w - 25 - size, h - 25);
         g2.drawLine(w - 25, h - 25, w - 25, h - 25 - size);
         g2.fillOval(w - 28, h - 28, 6, 6);
     }
 
-    // --------------------------------------------------------------------------------
-    // Custom Menu Button
-    // --------------------------------------------------------------------------------
+
 
     private class MenuButton extends JButton {
         private final String subtitle;
         private float hoverProgress = 0f;
-        private final Timer animationTimer;
         private boolean isHovered = false;
         private boolean isFocused = false;
 
@@ -682,12 +622,11 @@ public class MainMenuPanel extends JPanel {
             setCursor(new Cursor(Cursor.HAND_CURSOR));
             setFocusable(true);
 
-            // Flexible Größe - skaliert mit dem Layout
             setPreferredSize(new Dimension(320, 70));
             setMinimumSize(new Dimension(200, 50));
             setMaximumSize(new Dimension(450, 90));
 
-            animationTimer = new Timer(16, e -> {
+            var animationTimer = new Timer(16, e -> {
                 if (isHovered && hoverProgress < 1f) {
                     hoverProgress = Math.min(1f, hoverProgress + 0.12f);
                     repaint();
@@ -734,18 +673,18 @@ public class MainMenuPanel extends JPanel {
             int h = getHeight();
             int arc = 10;
 
-            // Schatten
+            // shadow
             g2.setColor(new Color(0, 0, 0, (int) (70 + 30 * hoverProgress)));
             g2.fill(new RoundRectangle2D.Float(4, 5, w - 8, h - 7, arc, arc));
 
-            // Hintergrund
+            // background
             Color bgStart = interpolateColor(STONE_DARK, new Color(65, 50, 35), hoverProgress);
             Color bgEnd = interpolateColor(STONE_MEDIUM, new Color(95, 70, 45), hoverProgress);
             GradientPaint bgGradient = new GradientPaint(0, 0, bgStart, 0, h, bgEnd);
             g2.setPaint(bgGradient);
             g2.fill(new RoundRectangle2D.Float(2, 2, w - 4, h - 4, arc, arc));
 
-            // Goldener Rand
+            // golden border
             Color borderColor = interpolateColor(PRIMARY_GOLD_DARK, PRIMARY_GOLD_LIGHT, hoverProgress);
             g2.setColor(borderColor);
             g2.setStroke(new BasicStroke(2f + hoverProgress * 0.5f));
@@ -763,11 +702,11 @@ public class MainMenuPanel extends JPanel {
                 g2.draw(new RoundRectangle2D.Float(1, 1, w - 3, h - 3, arc + 2, arc + 2));
             }
 
-            // Glanz
+            // glow
             g2.setColor(new Color(255, 255, 255, (int) (15 + 20 * hoverProgress)));
             g2.fill(new RoundRectangle2D.Float(4, 4, w - 8, (h - 8) / 3f, arc - 2, arc - 2));
 
-            // Text
+            // text
             g2.setFont(buttonFont);
             FontMetrics fm = g2.getFontMetrics();
             String text = getText();
@@ -782,7 +721,7 @@ public class MainMenuPanel extends JPanel {
             g2.setColor(textColor);
             g2.drawString(text, textX, textY);
 
-            // Untertitel
+            // subtitle
             if (subtitle != null && !subtitle.isEmpty()) {
                 g2.setFont(subtitleFont.deriveFont(11f));
                 fm = g2.getFontMetrics();
@@ -803,11 +742,9 @@ public class MainMenuPanel extends JPanel {
         }
     }
 
-    // --------------------------------------------------------------------------------
-    // Exit Button
-    // --------------------------------------------------------------------------------
 
-    private class ExitButton extends JButton {
+
+    private static class ExitButton extends JButton {
         private boolean isHovered = false;
         private boolean isFocused = false;
 
@@ -862,7 +799,6 @@ public class MainMenuPanel extends JPanel {
             int h = getHeight();
 
             if (isHovered) {
-                // Hover: Helleres Rot mit Hintergrund
                 g2.setColor(new Color(140, 50, 50, 180));
                 g2.fillRoundRect(0, 0, w, h, 8, 8);
                 g2.setColor(new Color(255, 17, 17));
@@ -870,7 +806,6 @@ public class MainMenuPanel extends JPanel {
                 g2.drawRoundRect(1, 1, w - 2, h - 2, 8, 8);
                 g2.setColor(new Color(255, 200, 200));
             } else {
-                // Normal: Dunkelrot mit Rahmen
                 g2.setColor(new Color(80, 40, 40, 120));
                 g2.fillRoundRect(0, 0, w, h, 8, 8);
                 g2.setColor(new Color(150, 80, 80));
@@ -899,18 +834,6 @@ public class MainMenuPanel extends JPanel {
             g2.drawString(text, textX, textY);
 
             g2.dispose();
-        }
-
-    }
-
-    private Font loadFont(String resourcePath, float size) {
-        try (var is = getClass().getResourceAsStream(resourcePath)) {
-            if (is == null) throw new IllegalArgumentException("Font nicht gefunden: " + resourcePath);
-            Font base = Font.createFont(Font.TRUETYPE_FONT, is);
-            return base.deriveFont(size);
-        } catch (Exception e) {
-            e.printStackTrace();
-            return new Font("SansSerif", Font.PLAIN, Math.round(size)); // Fallback
         }
     }
 }
