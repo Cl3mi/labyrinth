@@ -1537,7 +1537,6 @@ public class BoardPanel extends JPanel {
         boolean drewImage = false;
 
         if (info != null) {
-            // ✅ Einfach: Hole Bild direkt aus Map
             BufferedImage img = getTileImage(info.type);
             if (img != null) {
                 drawRotatedImage(g2, img, x, y, info.rotation);

@@ -258,7 +258,7 @@ public class GameClient extends WebSocketClient {
     }
 
     public void sendStartGame(BoardSize boardSize,
-                              int treasureCardCount,
+                              int totalTreasureCardCount,
                               int totalBonusCount,
                               Integer gameDurationInSeconds,
                               Integer turnTimeInSeconds) {
@@ -266,7 +266,7 @@ public class GameClient extends WebSocketClient {
             StartGameCommandPayload payload = new StartGameCommandPayload();
             payload.setType(CommandType.START_GAME);
             payload.setBoardSize(boardSize);
-            payload.setTreasureCardCount(treasureCardCount);
+            payload.setTreasureCardCount(totalTreasureCardCount);
             payload.setTotalBonusCount(totalBonusCount);
             payload.setGameDurationInSeconds(gameDurationInSeconds != null ? gameDurationInSeconds : 3600);
 
@@ -281,7 +281,6 @@ public class GameClient extends WebSocketClient {
             send(json);
             System.out.println(">>> START_GAME sent, waiting for response...");
 
-            // Debug: Teste ob der Socket noch funktioniert
             new Thread(() -> {
                 try {
                     Thread.sleep(3000);
