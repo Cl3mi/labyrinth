@@ -17,6 +17,7 @@ public record SimulationResult(
     BonusAction bonusAction
 ) {
     public static final int SCORE_FINISH_GAME = 1000;
+    public static final int SCORE_DOUBLE_TREASURE = 150;
     public static final int SCORE_TARGET_REACHABLE = 100;
     public static final int SCORE_BONUS_REACHABLE = 50;
     public static final int SCORE_TARGET_WITH_BONUS = 90;

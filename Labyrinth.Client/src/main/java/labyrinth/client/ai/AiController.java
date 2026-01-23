@@ -299,6 +299,29 @@ public class AiController {
         // Store decision for move phase (bonus handling)
         currentDecision = decision;
 
+        // Check if BEAM or SWAP is used - these REPLACE the push entirely
+        if (decision.bonusAction() != null) {
+            BonusType bonusType = decision.bonusAction().bonusType();
+
+            if (bonusType == BonusType.BEAM) {
+                // BEAM replaces push - teleport to target position
+                Position beamTarget = decision.bonusAction().targetPosition();
+                System.out.println("[AI] Using BEAM (replaces push) to " + beamTarget.getRow() + "/" + beamTarget.getColumn());
+                client.sendUseBeam(beamTarget.getRow(), beamTarget.getColumn());
+                return; // No shift needed - BEAM replaces it
+            }
+
+            if (bonusType == BonusType.SWAP) {
+                // SWAP replaces push - swap with target player
+                String targetPlayerId = decision.bonusAction().targetPlayerId();
+                System.out.println("[AI] Using SWAP (replaces push) with player " + targetPlayerId);
+                client.sendUseSwap(targetPlayerId);
+                return; // No shift needed - SWAP replaces it
+            }
+        }
+
+        // Normal push flow (or with PUSH_TWICE/PUSH_FIXED modifiers)
+
         // Check if we need to activate PUSH_TWICE before the shift
         if (decision.bonusAction() != null && decision.bonusAction().bonusType() == BonusType.PUSH_TWICE) {
             System.out.println("[AI] Activating PUSH_TWICE bonus");
@@ -318,10 +341,12 @@ public class AiController {
         // Small delay for natural feel
         Thread.sleep(150);
 
-        // Execute shift
-        System.out.println("[AI] Shifting " + (decision.shift().isRow() ? "row" : "column") +
-                " " + decision.shift().index() + " " + decision.shift().direction());
-        client.sendPushTile(decision.shift().index(), decision.shift().direction());
+        // Execute shift (only if we have a shift operation)
+        if (decision.shift() != null) {
+            System.out.println("[AI] Shifting " + (decision.shift().isRow() ? "row" : "column") +
+                    " " + decision.shift().index() + " " + decision.shift().direction());
+            client.sendPushTile(decision.shift().index(), decision.shift().direction());
+        }
 
         // Handle PUSH_TWICE second shift
         if (decision.bonusAction() != null && decision.bonusAction().bonusType() == BonusType.PUSH_TWICE) {
@@ -346,23 +371,10 @@ public class AiController {
             client.sendPushTile(secondOp.index(), secondOp.direction());
         }
 
-        // Handle PUSH_FIXED bonus
+        // Handle PUSH_FIXED bonus - this IS the push (not after a normal push)
         if (decision.bonusAction() != null && decision.bonusAction().bonusType() == BonusType.PUSH_FIXED) {
-            Thread.sleep(400); // Wait for regular shift to complete
-
             SimulationResult.BonusAction bonus = decision.bonusAction();
             ShiftOperation fixedOp = bonus.pushFixedOp();
-
-            // Apply rotations for PUSH_FIXED
-            if (bonus.pushFixedRotations() > 0) {
-                System.out.println("[AI] Rotating for PUSH_FIXED " + bonus.pushFixedRotations() + " times");
-                for (int i = 0; i < bonus.pushFixedRotations(); i++) {
-                    client.sendRotateTile();
-                    Thread.sleep(100);
-                }
-            }
-
-            Thread.sleep(150);
 
             System.out.println("[AI] Using PUSH_FIXED: " + (fixedOp.isRow() ? "row" : "column") +
                     " " + fixedOp.index() + " " + fixedOp.direction());
@@ -373,21 +385,8 @@ public class AiController {
     private void executeMovePhase(Board board, Player player, List<Player> allPlayers) throws InterruptedException {
         AiDecision decision = currentDecision;
 
-        if (decision != null && decision.bonusAction() != null &&
-            decision.bonusAction().bonusType() == BonusType.BEAM) {
-            Position beamTarget = decision.bonusAction().targetPosition();
-            System.out.println("[AI] Using BEAM to teleport to " + beamTarget.getRow() + "/" + beamTarget.getColumn());
-            client.sendUseBeam(beamTarget.getRow(), beamTarget.getColumn());
-            Thread.sleep(300);
-        }
-
-        if (decision != null && decision.bonusAction() != null &&
-            decision.bonusAction().bonusType() == BonusType.SWAP) {
-            String targetPlayerId = decision.bonusAction().targetPlayerId();
-            System.out.println("[AI] Using SWAP with player " + targetPlayerId);
-            client.sendUseSwap(targetPlayerId);
-            Thread.sleep(300);
-        }
+        // Note: BEAM and SWAP are now handled in shift phase (they replace the push)
+        // So we just need to move here
 
         BoardSimulator sim = new BoardSimulator(board, player, allPlayers);
         java.util.Set<Position> reachable = sim.getReachableUnblockedPositions();
