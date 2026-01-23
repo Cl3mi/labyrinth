@@ -1,6 +1,7 @@
 package labyrinth.client.ai;
 
 import labyrinth.client.models.Board;
+import labyrinth.client.util.Logger;
 import labyrinth.client.models.Player;
 import labyrinth.client.models.Position;
 import labyrinth.contracts.models.BonusType;
@@ -24,6 +25,7 @@ import java.util.*;
  */
 public class SimpleAiStrategy implements AiStrategy {
 
+    private static final Logger log = Logger.getLogger(SimpleAiStrategy.class);
     private static final double DISTANCE_WEIGHT = 3.0;
     private static final double STEPS_WEIGHT = 1.0;
 
@@ -43,9 +45,9 @@ public class SimpleAiStrategy implements AiStrategy {
 
         List<ShiftOperation> candidates = generateShiftCandidates(board);
 
-        System.out.println("[AI] Evaluating " + candidates.size() + " shift candidates");
-        System.out.println("[AI] Going home: " + (player.getCurrentTargetTreasure() == null));
-        System.out.println("[AI] Available bonuses: " + player.getAvailableBonuses());
+        log.info("[AI] Evaluating " + candidates.size() + " shift candidates");
+        log.info("[AI] Going home: " + (player.getCurrentTargetTreasure() == null));
+        log.info("[AI] Available bonuses: " + player.getAvailableBonuses());
 
         boolean goingHome = player.getCurrentTargetTreasure() == null;
 
@@ -65,17 +67,17 @@ public class SimpleAiStrategy implements AiStrategy {
 
         if (bestResult != null && bestResult.score() >= SimulationResult.SCORE_TARGET_REACHABLE) {
             if (goingHome && bestResult.score() >= SimulationResult.SCORE_FINISH_GAME) {
-                System.out.println("[AI] Can FINISH THE GAME!");
+                log.info("[AI] Can FINISH THE GAME!");
             } else {
-                System.out.println("[AI] Can reach target directly!");
+                log.info("[AI] Can reach target directly!");
             }
             return AiDecision.from(bestResult);
         }
 
         if (goingHome) {
-            System.out.println("[AI] Going home - not hunting for bonuses");
+            log.info("[AI] Going home - not hunting for bonuses");
             if (bestResult != null) {
-                System.out.println("[AI] Moving closer to home");
+                log.info("[AI] Moving closer to home");
                 return AiDecision.from(bestResult);
             }
         }
@@ -83,7 +85,7 @@ public class SimpleAiStrategy implements AiStrategy {
         if (!goingHome && player.getAvailableBonuses().contains(BonusType.SWAP)) {
             SimulationResult swapStealResult = trySwapToStealTreasure(board, player);
             if (swapStealResult != null) {
-                System.out.println("[AI] Using SWAP to steal treasure from opponent!");
+                log.info("[AI] Using SWAP to steal treasure from opponent!");
                 return AiDecision.from(swapStealResult);
             }
         }
@@ -91,7 +93,7 @@ public class SimpleAiStrategy implements AiStrategy {
         if (!goingHome && !player.getAvailableBonuses().isEmpty()) {
             SimulationResult doubleTreasureResult = tryDoubleTreasureCollection(board, player);
             if (doubleTreasureResult != null && doubleTreasureResult.score() >= SimulationResult.SCORE_DOUBLE_TREASURE) {
-                System.out.println("[AI] Can collect TWO treasures with bonus!");
+                log.info("[AI] Can collect TWO treasures with bonus!");
                 return AiDecision.from(doubleTreasureResult);
             }
         }
@@ -99,7 +101,7 @@ public class SimpleAiStrategy implements AiStrategy {
         if (!goingHome && !player.getAvailableBonuses().isEmpty()) {
             SimulationResult bonusUseResult = tryUsingBonusesToReachTarget(board, player, candidates);
             if (bonusUseResult != null && bonusUseResult.score() >= SimulationResult.SCORE_TARGET_WITH_BONUS) {
-                System.out.println("[AI] Using bonus to reach treasure!");
+                log.info("[AI] Using bonus to reach treasure!");
                 return AiDecision.from(bonusUseResult);
             }
         }
@@ -107,7 +109,7 @@ public class SimpleAiStrategy implements AiStrategy {
         if (!goingHome) {
             SimulationResult bonusResult = findBestBonusMove(board, player, candidates);
             if (bonusResult != null && bonusResult.score() == SimulationResult.SCORE_BONUS_REACHABLE) {
-                System.out.println("[AI] Collecting bonus (can't reach treasure)");
+                log.info("[AI] Collecting bonus (can't reach treasure)");
                 return AiDecision.from(bonusResult);
             }
         }
@@ -115,7 +117,7 @@ public class SimpleAiStrategy implements AiStrategy {
         if (!goingHome && bestResult != null && bestResult.score() <= SimulationResult.SCORE_MOVING_CLOSER) {
             SimulationResult strategicResult = findStrategicMove(board, player, candidates, bestResult);
             if (strategicResult != null && compareResults(strategicResult, bestResult) > 0) {
-                System.out.println("[AI] Found strategic move (block/push treasure)!");
+                log.info("[AI] Found strategic move (block/push treasure)!");
                 return AiDecision.from(strategicResult);
             }
         }
@@ -124,7 +126,7 @@ public class SimpleAiStrategy implements AiStrategy {
             ShiftOperation fallbackOp = candidates.get(random.nextInt(candidates.size()));
             Position currentPos = player.getCurrentPosition();
             bestResult = new SimulationResult(fallbackOp, 0, SimulationResult.SCORE_NO_MOVE, 0, currentPos, 0);
-            System.out.println("[AI] Using fallback shift");
+            log.info("[AI] Using fallback shift");
         }
 
         if (bestResult != null) {
@@ -132,17 +134,17 @@ public class SimpleAiStrategy implements AiStrategy {
             Position targetMovePos = bestResult.targetMovePosition();
 
             if (targetMovePos != null && targetMovePos.equals(currentPos)) {
-                System.out.println("[AI] STUCK DETECTED - would stay on same tile, searching for escape move");
+                log.info("[AI] STUCK DETECTED - would stay on same tile, searching for escape move");
                 SimulationResult escapeResult = findEscapeMove(board, player, candidates);
                 if (escapeResult != null && escapeResult.stepsToMove() > 0) {
-                    System.out.println("[AI] Found escape move - moving " + escapeResult.stepsToMove() + " steps away");
+                    log.info("[AI] Found escape move - moving " + escapeResult.stepsToMove() + " steps away");
                     bestResult = escapeResult;
                 }
             }
         }
 
         if (bestResult != null && bestResult.shift() != null) {
-            System.out.println("[AI] Best move: " + bestResult.shift().direction() + " at " +
+            log.info("[AI] Best move: " + bestResult.shift().direction() + " at " +
                     bestResult.shift().index() + ", score=" + bestResult.score() +
                     ", rotations=" + bestResult.rotations() + ", steps=" + bestResult.stepsToMove());
         }
@@ -206,7 +208,7 @@ public class SimpleAiStrategy implements AiStrategy {
             Position otherPos = other.getCurrentPosition();
 
             if (otherPos.equals(targetPos)) {
-                System.out.println("[AI] Opponent " + other.getName() + " is on our treasure - using SWAP!");
+                log.info("[AI] Opponent " + other.getName() + " is on our treasure - using SWAP!");
                 return new SimulationResult(
                     null, 0, SimulationResult.SCORE_TARGET_REACHABLE, 0, targetPos,
                     SimulationResult.BonusAction.swap(other.getId(), otherPos)
@@ -240,7 +242,7 @@ public class SimpleAiStrategy implements AiStrategy {
                 Position nextTreasurePos = findNextTreasurePosition(simFromBeam, player);
 
                 if (nextTreasurePos != null && reachableFromBeam.contains(nextTreasurePos)) {
-                    System.out.println("[AI] Can BEAM to treasure and walk to next one!");
+                    log.info("[AI] Can BEAM to treasure and walk to next one!");
                     return new SimulationResult(
                         null, 0, SimulationResult.SCORE_DOUBLE_TREASURE, 0, nextTreasurePos,
                         SimulationResult.BonusAction.beam(currentTreasurePos)
@@ -264,7 +266,7 @@ public class SimpleAiStrategy implements AiStrategy {
                 Position nextTreasurePos = findNextTreasurePosition(simAfterSwap, player);
 
                 if (nextTreasurePos != null && reachableAfterSwap.contains(nextTreasurePos)) {
-                    System.out.println("[AI] Can SWAP to treasure and walk to next one!");
+                    log.info("[AI] Can SWAP to treasure and walk to next one!");
                     return new SimulationResult(
                         null, 0, SimulationResult.SCORE_DOUBLE_TREASURE, 0, nextTreasurePos,
                         SimulationResult.BonusAction.swap(other.getId(), otherPos)
@@ -459,7 +461,7 @@ public class SimpleAiStrategy implements AiStrategy {
 
         ShiftOperation forbiddenOp = getForbiddenReversePush(board.getLastPush());
         if (forbiddenOp != null) {
-            System.out.println("[AI] Forbidden reverse push: " + forbiddenOp.direction() + " at " + forbiddenOp.index());
+            log.info("[AI] Forbidden reverse push: " + forbiddenOp.direction() + " at " + forbiddenOp.index());
         }
 
         for (int row = 1; row < height - 1; row++) {
@@ -544,7 +546,7 @@ public class SimpleAiStrategy implements AiStrategy {
                 int score = goingHome ? SimulationResult.SCORE_FINISH_GAME : SimulationResult.SCORE_TARGET_REACHABLE;
                 int steps = manhattanDistance(currentPos, targetPos);
                 if (goingHome) {
-                    System.out.println("[AI] HOME TILE IS REACHABLE! Score=" + score);
+                    log.info("[AI] HOME TILE IS REACHABLE! Score=" + score);
                 }
                 return new SimulationResult(op, rotations, score, 0, targetPos, steps);
             }

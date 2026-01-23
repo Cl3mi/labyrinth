@@ -1,6 +1,7 @@
 package labyrinth.client.ui;
 
 import labyrinth.client.audio.AudioPlayer;
+import labyrinth.client.util.Logger;
 import labyrinth.client.ui.Styles.StyledButton;
 import labyrinth.client.ui.Styles.StyledContextMenu;
 import labyrinth.client.ui.Styles.StyledTooltipManager;
@@ -23,6 +24,8 @@ import java.util.List;
  * Game Over UI showing winner and leaderboard with fantasy/medieval theme.
  */
 public class GameOverPanel extends JPanel {
+
+    private static final Logger log = Logger.getLogger(GameOverPanel.class);
 
     private final JLabel winnerLabel;
     private final JTable leaderboardTable;
@@ -442,7 +445,7 @@ public class GameOverPanel extends JPanel {
                 backgroundImage = new ImageIcon(url).getImage();
             }
         } catch (Exception e) {
-            System.err.println("Could not load background image: " + e.getMessage());
+            log.error("Could not load background image: %s", e.getMessage());
         }
     }
     @Override

@@ -1,6 +1,7 @@
 package labyrinth.client.ai;
 
 import labyrinth.client.messaging.GameClient;
+import labyrinth.client.util.Logger;
 import labyrinth.client.models.Board;
 import labyrinth.client.models.Player;
 import labyrinth.client.models.Position;
@@ -22,6 +23,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 public class AiController {
 
+    private static final Logger log = Logger.getLogger(AiController.class);
     private final GameClient client;
     private final AiStrategy strategy;
     private final ExecutorService executor;
@@ -74,7 +76,7 @@ public class AiController {
     public void toggleAiMode() {
         boolean newState = !aiModeEnabled.get();
         aiModeEnabled.set(newState);
-        System.out.println("[AI Controller] AI mode " + (newState ? "ENABLED" : "DISABLED"));
+        log.info("[AI Controller] AI mode " + (newState ? "ENABLED" : "DISABLED"));
 
         if (onAiModeChanged != null) {
             SwingUtilities.invokeLater(onAiModeChanged);
@@ -93,7 +95,7 @@ public class AiController {
      */
     public void setAiModeEnabled(boolean enabled) {
         aiModeEnabled.set(enabled);
-        System.out.println("[AI Controller] AI mode set to " + (enabled ? "ENABLED" : "DISABLED"));
+        log.info("[AI Controller] AI mode set to " + (enabled ? "ENABLED" : "DISABLED"));
 
         if (onAiModeChanged != null) {
             SwingUtilities.invokeLater(onAiModeChanged);
@@ -105,7 +107,7 @@ public class AiController {
      * Called when game ends to prevent the AI from continuing to send moves.
      */
     public void stop() {
-        System.out.println("[AI Controller] STOPPING - game ended");
+        log.info("[AI Controller] STOPPING - game ended");
         stopped.set(true);
         aiModeEnabled.set(false);
         aiTurnInProgress.set(false);
@@ -123,7 +125,7 @@ public class AiController {
      * Resets the stopped flag. Called when starting a new game.
      */
     public void reset() {
-        System.out.println("[AI Controller] RESET - ready for new game");
+        log.info("[AI Controller] RESET - ready for new game");
         stopped.set(false);
     }
 
@@ -137,7 +139,7 @@ public class AiController {
      */
     public void onGameStateUpdate(Board board, List<Player> players, CurrentTurnInfo turnInfo) {
         if (stopped.get()) {
-            System.out.println("[AI Controller] Ignoring state update - AI is stopped");
+            log.info("[AI Controller] Ignoring state update - AI is stopped");
             return;
         }
 
@@ -150,26 +152,26 @@ public class AiController {
         }
 
         if (board == null || players == null || turnInfo == null) {
-            System.out.println("[AI Controller] Skipping - null state");
+            log.info("[AI Controller] Skipping - null state");
             return;
         }
 
         if (localPlayerId == null || !localPlayerId.equals(turnInfo.getCurrentPlayerId())) {
-            System.out.println("[AI Controller] Not my turn. Local: " + localPlayerId + ", Current: " + turnInfo.getCurrentPlayerId());
+            log.info("[AI Controller] Not my turn. Local: " + localPlayerId + ", Current: " + turnInfo.getCurrentPlayerId());
             return;
         }
 
         Player localPlayer = findPlayerById(localPlayerId, players);
         if (localPlayer == null) {
-            System.out.println("[AI Controller] Local player not found in players list");
+            log.info("[AI Controller] Local player not found in players list");
             return;
         }
 
         if (aiTurnInProgress.compareAndSet(false, true)) {
-            System.out.println("[AI Controller] Auto-triggering AI for: " + localPlayer.getName() + " (State: " + turnInfo.getState() + ")");
+            log.info("[AI Controller] Auto-triggering AI for: " + localPlayer.getName() + " (State: " + turnInfo.getState() + ")");
             executeAiTurn(board, localPlayer, turnInfo.getState() == TurnState.WAITING_FOR_PUSH);
         } else {
-            System.out.println("[AI Controller] AI already in progress, skipping");
+            log.info("[AI Controller] AI already in progress, skipping");
         }
     }
 
@@ -188,7 +190,7 @@ public class AiController {
             }
 
             if (stopped.get()) {
-                System.out.println("[AI Controller] Re-trigger cancelled - AI is stopped");
+                log.info("[AI Controller] Re-trigger cancelled - AI is stopped");
                 return;
             }
 
@@ -203,7 +205,7 @@ public class AiController {
             if (localPlayer == null) return;
 
             if (aiTurnInProgress.compareAndSet(false, true)) {
-                System.out.println("[AI Controller] Re-triggering AI - still my turn (State: " + turnInfo.getState() + ")");
+                log.info("[AI Controller] Re-triggering AI - still my turn (State: " + turnInfo.getState() + ")");
                 executeAiTurn(board, localPlayer, turnInfo.getState() == TurnState.WAITING_FOR_PUSH);
             }
         });
@@ -220,13 +222,13 @@ public class AiController {
         executor.submit(() -> {
             try {
                 if (stopped.get()) {
-                    System.out.println("[AI] Turn cancelled - AI is stopped");
+                    log.info("[AI] Turn cancelled - AI is stopped");
                     return;
                 }
 
                 notifyThinkingStart();
 
-                System.out.println("[AI] Starting turn for: " + player.getName() + " (needsShift: " + needsShift + ")");
+                log.info("[AI] Starting turn for: " + player.getName() + " (needsShift: " + needsShift + ")");
 
                 if (needsShift) {
                     executeShiftPhase(board, player);
@@ -236,16 +238,16 @@ public class AiController {
                     aiTurnInProgress.set(false);
                     notifyThinkingEnd();
 
-                    System.out.println("[AI] Shift done, waiting for server state update for move phase");
+                    log.info("[AI] Shift done, waiting for server state update for move phase");
                     return; 
                 }
 
                 executeMovePhase(board, player, latestPlayers);
 
-                System.out.println("[AI] Turn completed for: " + player.getName());
+                log.info("[AI] Turn completed for: " + player.getName());
 
             } catch (Exception e) {
-                System.err.println("[AI] Error during AI turn: " + e.getMessage());
+                log.error("[AI] Error during AI turn: " + e.getMessage());
                 e.printStackTrace();
             } finally {
                 aiTurnInProgress.set(false);
@@ -267,7 +269,7 @@ public class AiController {
         }
 
         if (decision == null) {
-            System.out.println("[AI] No valid move found, using fallback");
+            log.info("[AI] No valid move found, using fallback");
             client.sendPushTile(1, labyrinth.contracts.models.Direction.RIGHT);
             currentDecision = null;
             return;
@@ -280,27 +282,27 @@ public class AiController {
 
             if (bonusType == BonusType.BEAM) {
                 Position beamTarget = decision.bonusAction().targetPosition();
-                System.out.println("[AI] Using BEAM (replaces push) to " + beamTarget.getRow() + "/" + beamTarget.getColumn());
+                log.info("[AI] Using BEAM (replaces push) to " + beamTarget.getRow() + "/" + beamTarget.getColumn());
                 client.sendUseBeam(beamTarget.getRow(), beamTarget.getColumn());
                 return; 
             }
 
             if (bonusType == BonusType.SWAP) {
                 String targetPlayerId = decision.bonusAction().targetPlayerId();
-                System.out.println("[AI] Using SWAP (replaces push) with player " + targetPlayerId);
+                log.info("[AI] Using SWAP (replaces push) with player " + targetPlayerId);
                 client.sendUseSwap(targetPlayerId);
                 return; 
             }
         }
 
         if (decision.bonusAction() != null && decision.bonusAction().bonusType() == BonusType.PUSH_TWICE) {
-            System.out.println("[AI] Activating PUSH_TWICE bonus");
+            log.info("[AI] Activating PUSH_TWICE bonus");
             client.sendUsePushTwice();
             Thread.sleep(300);
         }
 
         if (decision.rotations() > 0) {
-            System.out.println("[AI] Rotating extra tile " + decision.rotations() + " times");
+            log.info("[AI] Rotating extra tile " + decision.rotations() + " times");
             for (int i = 0; i < decision.rotations(); i++) {
                 client.sendRotateTile();
                 Thread.sleep(100);
@@ -310,7 +312,7 @@ public class AiController {
         Thread.sleep(150);
 
         if (decision.shift() != null) {
-            System.out.println("[AI] Shifting " + (decision.shift().isRow() ? "row" : "column") +
+            log.info("[AI] Shifting " + (decision.shift().isRow() ? "row" : "column") +
                     " " + decision.shift().index() + " " + decision.shift().direction());
             client.sendPushTile(decision.shift().index(), decision.shift().direction());
         }
@@ -322,7 +324,7 @@ public class AiController {
             ShiftOperation secondOp = bonus.secondPush();
 
             if (bonus.secondPushRotations() > 0) {
-                System.out.println("[AI] Rotating for second push " + bonus.secondPushRotations() + " times");
+                log.info("[AI] Rotating for second push " + bonus.secondPushRotations() + " times");
                 for (int i = 0; i < bonus.secondPushRotations(); i++) {
                     client.sendRotateTile();
                     Thread.sleep(100);
@@ -331,7 +333,7 @@ public class AiController {
 
             Thread.sleep(150);
 
-            System.out.println("[AI] Executing second push: " + (secondOp.isRow() ? "row" : "column") +
+            log.info("[AI] Executing second push: " + (secondOp.isRow() ? "row" : "column") +
                     " " + secondOp.index() + " " + secondOp.direction());
             client.sendPushTile(secondOp.index(), secondOp.direction());
         }
@@ -340,7 +342,7 @@ public class AiController {
             SimulationResult.BonusAction bonus = decision.bonusAction();
             ShiftOperation fixedOp = bonus.pushFixedOp();
 
-            System.out.println("[AI] Using PUSH_FIXED: " + (fixedOp.isRow() ? "row" : "column") +
+            log.info("[AI] Using PUSH_FIXED: " + (fixedOp.isRow() ? "row" : "column") +
                     " " + fixedOp.index() + " " + fixedOp.direction());
             client.sendUsePushFixed(fixedOp.index(), fixedOp.direction());
         }
@@ -355,7 +357,7 @@ public class AiController {
         Position currentPos = sim.getPlayerPosition();
         java.util.Set<Position> blockedPositions = sim.getOtherPlayerPositions();
 
-        System.out.println("[AI] Move phase: " + reachable.size() + " reachable positions (excl. " +
+        log.info("[AI] Move phase: " + reachable.size() + " reachable positions (excl. " +
                 blockedPositions.size() + " blocked), target: " +
                 (targetPos != null ? targetPos.getRow() + "/" + targetPos.getColumn() : "none"));
 
@@ -365,38 +367,38 @@ public class AiController {
             Position decisionTarget = decision.targetPosition();
             if (reachable.contains(decisionTarget)) {
                 bestMove = decisionTarget;
-                System.out.println("[AI] Using decision target position");
+                log.info("[AI] Using decision target position");
             }
         }
 
         if (bestMove == null) {
             if (targetPos != null && reachable.contains(targetPos)) {
                 bestMove = targetPos;
-                System.out.println("[AI] Target is directly reachable!");
+                log.info("[AI] Target is directly reachable!");
             } else if (targetPos != null) {
                 if (blockedPositions.contains(targetPos)) {
-                    System.out.println("[AI] Target is blocked by another player!");
+                    log.info("[AI] Target is blocked by another player!");
                 }
                 bestMove = findBestMoveWithSteps(reachable, targetPos, currentPos);
                 if (bestMove != null) {
                     int dist = BoardSimulator.manhattanDistance(bestMove, targetPos);
                     int steps = BoardSimulator.manhattanDistance(currentPos, bestMove);
-                    System.out.println("[AI] Moving closer to target, distance: " + dist + ", steps: " + steps);
+                    log.info("[AI] Moving closer to target, distance: " + dist + ", steps: " + steps);
                 }
             } else if (!reachable.isEmpty()) {
                 bestMove = findFarthestPosition(reachable, currentPos);
-                System.out.println("[AI] No target, maximizing steps");
+                log.info("[AI] No target, maximizing steps");
             }
         }
 
         if (bestMove == null) {
             bestMove = player.getCurrentPosition();
-            System.out.println("[AI] No better move found, staying in place");
+            log.info("[AI] No better move found, staying in place");
         }
 
         Thread.sleep(150);
 
-        System.out.println("[AI] Moving to " + bestMove.getRow() + "/" + bestMove.getColumn());
+        log.info("[AI] Moving to " + bestMove.getRow() + "/" + bestMove.getColumn());
         client.sendMovePawn(bestMove.getRow(), bestMove.getColumn());
 
         currentDecision = null;

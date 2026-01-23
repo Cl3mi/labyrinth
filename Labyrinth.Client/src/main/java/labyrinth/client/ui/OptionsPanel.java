@@ -1,6 +1,7 @@
 package labyrinth.client.ui;
 
 import labyrinth.client.audio.AudioPlayer;
+import labyrinth.client.util.Logger;
 import labyrinth.client.ui.Styles.StyledButton;
 import labyrinth.client.ui.Styles.StyledComboBox;
 import labyrinth.client.ui.Styles.StyledDialog;
@@ -20,6 +21,8 @@ import java.util.prefs.Preferences;
 
 
 public class OptionsPanel extends JPanel {
+
+    private static final Logger log = Logger.getLogger(OptionsPanel.class);
 
     @Setter
     private Runnable onBackToMenu;
@@ -101,10 +104,10 @@ public class OptionsPanel extends JPanel {
             var url = getClass().getResource(imagePath);
             if (url != null) {
                 backgroundImage = new ImageIcon(url).getImage();
-                System.out.println("[OptionsPanel] Loaded background: " + imagePath);
+                log.info("[OptionsPanel] Loaded background: %s", imagePath);
             }
         } catch (Exception e) {
-            System.err.println("Error loading background: " + e.getMessage());
+            log.error("Error loading background: %s", e.getMessage());
         }
     }
 

@@ -1,6 +1,7 @@
 package labyrinth.client.ui;
 
 import labyrinth.client.audio.AudioPlayer;
+import labyrinth.client.util.Logger;
 import labyrinth.client.ui.Styles.StyledButton;
 import labyrinth.client.ui.Styles.StyledContextMenu;
 import labyrinth.client.ui.Styles.StyledTooltipManager;
@@ -21,6 +22,8 @@ import java.util.function.Consumer;
  * Displays the game logo and primary navigation buttons.
  */
 public class MainMenuPanel extends ThemedPanel {
+
+    private static final Logger log = Logger.getLogger(MainMenuPanel.class);
 
     @Setter
     private Runnable onMultiplayerClicked;
@@ -73,7 +76,7 @@ public class MainMenuPanel extends ThemedPanel {
     private void loadResources() {
         logoImage = ImageAssetManager.getInstance().getLogoImage();
         if (logoImage == null) {
-            System.err.println("Logo not found: /images/ui/logo.png");
+            log.error("Logo not found: /images/ui/logo.png");
         }
     }
 

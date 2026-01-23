@@ -1,6 +1,7 @@
 package labyrinth.client.messaging;
 
 import labyrinth.client.models.LabyrinthApplication;
+import labyrinth.client.util.Logger;
 import labyrinth.client.models.LabyrinthApplication.ClientIdentityStore;
 
 import java.util.concurrent.*;
@@ -19,6 +20,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class ReconnectionManager {
 
+    private static final Logger log = Logger.getLogger(ReconnectionManager.class);
     private final GameClient client;
     private final LabyrinthApplication application;
     private final ScheduledExecutorService scheduler;
@@ -53,7 +55,7 @@ public class ReconnectionManager {
         attemptCount.set(0);
         cancelled.set(false);
 
-        System.out.println("[ReconnectionManager] Starting auto-reconnect sequence");
+        log.info("[ReconnectionManager] Starting auto-reconnect sequence");
 
         currentReconnectTask = scheduler.schedule(
             this::performReconnectAttempt,
@@ -70,7 +72,7 @@ public class ReconnectionManager {
 
         if (currentReconnectTask != null && !currentReconnectTask.isDone()) {
             currentReconnectTask.cancel(false);
-            System.out.println("[ReconnectionManager] Reconnection cancelled");
+            log.info("[ReconnectionManager] Reconnection cancelled");
         }
     }
 
@@ -108,17 +110,17 @@ public class ReconnectionManager {
      */
     private void performReconnectAttempt() {
         if (cancelled.get()) {
-            System.out.println("[ReconnectionManager] Attempt cancelled");
+            log.info("[ReconnectionManager] Attempt cancelled");
             return;
         }
 
         int currentAttempt = attemptCount.incrementAndGet();
-        System.out.println("[ReconnectionManager] Reconnection attempt " + currentAttempt + "/" + MAX_RECONNECT_ATTEMPTS);
+        log.info("[ReconnectionManager] Reconnection attempt " + currentAttempt + "/" + MAX_RECONNECT_ATTEMPTS);
 
         String token = ClientIdentityStore.loadToken();
 
         if (token == null || token.isBlank()) {
-            System.out.println("[ReconnectionManager] No token available - cannot auto-reconnect");
+            log.info("[ReconnectionManager] No token available - cannot auto-reconnect");
             application.showManualReconnectDialog();
             return;
         }
@@ -141,13 +143,13 @@ public class ReconnectionManager {
         }
 
         if (attemptNumber >= MAX_RECONNECT_ATTEMPTS) {
-            System.out.println("[ReconnectionManager] Max reconnect attempts reached - showing manual dialog");
+            log.info("[ReconnectionManager] Max reconnect attempts reached - showing manual dialog");
             application.showManualReconnectDialog();
         } else {
             int delayMs = calculateDelay(attemptNumber);
             int delaySeconds = delayMs / 1000;
 
-            System.out.println("[ReconnectionManager] Scheduling next attempt in " + delaySeconds + "s");
+            log.info("[ReconnectionManager] Scheduling next attempt in " + delaySeconds + "s");
 
             application.updateReconnectionStatus(attemptNumber, MAX_RECONNECT_ATTEMPTS, delaySeconds);
 

@@ -3,6 +3,7 @@ package labyrinth.client.messaging;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import labyrinth.client.util.Logger;
 import labyrinth.contracts.models.*;
 import lombok.Setter;
 import org.java_websocket.client.WebSocketClient;
@@ -15,6 +16,7 @@ import java.util.function.Consumer;
 
 public class GameClient extends WebSocketClient {
 
+    private static final Logger log = Logger.getLogger(GameClient.class);
     private final ObjectMapper mapper;
 
     private volatile ConnectionState connectionState = ConnectionState.DISCONNECTED;
@@ -46,7 +48,7 @@ public class GameClient extends WebSocketClient {
 
     @Override
     public void onOpen(ServerHandshake handShake) {
-        System.out.println("WebSocket connected");
+        log.info("WebSocket connected");
 
         connectionState = ConnectionState.CONNECTED;
         intentionalDisconnect = false; // Reset flag on successful connection
@@ -63,7 +65,7 @@ public class GameClient extends WebSocketClient {
     @Override
     public void onMessage(String message) {
         try {
-            System.out.println("WS IN: " + message);
+            log.info("WS IN: %s", message);
 
             JsonNode root = mapper.readTree(message);
             JsonNode typeNode = root.get("type");
@@ -118,14 +120,14 @@ public class GameClient extends WebSocketClient {
                 }
 
                 case GAME_OVER -> {
-                    System.out.println("[GameClient] GAME_OVER message received, parsing payload...");
+                    log.info("GAME_OVER message received, parsing payload...");
                     GameOverEventPayload payload = mapper.treeToValue(payloadNode, GameOverEventPayload.class);
-                    System.out.println("[GameClient] GAME_OVER payload parsed, winner: " + payload.getWinnerId() + ", callback registered: " + (onGameOver != null));
+                    log.info("GAME_OVER payload parsed, winner: %s, callback registered: %s", payload.getWinnerId(), onGameOver != null);
                     if (onGameOver != null) {
-                        System.out.println("[GameClient] Calling onGameOver callback...");
+                        log.info("Calling onGameOver callback...");
                         runOnUiThread(() -> onGameOver.accept(payload));
                     } else {
-                        System.err.println("[GameClient] WARNING: onGameOver callback is NULL!");
+                        log.error("WARNING: onGameOver callback is NULL!");
                     }
                 }
 
@@ -141,10 +143,10 @@ public class GameClient extends WebSocketClient {
 
                 case SERVER_INFO -> {
                     // ServerInfoEventPayload payload = mapper.treeToValue(payloadNode, ServerInfoEventPayload.class);
-                    System.out.println("SERVER_INFO received: " + payloadNode);
+                    log.info("SERVER_INFO received: %s", payloadNode);
                 }
 
-                default -> System.out.println("Unhandled event type: " + type + " raw=" + message);
+                default -> log.info("Unhandled event type: %s raw=%s", type, message);
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -156,12 +158,12 @@ public class GameClient extends WebSocketClient {
 
     @Override
     public void onClose(int code, String reason, boolean remote) {
-        System.out.println("WebSocket closed. code=" + code + " remote=" + remote + " reason=" + reason);
+        log.info("WebSocket closed. code=%d remote=%s reason=%s", code, remote, reason);
         ConnectionState previousState = connectionState;
 
         if (connectionState == ConnectionState.DISCONNECTING) {
             connectionState = ConnectionState.DISCONNECTED;
-            System.out.println("Intentional disconnect completed");
+            log.info("Intentional disconnect completed");
             return;
         }
 
@@ -171,7 +173,7 @@ public class GameClient extends WebSocketClient {
                                   previousState == ConnectionState.CONNECTED;
 
         if (shouldReconnect) {
-            System.out.println("Unintentional disconnect detected - triggering reconnection");
+            log.info("Unintentional disconnect detected - triggering reconnection");
             if (onConnectionLost != null) {
                 runOnUiThread(onConnectionLost);
             }
@@ -193,7 +195,7 @@ public class GameClient extends WebSocketClient {
                                    connectionState == ConnectionState.CONNECTING) &&
                                   !intentionalDisconnect;
         if (shouldReconnect) {
-            System.out.println("WebSocket error during active connection - may trigger reconnection");
+            log.info("WebSocket error during active connection - may trigger reconnection");
         }
 
         runOnUiThread(() -> {
@@ -223,7 +225,7 @@ public class GameClient extends WebSocketClient {
             payload.setType(CommandType.CONNECT);
             payload.setIdentifierToken(identifierToken);
             send(mapper.writeValueAsString(payload));
-            System.out.println("sendReconnect -> " + mapper.writeValueAsString(payload));
+            log.info("sendReconnect -> %s", mapper.writeValueAsString(payload));
         } catch (Exception e) {
             e.printStackTrace();
             runOnUiThread(() -> {
@@ -237,7 +239,7 @@ public class GameClient extends WebSocketClient {
             DisconnectCommandPayload payload = new DisconnectCommandPayload();
             payload.setType(CommandType.DISCONNECT);
             send(mapper.writeValueAsString(payload));
-            System.out.println("sendDisconnect -> " + mapper.writeValueAsString(payload));
+            log.info("sendDisconnect -> %s", mapper.writeValueAsString(payload));
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -262,16 +264,16 @@ public class GameClient extends WebSocketClient {
             payload.setAdditionalProperties(additionalProps);
 
             String json = mapper.writeValueAsString(payload);
-            System.out.println("sendStartGame isOpen=" + isOpen() + " isClosing=" + isClosing() + " isClosed=" + isClosed());
-            System.out.println("sendStartGame -> " + json);
+            log.info("sendStartGame isOpen=%s isClosing=%s isClosed=%s", isOpen(), isClosing(), isClosed());
+            log.info("sendStartGame -> %s", json);
             send(json);
-            System.out.println(">>> START_GAME sent, waiting for response...");
+            log.info(">>> START_GAME sent, waiting for response...");
 
             new Thread(() -> {
                 try {
                     Thread.sleep(3000);
-                    System.out.println(">>> 3 seconds passed - no GAME_STARTED received");
-                    System.out.println(">>> Connection still open: " + isOpen());
+                    log.info(">>> 3 seconds passed - no GAME_STARTED received");
+                    log.info(">>> Connection still open: %s", isOpen());
                 } catch (InterruptedException ignored) {}
             }).start();
         } catch (Exception e) {
@@ -288,7 +290,7 @@ public class GameClient extends WebSocketClient {
             payload.setType(CommandType.ROTATE_TILE);
 
             String json = mapper.writeValueAsString(payload);
-            System.out.println("sendRotateTile -> " + json);
+            log.info("sendRotateTile -> %s", json);
             send(json);
         } catch (Exception e) {
             e.printStackTrace();
@@ -311,7 +313,7 @@ public class GameClient extends WebSocketClient {
             payload.setTargetCoordinates(coords);
 
             String json = mapper.writeValueAsString(payload);
-            System.out.println("sendMovePawn -> " + json);
+            log.info("sendMovePawn -> %s", json);
             send(json);
         } catch (Exception e) {
             e.printStackTrace();
@@ -331,7 +333,7 @@ public class GameClient extends WebSocketClient {
             payload.setDirection(direction);
 
             String json = mapper.writeValueAsString(payload);
-            System.out.println("sendPushTile -> " + json);
+            log.info("sendPushTile -> %s", json);
             send(json);
         } catch (Exception e) {
             e.printStackTrace();
@@ -358,7 +360,7 @@ public class GameClient extends WebSocketClient {
             payload.setTargetCoordinates(coords);
 
             String json = mapper.writeValueAsString(payload);
-            System.out.println("sendUseBeam -> " + json);
+            log.info("sendUseBeam -> %s", json);
             send(json);
         } catch (Exception e) {
             e.printStackTrace();
@@ -379,7 +381,7 @@ public class GameClient extends WebSocketClient {
             payload.setTargetPlayerId(targetPlayerId);
 
             String json = mapper.writeValueAsString(payload);
-            System.out.println("sendUseSwap -> " + json);
+            log.info("sendUseSwap -> %s", json);
             send(json);
         } catch (Exception e) {
             e.printStackTrace();
@@ -402,7 +404,7 @@ public class GameClient extends WebSocketClient {
             payload.setDirection(direction);
 
             String json = mapper.writeValueAsString(payload);
-            System.out.println("sendUsePushFixed -> " + json);
+            log.info("sendUsePushFixed -> %s", json);
             send(json);
         } catch (Exception e) {
             e.printStackTrace();
@@ -422,7 +424,7 @@ public class GameClient extends WebSocketClient {
             payload.setType(CommandType.USE_PUSH_TWICE);
 
             String json = mapper.writeValueAsString(payload);
-            System.out.println("sendUsePushTwice -> " + json);
+            log.info("sendUsePushTwice -> %s", json);
             send(json);
         } catch (Exception e) {
             e.printStackTrace();
@@ -462,7 +464,7 @@ public class GameClient extends WebSocketClient {
         if (connectionState == ConnectionState.CONNECTED ||
             connectionState == ConnectionState.CONNECTING ||
             connectionState == ConnectionState.RECONNECTING) {
-            System.out.println("Cannot reconnect - already connected or connecting");
+            log.info("Cannot reconnect - already connected or connecting");
             return false;
         }
 
@@ -495,7 +497,7 @@ public class GameClient extends WebSocketClient {
     public boolean attemptConnect(String username) {
         if (connectionState == ConnectionState.CONNECTED ||
             connectionState == ConnectionState.CONNECTING) {
-            System.out.println("Cannot connect - already connected or connecting");
+            log.info("Cannot connect - already connected or connecting");
             return false;
         }
 

@@ -1,6 +1,7 @@
 package labyrinth.client.ui;
 
 import labyrinth.client.ui.Styles.StyledButton;
+import labyrinth.client.util.Logger;
 import labyrinth.client.ui.Styles.StyledContextMenu;
 import labyrinth.client.ui.Styles.StyledTooltipManager;
 import labyrinth.client.ui.theme.FontManager;
@@ -27,6 +28,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 public class ServerBrowserPanel extends JPanel {
+
+    private static final Logger log = Logger.getLogger(ServerBrowserPanel.class);
 
     @Setter
     private Runnable onBackToMenu;
@@ -225,12 +228,12 @@ public class ServerBrowserPanel extends JPanel {
             var url = getClass().getResource(imagePath);
             if (url != null) {
                 backgroundImage = new ImageIcon(url).getImage();
-                System.out.println("[ServerBrowserPanel] Loaded background: " + imagePath);
+                log.info("[ServerBrowserPanel] Loaded background: %s", imagePath);
             } else {
-                System.err.println("Background not found: " + imagePath);
+                log.error("Background not found: %s", imagePath);
             }
         } catch (Exception e) {
-            System.err.println("Error loading background: " + e.getMessage());
+            log.error("Error loading background: %s", e.getMessage());
         }
     }
 
