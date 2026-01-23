@@ -4,6 +4,7 @@ import labyrinth.client.messaging.GameClient;
 import labyrinth.client.models.Board;
 import labyrinth.client.models.Player;
 import labyrinth.client.models.Position;
+import labyrinth.contracts.models.BonusType;
 import labyrinth.contracts.models.CurrentTurnInfo;
 import labyrinth.contracts.models.TurnState;
 
@@ -30,7 +31,6 @@ public class AiController {
     private final AtomicBoolean aiModeEnabled = new AtomicBoolean(false);
     private final AtomicBoolean stopped = new AtomicBoolean(false);
 
-    // Callback for UI feedback
     private Runnable onAiThinkingStart;
     private Runnable onAiThinkingEnd;
     private Runnable onAiModeChanged;
@@ -110,7 +110,6 @@ public class AiController {
         aiModeEnabled.set(false);
         aiTurnInProgress.set(false);
 
-        // Clear stored state to prevent re-triggering
         latestBoard = null;
         latestPlayers = null;
         latestTurnInfo = null;
@@ -128,7 +127,6 @@ public class AiController {
         stopped.set(false);
     }
 
-    // Store latest state for re-triggering
     private volatile Board latestBoard;
     private volatile List<Player> latestPlayers;
     private volatile CurrentTurnInfo latestTurnInfo;
@@ -138,19 +136,17 @@ public class AiController {
      * If AI mode is enabled and it's the local player's turn, triggers AI automatically.
      */
     public void onGameStateUpdate(Board board, List<Player> players, CurrentTurnInfo turnInfo) {
-        // Check if stopped (game ended)
         if (stopped.get()) {
             System.out.println("[AI Controller] Ignoring state update - AI is stopped");
             return;
         }
 
-        // Always store latest state
         this.latestBoard = board;
         this.latestPlayers = players;
         this.latestTurnInfo = turnInfo;
 
         if (!aiModeEnabled.get()) {
-            return; // AI mode not enabled
+            return; 
         }
 
         if (board == null || players == null || turnInfo == null) {
@@ -158,20 +154,17 @@ public class AiController {
             return;
         }
 
-        // Check if it's the local player's turn
         if (localPlayerId == null || !localPlayerId.equals(turnInfo.getCurrentPlayerId())) {
             System.out.println("[AI Controller] Not my turn. Local: " + localPlayerId + ", Current: " + turnInfo.getCurrentPlayerId());
             return;
         }
 
-        // Find the local player
         Player localPlayer = findPlayerById(localPlayerId, players);
         if (localPlayer == null) {
             System.out.println("[AI Controller] Local player not found in players list");
             return;
         }
 
-        // Trigger AI if not already in progress
         if (aiTurnInProgress.compareAndSet(false, true)) {
             System.out.println("[AI Controller] Auto-triggering AI for: " + localPlayer.getName() + " (State: " + turnInfo.getState() + ")");
             executeAiTurn(board, localPlayer, turnInfo.getState() == TurnState.WAITING_FOR_PUSH);
@@ -185,10 +178,8 @@ public class AiController {
      * Called after AI completes a move to check if it's still our turn.
      */
     private void retriggerIfStillMyTurn() {
-        // Check if stopped (game ended) or AI mode disabled
         if (stopped.get() || !aiModeEnabled.get()) return;
 
-        // Small delay to let server state update arrive
         executor.submit(() -> {
             try {
                 Thread.sleep(500);
@@ -196,7 +187,6 @@ public class AiController {
                 return;
             }
 
-            // Re-check stopped flag after sleep (game may have ended while waiting)
             if (stopped.get()) {
                 System.out.println("[AI Controller] Re-trigger cancelled - AI is stopped");
                 return;
@@ -212,7 +202,6 @@ public class AiController {
             Player localPlayer = findPlayerById(localPlayerId, players);
             if (localPlayer == null) return;
 
-            // Check if we need to do something (still our turn, e.g., need to move after push)
             if (aiTurnInProgress.compareAndSet(false, true)) {
                 System.out.println("[AI Controller] Re-triggering AI - still my turn (State: " + turnInfo.getState() + ")");
                 executeAiTurn(board, localPlayer, turnInfo.getState() == TurnState.WAITING_FOR_PUSH);
@@ -230,34 +219,27 @@ public class AiController {
     private void executeAiTurn(Board board, Player player, boolean needsShift) {
         executor.submit(() -> {
             try {
-                // Check if stopped before starting
                 if (stopped.get()) {
                     System.out.println("[AI] Turn cancelled - AI is stopped");
                     return;
                 }
 
-                // Notify UI that AI is thinking
                 notifyThinkingStart();
 
                 System.out.println("[AI] Starting turn for: " + player.getName() + " (needsShift: " + needsShift + ")");
 
                 if (needsShift) {
-                    // Phase 1: Compute and execute shift
                     executeShiftPhase(board, player);
 
-                    // Wait for server to process and send new state
                     Thread.sleep(400);
 
-                    // After shift, we need to move - but server will send new state
-                    // Set flag to false so new state update can trigger move
                     aiTurnInProgress.set(false);
                     notifyThinkingEnd();
 
                     System.out.println("[AI] Shift done, waiting for server state update for move phase");
-                    return; // Let onGameStateUpdate handle the move phase
+                    return; 
                 }
 
-                // Phase 2: Execute move (only if no shift needed, i.e., already in WAITING_FOR_MOVE state)
                 executeMovePhase(board, player, latestPlayers);
 
                 System.out.println("[AI] Turn completed for: " + player.getName());
@@ -269,24 +251,54 @@ public class AiController {
                 aiTurnInProgress.set(false);
                 notifyThinkingEnd();
 
-                // Check if it's still our turn (e.g., game might loop back to us)
                 retriggerIfStillMyTurn();
             }
         });
     }
 
+    private volatile AiDecision currentDecision;
+
     private void executeShiftPhase(Board board, Player player) throws InterruptedException {
-        // Compute best move
-        AiDecision decision = strategy.computeBestMove(board, player);
+        AiDecision decision;
+        if (strategy instanceof SimpleAiStrategy simpleStrategy) {
+            decision = simpleStrategy.computeBestMove(board, player, latestPlayers);
+        } else {
+            decision = strategy.computeBestMove(board, player);
+        }
 
         if (decision == null) {
             System.out.println("[AI] No valid move found, using fallback");
-            // Fallback: push row 1 to the right
             client.sendPushTile(1, labyrinth.contracts.models.Direction.RIGHT);
+            currentDecision = null;
             return;
         }
 
-        // Apply rotations first
+        currentDecision = decision;
+
+        if (decision.bonusAction() != null) {
+            BonusType bonusType = decision.bonusAction().bonusType();
+
+            if (bonusType == BonusType.BEAM) {
+                Position beamTarget = decision.bonusAction().targetPosition();
+                System.out.println("[AI] Using BEAM (replaces push) to " + beamTarget.getRow() + "/" + beamTarget.getColumn());
+                client.sendUseBeam(beamTarget.getRow(), beamTarget.getColumn());
+                return; 
+            }
+
+            if (bonusType == BonusType.SWAP) {
+                String targetPlayerId = decision.bonusAction().targetPlayerId();
+                System.out.println("[AI] Using SWAP (replaces push) with player " + targetPlayerId);
+                client.sendUseSwap(targetPlayerId);
+                return; 
+            }
+        }
+
+        if (decision.bonusAction() != null && decision.bonusAction().bonusType() == BonusType.PUSH_TWICE) {
+            System.out.println("[AI] Activating PUSH_TWICE bonus");
+            client.sendUsePushTwice();
+            Thread.sleep(300);
+        }
+
         if (decision.rotations() > 0) {
             System.out.println("[AI] Rotating extra tile " + decision.rotations() + " times");
             for (int i = 0; i < decision.rotations(); i++) {
@@ -295,63 +307,88 @@ public class AiController {
             }
         }
 
-        // Small delay for natural feel
         Thread.sleep(150);
 
-        // Execute shift
-        System.out.println("[AI] Shifting " + (decision.shift().isRow() ? "row" : "column") +
-                " " + decision.shift().index() + " " + decision.shift().direction());
-        client.sendPushTile(decision.shift().index(), decision.shift().direction());
+        if (decision.shift() != null) {
+            System.out.println("[AI] Shifting " + (decision.shift().isRow() ? "row" : "column") +
+                    " " + decision.shift().index() + " " + decision.shift().direction());
+            client.sendPushTile(decision.shift().index(), decision.shift().direction());
+        }
+
+        if (decision.bonusAction() != null && decision.bonusAction().bonusType() == BonusType.PUSH_TWICE) {
+            Thread.sleep(400); 
+
+            SimulationResult.BonusAction bonus = decision.bonusAction();
+            ShiftOperation secondOp = bonus.secondPush();
+
+            if (bonus.secondPushRotations() > 0) {
+                System.out.println("[AI] Rotating for second push " + bonus.secondPushRotations() + " times");
+                for (int i = 0; i < bonus.secondPushRotations(); i++) {
+                    client.sendRotateTile();
+                    Thread.sleep(100);
+                }
+            }
+
+            Thread.sleep(150);
+
+            System.out.println("[AI] Executing second push: " + (secondOp.isRow() ? "row" : "column") +
+                    " " + secondOp.index() + " " + secondOp.direction());
+            client.sendPushTile(secondOp.index(), secondOp.direction());
+        }
+
+        if (decision.bonusAction() != null && decision.bonusAction().bonusType() == BonusType.PUSH_FIXED) {
+            SimulationResult.BonusAction bonus = decision.bonusAction();
+            ShiftOperation fixedOp = bonus.pushFixedOp();
+
+            System.out.println("[AI] Using PUSH_FIXED: " + (fixedOp.isRow() ? "row" : "column") +
+                    " " + fixedOp.index() + " " + fixedOp.direction());
+            client.sendUsePushFixed(fixedOp.index(), fixedOp.direction());
+        }
     }
 
     private void executeMovePhase(Board board, Player player, List<Player> allPlayers) throws InterruptedException {
-        // Use BoardSimulator to find reachable positions from current state (no shift simulation)
-        BoardSimulator sim = new BoardSimulator(board, player);
-        java.util.Set<Position> reachable = sim.getReachablePositions();
-        Position targetPos = sim.getTargetPosition(); // Treasure or home
+        AiDecision decision = currentDecision;
 
-        // Remove positions occupied by other players (can't move there)
-        java.util.Set<Position> blockedPositions = new java.util.HashSet<>();
-        if (allPlayers != null) {
-            for (Player p : allPlayers) {
-                if (!p.getId().equals(player.getId()) && p.getCurrentPosition() != null) {
-                    blockedPositions.add(p.getCurrentPosition());
-                }
-            }
-        }
-        reachable.removeAll(blockedPositions);
+        BoardSimulator sim = new BoardSimulator(board, player, allPlayers);
+        java.util.Set<Position> reachable = sim.getReachableUnblockedPositions();
+        Position targetPos = sim.getTargetPosition();
+        Position currentPos = sim.getPlayerPosition();
+        java.util.Set<Position> blockedPositions = sim.getOtherPlayerPositions();
 
         System.out.println("[AI] Move phase: " + reachable.size() + " reachable positions (excl. " +
                 blockedPositions.size() + " blocked), target: " +
                 (targetPos != null ? targetPos.getRow() + "/" + targetPos.getColumn() : "none"));
 
-        // Find the best position to move to
         Position bestMove = null;
 
-        if (targetPos != null && reachable.contains(targetPos)) {
-            // Target is directly reachable and not blocked!
-            bestMove = targetPos;
-            System.out.println("[AI] Target is directly reachable!");
-        } else if (targetPos != null) {
-            // Target blocked or not reachable - find closest reachable position to target
-            if (blockedPositions.contains(targetPos)) {
-                System.out.println("[AI] Target is blocked by another player!");
-            }
-            int minDist = Integer.MAX_VALUE;
-            for (Position rPos : reachable) {
-                int dist = Math.abs(rPos.getRow() - targetPos.getRow()) +
-                        Math.abs(rPos.getColumn() - targetPos.getColumn());
-                if (dist < minDist) {
-                    minDist = dist;
-                    bestMove = rPos;
-                }
-            }
-            if (bestMove != null) {
-                System.out.println("[AI] Moving closer to target, distance: " + minDist);
+        if (decision != null && decision.targetPosition() != null) {
+            Position decisionTarget = decision.targetPosition();
+            if (reachable.contains(decisionTarget)) {
+                bestMove = decisionTarget;
+                System.out.println("[AI] Using decision target position");
             }
         }
 
-        // Fallback: stay in place if no better option
+        if (bestMove == null) {
+            if (targetPos != null && reachable.contains(targetPos)) {
+                bestMove = targetPos;
+                System.out.println("[AI] Target is directly reachable!");
+            } else if (targetPos != null) {
+                if (blockedPositions.contains(targetPos)) {
+                    System.out.println("[AI] Target is blocked by another player!");
+                }
+                bestMove = findBestMoveWithSteps(reachable, targetPos, currentPos);
+                if (bestMove != null) {
+                    int dist = BoardSimulator.manhattanDistance(bestMove, targetPos);
+                    int steps = BoardSimulator.manhattanDistance(currentPos, bestMove);
+                    System.out.println("[AI] Moving closer to target, distance: " + dist + ", steps: " + steps);
+                }
+            } else if (!reachable.isEmpty()) {
+                bestMove = findFarthestPosition(reachable, currentPos);
+                System.out.println("[AI] No target, maximizing steps");
+            }
+        }
+
         if (bestMove == null) {
             bestMove = player.getCurrentPosition();
             System.out.println("[AI] No better move found, staying in place");
@@ -361,6 +398,39 @@ public class AiController {
 
         System.out.println("[AI] Moving to " + bestMove.getRow() + "/" + bestMove.getColumn());
         client.sendMovePawn(bestMove.getRow(), bestMove.getColumn());
+
+        currentDecision = null;
+    }
+
+    private Position findBestMoveWithSteps(java.util.Set<Position> reachable, Position target, Position current) {
+        Position best = null;
+        double bestScore = Double.NEGATIVE_INFINITY;
+        final double DISTANCE_WEIGHT = 3.0;
+        final double STEPS_WEIGHT = 1.0;
+
+        for (Position pos : reachable) {
+            int distToTarget = BoardSimulator.manhattanDistance(pos, target);
+            int steps = BoardSimulator.manhattanDistance(current, pos);
+            double score = -distToTarget * DISTANCE_WEIGHT + steps * STEPS_WEIGHT;
+            if (score > bestScore) {
+                bestScore = score;
+                best = pos;
+            }
+        }
+        return best;
+    }
+
+    private Position findFarthestPosition(java.util.Set<Position> reachable, Position current) {
+        Position farthest = null;
+        int maxDist = -1;
+        for (Position pos : reachable) {
+            int dist = BoardSimulator.manhattanDistance(pos, current);
+            if (dist > maxDist) {
+                maxDist = dist;
+                farthest = pos;
+            }
+        }
+        return farthest != null ? farthest : reachable.iterator().next();
     }
 
     private Player findPlayerById(String playerId, List<Player> players) {
