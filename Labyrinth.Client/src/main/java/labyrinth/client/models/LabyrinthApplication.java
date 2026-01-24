@@ -329,6 +329,10 @@ public class LabyrinthApplication {
             log.info("[{}] Next treasure: {}", PROFILE, treasure);
             SwingUtilities.invokeLater(() -> {
                 var player = resolveLocalPlayer(currentPlayers);
+                if (player == null) {
+                    log.info("[{}] Cannot set treasure - player not yet initialized", PROFILE);
+                    return;
+                }
                 player.setCurrentTargetTreasure(treasure);
 
                 if (boardPanel != null) {
@@ -679,7 +683,25 @@ public class LabyrinthApplication {
 
         client.setOnGameStarted(started -> {
             log.info("[{}] Received GAME_STARTED", PROFILE);
-            exitedToLobby = false;  // Reset flag - neues Spiel startet
+
+            // Reset all game-over related flags to allow transition to new game
+            isGameOver = false;
+            isGameOverCleanup = false;
+            exitedToLobby = false;
+            gameViewShown = false;
+
+            // Cleanup game over panel if it was showing
+            if (gameOverPanel != null) {
+                SwingUtilities.invokeLater(() -> gameOverPanel.cleanup());
+            }
+
+            // Cleanup old board panel if it exists
+            if (boardPanel != null) {
+                SwingUtilities.invokeLater(() -> {
+                    mainPanel.remove(boardPanel);
+                    boardPanel = null;
+                });
+            }
 
             if (aiController != null) {
                 aiController.reset();
