@@ -88,7 +88,7 @@ public class GameOverPanel extends JPanel {
         titleLabel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 60));
 
         // Trophy icon with bright golden glow background for visibility
-        JLabel trophyLabel = new JLabel("[#1]", SwingConstants.CENTER) {
+        JLabel trophyLabel = new JLabel("", SwingConstants.CENTER) {
             @Override
             protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g;
