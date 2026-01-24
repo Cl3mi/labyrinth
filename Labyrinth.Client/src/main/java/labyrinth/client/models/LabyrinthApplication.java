@@ -233,6 +233,24 @@ public class LabyrinthApplication {
         serverBrowserPanel.onShow();
     }
 
+    private void handleConnectionErrorAndReturnToServerBrowser(String title, String message) {
+        pendingMultiplayerJoin = false;
+        connectAckReceived = true; // Prevent fallback retry
+        if (client != null && client.isOpen()) {
+            isGameOverCleanup = true;
+            try {
+                client.disconnectCleanly();
+                reconnectionManager.cancelReconnection();
+            } catch (Exception e) {
+                log.error("Error disconnecting after connection error: {}", e.getMessage());
+            } finally {
+                isGameOverCleanup = false;
+            }
+        }
+        DialogFactory.showError(frame, title, message);
+        showServerBrowser();
+    }
+
     private void setUsername(GameServer gameServer) {
         mainMenuPanel.showMultiplayerUsernameDialog(username -> showMultiplayerLobby(gameServer, username));
     }
@@ -866,8 +884,19 @@ public class LabyrinthApplication {
                 if (msg != null && msg.contains("PLAYER_NOT_FOUND")) {
                     log.info("[{}] PLAYER_NOT_FOUND - ignoring (token already cleared)", PROFILE);
                     ClientIdentityStore.clearToken();
+                } else if (msg != null && msg.contains("was not connected")) {
+                    // Harmlos: DISCONNECT wurde gesendet aber Session war nie registriert
+                    log.debug("[{}] Ignoring 'was not connected' error (expected after failed connect)", PROFILE);
                 } else if (msg != null && msg.contains("already connected")) {
-                    log.info("[{}] Session already connected - ignoring: {}", PROFILE, msg);
+                    log.info("[{}] Username already taken - returning to server browser", PROFILE);
+                    handleConnectionErrorAndReturnToServerBrowser(
+                            "Benutzername vergeben",
+                            "Der Benutzername ist auf diesem Server bereits vergeben.\nBitte wähle einen anderen Namen.");
+                } else if (msg != null && msg.contains("Session is not connected")) {
+                    log.info("[{}] Session not connected - returning to server browser", PROFILE);
+                    handleConnectionErrorAndReturnToServerBrowser(
+                            "Sitzungsfehler",
+                            "Die Verbindung zum Server wurde unterbrochen.\nBitte verbinde dich erneut.");
                 } else if (pendingMultiplayerJoin) {
                     pendingMultiplayerJoin = false;
                     DialogFactory.showError(frame, "Verbindungsfehler", msg);
