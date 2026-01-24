@@ -376,9 +376,22 @@ public class Game {
 
         turnController.stopTimer();
         removeBots();
+        resetAiStateForConnectedPlayers();
         this.roomState = RoomState.LOBBY;
 
         gameLogger.log(GameLogType.RETURN_TO_LOBBY, "Return to lobby complete.");
+    }
+
+    /**
+     * Resets isAiActive to false for all connected players.
+     * Called when returning to lobby so players don't stay in AI mode for the next game.
+     */
+    private void resetAiStateForConnectedPlayers() {
+        for (Player player : playerRegistry.getPlayers()) {
+            if (!player.isDisconnected()) {
+                player.setAiActive(false);
+            }
+        }
     }
 
     private void removeBots() {

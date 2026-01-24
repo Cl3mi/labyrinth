@@ -19,6 +19,16 @@ public class ConnectionCleanupService {
     private static final org.slf4j.Logger log = LoggerFactory.getLogger(ConnectionCleanupService.class);
 
     /**
+     * Proactively checks all registered players to detect stale sessions.
+     * This catches "ghost players" where the connection dropped without triggering afterConnectionClosed().
+     * Runs every 5 seconds.
+     */
+    @Scheduled(fixedRate = 5000)
+    public void detectStaleConnections() {
+        playerSessionRegistry.checkAndMarkStaleConnections();
+    }
+
+    /**
      * Handles players who have been disconnected for more than 30 seconds.
      * After 30 seconds, the player permanently becomes AI-controlled.
      * Runs every second.

@@ -91,4 +91,19 @@ public class PlayerSessionRegistry {
         PlayerRegistration reg = registrations.get(playerId);
         return reg != null && reg.isConnected();
     }
+
+    /**
+     * Proactively checks all registrations for stale connections.
+     * This detects "ghost players" where the WebSocket closed without triggering afterConnectionClosed().
+     */
+    public void checkAndMarkStaleConnections() {
+        for (PlayerRegistration reg : registrations.values()) {
+            if (reg.isConnected()) {
+                WebSocketSession session = reg.getSession();
+                if (session == null || !session.isOpen()) {
+                    reg.markDisconnected();
+                }
+            }
+        }
+    }
 }
