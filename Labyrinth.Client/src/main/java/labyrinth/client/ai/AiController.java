@@ -73,11 +73,17 @@ public class AiController {
     /**
      * Toggles AI mode on/off.
      * When enabled, AI will automatically make moves when it's the local player's turn.
+     * Also notifies the server so the AI status is broadcast to all clients.
      */
     public void toggleAiMode() {
         boolean newState = !aiModeEnabled.get();
         aiModeEnabled.set(newState);
         log.info("[AI Controller] AI mode " + (newState ? "ENABLED" : "DISABLED"));
+
+        // Notify server of AI status change
+        if (client != null && client.isOpen()) {
+            client.sendToggleAi(newState);
+        }
 
         if (onAiModeChanged != null) {
             SwingUtilities.invokeLater(onAiModeChanged);
@@ -93,10 +99,16 @@ public class AiController {
 
     /**
      * Sets AI mode directly.
+     * Also notifies the server so the AI status is broadcast to all clients.
      */
     public void setAiModeEnabled(boolean enabled) {
-        aiModeEnabled.set(enabled);
+        boolean previousState = aiModeEnabled.getAndSet(enabled);
         log.info("[AI Controller] AI mode set to " + (enabled ? "ENABLED" : "DISABLED"));
+
+        // Notify server of AI status change (only if state changed)
+        if (previousState != enabled && client != null && client.isOpen()) {
+            client.sendToggleAi(enabled);
+        }
 
         if (onAiModeChanged != null) {
             SwingUtilities.invokeLater(onAiModeChanged);
