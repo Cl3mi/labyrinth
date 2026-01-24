@@ -47,7 +47,8 @@ public class MultiplayerLobbyPanel extends JPanel {
     private volatile LobbyStateEventPayload lastLobbyState;
 
 
-    private int configBoardSize = 7;
+    private int configBoardWidth = 7;
+    private int configBoardHeight = 7;
     private int configTreasuresToWin = 6;
     private int configBonusCount = 0;
     private int configTurnTimeSeconds = 30;
@@ -55,7 +56,8 @@ public class MultiplayerLobbyPanel extends JPanel {
     private String configUsername = "Player";
 
     private StyledTextField usernameField;
-    private StyledComboBox<String> boardSizeCombo;
+    private StyledComboBox<String> boardWidthCombo;
+    private StyledComboBox<String> boardHeightCombo;
     private StyledComboBox<String> treasureCombo;
     private StyledComboBox<String> bonusCombo;
     private StyledComboBox<String> durationCombo;
@@ -238,27 +240,46 @@ public class MultiplayerLobbyPanel extends JPanel {
         StyledTooltipManager.setTooltip(usernameField, "Spielername", "Dein Anzeigename im Spiel (wird im Hauptmenü festgelegt)");
         settingsGrid.add(usernameField, gbc);
 
-        // game board size
+        // game board width
         gbc.gridx = 0; gbc.gridy = 1; gbc.weightx = 0.4;
-        settingsGrid.add(createStyledLabel("Spielfeldgröße:"), gbc);
+        settingsGrid.add(createStyledLabel("Spielfeld Breite:"), gbc);
 
         gbc.gridx = 1; gbc.weightx = 0.6;
-        boardSizeCombo = new StyledComboBox<>();
+        boardWidthCombo = new StyledComboBox<>();
         for (int i = 3; i <= 11; i += 2) {
-            boardSizeCombo.addItem(i + " × " + i);
+            boardWidthCombo.addItem(String.valueOf(i));
         }
-        boardSizeCombo.setSelectedItem("7 × 7");
-        boardSizeCombo.addActionListener(e -> {
-            String selected = (String) boardSizeCombo.getSelectedItem();
+        boardWidthCombo.setSelectedItem("7");
+        boardWidthCombo.addActionListener(e -> {
+            String selected = (String) boardWidthCombo.getSelectedItem();
             if (selected != null) {
-                configBoardSize = Integer.parseInt(selected.split(" ")[0]);
+                configBoardWidth = Integer.parseInt(selected);
             }
         });
-        StyledTooltipManager.setTooltip(boardSizeCombo, "Spielfeldgröße", "Größe des Spielfelds (Standardwert: 7×7)");
-        settingsGrid.add(boardSizeCombo, gbc);
+        StyledTooltipManager.setTooltip(boardWidthCombo, "Breite", "Breite des Spielfelds (nur ungerade Zahlen, 3-11)");
+        settingsGrid.add(boardWidthCombo, gbc);
+
+        // game board height
+        gbc.gridx = 0; gbc.gridy = 2; gbc.weightx = 0.4;
+        settingsGrid.add(createStyledLabel("Spielfeld Höhe:"), gbc);
+
+        gbc.gridx = 1; gbc.weightx = 0.6;
+        boardHeightCombo = new StyledComboBox<>();
+        for (int i = 3; i <= 11; i += 2) {
+            boardHeightCombo.addItem(String.valueOf(i));
+        }
+        boardHeightCombo.setSelectedItem("7");
+        boardHeightCombo.addActionListener(e -> {
+            String selected = (String) boardHeightCombo.getSelectedItem();
+            if (selected != null) {
+                configBoardHeight = Integer.parseInt(selected);
+            }
+        });
+        StyledTooltipManager.setTooltip(boardHeightCombo, "Höhe", "Höhe des Spielfelds (nur ungerade Zahlen, 3-11)");
+        settingsGrid.add(boardHeightCombo, gbc);
 
         // treasures
-        gbc.gridx = 0; gbc.gridy = 2;
+        gbc.gridx = 0; gbc.gridy = 3;
         settingsGrid.add(createStyledLabel("Schätze pro Spieler:"), gbc);
 
         gbc.gridx = 1;
@@ -277,7 +298,7 @@ public class MultiplayerLobbyPanel extends JPanel {
         settingsGrid.add(treasureCombo, gbc);
 
         // bonus count
-        gbc.gridx = 0; gbc.gridy = 3;
+        gbc.gridx = 0; gbc.gridy = 4;
         settingsGrid.add(createStyledLabel("Bonus-Anzahl:"), gbc);
 
         gbc.gridx = 1;
@@ -487,6 +508,9 @@ public class MultiplayerLobbyPanel extends JPanel {
                 if (Boolean.TRUE.equals(p.getIsAdmin())) {
                     sb.append("(Admin) ");
                 }
+                if (Boolean.TRUE.equals(p.getIsAiControlled())) {
+                    sb.append("[AI] ");
+                }
 
                 String name = p.getName() != null ? p.getName() : "<unbekannt>";
                 sb.append(name);
@@ -511,7 +535,8 @@ public class MultiplayerLobbyPanel extends JPanel {
 
     private void enableSettingsPanel(boolean enabled) {
         if (usernameField != null) usernameField.setEnabled(enabled);
-        if (boardSizeCombo != null) boardSizeCombo.setEnabled(enabled);
+        if (boardWidthCombo != null) boardWidthCombo.setEnabled(enabled);
+        if (boardHeightCombo != null) boardHeightCombo.setEnabled(enabled);
         if (treasureCombo != null) treasureCombo.setEnabled(enabled);
         if (bonusCombo != null) bonusCombo.setEnabled(enabled);
         if (durationCombo != null) durationCombo.setEnabled(enabled);
@@ -536,11 +561,11 @@ public class MultiplayerLobbyPanel extends JPanel {
         startButton.setEnabled(false);
 
         BoardSize bs = new BoardSize();
-        bs.setRows(configBoardSize);
-        bs.setCols(configBoardSize);
+        bs.setRows(configBoardHeight);
+        bs.setCols(configBoardWidth);
 
         try {
-            log.info("START clicked -> sending START_GAME with {} bonuses", configBonusCount);
+            log.info("START clicked -> sending START_GAME with {}x{} board, {} bonuses", configBoardWidth, configBoardHeight, configBonusCount);
             client.sendStartGame(bs, configTreasuresToWin * playerCount, configBonusCount, configGameDurationMinutes * 60, configTurnTimeSeconds);
         } catch (Exception ex) {
             ex.printStackTrace();

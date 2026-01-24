@@ -1,7 +1,6 @@
 package labyrinth.client.models;
 
 import labyrinth.client.ai.AiController;
-import labyrinth.client.logging.GameLogger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import labyrinth.client.enums.PanelName;
@@ -52,7 +51,6 @@ public class LabyrinthApplication {
 
     private ReconnectionManager reconnectionManager;
     private AiController aiController;
-    private GameLogger gameLogger;
 
     // Current game state for AI assist button
     private volatile Board currentBoard;
@@ -276,7 +274,6 @@ public class LabyrinthApplication {
         lobbyPanel.setClient(client);
 
         aiController = new AiController(client);
-        gameLogger = new GameLogger();
 
         registerCallbacks();
 
@@ -332,6 +329,10 @@ public class LabyrinthApplication {
             log.info("[{}] Next treasure: {}", PROFILE, treasure);
             SwingUtilities.invokeLater(() -> {
                 var player = resolveLocalPlayer(currentPlayers);
+                if (player == null) {
+                    log.info("[{}] Cannot set treasure - player not yet initialized", PROFILE);
+                    return;
+                }
                 player.setCurrentTargetTreasure(treasure);
 
                 if (boardPanel != null) {
@@ -536,6 +537,10 @@ public class LabyrinthApplication {
     }
 
     private void exitGameToMainMenu() {
+        if (aiController != null) {
+            aiController.stop();
+        }
+
         if (client != null && client.isOpen()) {
             try {
                 client.disconnectCleanly();
@@ -572,6 +577,10 @@ public class LabyrinthApplication {
 
 
     private void exitGameCleanup() {
+        if (aiController != null) {
+            aiController.stop();
+        }
+
         if (gameOverPanel != null) {
             gameOverPanel.cleanup();
         }
@@ -682,7 +691,25 @@ public class LabyrinthApplication {
 
         client.setOnGameStarted(started -> {
             log.info("[{}] Received GAME_STARTED", PROFILE);
-            exitedToLobby = false;  // Reset flag - neues Spiel startet
+
+            // Reset all game-over related flags to allow transition to new game
+            isGameOver = false;
+            isGameOverCleanup = false;
+            exitedToLobby = false;
+            gameViewShown = false;
+
+            // Cleanup game over panel if it was showing
+            if (gameOverPanel != null) {
+                SwingUtilities.invokeLater(() -> gameOverPanel.cleanup());
+            }
+
+            // Cleanup old board panel if it exists
+            if (boardPanel != null) {
+                SwingUtilities.invokeLater(() -> {
+                    mainPanel.remove(boardPanel);
+                    boardPanel = null;
+                });
+            }
 
             if (aiController != null) {
                 aiController.reset();
@@ -698,12 +725,6 @@ public class LabyrinthApplication {
             currentBoard = board;
             currentPlayers = players;
             currentTurnInfo = started.getCurrentTurnInfo();
-
-            // Log initial game state
-            if (gameLogger != null) {
-                gameLogger.reset();
-                gameLogger.logGameStart(board, players);
-            }
 
             showGame(board, started.getGameEndTime(), started.getCurrentTurnInfo());
 
@@ -741,13 +762,6 @@ public class LabyrinthApplication {
             currentPlayers = players;
             currentTurnInfo = state.getCurrentTurnInfo();
 
-            // Log game state changes (moves)
-            if (gameLogger != null && state.getCurrentTurnInfo() != null) {
-                gameLogger.logStateUpdate(board, players,
-                    state.getCurrentTurnInfo().getCurrentPlayerId(),
-                    state.getCurrentTurnInfo().getState());
-            }
-
             showGame(board, state.getGameEndTime(), state.getCurrentTurnInfo());
 
             if (aiController != null && !isGameOver) {
@@ -759,18 +773,6 @@ public class LabyrinthApplication {
             log.info("[{}] *** GAME_OVER EVENT RECEIVED *** Winner: {}", PROFILE, gameOver.getWinnerId());
 
             isGameOver = true;
-
-            // Log game over
-            if (gameLogger != null && currentPlayers != null) {
-                String winnerName = "Unknown";
-                for (Player p : currentPlayers) {
-                    if (p.getId() != null && p.getId().equals(gameOver.getWinnerId())) {
-                        winnerName = p.getName();
-                        break;
-                    }
-                }
-                gameLogger.logGameOver(gameOver.getWinnerId(), winnerName, currentPlayers);
-            }
 
             if (aiController != null) {
                 aiController.stop();

@@ -433,6 +433,29 @@ public class GameClient extends WebSocketClient {
         }
     }
 
+    // ===================== AI CONTROL =====================
+
+    /**
+     * Send TOGGLE_AI command to enable or disable AI control for the player.
+     * When enabled, the server tracks that this player is AI-controlled and broadcasts this status.
+     */
+    public void sendToggleAi(boolean enabled) {
+        try {
+            ToggleAiCommandPayload payload = new ToggleAiCommandPayload();
+            payload.setType(CommandType.TOGGLE_AI);
+            payload.setEnabled(enabled);
+
+            String json = mapper.writeValueAsString(payload);
+            log.info("sendToggleAi -> {}", json);
+            send(json);
+        } catch (Exception e) {
+            e.printStackTrace();
+            if (onErrorMessage != null) {
+                runOnUiThread(() -> onErrorMessage.accept("Failed to send toggle AI: " + e.getMessage()));
+            }
+        }
+    }
+
     // ===================== CONNECTION MANAGEMENT =====================
 
     /**

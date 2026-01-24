@@ -613,6 +613,14 @@ public class BoardPanel extends JPanel {
             case java.awt.event.KeyEvent.VK_TAB, java.awt.event.KeyEvent.VK_H -> {
                 showKeyboardHelp();
             }
+
+            // K - toggle AI mode
+            case java.awt.event.KeyEvent.VK_K -> {
+                if (onAiToggleRequested != null) {
+                    soundEffects.playMove();
+                    onAiToggleRequested.run();
+                }
+            }
         }
     }
 
@@ -626,6 +634,7 @@ public class BoardPanel extends JPanel {
             R / E: Extra-Tile im Uhrzeigersinn drehen
             Q: Extra-Tile gegen Uhrzeigersinn drehen
 
+            K: KI-Modus ein/ausschalten
             P / Esc: Optionen/Pause
             H / Tab: Diese Hilfe anzeigen
             """;
@@ -1044,7 +1053,7 @@ public class BoardPanel extends JPanel {
 
     /**
      * Check if there are any valid fixed rows/columns that can be pushed with PUSH_FIXED bonus.
-     * Valid targets are rows/columns with even index (fixed tiles) that are NOT on the edge.
+     * Valid targets are rows/columns that contain fixed tiles and are NOT on the edge.
      */
     private boolean hasValidPushFixedTargets() {
         if (board == null) return false;
@@ -1052,14 +1061,18 @@ public class BoardPanel extends JPanel {
         int rows = board.getHeight();
         int cols = board.getWidth();
 
-        // Check for valid fixed rows (even index, not edge)
-        for (int row = 2; row < rows - 1; row += 2) {
-            return true; // Found at least one valid row
+        // Check for valid fixed rows (not edge, contains fixed tiles)
+        for (int row = 1; row < rows - 1; row++) {
+            if (rowContainsFixedTile(row)) {
+                return true;
+            }
         }
 
-        // Check for valid fixed columns (even index, not edge)
-        for (int col = 2; col < cols - 1; col += 2) {
-            return true; // Found at least one valid column
+        // Check for valid fixed columns (not edge, contains fixed tiles)
+        for (int col = 1; col < cols - 1; col++) {
+            if (columnContainsFixedTile(col)) {
+                return true;
+            }
         }
 
         return false;
@@ -1697,15 +1710,18 @@ public class BoardPanel extends JPanel {
         boolean pushFixedActive = activeBonusMode == BonusType.PUSH_FIXED;
 
         for (int row = 0; row < rows; row++) {
-            // Normal: nur ungerade Reihen (1, 3, 5) sind schiebar
-            // Push Fixed: alle Reihen außer den äußersten (0 und rows-1)
-            boolean isNormalPushable = row % 2 == 1;
+            // Check if this row contains any fixed tiles
+            boolean rowHasFixedTile = rowContainsFixedTile(row);
+
+            // Normal: row is shiftable if it has no fixed tiles
+            // Push Fixed: all rows except the outermost (0 and rows-1) are pushable
+            boolean isNormalPushable = !rowHasFixedTile;
             boolean isPushFixedPushable = pushFixedActive && row > 0 && row < rows - 1;
 
             if (!isNormalPushable && !isPushFixedPushable) continue;
 
             int y = yOffset + row * size + (size - arrowSize) / 2;
-            boolean isFixedRow = row % 2 == 0; // gerade Indices sind fixierte Reihen
+            boolean isFixedRow = rowHasFixedTile;
 
             Rectangle leftBounds = new Rectangle(xOffset - arrowSize - ARROW_MARGIN, y, arrowSize, arrowSize);
             ArrowButton leftArrow = new ArrowButton(leftBounds, Direction.RIGHT, row, true, isFixedRow);
@@ -1719,13 +1735,18 @@ public class BoardPanel extends JPanel {
         }
 
         for (int col = 0; col < cols; col++) {
-            boolean isNormalPushable = col % 2 == 1;
+            // Check if this column contains any fixed tiles
+            boolean colHasFixedTile = columnContainsFixedTile(col);
+
+            // Normal: column is shiftable if it has no fixed tiles
+            // Push Fixed: all columns except the outermost (0 and cols-1) are pushable
+            boolean isNormalPushable = !colHasFixedTile;
             boolean isPushFixedPushable = pushFixedActive && col > 0 && col < cols - 1;
 
             if (!isNormalPushable && !isPushFixedPushable) continue;
 
             int x = xOffset + col * size + (size - arrowSize) / 2;
-            boolean isFixedCol = col % 2 == 0;
+            boolean isFixedCol = colHasFixedTile;
 
             Rectangle upBounds = new Rectangle(x, yOffset - arrowSize - ARROW_MARGIN, arrowSize, arrowSize);
             ArrowButton upArrow = new ArrowButton(upBounds, Direction.DOWN, col, false, isFixedCol);
@@ -1737,6 +1758,41 @@ public class BoardPanel extends JPanel {
             arrowButtons.add(downArrow);
             drawArrowButton(g2, downArrow);
         }
+    }
+
+    /**
+     * Check if a row contains any fixed tiles.
+     */
+    private boolean rowContainsFixedTile(int row) {
+        if (board == null) return false;
+        Tile[][] tiles = board.getTiles();
+        if (tiles == null || row < 0 || row >= tiles.length) return false;
+
+        for (int col = 0; col < board.getWidth(); col++) {
+            Tile tile = tiles[row][col];
+            if (tile != null && Boolean.TRUE.equals(tile.getIsFixed())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Check if a column contains any fixed tiles.
+     */
+    private boolean columnContainsFixedTile(int col) {
+        if (board == null) return false;
+        Tile[][] tiles = board.getTiles();
+        if (tiles == null || col < 0) return false;
+
+        for (int row = 0; row < board.getHeight(); row++) {
+            if (row >= tiles.length || col >= tiles[row].length) continue;
+            Tile tile = tiles[row][col];
+            if (tile != null && Boolean.TRUE.equals(tile.getIsFixed())) {
+                return true;
+            }
+        }
+        return false;
     }
 
    private static final Color ARROW_COLOR_FIXED = new Color(200, 140, 50);       // Gold für fixierte Reihen
