@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
+    <!-- Log directory - same as GameLogger (./logs/) -->
+    <property name="LOG_DIR" value="${LOG_DIR:-logs}" />
+
     <!-- Console Appender -->
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
@@ -7,23 +10,27 @@
         </encoder>
     </appender>
 
-    <!-- File Appender (optional - uncomment to enable file logging) -->
-    <!--
-    <appender name="FILE" class="ch.qos.logback.core.FileAppender">
-        <file>labyrinth-client.log</file>
+    <!-- Rolling File Appender with date-based rotation -->
+    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_DIR}/labyrinth-client.log</file>
         <append>true</append>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <!-- Daily rollover with max 7 days history -->
+            <fileNamePattern>${LOG_DIR}/labyrinth-client.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <maxHistory>7</maxHistory>
+            <totalSizeCap>50MB</totalSizeCap>
+        </rollingPolicy>
         <encoder>
             <pattern>[%d{yyyy-MM-dd HH:mm:ss}] [%level] [%logger{36}] %msg%n</pattern>
         </encoder>
     </appender>
-    -->
 
     <!-- Root Logger -->
     <root level="INFO">
         <appender-ref ref="CONSOLE" />
-        <!-- <appender-ref ref="FILE" /> -->
+        <appender-ref ref="FILE" />
     </root>
 
-    <!-- Package-specific log levels (optional) -->
+    <!-- Package-specific log levels -->
     <logger name="labyrinth.client" level="INFO" />
 </configuration>

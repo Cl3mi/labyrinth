@@ -36,3 +36,6 @@ build/
 /Labyrinth.Contracts/${project.build.directory}
 
 .claude/
+logs/game-client1.log
+logs/game-client2.log
+*.log

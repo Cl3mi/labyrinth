@@ -1,6 +1,7 @@
 package labyrinth.client.models;
 
 import labyrinth.client.ai.AiController;
+import labyrinth.client.logging.GameLogger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import labyrinth.client.enums.PanelName;
@@ -51,6 +52,7 @@ public class LabyrinthApplication {
 
     private ReconnectionManager reconnectionManager;
     private AiController aiController;
+    private GameLogger gameLogger;
 
     // Current game state for AI assist button
     private volatile Board currentBoard;
@@ -274,6 +276,7 @@ public class LabyrinthApplication {
         lobbyPanel.setClient(client);
 
         aiController = new AiController(client);
+        gameLogger = new GameLogger();
 
         registerCallbacks();
 
@@ -726,6 +729,12 @@ public class LabyrinthApplication {
             currentPlayers = players;
             currentTurnInfo = started.getCurrentTurnInfo();
 
+            // Log initial game state
+            if (gameLogger != null) {
+                gameLogger.reset();
+                gameLogger.logGameStart(board, players);
+            }
+
             showGame(board, started.getGameEndTime(), started.getCurrentTurnInfo());
 
             if (aiController != null) {
@@ -762,6 +771,13 @@ public class LabyrinthApplication {
             currentPlayers = players;
             currentTurnInfo = state.getCurrentTurnInfo();
 
+            // Log game state changes (moves)
+            if (gameLogger != null && state.getCurrentTurnInfo() != null) {
+                gameLogger.logStateUpdate(board, players,
+                    state.getCurrentTurnInfo().getCurrentPlayerId(),
+                    state.getCurrentTurnInfo().getState());
+            }
+
             showGame(board, state.getGameEndTime(), state.getCurrentTurnInfo());
 
             if (aiController != null && !isGameOver) {
@@ -773,6 +789,18 @@ public class LabyrinthApplication {
             log.info("[{}] *** GAME_OVER EVENT RECEIVED *** Winner: {}", PROFILE, gameOver.getWinnerId());
 
             isGameOver = true;
+
+            // Log game over
+            if (gameLogger != null && currentPlayers != null) {
+                String winnerName = "Unknown";
+                for (Player p : currentPlayers) {
+                    if (p.getId() != null && p.getId().equals(gameOver.getWinnerId())) {
+                        winnerName = p.getName();
+                        break;
+                    }
+                }
+                gameLogger.logGameOver(gameOver.getWinnerId(), winnerName, currentPlayers);
+            }
 
             if (aiController != null) {
                 aiController.stop();

@@ -562,23 +562,23 @@ public class BoardPanel extends JPanel {
                 }
             }
 
-            // Arrow key navigation
-            case java.awt.event.KeyEvent.VK_UP -> {
+            // Arrow key and WASD navigation
+            case java.awt.event.KeyEvent.VK_UP, java.awt.event.KeyEvent.VK_W -> {
                 keyboardNavigationActive = true;
                 selectedRow = Math.max(0, selectedRow - 1);
                 repaint();
             }
-            case java.awt.event.KeyEvent.VK_DOWN -> {
+            case java.awt.event.KeyEvent.VK_DOWN, java.awt.event.KeyEvent.VK_S -> {
                 keyboardNavigationActive = true;
                 selectedRow = Math.min(board.getHeight() - 1, selectedRow + 1);
                 repaint();
             }
-            case java.awt.event.KeyEvent.VK_LEFT -> {
+            case java.awt.event.KeyEvent.VK_LEFT, java.awt.event.KeyEvent.VK_A -> {
                 keyboardNavigationActive = true;
                 selectedCol = Math.max(0, selectedCol - 1);
                 repaint();
             }
-            case java.awt.event.KeyEvent.VK_RIGHT -> {
+            case java.awt.event.KeyEvent.VK_RIGHT, java.awt.event.KeyEvent.VK_D -> {
                 keyboardNavigationActive = true;
                 selectedCol = Math.min(board.getWidth() - 1, selectedCol + 1);
                 repaint();
@@ -625,21 +625,160 @@ public class BoardPanel extends JPanel {
     }
 
     private void showKeyboardHelp() {
-        String helpText = """
-            TASTATUR-STEUERUNG:
+        Color CARD_BG = new Color(35, 32, 28, 245);
+        Color CARD_BORDER = new Color(100, 85, 60);
+        Color PRIMARY_GOLD = new Color(218, 165, 32);
+        Color PRIMARY_GOLD_LIGHT = new Color(255, 215, 0);
+        Color TEXT_LIGHT = new Color(255, 248, 230);
+        Color KEY_BG = new Color(60, 55, 48);
 
-            Pfeiltasten: Tile-Auswahl navigieren
-            Enter/Leertaste: Ausgewähltes Tile bestätigen
+        JDialog dialog = new JDialog(
+                SwingUtilities.getWindowAncestor(this),
+                "Tastatur-Hilfe",
+                Dialog.ModalityType.APPLICATION_MODAL
+        );
+        dialog.setUndecorated(true);
+        dialog.setBackground(new Color(0, 0, 0, 0));
 
-            R / E: Extra-Tile im Uhrzeigersinn drehen
-            Q: Extra-Tile gegen Uhrzeigersinn drehen
+        JPanel mainPanel = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(CARD_BG);
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 20, 20);
+                g2.setColor(CARD_BORDER);
+                g2.setStroke(new BasicStroke(3));
+                g2.drawRoundRect(1, 1, getWidth() - 3, getHeight() - 3, 20, 20);
+                g2.dispose();
+                super.paintComponent(g);
+            }
+        };
+        mainPanel.setLayout(new BorderLayout(0, 15));
+        mainPanel.setBorder(BorderFactory.createEmptyBorder(20, 25, 20, 25));
+        mainPanel.setOpaque(false);
 
-            K: KI-Modus ein/ausschalten
-            P / Esc: Optionen/Pause
-            H / Tab: Diese Hilfe anzeigen
-            """;
+        // Title
+        JLabel titleLabel = new JLabel("⌨ Tastatur-Steuerung");
+        titleLabel.setFont(FontManager.getBodyMedium(Font.BOLD));
+        titleLabel.setForeground(PRIMARY_GOLD_LIGHT);
+        titleLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        mainPanel.add(titleLabel, BorderLayout.NORTH);
 
-        toastManager.showInfo("HELP", "Tastatur-Hilfe", helpText);
+        // Content panel with key bindings
+        JPanel contentPanel = new JPanel();
+        contentPanel.setOpaque(false);
+        contentPanel.setLayout(new BoxLayout(contentPanel, BoxLayout.Y_AXIS));
+        contentPanel.setBorder(BorderFactory.createEmptyBorder(10, 0, 10, 0));
+
+        // Helper to create key binding rows
+        java.util.function.BiConsumer<String, String> addKeyRow = (keys, description) -> {
+            JPanel row = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 3));
+            row.setOpaque(false);
+            row.setMaximumSize(new Dimension(400, 35));
+
+            // Key badges
+            for (String key : keys.split("\\s*/\\s*")) {
+                JLabel keyLabel = new JLabel(key) {
+                    @Override
+                    protected void paintComponent(Graphics g) {
+                        Graphics2D g2 = (Graphics2D) g.create();
+                        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                        g2.setColor(KEY_BG);
+                        g2.fillRoundRect(0, 0, getWidth(), getHeight(), 8, 8);
+                        g2.setColor(CARD_BORDER);
+                        g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 8, 8);
+                        g2.dispose();
+                        super.paintComponent(g);
+                    }
+                };
+                keyLabel.setFont(FontManager.getBodyMedium(Font.BOLD));
+                keyLabel.setForeground(PRIMARY_GOLD);
+                keyLabel.setHorizontalAlignment(SwingConstants.CENTER);
+                keyLabel.setBorder(BorderFactory.createEmptyBorder(4, 10, 4, 10));
+                keyLabel.setOpaque(false);
+                row.add(keyLabel);
+            }
+
+            JLabel descLabel = new JLabel(description);
+            descLabel.setFont(FontManager.getBodyMedium(Font.PLAIN));
+            descLabel.setForeground(TEXT_LIGHT);
+            row.add(descLabel);
+
+            contentPanel.add(row);
+        };
+
+        // Navigation section
+        JLabel navHeader = new JLabel("Navigation");
+        navHeader.setFont(FontManager.getBodyMedium(Font.BOLD));
+        navHeader.setForeground(PRIMARY_GOLD);
+        navHeader.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 0));
+        navHeader.setAlignmentX(Component.LEFT_ALIGNMENT);
+        contentPanel.add(navHeader);
+
+        addKeyRow.accept("W / ↑", "Nach oben");
+        addKeyRow.accept("S / ↓", "Nach unten");
+        addKeyRow.accept("A / ←", "Nach links");
+        addKeyRow.accept("D / →", "Nach rechts");
+        addKeyRow.accept("Enter / Space", "Auswahl bestätigen");
+
+        contentPanel.add(Box.createVerticalStrut(10));
+
+        // Tile section
+        JLabel tileHeader = new JLabel("Extra-Tile");
+        tileHeader.setFont(FontManager.getBodyMedium(Font.BOLD));
+        tileHeader.setForeground(PRIMARY_GOLD);
+        tileHeader.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 0));
+        tileHeader.setAlignmentX(Component.LEFT_ALIGNMENT);
+        contentPanel.add(tileHeader);
+
+        addKeyRow.accept("R / E", "Im Uhrzeigersinn drehen");
+        addKeyRow.accept("Q", "Gegen Uhrzeigersinn drehen");
+
+        contentPanel.add(Box.createVerticalStrut(10));
+
+        // Other section
+        JLabel otherHeader = new JLabel("Sonstiges");
+        otherHeader.setFont(FontManager.getBodyMedium(Font.BOLD));
+        otherHeader.setForeground(PRIMARY_GOLD);
+        otherHeader.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 0));
+        otherHeader.setAlignmentX(Component.LEFT_ALIGNMENT);
+        contentPanel.add(otherHeader);
+
+        addKeyRow.accept("K", "KI-Modus ein/aus");
+        addKeyRow.accept("P / Esc", "Optionen / Pause");
+        addKeyRow.accept("H / Tab", "Diese Hilfe");
+
+        mainPanel.add(contentPanel, BorderLayout.CENTER);
+
+        // Close button
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        buttonPanel.setOpaque(false);
+
+        StyledButton closeBtn = new StyledButton("Schließen", StyledButton.Style.PRIMARY);
+        closeBtn.setPreferredSize(new Dimension(120, 35));
+        closeBtn.addActionListener(e -> dialog.dispose());
+        buttonPanel.add(closeBtn);
+
+        mainPanel.add(buttonPanel, BorderLayout.SOUTH);
+
+        dialog.setContentPane(mainPanel);
+        dialog.pack();
+        dialog.setLocationRelativeTo(this);
+
+        // Close on Escape or H
+        dialog.getRootPane().registerKeyboardAction(
+                e -> dialog.dispose(),
+                KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_ESCAPE, 0),
+                JComponent.WHEN_IN_FOCUSED_WINDOW
+        );
+        dialog.getRootPane().registerKeyboardAction(
+                e -> dialog.dispose(),
+                KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_H, 0),
+                JComponent.WHEN_IN_FOCUSED_WINDOW
+        );
+
+        dialog.setVisible(true);
     }
 
     private boolean handleArrowClick(Point p) {
@@ -1855,7 +1994,7 @@ public class BoardPanel extends JPanel {
         if (currentTurnState == labyrinth.contracts.models.TurnState.WAITING_FOR_PUSH) {
             g2.setFont(FontManager.getFontForSize(10f, Font.ITALIC));
             g2.setColor(new Color(255, 255, 255, 200));
-            g2.drawString("R/Q/E: Drehen", x, y + size + 15);
+            g2.drawString("R/Q/E: Tile rotieren", x, y + size + 15);
         }
     }
 
@@ -2080,7 +2219,7 @@ public class BoardPanel extends JPanel {
 
         g2.setFont(FontManager.getFontForSize((float) hintFontSize, Font.ITALIC));
         g2.setColor(new Color(255, 255, 255, 200));
-        g2.drawString("R/Q/E: Tile drehen", sidebarX + padding, currentY);
+        g2.drawString("H: Tastaturhilfe", sidebarX + padding, currentY);
     }
 
     /**
