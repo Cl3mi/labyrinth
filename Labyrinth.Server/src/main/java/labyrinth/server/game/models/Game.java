@@ -374,6 +374,7 @@ public class Game {
         gameLogger.log(GameLogType.RETURN_TO_LOBBY, "Current state: " + this.roomState);
         gameLogger.log(GameLogType.RETURN_TO_LOBBY, "Return to lobby");
 
+        turnController.stopTimer();
         removeBots();
         this.roomState = RoomState.LOBBY;
 

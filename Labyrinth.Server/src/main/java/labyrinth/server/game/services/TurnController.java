@@ -75,6 +75,18 @@ public class TurnController implements ITurnController {
     }
 
     /**
+     * Trys to get the current player based on the player list.
+     */
+    public Optional<Player> tryGetCurrentPlayer(List<Player> players) {
+        List<Player> playersCopy = players.stream().toList();
+
+        if (currentPlayerIndex < playersCopy.size()) {
+            return Optional.of(playersCopy.get(currentPlayerIndex));
+        }
+        return Optional.empty();
+    }
+
+    /**
      * Sets the move state.
      */
     public void setMoveState(MoveState moveState) {
@@ -109,8 +121,15 @@ public class TurnController implements ITurnController {
             currentPlayerIndex = 0;
         }
 
-        Player nextPlayer = getCurrentPlayer(players);
-        beginTurn(nextPlayer, "New Player to move: " + nextPlayer.getUsername(), players, roomState, gameConfig, aiTurnExecutor);
+        var nextPlayer = tryGetCurrentPlayer(players);
+
+        if(nextPlayer.isPresent()) {
+            beginTurn(nextPlayer.get(), "New Player to move: " + nextPlayer.get().getUsername(), players, roomState, gameConfig, aiTurnExecutor);
+        } else {
+            log.error("Cannot advance to next player. Player with index {} not found", currentPlayerIndex);
+            stopTimer();
+        }
+
     }
 
 
