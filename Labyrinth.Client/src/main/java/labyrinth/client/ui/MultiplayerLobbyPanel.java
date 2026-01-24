@@ -39,6 +39,7 @@ public class MultiplayerLobbyPanel extends JPanel {
     private String localUsername;
 
     private JLabel connectionLabel;
+    private JLabel serverNameLabel;
     private DefaultListModel<String> playerListModel;
     private StyledButton startButton;
     private StyledButton cancelReconnectButton;
@@ -142,6 +143,11 @@ public class MultiplayerLobbyPanel extends JPanel {
         lobbyTitleLabel.setForeground(GameTheme.Colors.PRIMARY_GOLD_LIGHT);
         lobbyTitleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
+        serverNameLabel = new JLabel("");
+        serverNameLabel.setFont(FontManager.getBodyLarge(Font.BOLD));
+        serverNameLabel.setForeground(GameTheme.Colors.TEXT_LIGHT);
+        serverNameLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+
         connectionLabel = new JLabel("Verbindung wird aufgebaut...");
         connectionLabel.setFont(FontManager.getBodyMedium());
         connectionLabel.setForeground(GameTheme.Colors.PRIMARY_GOLD_LIGHT);
@@ -149,6 +155,8 @@ public class MultiplayerLobbyPanel extends JPanel {
 
         centerPanel.add(Box.createVerticalStrut(5));
         centerPanel.add(lobbyTitleLabel);
+        centerPanel.add(Box.createVerticalStrut(3));
+        centerPanel.add(serverNameLabel);
         centerPanel.add(Box.createVerticalStrut(5));
         centerPanel.add(connectionLabel);
 
@@ -470,6 +478,18 @@ public class MultiplayerLobbyPanel extends JPanel {
                 usernameField.setText(username);
             }
         }
+    }
+
+    public void setServerName(String serverName) {
+        SwingUtilities.invokeLater(() -> {
+            if (serverNameLabel != null) {
+                if (serverName != null && !serverName.isBlank()) {
+                    serverNameLabel.setText("Server: " + serverName);
+                } else {
+                    serverNameLabel.setText("");
+                }
+            }
+        });
     }
 
 

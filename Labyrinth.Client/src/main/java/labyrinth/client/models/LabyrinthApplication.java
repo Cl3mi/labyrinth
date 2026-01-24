@@ -239,6 +239,7 @@ public class LabyrinthApplication {
 
     private void showMultiplayerLobby(GameServer gameServer, String username) {
         lobbyPanel.setMultiplayerUsername(username);
+        lobbyPanel.setServerName(gameServer.getName());
 
         ClientIdentityStore.clearToken();
         loginSent = false;
