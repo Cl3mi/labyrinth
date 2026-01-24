@@ -27,8 +27,8 @@ public class MessageService {
                 synchronized (session) {
                     session.sendMessage(new TextMessage(jsonPayload));
                 }
-            } catch (IOException e) {
-                log.error("IOException at sendToSession (SessionId: {}).", session.getId(), e);
+            } catch (IOException | IllegalStateException e) {
+                log.error("Error at sendToSession (SessionId: {}).", session.getId(), e);
             }
         }
     }
@@ -41,8 +41,8 @@ public class MessageService {
                 synchronized (session) {
                     session.sendMessage(new TextMessage(jsonPayload));
                 }
-            } catch (IOException e) {
-                log.error("IOException at sendToPlayer (SessionId: {}).", session.getId(), e);
+            } catch (IOException | IllegalStateException e) {
+                log.error("Error at sendToPlayer (SessionId: {}).", session.getId(), e);
             }
         }
     }
@@ -63,8 +63,8 @@ public class MessageService {
                     synchronized (session) {
                         session.sendMessage(textMessage);
                     }
-                } catch (IOException e) {
-                    log.error("IOException at broadcastToPlayers (SessionId: {}).", session.getId(), e);
+                } catch (IOException | IllegalStateException e) {
+                    log.error("Error at broadcastToPlayers (SessionId: {}).", session.getId(), e);
                 }
             }
         }
