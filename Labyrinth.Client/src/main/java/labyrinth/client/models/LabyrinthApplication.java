@@ -537,6 +537,10 @@ public class LabyrinthApplication {
     }
 
     private void exitGameToMainMenu() {
+        if (aiController != null) {
+            aiController.stop();
+        }
+
         if (client != null && client.isOpen()) {
             try {
                 client.disconnectCleanly();
@@ -573,6 +577,10 @@ public class LabyrinthApplication {
 
 
     private void exitGameCleanup() {
+        if (aiController != null) {
+            aiController.stop();
+        }
+
         if (gameOverPanel != null) {
             gameOverPanel.cleanup();
         }

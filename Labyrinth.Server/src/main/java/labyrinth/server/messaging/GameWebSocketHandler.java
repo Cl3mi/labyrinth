@@ -39,9 +39,9 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
         var serverInfo = new ServerInfoPayload();
         serverInfo.setType(EventType.SERVER_INFO);
         serverInfo.setServerTime(OffsetDateTime.now());
-        serverInfo.setMotd("Welcome to Labyrinth Game Server!");
+        serverInfo.setMotd("Welcome to the aMAZEing Game Server!");
         serverInfo.setProtocolVersion("1.0.0");
-        serverInfo.setServerVersion("");
+        serverInfo.setServerVersion("1.0.0");
 
         messageService.sendToSession(session, serverInfo);
 
