@@ -86,6 +86,7 @@ public class Player {
     public boolean shouldMoveBePerformedByAi(){
         return isBot();
     }
+
     /**
      * Resets the player's state for a new game.
      * Clears treasures, bonuses, tiles, and statistics while preserving

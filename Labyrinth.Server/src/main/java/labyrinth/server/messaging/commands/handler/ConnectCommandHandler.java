@@ -6,10 +6,12 @@ import labyrinth.server.exceptions.GameAlreadyStartedException;
 import labyrinth.server.exceptions.UsernameTakenException;
 import labyrinth.server.game.GameService;
 import labyrinth.server.game.enums.RoomState;
+import labyrinth.server.game.models.Player;
 import labyrinth.server.messaging.MessageService;
 import labyrinth.server.messaging.PlayerSessionRegistry;
 import labyrinth.server.messaging.mapper.GameMapper;
 import labyrinth.server.messaging.mapper.PlayerInfoMapper;
+import labyrinth.server.messaging.mapper.TreasureMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -25,19 +27,22 @@ public class ConnectCommandHandler extends AbstractCommandHandler<ConnectCommand
     private final MessageService messageService;
     private final PlayerInfoMapper playerInfoMapper;
     private final GameMapper gameMapper;
+    private final TreasureMapper treasureMapper;
     private static final Logger log = LoggerFactory.getLogger(ConnectCommandHandler.class);
 
     public ConnectCommandHandler(GameService gameService,
                                  PlayerSessionRegistry playerSessionRegistry,
                                  MessageService messageService,
                                  PlayerInfoMapper playerInfoMapper,
-                                 GameMapper gameMapper) {
+                                 GameMapper gameMapper,
+                                 TreasureMapper treasureMapper) {
 
         super(gameService, playerSessionRegistry);
 
         this.messageService = messageService;
         this.playerInfoMapper = playerInfoMapper;
         this.gameMapper = gameMapper;
+        this.treasureMapper = treasureMapper;
     }
 
     @Override
@@ -52,9 +57,10 @@ public class ConnectCommandHandler extends AbstractCommandHandler<ConnectCommand
         }
 
         Optional<UUID> maybeToken = parseIdentifierToken(payload.getIdentifierToken());
+        Player reconnectedPlayer = null;
 
         if (maybeToken.isPresent()) {
-            handleReconnection(session, maybeToken.get(), payload);
+            reconnectedPlayer = handleReconnection(session, maybeToken.get(), payload);
         } else {
             connectNewPlayer(session, payload.getUsername());
         }
@@ -63,6 +69,10 @@ public class ConnectCommandHandler extends AbstractCommandHandler<ConnectCommand
             broadcastLobbyState();
         } else {
             broadcastGameStateUpdateEvent();
+            if (reconnectedPlayer != null) {
+                sendPlayerUpdatedEvent(reconnectedPlayer);
+                sendNextTreasureEvent(reconnectedPlayer);
+            }
         }
     }
 
@@ -79,7 +89,7 @@ public class ConnectCommandHandler extends AbstractCommandHandler<ConnectCommand
         }
     }
 
-    private void handleReconnection(WebSocketSession session, UUID identifierToken, ConnectCommandPayload payload) throws ActionErrorException {
+    private Player handleReconnection(WebSocketSession session, UUID identifierToken, ConnectCommandPayload payload) throws ActionErrorException {
 
         var playerId = playerSessionRegistry.getPlayerIdByIdentifierToken(identifierToken);
 
@@ -91,7 +101,7 @@ public class ConnectCommandHandler extends AbstractCommandHandler<ConnectCommand
             }
 
             connectNewPlayer(session, payload.getUsername());
-            return;
+            return null;
         }
 
         var player = gameService.getPlayer(playerId);
@@ -103,6 +113,7 @@ public class ConnectCommandHandler extends AbstractCommandHandler<ConnectCommand
         // Clear disconnected flag on successful reconnection
         player.setDisconnected(false);
         registerAndAcknowledge(playerId, identifierToken, session);
+        return player;
     }
 
 
@@ -153,5 +164,24 @@ public class ConnectCommandHandler extends AbstractCommandHandler<ConnectCommand
     private void broadcastGameStateUpdateEvent() {
         var gameState = gameService.withGameReadLock(gameMapper::toGameStateDto);
         messageService.broadcastToPlayers(gameState);
+    }
+
+    private void sendPlayerUpdatedEvent(Player player) {
+        var payload = new PlayerUpdatedEventPayload();
+        payload.setType(EventType.PLAYER_UPDATED);
+        payload.setPlayer(playerInfoMapper.toDto(player));
+        messageService.broadcastToPlayers(payload);
+    }
+
+    private void sendNextTreasureEvent(Player player) {
+        var treasureCard = player.getCurrentTreasureCard();
+        if (treasureCard == null) {
+            return;
+        }
+
+        var payload = new NextTreasureCardEventPayload();
+        payload.setType(EventType.NEXT_TREASURE);
+        payload.setTreasure(treasureMapper.toDto(treasureCard));
+        messageService.sendToPlayer(player.getId(), payload);
     }
 }
