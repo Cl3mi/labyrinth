@@ -30,11 +30,11 @@ public record GameConfig(
     }
 
     public int getLastRowIndex(){
-        return  boardWidth - 1;
+        return boardHeight - 1;
     }
 
     public int getLastColIndex(){
-        return  boardHeight - 1;
+        return boardWidth - 1;
     }
 
     public Position getStartPosition(int playerIndex){
