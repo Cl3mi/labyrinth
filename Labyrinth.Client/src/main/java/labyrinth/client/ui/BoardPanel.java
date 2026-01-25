@@ -568,27 +568,28 @@ public class BoardPanel extends JPanel {
 
             // Arrow key and WASD navigation
             // Allow navigation to -1 (top/left arrows) and board size (bottom/right arrows)
+            // Skip non-pushable positions when at the boundaries
             case java.awt.event.KeyEvent.VK_UP, java.awt.event.KeyEvent.VK_W -> {
                 keyboardNavigationActive = true;
-                selectedRow = Math.max(-1, selectedRow - 1);
+                navigateUp();
                 updateSelectedArrow();
                 repaint();
             }
             case java.awt.event.KeyEvent.VK_DOWN, java.awt.event.KeyEvent.VK_S -> {
                 keyboardNavigationActive = true;
-                selectedRow = Math.min(board.getHeight(), selectedRow + 1);
+                navigateDown();
                 updateSelectedArrow();
                 repaint();
             }
             case java.awt.event.KeyEvent.VK_LEFT, java.awt.event.KeyEvent.VK_A -> {
                 keyboardNavigationActive = true;
-                selectedCol = Math.max(-1, selectedCol - 1);
+                navigateLeft();
                 updateSelectedArrow();
                 repaint();
             }
             case java.awt.event.KeyEvent.VK_RIGHT, java.awt.event.KeyEvent.VK_D -> {
                 keyboardNavigationActive = true;
-                selectedCol = Math.min(board.getWidth(), selectedCol + 1);
+                navigateRight();
                 updateSelectedArrow();
                 repaint();
             }
@@ -663,6 +664,7 @@ public class BoardPanel extends JPanel {
     /**
      * Updates the selected arrow properties based on the current selectedRow/selectedCol.
      * An arrow is selected when navigation goes beyond the board boundaries.
+     * Only selects arrows for pushable rows/columns (those without fixed tiles).
      */
     private void updateSelectedArrow() {
         selectedArrowIndex = null;
@@ -676,28 +678,252 @@ public class BoardPanel extends JPanel {
 
         // Top arrow (column arrow that pushes DOWN)
         if (selectedRow == -1 && selectedCol >= 0 && selectedCol < cols) {
-            selectedArrowIndex = selectedCol;
-            selectedArrowIsRow = false;
-            selectedArrowDirection = Direction.DOWN;
+            if (isColumnPushable(selectedCol)) {
+                selectedArrowIndex = selectedCol;
+                selectedArrowIsRow = false;
+                selectedArrowDirection = Direction.DOWN;
+            }
         }
         // Bottom arrow (column arrow that pushes UP)
         else if (selectedRow == rows && selectedCol >= 0 && selectedCol < cols) {
-            selectedArrowIndex = selectedCol;
-            selectedArrowIsRow = false;
-            selectedArrowDirection = Direction.UP;
+            if (isColumnPushable(selectedCol)) {
+                selectedArrowIndex = selectedCol;
+                selectedArrowIsRow = false;
+                selectedArrowDirection = Direction.UP;
+            }
         }
         // Left arrow (row arrow that pushes RIGHT)
         else if (selectedCol == -1 && selectedRow >= 0 && selectedRow < rows) {
-            selectedArrowIndex = selectedRow;
-            selectedArrowIsRow = true;
-            selectedArrowDirection = Direction.RIGHT;
+            if (isRowPushable(selectedRow)) {
+                selectedArrowIndex = selectedRow;
+                selectedArrowIsRow = true;
+                selectedArrowDirection = Direction.RIGHT;
+            }
         }
         // Right arrow (row arrow that pushes LEFT)
         else if (selectedCol == cols && selectedRow >= 0 && selectedRow < rows) {
-            selectedArrowIndex = selectedRow;
-            selectedArrowIsRow = true;
-            selectedArrowDirection = Direction.LEFT;
+            if (isRowPushable(selectedRow)) {
+                selectedArrowIndex = selectedRow;
+                selectedArrowIsRow = true;
+                selectedArrowDirection = Direction.LEFT;
+            }
         }
+    }
+
+    /**
+     * Check if a row is pushable (doesn't contain fixed tiles, or PUSH_FIXED bonus is active).
+     */
+    private boolean isRowPushable(int row) {
+        if (board == null) return false;
+        int rows = board.getHeight();
+        if (row < 0 || row >= rows) return false;
+
+        boolean rowHasFixedTile = rowContainsFixedTile(row);
+        boolean pushFixedActive = activeBonusMode == BonusType.PUSH_FIXED;
+
+        // Normal: row is shiftable if it has no fixed tiles
+        boolean isNormalPushable = !rowHasFixedTile;
+        // Push Fixed: all rows except the outermost (0 and rows-1) are pushable
+        boolean isPushFixedPushable = pushFixedActive && row > 0 && row < rows - 1;
+
+        return isNormalPushable || isPushFixedPushable;
+    }
+
+    /**
+     * Check if a column is pushable (doesn't contain fixed tiles, or PUSH_FIXED bonus is active).
+     */
+    private boolean isColumnPushable(int col) {
+        if (board == null) return false;
+        int cols = board.getWidth();
+        if (col < 0 || col >= cols) return false;
+
+        boolean colHasFixedTile = columnContainsFixedTile(col);
+        boolean pushFixedActive = activeBonusMode == BonusType.PUSH_FIXED;
+
+        // Normal: column is shiftable if it has no fixed tiles
+        boolean isNormalPushable = !colHasFixedTile;
+        // Push Fixed: all columns except the outermost (0 and cols-1) are pushable
+        boolean isPushFixedPushable = pushFixedActive && col > 0 && col < cols - 1;
+
+        return isNormalPushable || isPushFixedPushable;
+    }
+
+    /**
+     * Navigate up, skipping non-pushable positions when at the left/right boundaries.
+     */
+    private void navigateUp() {
+        if (board == null) return;
+        int rows = board.getHeight();
+
+        // If we're at left or right boundary (selecting row arrows), skip non-pushable rows
+        if (selectedCol == -1 || selectedCol == board.getWidth()) {
+            int newRow = selectedRow - 1;
+            while (newRow >= 0 && !isRowPushable(newRow)) {
+                newRow--;
+            }
+            // If no pushable row found, go to -1 (exit arrow area) or stay at current
+            if (newRow < 0) {
+                selectedRow = -1; // Go above the board (no arrow selected)
+            } else {
+                selectedRow = newRow;
+            }
+        } else {
+            // Normal navigation within board or to top arrows
+            selectedRow = Math.max(-1, selectedRow - 1);
+            // If going to top arrow row, find a pushable column
+            if (selectedRow == -1 && !isColumnPushable(selectedCol)) {
+                // Find nearest pushable column
+                int nearestCol = findNearestPushableColumn(selectedCol);
+                if (nearestCol >= 0) {
+                    selectedCol = nearestCol;
+                } else {
+                    selectedRow = 0; // Can't go to top, stay on board
+                }
+            }
+        }
+    }
+
+    /**
+     * Navigate down, skipping non-pushable positions when at the left/right boundaries.
+     */
+    private void navigateDown() {
+        if (board == null) return;
+        int rows = board.getHeight();
+
+        // If we're at left or right boundary (selecting row arrows), skip non-pushable rows
+        if (selectedCol == -1 || selectedCol == board.getWidth()) {
+            int newRow = selectedRow + 1;
+            while (newRow < rows && !isRowPushable(newRow)) {
+                newRow++;
+            }
+            // If no pushable row found, go to rows (exit arrow area) or stay at current
+            if (newRow >= rows) {
+                selectedRow = rows; // Go below the board (no arrow selected)
+            } else {
+                selectedRow = newRow;
+            }
+        } else {
+            // Normal navigation within board or to bottom arrows
+            selectedRow = Math.min(board.getHeight(), selectedRow + 1);
+            // If going to bottom arrow row, find a pushable column
+            if (selectedRow == rows && !isColumnPushable(selectedCol)) {
+                // Find nearest pushable column
+                int nearestCol = findNearestPushableColumn(selectedCol);
+                if (nearestCol >= 0) {
+                    selectedCol = nearestCol;
+                } else {
+                    selectedRow = rows - 1; // Can't go to bottom, stay on board
+                }
+            }
+        }
+    }
+
+    /**
+     * Navigate left, skipping non-pushable positions when at the top/bottom boundaries.
+     */
+    private void navigateLeft() {
+        if (board == null) return;
+        int cols = board.getWidth();
+
+        // If we're at top or bottom boundary (selecting column arrows), skip non-pushable columns
+        if (selectedRow == -1 || selectedRow == board.getHeight()) {
+            int newCol = selectedCol - 1;
+            while (newCol >= 0 && !isColumnPushable(newCol)) {
+                newCol--;
+            }
+            // If no pushable column found, go to -1 (exit arrow area) or stay at current
+            if (newCol < 0) {
+                selectedCol = -1; // Go left of the board (no arrow selected)
+            } else {
+                selectedCol = newCol;
+            }
+        } else {
+            // Normal navigation within board or to left arrows
+            selectedCol = Math.max(-1, selectedCol - 1);
+            // If going to left arrow column, find a pushable row
+            if (selectedCol == -1 && !isRowPushable(selectedRow)) {
+                // Find nearest pushable row
+                int nearestRow = findNearestPushableRow(selectedRow);
+                if (nearestRow >= 0) {
+                    selectedRow = nearestRow;
+                } else {
+                    selectedCol = 0; // Can't go to left, stay on board
+                }
+            }
+        }
+    }
+
+    /**
+     * Navigate right, skipping non-pushable positions when at the top/bottom boundaries.
+     */
+    private void navigateRight() {
+        if (board == null) return;
+        int cols = board.getWidth();
+
+        // If we're at top or bottom boundary (selecting column arrows), skip non-pushable columns
+        if (selectedRow == -1 || selectedRow == board.getHeight()) {
+            int newCol = selectedCol + 1;
+            while (newCol < cols && !isColumnPushable(newCol)) {
+                newCol++;
+            }
+            // If no pushable column found, go to cols (exit arrow area) or stay at current
+            if (newCol >= cols) {
+                selectedCol = cols; // Go right of the board (no arrow selected)
+            } else {
+                selectedCol = newCol;
+            }
+        } else {
+            // Normal navigation within board or to right arrows
+            selectedCol = Math.min(board.getWidth(), selectedCol + 1);
+            // If going to right arrow column, find a pushable row
+            if (selectedCol == cols && !isRowPushable(selectedRow)) {
+                // Find nearest pushable row
+                int nearestRow = findNearestPushableRow(selectedRow);
+                if (nearestRow >= 0) {
+                    selectedRow = nearestRow;
+                } else {
+                    selectedCol = cols - 1; // Can't go to right, stay on board
+                }
+            }
+        }
+    }
+
+    /**
+     * Find the nearest pushable column to the given column.
+     */
+    private int findNearestPushableColumn(int col) {
+        if (board == null) return -1;
+        int cols = board.getWidth();
+
+        // Search outward from the given column
+        for (int offset = 0; offset < cols; offset++) {
+            if (col - offset >= 0 && isColumnPushable(col - offset)) {
+                return col - offset;
+            }
+            if (col + offset < cols && isColumnPushable(col + offset)) {
+                return col + offset;
+            }
+        }
+        return -1;
+    }
+
+    /**
+     * Find the nearest pushable row to the given row.
+     */
+    private int findNearestPushableRow(int row) {
+        if (board == null) return -1;
+        int rows = board.getHeight();
+
+        // Search outward from the given row
+        for (int offset = 0; offset < rows; offset++) {
+            if (row - offset >= 0 && isRowPushable(row - offset)) {
+                return row - offset;
+            }
+            if (row + offset < rows && isRowPushable(row + offset)) {
+                return row + offset;
+            }
+        }
+        return -1;
     }
 
     /**
