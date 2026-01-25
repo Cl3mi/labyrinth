@@ -18,21 +18,32 @@ import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
 import java.util.*;
 import java.util.List;
 
 /**
  * Game Over UI showing winner and leaderboard with fantasy/medieval theme.
+ * Implements responsive layout that adapts to different screen sizes.
  */
 public class GameOverPanel extends JPanel {
 
     private static final Logger log = LoggerFactory.getLogger(GameOverPanel.class);
 
-    private final JLabel winnerLabel;
-    private final JTable leaderboardTable;
-    private final DefaultTableModel tableModel;
-    private final JScrollPane scrollPane;
-    private final JPanel achievementsPanel;
+    private static final int MIN_WIDTH = 600;
+    private static final int MIN_HEIGHT = 400;
+    private static final int COMPACT_THRESHOLD = 800;
+    private static final int MEDIUM_THRESHOLD = 1200;
+
+    private JLabel winnerLabel;
+    private JLabel titleLabel;
+    private JTable leaderboardTable;
+    private DefaultTableModel tableModel;
+    private JScrollPane scrollPane;
+    private JPanel achievementsPanel;
+    private JPanel header;
+    private StyledButton backToLobbyButton;
 
     private Image backgroundImage;
     private int animationFrame = 0;
@@ -41,64 +52,87 @@ public class GameOverPanel extends JPanel {
     private final Map<String, List<String>> playerAchievements = new HashMap<>();
     private final Map<String, String> playerIdToName = new HashMap<>();
 
-
     public GameOverPanel(Runnable onBackToLobby) {
         loadBackgroundImage();
 
         setOpaque(false);
-        setLayout(new BorderLayout(20, 20));
-        setBorder(new EmptyBorder(40, 60, 40, 60));
+        setLayout(new BorderLayout());
+        setMinimumSize(new Dimension(MIN_WIDTH, MIN_HEIGHT));
 
-        // ===== Header =====
-        JPanel header = new JPanel() {
+        header = createHeader();
+        scrollPane = createLeaderboardScrollPane();
+        achievementsPanel = createAchievementsPanel();
+        backToLobbyButton = createBackButton(onBackToLobby);
+
+        JPanel footer = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        footer.setOpaque(false);
+        footer.add(backToLobbyButton);
+
+        JPanel centerContainer = new JPanel(new BorderLayout());
+        centerContainer.setOpaque(false);
+        centerContainer.add(scrollPane, BorderLayout.CENTER);
+        centerContainer.add(achievementsPanel, BorderLayout.SOUTH);
+
+        add(header, BorderLayout.NORTH);
+        add(centerContainer, BorderLayout.CENTER);
+        add(footer, BorderLayout.SOUTH);
+
+        addComponentListener(new ComponentAdapter() {
+            @Override
+            public void componentResized(ComponentEvent e) {
+                updateResponsiveLayout();
+            }
+        });
+
+        updateResponsiveLayout();
+    }
+
+    /**
+     * Creates the header panel with title and winner announcement.
+     */
+    private JPanel createHeader() {
+        JPanel headerPanel = new JPanel() {
             @Override
             protected void paintComponent(Graphics g) {
                 super.paintComponent(g);
                 Graphics2D g2 = (Graphics2D) g;
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-                // Draw ornate title banner
-                int bannerY = 20;
-                int bannerHeight = 80;
+                int margin = getResponsiveMargin();
+                int bannerY = margin / 2;
+                int bannerHeight = Math.max(60, getHeight() - margin);
 
-                // Parchment banner background
                 GradientPaint bannerGradient = new GradientPaint(
                         0, bannerY, GameTheme.Colors.SURFACE_PRIMARY,
                         0, bannerY + bannerHeight, GameTheme.Colors.SURFACE_SECONDARY
                 );
                 g2.setPaint(bannerGradient);
-                g2.fillRoundRect(40, bannerY, getWidth() - 80, bannerHeight,
+                g2.fillRoundRect(margin, bannerY, getWidth() - margin * 2, bannerHeight,
                         GameTheme.Spacing.RADIUS_LARGE, GameTheme.Spacing.RADIUS_LARGE);
 
-                // Ornate border
-                ThemeEffects.drawOrnateBorder(g2, 40, bannerY, getWidth() - 80, bannerHeight);
-
-                // Corner ornaments
-                ThemeEffects.drawCornerOrnaments(g2, 40, bannerY, getWidth() - 80, bannerHeight, 12);
+                ThemeEffects.drawOrnateBorder(g2, margin, bannerY, getWidth() - margin * 2, bannerHeight);
+                ThemeEffects.drawCornerOrnaments(g2, margin, bannerY, getWidth() - margin * 2, bannerHeight, 12);
             }
         };
-        header.setOpaque(false);
-        header.setLayout(new BoxLayout(header, BoxLayout.Y_AXIS));
-        header.setPreferredSize(new Dimension(0, 180));
+        headerPanel.setOpaque(false);
+        headerPanel.setLayout(new BoxLayout(headerPanel, BoxLayout.Y_AXIS));
 
-        JLabel titleLabel = new JLabel("QUEST COMPLETE", SwingConstants.CENTER);
-        titleLabel.setFont(FontManager.getHeadingLarge());
+        titleLabel = new JLabel("QUEST COMPLETE", SwingConstants.CENTER);
         titleLabel.setForeground(GameTheme.Colors.ACCENT_GOLD);
         titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
-        titleLabel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 60));
 
-        // Trophy icon with bright golden glow background for visibility
         JLabel trophyLabel = new JLabel("", SwingConstants.CENTER) {
             @Override
             protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g;
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-                // Golden glow behind trophy for visibility
                 int centerX = getWidth() / 2;
                 int centerY = getHeight() / 2;
+                int glowRadius = Math.min(30, getHeight() / 2);
+
                 RadialGradientPaint glow = new RadialGradientPaint(
-                        centerX, centerY, 30f,
+                        centerX, centerY, glowRadius,
                         new float[]{0.0f, 1.0f},
                         new Color[]{
                                 ThemeEffects.withAlpha(GameTheme.Colors.ACCENT_GOLD, 200),
@@ -106,30 +140,32 @@ public class GameOverPanel extends JPanel {
                         }
                 );
                 g2.setPaint(glow);
-                g2.fillOval(centerX - 30, centerY - 30, 60, 60);
+                g2.fillOval(centerX - glowRadius, centerY - glowRadius, glowRadius * 2, glowRadius * 2);
 
                 super.paintComponent(g);
             }
         };
-        trophyLabel.setFont(FontManager.getHeadingLarge());
         trophyLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
-        trophyLabel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 60));
 
         winnerLabel = new JLabel("", SwingConstants.CENTER);
-        winnerLabel.setFont(FontManager.getBodyLarge(Font.BOLD)); // Increased size
         winnerLabel.setForeground(GameTheme.Colors.TEXT_PRIMARY);
         winnerLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
-        winnerLabel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
 
-        header.add(Box.createVerticalStrut(38));
-        header.add(titleLabel);
-        header.add(Box.createVerticalStrut(8));
-        header.add(trophyLabel);
-        header.add(Box.createVerticalStrut(12));
-        header.add(winnerLabel);
-        header.add(Box.createVerticalStrut(20));
+        headerPanel.add(Box.createVerticalGlue());
+        headerPanel.add(titleLabel);
+        headerPanel.add(Box.createVerticalStrut(8));
+        headerPanel.add(trophyLabel);
+        headerPanel.add(Box.createVerticalStrut(8));
+        headerPanel.add(winnerLabel);
+        headerPanel.add(Box.createVerticalGlue());
 
-        // ===== Leaderboard =====
+        return headerPanel;
+    }
+
+    /**
+     * Creates the leaderboard table and scroll pane.
+     */
+    private JScrollPane createLeaderboardScrollPane() {
         String[] columnNames = {"Rang", "Spieler", "Schätze", "Züge", "Verschiebungen", "Punkte"};
         tableModel = new DefaultTableModel(columnNames, 0) {
             @Override
@@ -143,7 +179,6 @@ public class GameOverPanel extends JPanel {
             public Component prepareRenderer(javax.swing.table.TableCellRenderer renderer, int row, int col) {
                 Component comp = super.prepareRenderer(renderer, row, col);
 
-                // Alternating row colors for better readability
                 if (!isRowSelected(row)) {
                     if (row % 2 == 0) {
                         comp.setBackground(GameTheme.Colors.SURFACE_PRIMARY);
@@ -151,7 +186,6 @@ public class GameOverPanel extends JPanel {
                         comp.setBackground(GameTheme.Colors.SURFACE_SECONDARY);
                     }
 
-                    // Highlight top 3 with subtle gold tint
                     if (row < 3) {
                         Color highlightColor = ThemeEffects.withAlpha(GameTheme.Colors.ACCENT_GOLD, 30);
                         comp.setBackground(ThemeEffects.blendColors(comp.getBackground(), highlightColor, 0.3f));
@@ -163,132 +197,170 @@ public class GameOverPanel extends JPanel {
                     comp.setForeground(GameTheme.Colors.BACKGROUND_PRIMARY);
                 }
 
-                // Increase font size for better readability
-                comp.setFont(FontManager.getBodyLarge());
-
                 return comp;
             }
         };
 
-        leaderboardTable.setFont(FontManager.getBodyLarge()); // Larger font
-        leaderboardTable.setRowHeight(55); // Taller rows for larger font
         leaderboardTable.setShowGrid(true);
         leaderboardTable.setGridColor(ThemeEffects.withAlpha(GameTheme.Colors.ACCENT_COPPER, 100));
         leaderboardTable.setSelectionBackground(GameTheme.Colors.ACCENT_GOLD);
         leaderboardTable.setSelectionForeground(GameTheme.Colors.BACKGROUND_PRIMARY);
         leaderboardTable.setIntercellSpacing(new Dimension(10, 5));
 
-        // Header styling
-        leaderboardTable.getTableHeader().setFont(FontManager.getHeadingMedium()); // Larger header font
         leaderboardTable.getTableHeader().setBackground(GameTheme.Colors.BACKGROUND_SECONDARY);
         leaderboardTable.getTableHeader().setForeground(GameTheme.Colors.ACCENT_GOLD);
         leaderboardTable.getTableHeader().setReorderingAllowed(false);
-        leaderboardTable.getTableHeader().setPreferredSize(new Dimension(0, 50));
 
-        // Center align all cells with proper background handling
         DefaultTableCellRenderer centerRenderer = new DefaultTableCellRenderer() {
             @Override
             public Component getTableCellRendererComponent(JTable table, Object value,
                                                            boolean isSelected, boolean hasFocus, int row, int column) {
                 Component comp = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
-
-                // Don't override the prepareRenderer background/foreground
-                // Just set alignment and font
                 setHorizontalAlignment(SwingConstants.CENTER);
-                setFont(FontManager.getBodyLarge());
-
                 return comp;
             }
         };
         centerRenderer.setOpaque(true);
+
         for (int i = 0; i < leaderboardTable.getColumnCount(); i++) {
             leaderboardTable.getColumnModel().getColumn(i).setCellRenderer(centerRenderer);
         }
 
-        // Column widths
-        leaderboardTable.getColumnModel().getColumn(0).setPreferredWidth(70);   // Rang
-        leaderboardTable.getColumnModel().getColumn(1).setPreferredWidth(180);  // Spieler
-        leaderboardTable.getColumnModel().getColumn(2).setPreferredWidth(90);   // Schätze
-        leaderboardTable.getColumnModel().getColumn(3).setPreferredWidth(80);   // Züge
-        leaderboardTable.getColumnModel().getColumn(4).setPreferredWidth(120);  // Verschiebungen
-        leaderboardTable.getColumnModel().getColumn(5).setPreferredWidth(90);   // Punkte
-
-        // Custom scroll pane with parchment styling
-        scrollPane = new JScrollPane(leaderboardTable) {
+        JScrollPane pane = new JScrollPane(leaderboardTable) {
             @Override
             public Dimension getPreferredSize() {
-                // Calculate height based on table content (header + rows + insets)
                 int rowCount = leaderboardTable.getRowCount();
                 int headerHeight = leaderboardTable.getTableHeader().getPreferredSize().height;
                 int rowHeight = leaderboardTable.getRowHeight();
-                int totalHeight = headerHeight + (rowCount * rowHeight) + 30; // +30 for padding
-
-                // Cap at reasonable max height
-                totalHeight = Math.min(totalHeight, 400);
+                int totalHeight = headerHeight + (rowCount * rowHeight) + 30;
+                int maxHeight = (int) (GameOverPanel.this.getHeight() * 0.5);
+                totalHeight = Math.min(totalHeight, Math.max(200, maxHeight));
 
                 return new Dimension(getWidth(), totalHeight);
-            }
-
-            @Override
-            protected void paintComponent(Graphics g) {
-                super.paintComponent(g);
             }
 
             @Override
             protected void paintBorder(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g;
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-
-                // Draw ornate frame around leaderboard - uses actual component height
                 ThemeEffects.drawOrnateBorder(g2, 0, 0, getWidth(), getHeight());
             }
         };
-        scrollPane.setOpaque(false);
-        scrollPane.getViewport().setOpaque(false);
-        scrollPane.setBorder(new EmptyBorder(10, 10, 10, 10));
-        scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
-        scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
 
-        // ===== Footer =====
-        JPanel footer = new JPanel();
-        footer.setOpaque(false);
-        footer.setLayout(new FlowLayout(FlowLayout.CENTER, 20, 20));
+        pane.setOpaque(false);
+        pane.getViewport().setOpaque(false);
+        pane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+        pane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
 
-        StyledButton backToLobbyButton = new StyledButton("Return to Tavern", StyledButton.Style.PRIMARY);
-        backToLobbyButton.setPreferredSize(new Dimension(280, 60));
-        backToLobbyButton.addActionListener(e -> {
-            if (onBackToLobby != null) {
-                onBackToLobby.run();
-            }
-        });
-        StyledTooltipManager.setTooltip(backToLobbyButton, "Zurück zur Lobby", "Kehre zur Lobby zurück, um ein neues Spiel zu konfigurieren");
-        StyledContextMenu.attachTo(backToLobbyButton);
-        footer.add(backToLobbyButton);
-
-        // ===== Achievements Panel =====
-        achievementsPanel = createAchievementsPanel();
-
-        // ===== Add to panel =====
-        add(header, BorderLayout.NORTH);
-
-        // Center panel with leaderboard and achievements
-        JPanel centerContainer = new JPanel(new BorderLayout(0, 15));
-        centerContainer.setOpaque(false);
-        centerContainer.add(scrollPane, BorderLayout.CENTER);
-        centerContainer.add(achievementsPanel, BorderLayout.SOUTH);
-
-        add(centerContainer, BorderLayout.CENTER);
-        add(footer, BorderLayout.SOUTH);
+        return pane;
     }
 
     private JPanel createAchievementsPanel() {
         JPanel panel = new JPanel();
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
         panel.setOpaque(false);
-        panel.setBorder(new EmptyBorder(10, 0, 0, 0));
         return panel;
     }
 
+    private StyledButton createBackButton(Runnable onBackToLobby) {
+        StyledButton button = new StyledButton("Return to Tavern", StyledButton.Style.PRIMARY);
+        button.addActionListener(e -> {
+            if (onBackToLobby != null) {
+                onBackToLobby.run();
+            }
+        });
+        StyledTooltipManager.setTooltip(button, "Zurück zur Lobby", "Kehre zur Lobby zurück, um ein neues Spiel zu konfigurieren");
+        StyledContextMenu.attachTo(button);
+        return button;
+    }
+
+    /**
+     * Updates the layout based on current panel dimensions.
+     */
+    private void updateResponsiveLayout() {
+        int width = getWidth();
+        int height = getHeight();
+
+        if (width == 0 || height == 0) return;
+
+        boolean isCompact = width < COMPACT_THRESHOLD;
+        boolean isMedium = width < MEDIUM_THRESHOLD;
+
+        int horizontalPadding = isCompact ? 20 : (isMedium ? 40 : 60);
+        int verticalPadding = isCompact ? 20 : 40;
+        setBorder(new EmptyBorder(verticalPadding, horizontalPadding, verticalPadding, horizontalPadding));
+
+        Font titleFont = isCompact ? FontManager.getHeadingMedium() : FontManager.getHeadingLarge();
+        Font winnerFont = isCompact ? FontManager.getBodyMedium(Font.BOLD) : FontManager.getBodyLarge(Font.BOLD);
+        Font tableFont = isCompact ? FontManager.getBodySmall() : FontManager.getBodyLarge();
+        Font headerFont = isCompact ? FontManager.getBodyMedium(Font.BOLD) : FontManager.getHeadingMedium();
+
+        titleLabel.setFont(titleFont);
+        winnerLabel.setFont(winnerFont);
+        leaderboardTable.setFont(tableFont);
+        leaderboardTable.getTableHeader().setFont(headerFont);
+
+        int rowHeight = isCompact ? 40 : 55;
+        int headerHeight = isCompact ? 35 : 50;
+        leaderboardTable.setRowHeight(rowHeight);
+        leaderboardTable.getTableHeader().setPreferredSize(new Dimension(0, headerHeight));
+
+        int panelHeaderHeight = isCompact ? 120 : (isMedium ? 150 : 180);
+        header.setPreferredSize(new Dimension(0, panelHeaderHeight));
+
+        updateColumnWidths(isCompact, isMedium);
+
+        int buttonWidth = isCompact ? 200 : 280;
+        int buttonHeight = isCompact ? 45 : 60;
+        backToLobbyButton.setPreferredSize(new Dimension(buttonWidth, buttonHeight));
+
+        int scrollPadding = isCompact ? 5 : 10;
+        scrollPane.setBorder(new EmptyBorder(scrollPadding, scrollPadding, scrollPadding, scrollPadding));
+
+        int achievementPadding = isCompact ? 5 : 10;
+        achievementsPanel.setBorder(new EmptyBorder(achievementPadding, 0, 0, 0));
+
+        revalidate();
+        repaint();
+    }
+
+    private void updateColumnWidths(boolean isCompact, boolean isMedium) {
+        if (leaderboardTable.getColumnCount() < 6) return;
+
+        if (isCompact) {
+            leaderboardTable.getColumnModel().getColumn(0).setPreferredWidth(50);
+            leaderboardTable.getColumnModel().getColumn(1).setPreferredWidth(120);
+            leaderboardTable.getColumnModel().getColumn(2).setPreferredWidth(60);
+            leaderboardTable.getColumnModel().getColumn(3).setPreferredWidth(50);
+            leaderboardTable.getColumnModel().getColumn(4).setPreferredWidth(80);
+            leaderboardTable.getColumnModel().getColumn(5).setPreferredWidth(60);
+        } else if (isMedium) {
+            leaderboardTable.getColumnModel().getColumn(0).setPreferredWidth(60);
+            leaderboardTable.getColumnModel().getColumn(1).setPreferredWidth(150);
+            leaderboardTable.getColumnModel().getColumn(2).setPreferredWidth(75);
+            leaderboardTable.getColumnModel().getColumn(3).setPreferredWidth(65);
+            leaderboardTable.getColumnModel().getColumn(4).setPreferredWidth(100);
+            leaderboardTable.getColumnModel().getColumn(5).setPreferredWidth(75);
+        } else {
+            leaderboardTable.getColumnModel().getColumn(0).setPreferredWidth(70);
+            leaderboardTable.getColumnModel().getColumn(1).setPreferredWidth(180);
+            leaderboardTable.getColumnModel().getColumn(2).setPreferredWidth(90);
+            leaderboardTable.getColumnModel().getColumn(3).setPreferredWidth(80);
+            leaderboardTable.getColumnModel().getColumn(4).setPreferredWidth(120);
+            leaderboardTable.getColumnModel().getColumn(5).setPreferredWidth(90);
+        }
+    }
+
+    private int getResponsiveMargin() {
+        int width = getWidth();
+        if (width < COMPACT_THRESHOLD) return 20;
+        if (width < MEDIUM_THRESHOLD) return 30;
+        return 40;
+    }
+
+    /**
+     * Updates the panel with game over data including winner and rankings.
+     */
     public void updateGameOver(GameOverEventPayload payload) {
         if (animationTimer != null && animationTimer.isRunning()) {
             animationTimer.stop();
@@ -296,15 +368,14 @@ public class GameOverPanel extends JPanel {
 
         AudioPlayer.getInstance().playGameOverSequence();
 
-        Map<String, String> playerIdToName = new HashMap<>();
+        Map<String, String> payloadPlayerIdToName = new HashMap<>();
         if (payload.getRanking() != null) {
             for (RankingEntry entry : payload.getRanking()) {
                 String playerName = getPlayerName(entry);
-                playerIdToName.put(entry.getPlayerId(), playerName);
+                payloadPlayerIdToName.put(entry.getPlayerId(), playerName);
             }
         }
 
-        // Find winner name
         String winnerName = "Unknown";
         if (payload.getRanking() != null && payload.getRanking().length > 0) {
             for (RankingEntry entry : payload.getRanking()) {
@@ -315,7 +386,6 @@ public class GameOverPanel extends JPanel {
             }
         }
 
-        // Animate winner announcement with subtle pulsing
         final String winnerNameFinal = winnerName;
         animationFrame = 0;
         animationTimer = new Timer(150, e -> {
@@ -338,11 +408,9 @@ public class GameOverPanel extends JPanel {
         });
         animationTimer.start();
 
-        // Update leaderboard
         tableModel.setRowCount(0);
         if (payload.getRanking() != null) {
             for (RankingEntry entry : payload.getRanking()) {
-                // Show medal emojis for top 3 ranks, numbers for others
                 String rankIcon = switch (entry.getRank()) {
                     case 1 -> " 1.";
                     case 2 -> " 2.";
@@ -368,18 +436,17 @@ public class GameOverPanel extends JPanel {
             }
         }
 
-        // Update achievements display with player names
-        updateAchievementsDisplayWithNames(playerIdToName);
+        updateAchievementsDisplayWithNames(payloadPlayerIdToName);
+        updateResponsiveLayout();
 
-        // Resize scroll pane to fit content and redraw border
         scrollPane.revalidate();
         scrollPane.repaint();
     }
 
     /**
-     * Update achievements display with proper player names from ranking data.
+     * Updates achievements display with proper player names from ranking data.
      */
-    private void updateAchievementsDisplayWithNames(Map<String, String> playerIdToName) {
+    private void updateAchievementsDisplayWithNames(Map<String, String> playerNames) {
         achievementsPanel.removeAll();
 
         if (playerAchievements.isEmpty()) {
@@ -389,7 +456,6 @@ public class GameOverPanel extends JPanel {
 
         achievementsPanel.setVisible(true);
 
-        // Title
         JLabel achievementTitle = new JLabel("Errungenschaften", SwingConstants.CENTER);
         achievementTitle.setFont(FontManager.getHeadingSmall());
         achievementTitle.setForeground(GameTheme.Colors.ACCENT_GOLD);
@@ -397,17 +463,13 @@ public class GameOverPanel extends JPanel {
         achievementTitle.setBorder(new EmptyBorder(5, 0, 10, 0));
         achievementsPanel.add(achievementTitle);
 
-        // Create achievement entries for each player
         for (Map.Entry<String, List<String>> entry : playerAchievements.entrySet()) {
             String playerId = entry.getKey();
             List<String> achievements = entry.getValue();
 
             if (achievements.isEmpty()) continue;
 
-            // Get player name from mapping, fallback to ID
-            String playerName = playerIdToName.getOrDefault(playerId, playerId);
-
-            // Create achievement card for this player
+            String playerName = playerNames.getOrDefault(playerId, playerId);
             JPanel playerAchievementCard = createPlayerAchievementCard(playerName, achievements);
             achievementsPanel.add(playerAchievementCard);
             achievementsPanel.add(Box.createVerticalStrut(5));
@@ -418,17 +480,15 @@ public class GameOverPanel extends JPanel {
     }
 
     /**
-     * Get player name - first from our ID-to-name map, then from additionalProperties, then fallback to ID
+     * Gets player name from entry, checking local map first, then additional properties.
      */
     private String getPlayerName(RankingEntry entry) {
         String playerId = entry.getPlayerId();
 
-        // First check our locally stored player names
         if (playerIdToName.containsKey(playerId)) {
             return playerIdToName.get(playerId);
         }
 
-        // Fallback: Check additionalProperties for playerName
         if (entry.getAdditionalProperties() != null && entry.getAdditionalProperties().containsKey("playerName")) {
             Object value = entry.getAdditionalProperties().get("playerName");
             if (value instanceof String) {
@@ -436,7 +496,7 @@ public class GameOverPanel extends JPanel {
             }
         }
 
-        return playerId; // Fallback to player ID if name not available
+        return playerId;
     }
 
     private void loadBackgroundImage() {
@@ -449,6 +509,7 @@ public class GameOverPanel extends JPanel {
             log.error("Could not load background image: {}", e.getMessage());
         }
     }
+
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
@@ -458,12 +519,10 @@ public class GameOverPanel extends JPanel {
         g2.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
 
         if (backgroundImage != null) {
-            // Darken background image slightly for better contrast
             g2.drawImage(backgroundImage, 0, 0, getWidth(), getHeight(), this);
             g2.setColor(ThemeEffects.withAlpha(GameTheme.Colors.BACKGROUND_PRIMARY, 100));
             g2.fillRect(0, 0, getWidth(), getHeight());
         } else {
-            // Fallback: Dark earthy gradient background
             GradientPaint gradient = new GradientPaint(
                     0, 0, GameTheme.Colors.BACKGROUND_PRIMARY,
                     0, getHeight(), GameTheme.Colors.BACKGROUND_SECONDARY
@@ -472,10 +531,10 @@ public class GameOverPanel extends JPanel {
             g2.fillRect(0, 0, getWidth(), getHeight());
         }
 
-        // Subtle vignette effect
+        float vignetteRadius = Math.max(getWidth(), getHeight()) * 0.8f;
         RadialGradientPaint vignette = new RadialGradientPaint(
                 getWidth() / 2f, getHeight() / 2f,
-                Math.max(getWidth(), getHeight()) * 0.8f,
+                vignetteRadius,
                 new float[]{0.0f, 1.0f},
                 new Color[]{
                         ThemeEffects.withAlpha(GameTheme.Colors.BACKGROUND_PRIMARY, 0),
@@ -486,79 +545,36 @@ public class GameOverPanel extends JPanel {
         g2.fillRect(0, 0, getWidth(), getHeight());
     }
 
+    /**
+     * Cleans up resources when panel is disposed.
+     */
     public void cleanup() {
         if (animationTimer != null && animationTimer.isRunning()) {
             animationTimer.stop();
         }
-        // Clear achievements when panel is cleaned up
         playerAchievements.clear();
         achievementsPanel.removeAll();
     }
 
     /**
-     * Add an achievement for a player.
-     * This should be called when ACHIEVEMENT_UNLOCKED events are received.
+     * Adds an achievement for a player. Call when ACHIEVEMENT_UNLOCKED events are received.
      */
     public void addAchievement(String playerId, String achievementName) {
         playerAchievements.computeIfAbsent(playerId, k -> new ArrayList<>()).add(achievementName);
     }
 
-    /**
-     * Update the achievements display after all achievements have been added.
-     */
-    private void updateAchievementsDisplay() {
-        achievementsPanel.removeAll();
-
-        if (playerAchievements.isEmpty()) {
-            achievementsPanel.setVisible(false);
-            return;
-        }
-
-        achievementsPanel.setVisible(true);
-
-        // Title
-        JLabel achievementTitle = new JLabel("Errungenschaften", SwingConstants.CENTER);
-        achievementTitle.setFont(FontManager.getHeadingSmall());
-        achievementTitle.setForeground(GameTheme.Colors.ACCENT_GOLD);
-        achievementTitle.setAlignmentX(Component.CENTER_ALIGNMENT);
-        achievementTitle.setBorder(new EmptyBorder(5, 0, 10, 0));
-        achievementsPanel.add(achievementTitle);
-
-        // Create achievement entries for each player
-        for (Map.Entry<String, List<String>> entry : playerAchievements.entrySet()) {
-            String playerId = entry.getKey();
-            List<String> achievements = entry.getValue();
-
-            if (achievements.isEmpty()) continue;
-
-            // Find player name
-            String playerName = playerId; // fallback
-            // Will be set from ranking data in updateGameOver
-
-            // Create achievement card for this player
-            JPanel playerAchievementCard = createPlayerAchievementCard(playerName, achievements);
-            achievementsPanel.add(playerAchievementCard);
-            achievementsPanel.add(Box.createVerticalStrut(5));
-        }
-
-        achievementsPanel.revalidate();
-        achievementsPanel.repaint();
-    }
-
-
-
     private JPanel createPlayerAchievementCard(String playerName, List<String> achievements) {
+        boolean isCompact = getWidth() < COMPACT_THRESHOLD;
+
         JPanel card = new JPanel() {
             @Override
             protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-                // Semi-transparent background
                 g2.setColor(ThemeEffects.withAlpha(GameTheme.Colors.SURFACE_PRIMARY, 180));
                 g2.fillRoundRect(0, 0, getWidth(), getHeight(), 10, 10);
 
-                // Border
                 g2.setColor(GameTheme.Colors.ACCENT_GOLD);
                 g2.setStroke(new BasicStroke(1.5f));
                 g2.drawRoundRect(1, 1, getWidth() - 2, getHeight() - 2, 10, 10);
@@ -567,37 +583,44 @@ public class GameOverPanel extends JPanel {
                 super.paintComponent(g);
             }
         };
-        card.setLayout(new FlowLayout(FlowLayout.LEFT, 10, 8));
-        card.setOpaque(false);
-        card.setMaximumSize(new Dimension(Integer.MAX_VALUE, 45));
 
-        // Player name
+        int padding = isCompact ? 6 : 10;
+        card.setLayout(new FlowLayout(FlowLayout.LEFT, padding, padding / 2));
+        card.setOpaque(false);
+
+        int cardHeight = isCompact ? 35 : 45;
+        card.setMaximumSize(new Dimension(Integer.MAX_VALUE, cardHeight));
+
+        Font nameFont = isCompact ? FontManager.getBodySmall(Font.BOLD) : FontManager.getBodyMedium(Font.BOLD);
         JLabel nameLabel = new JLabel(playerName + ": ");
-        nameLabel.setFont(FontManager.getBodyMedium(Font.BOLD));
+        nameLabel.setFont(nameFont);
         nameLabel.setForeground(GameTheme.Colors.TEXT_PRIMARY);
         card.add(nameLabel);
 
-        // Achievement badges
         for (String achievement : achievements) {
-            JLabel badge = createAchievementBadge(achievement);
+            JLabel badge = createAchievementBadge(achievement, isCompact);
             card.add(badge);
         }
 
         return card;
     }
 
-    private JLabel createAchievementBadge(String achievementName) {
+    private JLabel createAchievementBadge(String achievementName, boolean isCompact) {
         String icon = getAchievementIcon(achievementName);
         String displayName = formatAchievementName(achievementName);
 
         JLabel badge = new JLabel(icon + " " + displayName);
-        badge.setFont(FontManager.getBodySmall(Font.BOLD));
+        Font badgeFont = isCompact ? FontManager.getBodySmall() : FontManager.getBodySmall(Font.BOLD);
+        badge.setFont(badgeFont);
         badge.setForeground(GameTheme.Colors.ACCENT_GOLD);
         badge.setOpaque(true);
         badge.setBackground(ThemeEffects.withAlpha(GameTheme.Colors.ACCENT_GOLD, 30));
+
+        int vPad = isCompact ? 2 : 3;
+        int hPad = isCompact ? 5 : 8;
         badge.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(GameTheme.Colors.ACCENT_GOLD, 1),
-                BorderFactory.createEmptyBorder(3, 8, 3, 8)
+                BorderFactory.createEmptyBorder(vPad, hPad, vPad, hPad)
         ));
 
         return badge;
@@ -620,14 +643,13 @@ public class GameOverPanel extends JPanel {
     }
 
     /**
-     * Set the callback for starting a new round.
+     * Sets the callback for starting a new round.
      */
     public void setOnStartNewRound(Runnable callback) {
     }
 
     /**
-     * Set the player ID to name mapping.
-     * Call this before updateGameOver to ensure player names are displayed correctly.
+     * Sets the player ID to name mapping. Call before updateGameOver for correct name display.
      */
     public void setPlayerNames(Map<String, String> idToNameMap) {
         this.playerIdToName.clear();

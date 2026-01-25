@@ -92,6 +92,10 @@ public class BoardPanel extends JPanel {
 
     private final List<ArrowButton> arrowButtons = new ArrayList<>();
     private ArrowButton hoveredArrow = null;
+    // Keyboard-selected arrow properties (stored separately since arrowButtons is recreated on repaint)
+    private Integer selectedArrowIndex = null;
+    private Boolean selectedArrowIsRow = null;
+    private Direction selectedArrowDirection = null;
 
     private int xOffset;
     private int yOffset;
@@ -563,35 +567,67 @@ public class BoardPanel extends JPanel {
             }
 
             // Arrow key and WASD navigation
+            // Allow navigation to -1 (top/left arrows) and board size (bottom/right arrows)
             case java.awt.event.KeyEvent.VK_UP, java.awt.event.KeyEvent.VK_W -> {
                 keyboardNavigationActive = true;
-                selectedRow = Math.max(0, selectedRow - 1);
+                selectedRow = Math.max(-1, selectedRow - 1);
+                updateSelectedArrow();
                 repaint();
             }
             case java.awt.event.KeyEvent.VK_DOWN, java.awt.event.KeyEvent.VK_S -> {
                 keyboardNavigationActive = true;
-                selectedRow = Math.min(board.getHeight() - 1, selectedRow + 1);
+                selectedRow = Math.min(board.getHeight(), selectedRow + 1);
+                updateSelectedArrow();
                 repaint();
             }
             case java.awt.event.KeyEvent.VK_LEFT, java.awt.event.KeyEvent.VK_A -> {
                 keyboardNavigationActive = true;
-                selectedCol = Math.max(0, selectedCol - 1);
+                selectedCol = Math.max(-1, selectedCol - 1);
+                updateSelectedArrow();
                 repaint();
             }
             case java.awt.event.KeyEvent.VK_RIGHT, java.awt.event.KeyEvent.VK_D -> {
                 keyboardNavigationActive = true;
-                selectedCol = Math.min(board.getWidth() - 1, selectedCol + 1);
+                selectedCol = Math.min(board.getWidth(), selectedCol + 1);
+                updateSelectedArrow();
                 repaint();
             }
 
             // Confirm selection with Enter or Space
             case java.awt.event.KeyEvent.VK_ENTER, java.awt.event.KeyEvent.VK_SPACE -> {
-                if (keyboardNavigationActive && currentTurnState == labyrinth.contracts.models.TurnState.WAITING_FOR_MOVE) {
-                    client.sendMovePawn(selectedRow, selectedCol);
+                if (currentTurnState == labyrinth.contracts.models.TurnState.WAITING_FOR_PUSH && selectedArrowIndex != null) {
+                    // Trigger push with the selected arrow
+                    lastPushedIndex = selectedArrowIndex;
+                    lastPushedWasRow = selectedArrowIsRow;
+                    lastPushDirection = selectedArrowDirection;
+                    lastPushTimestamp = System.currentTimeMillis();
+
+                    soundEffects.playPush();
+
+                    String rowCol = selectedArrowIsRow ? "Zeile " + selectedArrowIndex : "Spalte " + selectedArrowIndex;
+                    String directionStr = switch (selectedArrowDirection) {
+                        case UP -> "nach oben";
+                        case DOWN -> "nach unten";
+                        case LEFT -> "nach links";
+                        case RIGHT -> "nach rechts";
+                    };
+                    toastManager.showInfo("PUSH", "Einschub", rowCol + " wird " + directionStr + " geschoben");
+
+                    client.sendPushTile(selectedArrowIndex, selectedArrowDirection);
                     inputLocked = true;
-                    keyboardNavigationActive = false;
+                    selectedArrowIndex = null;
+                    selectedArrowIsRow = null;
+                    selectedArrowDirection = null;
+                } else if (keyboardNavigationActive && currentTurnState == labyrinth.contracts.models.TurnState.WAITING_FOR_MOVE) {
+                    // Only allow move if selection is within the board
+                    if (selectedRow >= 0 && selectedRow < board.getHeight() &&
+                        selectedCol >= 0 && selectedCol < board.getWidth()) {
+                        client.sendMovePawn(selectedRow, selectedCol);
+                        inputLocked = true;
+                        keyboardNavigationActive = false;
+                    }
                 } else if (currentTurnState == labyrinth.contracts.models.TurnState.WAITING_FOR_PUSH) {
-                    toastManager.showInfo("INFO", "Hinweis", "Erst Tile einschieben, dann Figur bewegen");
+                    toastManager.showInfo("INFO", "Hinweis", "Navigiere zu einem Pfeil am Rand und drücke Enter");
                 }
             }
 
@@ -622,6 +658,56 @@ public class BoardPanel extends JPanel {
                 }
             }
         }
+    }
+
+    /**
+     * Updates the selected arrow properties based on the current selectedRow/selectedCol.
+     * An arrow is selected when navigation goes beyond the board boundaries.
+     */
+    private void updateSelectedArrow() {
+        selectedArrowIndex = null;
+        selectedArrowIsRow = null;
+        selectedArrowDirection = null;
+
+        if (board == null) return;
+
+        int rows = board.getHeight();
+        int cols = board.getWidth();
+
+        // Top arrow (column arrow that pushes DOWN)
+        if (selectedRow == -1 && selectedCol >= 0 && selectedCol < cols) {
+            selectedArrowIndex = selectedCol;
+            selectedArrowIsRow = false;
+            selectedArrowDirection = Direction.DOWN;
+        }
+        // Bottom arrow (column arrow that pushes UP)
+        else if (selectedRow == rows && selectedCol >= 0 && selectedCol < cols) {
+            selectedArrowIndex = selectedCol;
+            selectedArrowIsRow = false;
+            selectedArrowDirection = Direction.UP;
+        }
+        // Left arrow (row arrow that pushes RIGHT)
+        else if (selectedCol == -1 && selectedRow >= 0 && selectedRow < rows) {
+            selectedArrowIndex = selectedRow;
+            selectedArrowIsRow = true;
+            selectedArrowDirection = Direction.RIGHT;
+        }
+        // Right arrow (row arrow that pushes LEFT)
+        else if (selectedCol == cols && selectedRow >= 0 && selectedRow < rows) {
+            selectedArrowIndex = selectedRow;
+            selectedArrowIsRow = true;
+            selectedArrowDirection = Direction.LEFT;
+        }
+    }
+
+    /**
+     * Checks if the given arrow matches the current keyboard selection.
+     */
+    private boolean isArrowSelected(ArrowButton arrow) {
+        return selectedArrowIndex != null &&
+               arrow.index == selectedArrowIndex &&
+               arrow.isRow == selectedArrowIsRow &&
+               arrow.direction == selectedArrowDirection;
     }
 
     private void showKeyboardHelp() {
@@ -766,7 +852,7 @@ public class BoardPanel extends JPanel {
         dialog.pack();
         dialog.setLocationRelativeTo(this);
 
-        // Close on Escape or H
+        // Close on Escape, H, or Tab
         dialog.getRootPane().registerKeyboardAction(
                 e -> dialog.dispose(),
                 KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_ESCAPE, 0),
@@ -777,6 +863,11 @@ public class BoardPanel extends JPanel {
                 KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_H, 0),
                 JComponent.WHEN_IN_FOCUSED_WINDOW
         );
+        dialog.getRootPane().registerKeyboardAction(
+                e -> dialog.dispose(),
+                KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_TAB, 0),
+                JComponent.WHEN_IN_FOCUSED_WINDOW
+        );
 
         dialog.setVisible(true);
     }
@@ -784,16 +875,13 @@ public class BoardPanel extends JPanel {
     private boolean handleArrowClick(Point p) {
         for (ArrowButton arrow : arrowButtons) {
             if (arrow.contains(p)) {
-                // Record push action for visual feedback
                 lastPushedIndex = arrow.index;
                 lastPushedWasRow = arrow.isRow;
                 lastPushDirection = arrow.direction;
                 lastPushTimestamp = System.currentTimeMillis();
 
-                // Play push sound
                 soundEffects.playPush();
 
-                // Show toast notification
                 String rowCol = arrow.isRow ? "Zeile " + arrow.index : "Spalte " + arrow.index;
                 String directionStr = switch (arrow.direction) {
                     case UP -> "nach oben";
@@ -803,7 +891,6 @@ public class BoardPanel extends JPanel {
                 };
                 toastManager.showInfo("PUSH", "Einschub", rowCol + " wird " + directionStr + " geschoben");
 
-                // Send command to server
                 client.sendPushTile(arrow.index, arrow.direction);
                 inputLocked = true;
                 return true;
@@ -1403,7 +1490,10 @@ public class BoardPanel extends JPanel {
                 int x = xOffset + col * size;
                 int y = yOffset + row * size;
 
-                if (keyboardNavigationActive && row == selectedRow && col == selectedCol) {
+                // Only draw tile selection if within board bounds (not at arrow positions)
+                if (keyboardNavigationActive && row == selectedRow && col == selectedCol &&
+                    selectedRow >= 0 && selectedRow < board.getHeight() &&
+                    selectedCol >= 0 && selectedCol < board.getWidth()) {
                     drawKeyboardSelectionHighlight(g2, x, y);
                 }
 
@@ -1949,7 +2039,41 @@ public class BoardPanel extends JPanel {
             hoverColor = ARROW_COLOR_HOVER;
         }
 
-        Color currentColor = (arrow == hoveredArrow) ? hoverColor : baseColor;
+        // Highlight if hovered or selected via keyboard
+        boolean isSelected = isArrowSelected(arrow);
+        Color currentColor = (arrow == hoveredArrow || isSelected) ? hoverColor : baseColor;
+
+        // Draw keyboard selection highlight (pulsing yellow border like tiles)
+        if (isSelected && keyboardNavigationActive) {
+            long time = System.currentTimeMillis();
+            int pulseAlpha = 150 + (int) (50 * Math.sin(time / 200.0));
+
+            // Outer glow
+            g2.setColor(new Color(255, 255, 100, pulseAlpha));
+            g2.setStroke(new BasicStroke(4));
+            g2.drawRoundRect(arrow.bounds.x - 4, arrow.bounds.y - 4,
+                    arrow.bounds.width + 8, arrow.bounds.height + 8, 12, 12);
+
+            // Corner markers
+            g2.setColor(new Color(255, 255, 0, 200));
+            int cornerSize = 6;
+            int x = arrow.bounds.x;
+            int y = arrow.bounds.y;
+            int w = arrow.bounds.width;
+            int h = arrow.bounds.height;
+            // Top-left
+            g2.fillRect(x - 2, y - 2, cornerSize, 2);
+            g2.fillRect(x - 2, y - 2, 2, cornerSize);
+            // Top-right
+            g2.fillRect(x + w - cornerSize + 2, y - 2, cornerSize, 2);
+            g2.fillRect(x + w, y - 2, 2, cornerSize);
+            // Bottom-left
+            g2.fillRect(x - 2, y + h, cornerSize, 2);
+            g2.fillRect(x - 2, y + h - cornerSize + 2, 2, cornerSize);
+            // Bottom-right
+            g2.fillRect(x + w - cornerSize + 2, y + h, cornerSize, 2);
+            g2.fillRect(x + w, y + h - cornerSize + 2, 2, cornerSize);
+        }
 
         // Shadow
         g2.setColor(currentColor);
@@ -3067,6 +3191,19 @@ public class BoardPanel extends JPanel {
         dialog.setContentPane(mainPanel);
         dialog.setSize(580, 400);
         dialog.setLocationRelativeTo(this);
+
+        // Close on Escape or P
+        dialog.getRootPane().registerKeyboardAction(
+                e -> dialog.dispose(),
+                KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_ESCAPE, 0),
+                JComponent.WHEN_IN_FOCUSED_WINDOW
+        );
+        dialog.getRootPane().registerKeyboardAction(
+                e -> dialog.dispose(),
+                KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_P, 0),
+                JComponent.WHEN_IN_FOCUSED_WINDOW
+        );
+
         dialog.setVisible(true);
     }
 
