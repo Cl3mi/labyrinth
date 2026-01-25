@@ -202,6 +202,22 @@ public class ServerBrowserPanel extends JPanel {
                     return;
                 }
 
+                // Tab key wrapping
+                if (keyCode == KeyEvent.VK_TAB) {
+                    e.consume();
+                    if (focused == backButton) {
+                        // Tab from back button -> server list
+                        serverList.requestFocusInWindow();
+                        if (serverList.getModel().getSize() > 0 && serverList.getSelectedIndex() < 0) {
+                            serverList.setSelectedIndex(0);
+                        }
+                    } else {
+                        // Tab from server list -> back button (wrap)
+                        backButton.requestFocusInWindow();
+                    }
+                    return;
+                }
+
                 // Navigate between back button and server list
                 if (focused == backButton) {
                     if (keyCode == KeyEvent.VK_DOWN || keyCode == KeyEvent.VK_S) {
@@ -235,7 +251,27 @@ public class ServerBrowserPanel extends JPanel {
         backButton.addKeyListener(navListener);
         serverList.addKeyListener(navListener);
 
+        // Disable default Tab traversal so our listener handles it
+        backButton.setFocusTraversalKeysEnabled(false);
+        serverList.setFocusTraversalKeysEnabled(false);
+
         setFocusable(true);
+        setFocusTraversalKeysEnabled(false);
+
+        // Request focus on first component when panel gains focus
+        addFocusListener(new java.awt.event.FocusAdapter() {
+            @Override
+            public void focusGained(java.awt.event.FocusEvent e) {
+                if (serverList.getModel().getSize() > 0) {
+                    serverList.requestFocusInWindow();
+                    if (serverList.getSelectedIndex() < 0) {
+                        serverList.setSelectedIndex(0);
+                    }
+                } else {
+                    backButton.requestFocusInWindow();
+                }
+            }
+        });
     }
 
     private boolean isDescendant(Component ancestor, Component descendant) {
@@ -352,6 +388,16 @@ public class ServerBrowserPanel extends JPanel {
 
     private void updateServerList(List<GameServer> servers) {
         SwingUtilities.invokeLater(() -> {
+            // Preserve selection before clearing - use URI as unique identifier
+            String selectedServerUri = null;
+            int previousIndex = serverList.getSelectedIndex();
+            if (previousIndex >= 0 && previousIndex < serverListModel.size()) {
+                GameServer selected = serverListModel.getElementAt(previousIndex);
+                if (selected != null) {
+                    selectedServerUri = selected.getUri();
+                }
+            }
+
             serverListModel.clear();
             if (servers == null || servers.isEmpty()) {
                 statusLabel.setText("Keine Server gefunden");
@@ -359,10 +405,15 @@ public class ServerBrowserPanel extends JPanel {
             }
 
             int added = 0;
+            int restoredIndexByUri = -1;
             for (GameServer s : servers) {
                 if (s == null) continue;
                 if (!isLobby(s)) continue;
                 serverListModel.addElement(s);
+                // Check if this is the previously selected server by URI
+                if (selectedServerUri != null && selectedServerUri.equals(s.getUri())) {
+                    restoredIndexByUri = added;
+                }
                 added++;
             }
 
@@ -370,6 +421,15 @@ public class ServerBrowserPanel extends JPanel {
                 statusLabel.setText("Keine Lobbys verfügbar");
             } else {
                 statusLabel.setText("Aktualisiert: " + LocalTime.now().format(timeFmt));
+                // Restore selection: prefer same server by URI, fallback to same index
+                if (restoredIndexByUri >= 0) {
+                    serverList.setSelectedIndex(restoredIndexByUri);
+                } else if (previousIndex >= 0 && previousIndex < added) {
+                    serverList.setSelectedIndex(previousIndex);
+                } else if (previousIndex >= added && added > 0) {
+                    // Previous index is out of bounds, select last item
+                    serverList.setSelectedIndex(added - 1);
+                }
             }
         });
     }

@@ -367,6 +367,12 @@ public final class DialogFactory {
                 } else if (keyCode == KeyEvent.VK_UP) {
                     e.consume();
                     inputField.requestFocusInWindow();
+                } else if (keyCode == KeyEvent.VK_ENTER || keyCode == KeyEvent.VK_SPACE) {
+                    e.consume();
+                    Component focused = KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
+                    if (focused instanceof AbstractButton button) {
+                        button.doClick();
+                    }
                 }
             }
         };

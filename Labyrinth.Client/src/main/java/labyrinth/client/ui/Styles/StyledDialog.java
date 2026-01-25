@@ -249,6 +249,12 @@ public class StyledDialog extends JDialog {
                         } else {
                             yesButton.requestFocusInWindow();
                         }
+                    } else if (keyCode == KeyEvent.VK_ENTER || keyCode == KeyEvent.VK_SPACE) {
+                        e.consume();
+                        Component focused = KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
+                        if (focused instanceof AbstractButton button) {
+                            button.doClick();
+                        }
                     }
                 }
             };
@@ -260,6 +266,17 @@ public class StyledDialog extends JDialog {
             StyledButton okButton = createStyledButton("OK", true, type.color);
             okButton.addActionListener(e -> closeDialog(true));
             buttonPanel.add(okButton);
+
+            // Add Enter/Space key handling for OK button
+            okButton.addKeyListener(new KeyAdapter() {
+                @Override
+                public void keyPressed(KeyEvent e) {
+                    if (e.getKeyCode() == KeyEvent.VK_ENTER || e.getKeyCode() == KeyEvent.VK_SPACE) {
+                        e.consume();
+                        okButton.doClick();
+                    }
+                }
+            });
 
             SwingUtilities.invokeLater(okButton::requestFocusInWindow);
         }

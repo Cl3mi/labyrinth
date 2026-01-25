@@ -49,10 +49,11 @@ public class KeyboardNavigationHelper {
             return;
         }
 
-        // Make all components focusable
+        // Make all components focusable and disable default Tab traversal
         for (Component comp : components) {
             if (comp instanceof JComponent jComp) {
                 jComp.setFocusable(true);
+                jComp.setFocusTraversalKeysEnabled(false);
             }
         }
 
@@ -75,6 +76,19 @@ public class KeyboardNavigationHelper {
                         : (keyCode == KeyEvent.VK_RIGHT || keyCode == KeyEvent.VK_D);
                 boolean isPrev = vertical ? (keyCode == KeyEvent.VK_UP || keyCode == KeyEvent.VK_W)
                         : (keyCode == KeyEvent.VK_LEFT || keyCode == KeyEvent.VK_A);
+
+                // Tab key wrapping
+                if (keyCode == KeyEvent.VK_TAB) {
+                    e.consume();
+                    if (e.isShiftDown()) {
+                        int prevIndex = currentIndex < 0 ? components.size() - 1 : (currentIndex - 1 + components.size()) % components.size();
+                        requestFocusFor(components.get(prevIndex));
+                    } else {
+                        int nextIndex = currentIndex < 0 ? 0 : (currentIndex + 1) % components.size();
+                        requestFocusFor(components.get(nextIndex));
+                    }
+                    return;
+                }
 
                 if (isNext) {
                     e.consume();
@@ -105,6 +119,7 @@ public class KeyboardNavigationHelper {
 
         panel.addKeyListener(navListener);
         panel.setFocusable(true);
+        panel.setFocusTraversalKeysEnabled(false);
 
         // Also add listener to each component for when they have focus
         for (Component comp : components) {

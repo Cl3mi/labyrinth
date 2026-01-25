@@ -296,6 +296,16 @@ public class MainMenuPanel extends ThemedPanel {
         KeyboardNavigationHelper.setupVerticalNavigation(this, navigationButtons);
         setFocusCycleRoot(true);
         setFocusTraversalPolicy(KeyboardNavigationHelper.createFocusPolicy(navigationButtons));
+
+        // Request focus on first button when panel gains focus
+        addFocusListener(new java.awt.event.FocusAdapter() {
+            @Override
+            public void focusGained(java.awt.event.FocusEvent e) {
+                if (!navigationButtons.isEmpty()) {
+                    navigationButtons.get(0).requestFocusInWindow();
+                }
+            }
+        });
     }
 
     @Override

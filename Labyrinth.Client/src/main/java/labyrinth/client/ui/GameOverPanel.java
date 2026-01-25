@@ -148,7 +148,12 @@ public class GameOverPanel extends JPanel {
         backToLobbyButton.addKeyListener(navListener);
         leaderboardTable.addKeyListener(navListener);
 
+        // Disable default Tab traversal so our listener handles it
+        backToLobbyButton.setFocusTraversalKeysEnabled(false);
+        leaderboardTable.setFocusTraversalKeysEnabled(false);
+
         setFocusable(true);
+        setFocusTraversalKeysEnabled(false);
     }
 
     private boolean isDescendant(Component ancestor, Component descendant) {

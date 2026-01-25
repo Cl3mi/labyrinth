@@ -595,12 +595,26 @@ public class MultiplayerLobbyPanel extends JPanel {
                 Component focused = KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
                 int currentIndex = findFocusedIndex(focused);
 
+                // Check if focus is in a combo box - let it handle up/down arrows
+                boolean inComboBox = focused instanceof JComboBox || isComboBoxChild(focused);
+
                 if (keyCode == KeyEvent.VK_DOWN || keyCode == KeyEvent.VK_S) {
-                    e.consume();
-                    focusNext(currentIndex);
+                    if (!inComboBox) {
+                        e.consume();
+                        focusNext(currentIndex);
+                    }
                 } else if (keyCode == KeyEvent.VK_UP || keyCode == KeyEvent.VK_W) {
+                    if (!inComboBox) {
+                        e.consume();
+                        focusPrev(currentIndex);
+                    }
+                } else if (keyCode == KeyEvent.VK_TAB) {
                     e.consume();
-                    focusPrev(currentIndex);
+                    if (e.isShiftDown()) {
+                        focusPrev(currentIndex);
+                    } else {
+                        focusNext(currentIndex);
+                    }
                 } else if (keyCode == KeyEvent.VK_ENTER || keyCode == KeyEvent.VK_SPACE) {
                     if (focused instanceof AbstractButton button) {
                         e.consume();
@@ -620,10 +634,25 @@ public class MultiplayerLobbyPanel extends JPanel {
         for (Component comp : focusableComponents) {
             if (comp != null) {
                 comp.addKeyListener(navListener);
+                // Disable default Tab traversal so our listener handles it
+                if (comp instanceof JComponent jComp) {
+                    jComp.setFocusTraversalKeysEnabled(false);
+                }
             }
         }
 
         setFocusable(true);
+        setFocusTraversalKeysEnabled(false);
+
+        // Request focus when panel gains focus
+        addFocusListener(new java.awt.event.FocusAdapter() {
+            @Override
+            public void focusGained(java.awt.event.FocusEvent e) {
+                if (backButton != null && backButton.isVisible() && backButton.isEnabled()) {
+                    backButton.requestFocusInWindow();
+                }
+            }
+        });
         setFocusCycleRoot(true);
         setFocusTraversalPolicy(KeyboardNavigationHelper.createFocusPolicy(focusableComponents));
     }
@@ -673,6 +702,16 @@ public class MultiplayerLobbyPanel extends JPanel {
         Component parent = descendant;
         while (parent != null) {
             if (parent == ancestor) return true;
+            parent = parent.getParent();
+        }
+        return false;
+    }
+
+    private boolean isComboBoxChild(Component comp) {
+        if (comp == null) return false;
+        Component parent = comp.getParent();
+        while (parent != null) {
+            if (parent instanceof JComboBox) return true;
             parent = parent.getParent();
         }
         return false;
