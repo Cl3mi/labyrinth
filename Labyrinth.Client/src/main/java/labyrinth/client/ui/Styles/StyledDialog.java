@@ -7,7 +7,11 @@ import labyrinth.client.ui.theme.ThemeManager;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.*;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.awt.geom.RoundRectangle2D;
 
 /**
@@ -230,11 +234,49 @@ public class StyledDialog extends JDialog {
             noButton.addActionListener(e -> closeDialog(false));
             buttonPanel.add(noButton);
 
+            // Add left/right arrow key navigation between buttons
+            KeyListener buttonNavListener = new KeyAdapter() {
+                @Override
+                public void keyPressed(KeyEvent e) {
+                    int keyCode = e.getKeyCode();
+                    if (keyCode == KeyEvent.VK_LEFT || keyCode == KeyEvent.VK_A ||
+                        keyCode == KeyEvent.VK_RIGHT || keyCode == KeyEvent.VK_D ||
+                        keyCode == KeyEvent.VK_TAB) {
+                        e.consume();
+                        Component focused = KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
+                        if (focused == yesButton) {
+                            noButton.requestFocusInWindow();
+                        } else {
+                            yesButton.requestFocusInWindow();
+                        }
+                    } else if (keyCode == KeyEvent.VK_ENTER || keyCode == KeyEvent.VK_SPACE) {
+                        e.consume();
+                        Component focused = KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
+                        if (focused instanceof AbstractButton button) {
+                            button.doClick();
+                        }
+                    }
+                }
+            };
+            yesButton.addKeyListener(buttonNavListener);
+            noButton.addKeyListener(buttonNavListener);
+
             SwingUtilities.invokeLater(yesButton::requestFocusInWindow);
         } else {
             StyledButton okButton = createStyledButton("OK", true, type.color);
             okButton.addActionListener(e -> closeDialog(true));
             buttonPanel.add(okButton);
+
+            // Add Enter/Space key handling for OK button
+            okButton.addKeyListener(new KeyAdapter() {
+                @Override
+                public void keyPressed(KeyEvent e) {
+                    if (e.getKeyCode() == KeyEvent.VK_ENTER || e.getKeyCode() == KeyEvent.VK_SPACE) {
+                        e.consume();
+                        okButton.doClick();
+                    }
+                }
+            });
 
             SwingUtilities.invokeLater(okButton::requestFocusInWindow);
         }

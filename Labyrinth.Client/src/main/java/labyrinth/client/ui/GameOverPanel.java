@@ -20,6 +20,8 @@ import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
 import java.util.*;
 import java.util.List;
 
@@ -85,6 +87,89 @@ public class GameOverPanel extends JPanel {
         });
 
         updateResponsiveLayout();
+        setupKeyboardNavigation(onBackToLobby);
+    }
+
+    private void setupKeyboardNavigation(Runnable onBackToLobby) {
+        KeyListener navListener = new KeyListener() {
+            @Override
+            public void keyPressed(KeyEvent e) {
+                int keyCode = e.getKeyCode();
+
+                if (keyCode == KeyEvent.VK_ESCAPE || keyCode == KeyEvent.VK_ENTER || keyCode == KeyEvent.VK_SPACE) {
+                    e.consume();
+                    if (onBackToLobby != null) {
+                        onBackToLobby.run();
+                    }
+                    return;
+                }
+
+                Component focused = KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
+
+                // Navigate between table and button
+                if (keyCode == KeyEvent.VK_DOWN || keyCode == KeyEvent.VK_S) {
+                    if (focused == leaderboardTable || isDescendant(scrollPane, focused)) {
+                        // If at last row, go to button
+                        if (leaderboardTable.getSelectedRow() >= leaderboardTable.getRowCount() - 1) {
+                            e.consume();
+                            backToLobbyButton.requestFocusInWindow();
+                        }
+                    }
+                } else if (keyCode == KeyEvent.VK_UP || keyCode == KeyEvent.VK_W) {
+                    if (focused == backToLobbyButton) {
+                        e.consume();
+                        leaderboardTable.requestFocusInWindow();
+                        if (leaderboardTable.getRowCount() > 0) {
+                            leaderboardTable.setRowSelectionInterval(leaderboardTable.getRowCount() - 1, leaderboardTable.getRowCount() - 1);
+                        }
+                    } else if (focused == leaderboardTable) {
+                        if (leaderboardTable.getSelectedRow() <= 0) {
+                            // Already at top, stay there
+                        }
+                    }
+                } else if (keyCode == KeyEvent.VK_TAB) {
+                    e.consume();
+                    if (focused == backToLobbyButton) {
+                        leaderboardTable.requestFocusInWindow();
+                    } else {
+                        backToLobbyButton.requestFocusInWindow();
+                    }
+                }
+            }
+
+            @Override
+            public void keyTyped(KeyEvent e) {}
+
+            @Override
+            public void keyReleased(KeyEvent e) {}
+        };
+
+        addKeyListener(navListener);
+        backToLobbyButton.addKeyListener(navListener);
+        leaderboardTable.addKeyListener(navListener);
+
+        // Disable default Tab traversal so our listener handles it
+        backToLobbyButton.setFocusTraversalKeysEnabled(false);
+        leaderboardTable.setFocusTraversalKeysEnabled(false);
+
+        setFocusable(true);
+        setFocusTraversalKeysEnabled(false);
+    }
+
+    private boolean isDescendant(Component ancestor, Component descendant) {
+        if (ancestor == null || descendant == null) return false;
+        Component parent = descendant;
+        while (parent != null) {
+            if (parent == ancestor) return true;
+            parent = parent.getParent();
+        }
+        return false;
+    }
+
+    @Override
+    public void addNotify() {
+        super.addNotify();
+        SwingUtilities.invokeLater(() -> backToLobbyButton.requestFocusInWindow());
     }
 
     /**

@@ -22,7 +22,11 @@ import lombok.Setter;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
 import java.awt.geom.RoundRectangle2D;
+import java.util.ArrayList;
+import java.util.List;
 
 
 public class MultiplayerLobbyPanel extends JPanel {
@@ -66,6 +70,8 @@ public class MultiplayerLobbyPanel extends JPanel {
     @Setter
     private Runnable onBackToMenu;
 
+    private StyledButton backButton;
+    private final List<Component> focusableComponents = new ArrayList<>();
 
 
     public MultiplayerLobbyPanel(String localPlayerId) {
@@ -73,6 +79,7 @@ public class MultiplayerLobbyPanel extends JPanel {
 
         loadBackgroundImage();
         setupUI();
+        setupKeyboardNavigation();
 
         ThemeManager.getInstance().addThemeChangeListener(() -> {
             loadBackgroundImage();
@@ -114,7 +121,7 @@ public class MultiplayerLobbyPanel extends JPanel {
         header.setOpaque(false);
 
         // back button
-        var backButton = new StyledButton("Zurück", StyledButton.Style.SECONDARY);
+        backButton = new StyledButton("Zurück", StyledButton.Style.SECONDARY);
         backButton.setPreferredSize(new Dimension(140, 40));
         backButton.addActionListener(e -> {
             boolean confirmed = StyledDialog.showConfirm(this,
@@ -560,6 +567,164 @@ public class MultiplayerLobbyPanel extends JPanel {
         if (treasureCombo != null) treasureCombo.setEnabled(enabled);
         if (bonusCombo != null) bonusCombo.setEnabled(enabled);
         if (durationCombo != null) durationCombo.setEnabled(enabled);
+    }
+
+    private void setupKeyboardNavigation() {
+        // Build list of focusable components in order
+        focusableComponents.clear();
+        focusableComponents.add(backButton);
+        focusableComponents.add(boardWidthCombo);
+        focusableComponents.add(boardHeightCombo);
+        focusableComponents.add(treasureCombo);
+        focusableComponents.add(bonusCombo);
+        focusableComponents.add(durationCombo);
+        focusableComponents.add(cancelReconnectButton);
+        focusableComponents.add(startButton);
+
+        KeyListener navListener = new KeyListener() {
+            @Override
+            public void keyPressed(KeyEvent e) {
+                int keyCode = e.getKeyCode();
+
+                if (keyCode == KeyEvent.VK_ESCAPE) {
+                    e.consume();
+                    backButton.doClick();
+                    return;
+                }
+
+                Component focused = KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
+                int currentIndex = findFocusedIndex(focused);
+
+                // Check if focus is in a combo box - let it handle up/down arrows
+                boolean inComboBox = focused instanceof JComboBox || isComboBoxChild(focused);
+
+                if (keyCode == KeyEvent.VK_DOWN || keyCode == KeyEvent.VK_S) {
+                    if (!inComboBox) {
+                        e.consume();
+                        focusNext(currentIndex);
+                    }
+                } else if (keyCode == KeyEvent.VK_UP || keyCode == KeyEvent.VK_W) {
+                    if (!inComboBox) {
+                        e.consume();
+                        focusPrev(currentIndex);
+                    }
+                } else if (keyCode == KeyEvent.VK_TAB) {
+                    e.consume();
+                    if (e.isShiftDown()) {
+                        focusPrev(currentIndex);
+                    } else {
+                        focusNext(currentIndex);
+                    }
+                } else if (keyCode == KeyEvent.VK_ENTER || keyCode == KeyEvent.VK_SPACE) {
+                    if (focused instanceof AbstractButton button) {
+                        e.consume();
+                        button.doClick();
+                    }
+                }
+            }
+
+            @Override
+            public void keyTyped(KeyEvent e) {}
+
+            @Override
+            public void keyReleased(KeyEvent e) {}
+        };
+
+        addKeyListener(navListener);
+        for (Component comp : focusableComponents) {
+            if (comp != null) {
+                comp.addKeyListener(navListener);
+                // Disable default Tab traversal so our listener handles it
+                if (comp instanceof JComponent jComp) {
+                    jComp.setFocusTraversalKeysEnabled(false);
+                }
+            }
+        }
+
+        setFocusable(true);
+        setFocusTraversalKeysEnabled(false);
+
+        // Request focus when panel gains focus
+        addFocusListener(new java.awt.event.FocusAdapter() {
+            @Override
+            public void focusGained(java.awt.event.FocusEvent e) {
+                if (backButton != null && backButton.isVisible() && backButton.isEnabled()) {
+                    backButton.requestFocusInWindow();
+                }
+            }
+        });
+        setFocusCycleRoot(true);
+        setFocusTraversalPolicy(KeyboardNavigationHelper.createFocusPolicy(focusableComponents));
+    }
+
+    private int findFocusedIndex(Component focused) {
+        for (int i = 0; i < focusableComponents.size(); i++) {
+            Component comp = focusableComponents.get(i);
+            if (comp == focused || isDescendant(comp, focused)) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    private void focusNext(int currentIndex) {
+        int nextIndex = currentIndex < 0 ? 0 : (currentIndex + 1) % focusableComponents.size();
+        // Skip invisible or disabled components
+        int attempts = 0;
+        while (attempts < focusableComponents.size()) {
+            Component next = focusableComponents.get(nextIndex);
+            if (next != null && next.isVisible() && next.isEnabled()) {
+                next.requestFocusInWindow();
+                return;
+            }
+            nextIndex = (nextIndex + 1) % focusableComponents.size();
+            attempts++;
+        }
+    }
+
+    private void focusPrev(int currentIndex) {
+        int prevIndex = currentIndex < 0 ? focusableComponents.size() - 1 : (currentIndex - 1 + focusableComponents.size()) % focusableComponents.size();
+        // Skip invisible or disabled components
+        int attempts = 0;
+        while (attempts < focusableComponents.size()) {
+            Component prev = focusableComponents.get(prevIndex);
+            if (prev != null && prev.isVisible() && prev.isEnabled()) {
+                prev.requestFocusInWindow();
+                return;
+            }
+            prevIndex = (prevIndex - 1 + focusableComponents.size()) % focusableComponents.size();
+            attempts++;
+        }
+    }
+
+    private boolean isDescendant(Component ancestor, Component descendant) {
+        if (ancestor == null || descendant == null) return false;
+        Component parent = descendant;
+        while (parent != null) {
+            if (parent == ancestor) return true;
+            parent = parent.getParent();
+        }
+        return false;
+    }
+
+    private boolean isComboBoxChild(Component comp) {
+        if (comp == null) return false;
+        Component parent = comp.getParent();
+        while (parent != null) {
+            if (parent instanceof JComboBox) return true;
+            parent = parent.getParent();
+        }
+        return false;
+    }
+
+    @Override
+    public void addNotify() {
+        super.addNotify();
+        SwingUtilities.invokeLater(() -> {
+            if (backButton != null) {
+                backButton.requestFocusInWindow();
+            }
+        });
     }
 
     private void onStartGameClicked() {

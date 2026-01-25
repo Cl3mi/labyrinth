@@ -17,6 +17,8 @@ import org.jspecify.annotations.NonNull;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.geom.RoundRectangle2D;
@@ -35,6 +37,7 @@ public class ServerBrowserPanel extends JPanel {
     @Setter
     private Runnable onBackToMenu;
     private Image backgroundImage;
+    private StyledButton backButton;
 
     private final ServersApi serversApi;
 
@@ -68,18 +71,18 @@ public class ServerBrowserPanel extends JPanel {
         JPanel header = new JPanel(new BorderLayout(20, 0));
         header.setOpaque(false);
 
-        StyledButton backBtn = new StyledButton("Zurück", StyledButton.Style.SECONDARY);
-        backBtn.setPreferredSize(new Dimension(140, 40));
-        backBtn.setFocusPainted(false);
-        backBtn.addActionListener(e -> {
+        backButton = new StyledButton("Zurück", StyledButton.Style.SECONDARY);
+        backButton.setPreferredSize(new Dimension(140, 40));
+        backButton.setFocusPainted(false);
+        backButton.addActionListener(e -> {
             onLeaveServerBrowser();
             if (onBackToMenu != null) onBackToMenu.run();
         });
-        StyledTooltipManager.setTooltip(backBtn, "Zurück", "Zurück zum Hauptmenü");
-        StyledContextMenu.attachTo(backBtn);
+        StyledTooltipManager.setTooltip(backButton, "Zurück", "Zurück zum Hauptmenü");
+        StyledContextMenu.attachTo(backButton);
         JPanel leftPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
         leftPanel.setOpaque(false);
-        leftPanel.add(backBtn);
+        leftPanel.add(backButton);
         header.add(leftPanel, BorderLayout.WEST);
 
         JPanel centerPanel = new JPanel();
@@ -173,6 +176,125 @@ public class ServerBrowserPanel extends JPanel {
         listCard.add(sp, BorderLayout.CENTER);
 
         add(listCard, BorderLayout.CENTER);
+
+        setupKeyboardNavigation();
+    }
+
+    private void setupKeyboardNavigation() {
+        // Add keyboard navigation for the server list
+        KeyboardNavigationHelper.setupListNavigation(serverList, server -> {
+            if (onServerSelected != null) {
+                onServerSelected.accept(server);
+            }
+        });
+
+        // Add key listener for navigation between back button and server list
+        KeyListener navListener = new KeyListener() {
+            @Override
+            public void keyPressed(KeyEvent e) {
+                Component focused = KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
+                int keyCode = e.getKeyCode();
+
+                if (keyCode == KeyEvent.VK_ESCAPE) {
+                    e.consume();
+                    onLeaveServerBrowser();
+                    if (onBackToMenu != null) onBackToMenu.run();
+                    return;
+                }
+
+                // Tab key wrapping
+                if (keyCode == KeyEvent.VK_TAB) {
+                    e.consume();
+                    if (focused == backButton) {
+                        // Tab from back button -> server list
+                        serverList.requestFocusInWindow();
+                        if (serverList.getModel().getSize() > 0 && serverList.getSelectedIndex() < 0) {
+                            serverList.setSelectedIndex(0);
+                        }
+                    } else {
+                        // Tab from server list -> back button (wrap)
+                        backButton.requestFocusInWindow();
+                    }
+                    return;
+                }
+
+                // Navigate between back button and server list
+                if (focused == backButton) {
+                    if (keyCode == KeyEvent.VK_DOWN || keyCode == KeyEvent.VK_S) {
+                        e.consume();
+                        serverList.requestFocusInWindow();
+                        if (serverList.getModel().getSize() > 0 && serverList.getSelectedIndex() < 0) {
+                            serverList.setSelectedIndex(0);
+                        }
+                    } else if (keyCode == KeyEvent.VK_ENTER || keyCode == KeyEvent.VK_SPACE) {
+                        e.consume();
+                        backButton.doClick();
+                    }
+                } else if (focused == serverList || isDescendant(serverList, focused)) {
+                    if (keyCode == KeyEvent.VK_UP || keyCode == KeyEvent.VK_W) {
+                        if (serverList.getSelectedIndex() <= 0) {
+                            e.consume();
+                            backButton.requestFocusInWindow();
+                        }
+                    }
+                }
+            }
+
+            @Override
+            public void keyTyped(KeyEvent e) {}
+
+            @Override
+            public void keyReleased(KeyEvent e) {}
+        };
+
+        addKeyListener(navListener);
+        backButton.addKeyListener(navListener);
+        serverList.addKeyListener(navListener);
+
+        // Disable default Tab traversal so our listener handles it
+        backButton.setFocusTraversalKeysEnabled(false);
+        serverList.setFocusTraversalKeysEnabled(false);
+
+        setFocusable(true);
+        setFocusTraversalKeysEnabled(false);
+
+        // Request focus on first component when panel gains focus
+        addFocusListener(new java.awt.event.FocusAdapter() {
+            @Override
+            public void focusGained(java.awt.event.FocusEvent e) {
+                if (serverList.getModel().getSize() > 0) {
+                    serverList.requestFocusInWindow();
+                    if (serverList.getSelectedIndex() < 0) {
+                        serverList.setSelectedIndex(0);
+                    }
+                } else {
+                    backButton.requestFocusInWindow();
+                }
+            }
+        });
+    }
+
+    private boolean isDescendant(Component ancestor, Component descendant) {
+        if (ancestor == null || descendant == null) return false;
+        Component parent = descendant;
+        while (parent != null) {
+            if (parent == ancestor) return true;
+            parent = parent.getParent();
+        }
+        return false;
+    }
+
+    @Override
+    public void addNotify() {
+        super.addNotify();
+        SwingUtilities.invokeLater(() -> {
+            if (serverList.getModel().getSize() > 0) {
+                serverList.setSelectedIndex(0);
+                serverList.requestFocusInWindow();
+            } else {
+                backButton.requestFocusInWindow();
+            }
+        });
     }
 
     private @NonNull JPanel getListPanel() {
@@ -266,6 +388,16 @@ public class ServerBrowserPanel extends JPanel {
 
     private void updateServerList(List<GameServer> servers) {
         SwingUtilities.invokeLater(() -> {
+            // Preserve selection before clearing - use URI as unique identifier
+            String selectedServerUri = null;
+            int previousIndex = serverList.getSelectedIndex();
+            if (previousIndex >= 0 && previousIndex < serverListModel.size()) {
+                GameServer selected = serverListModel.getElementAt(previousIndex);
+                if (selected != null) {
+                    selectedServerUri = selected.getUri();
+                }
+            }
+
             serverListModel.clear();
             if (servers == null || servers.isEmpty()) {
                 statusLabel.setText("Keine Server gefunden");
@@ -273,10 +405,15 @@ public class ServerBrowserPanel extends JPanel {
             }
 
             int added = 0;
+            int restoredIndexByUri = -1;
             for (GameServer s : servers) {
                 if (s == null) continue;
                 if (!isLobby(s)) continue;
                 serverListModel.addElement(s);
+                // Check if this is the previously selected server by URI
+                if (selectedServerUri != null && selectedServerUri.equals(s.getUri())) {
+                    restoredIndexByUri = added;
+                }
                 added++;
             }
 
@@ -284,6 +421,15 @@ public class ServerBrowserPanel extends JPanel {
                 statusLabel.setText("Keine Lobbys verfügbar");
             } else {
                 statusLabel.setText("Aktualisiert: " + LocalTime.now().format(timeFmt));
+                // Restore selection: prefer same server by URI, fallback to same index
+                if (restoredIndexByUri >= 0) {
+                    serverList.setSelectedIndex(restoredIndexByUri);
+                } else if (previousIndex >= 0 && previousIndex < added) {
+                    serverList.setSelectedIndex(previousIndex);
+                } else if (previousIndex >= added && added > 0) {
+                    // Previous index is out of bounds, select last item
+                    serverList.setSelectedIndex(added - 1);
+                }
             }
         });
     }

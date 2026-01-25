@@ -172,6 +172,10 @@ public class LabyrinthApplication {
         frame.setContentPane(mainPanel);
         frame.setVisible(true);
 
+        // Ensure window gets focus on startup
+        frame.toFront();
+        frame.requestFocus();
+
         loginSent = false;
         connectAckReceived = false;
 
@@ -203,11 +207,13 @@ public class LabyrinthApplication {
 
         CardLayout cl = (CardLayout) mainPanel.getLayout();
         cl.show(mainPanel, PanelName.MAIN_MENU.getCardName());
+        SwingUtilities.invokeLater(() -> mainMenuPanel.requestFocusInWindow());
     }
 
     private void showOptions() {
         CardLayout cl = (CardLayout) mainPanel.getLayout();
         cl.show(mainPanel, PanelName.OPTIONS.getCardName());
+        SwingUtilities.invokeLater(() -> optionsPanel.requestFocusInWindow());
     }
 
     private void applySettings() {
@@ -231,6 +237,7 @@ public class LabyrinthApplication {
         cl.show(mainPanel, PanelName.SERVER_BROWSER.getCardName());
 
         serverBrowserPanel.onShow();
+        SwingUtilities.invokeLater(() -> serverBrowserPanel.requestFocusInWindow());
     }
 
     private void handleConnectionErrorAndReturnToServerBrowser(String title, String message) {
@@ -670,6 +677,7 @@ public class LabyrinthApplication {
     private void showLobby() {
         CardLayout cl = (CardLayout) mainPanel.getLayout();
         cl.show(mainPanel, PanelName.LOBBY.getCardName());
+        SwingUtilities.invokeLater(() -> lobbyPanel.requestFocusInWindow());
     }
 
     private Player resolveLocalPlayer(List<Player> players) {

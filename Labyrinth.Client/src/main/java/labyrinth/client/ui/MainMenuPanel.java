@@ -16,6 +16,8 @@ import lombok.Setter;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.Consumer;
 
 /**
@@ -37,12 +39,14 @@ public class MainMenuPanel extends ThemedPanel {
     private String multiplayerUsername = "Player";
 
     private Image logoImage;
+    private final List<StyledButton> navigationButtons = new ArrayList<>();
 
     public MainMenuPanel() {
         setDrawCornerDecorations(true);
         loadResources();
         initMusic();
         setupUI();
+        setupKeyboardNavigation();
     }
 
     /**
@@ -227,6 +231,8 @@ public class MainMenuPanel extends ThemedPanel {
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
         panel.setOpaque(false);
 
+        navigationButtons.clear();
+
         StyledButton multiplayerBtn = new StyledButton(
                 "Spiel starten",
                 "Spiele alleine gegen KI oder online mit Freunden",
@@ -242,6 +248,7 @@ public class MainMenuPanel extends ThemedPanel {
                 "Spiele alleine gegen KI oder online mit Freunden");
         StyledContextMenu.attachTo(multiplayerBtn);
         panel.add(multiplayerBtn);
+        navigationButtons.add(multiplayerBtn);
 
         panel.add(Box.createVerticalStrut(12));
 
@@ -260,6 +267,7 @@ public class MainMenuPanel extends ThemedPanel {
                 "Grafik, Audio und Spieloptionen anpassen");
         StyledContextMenu.attachTo(optionsBtn);
         panel.add(optionsBtn);
+        navigationButtons.add(optionsBtn);
 
         panel.add(Box.createVerticalStrut(20));
 
@@ -279,8 +287,36 @@ public class MainMenuPanel extends ThemedPanel {
                 "Spiel verlassen und Anwendung schließen");
         StyledContextMenu.attachTo(exitBtn);
         panel.add(exitBtn);
+        navigationButtons.add(exitBtn);
 
         return panel;
+    }
+
+    private void setupKeyboardNavigation() {
+        KeyboardNavigationHelper.setupVerticalNavigation(this, navigationButtons);
+        setFocusCycleRoot(true);
+        setFocusTraversalPolicy(KeyboardNavigationHelper.createFocusPolicy(navigationButtons));
+
+        // Request focus on first button when panel gains focus
+        addFocusListener(new java.awt.event.FocusAdapter() {
+            @Override
+            public void focusGained(java.awt.event.FocusEvent e) {
+                if (!navigationButtons.isEmpty()) {
+                    navigationButtons.get(0).requestFocusInWindow();
+                }
+            }
+        });
+    }
+
+    @Override
+    public void addNotify() {
+        super.addNotify();
+        // Focus the first button when panel becomes visible
+        SwingUtilities.invokeLater(() -> {
+            if (!navigationButtons.isEmpty()) {
+                navigationButtons.get(0).requestFocusInWindow();
+            }
+        });
     }
 
     private JPanel createFooterPanel() {

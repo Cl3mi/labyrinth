@@ -16,7 +16,11 @@ import lombok.Setter;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
 import java.awt.geom.RoundRectangle2D;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.Consumer;
 import java.util.prefs.Preferences;
 
@@ -45,6 +49,11 @@ public class OptionsPanel extends JPanel {
     private JToggleButton themeToggle;
     private JLabel musicValueLabel;
     private JLabel sfxValueLabel;
+    private StyledButton backButton;
+    private StyledButton resetButton;
+    private StyledButton saveButton;
+    private StyledComboBox<String> windowSizeCombo;
+    private final List<Component> focusableComponents = new ArrayList<>();
 
 
     @Getter
@@ -91,6 +100,7 @@ public class OptionsPanel extends JPanel {
         loadSettings();
         loadBackgroundImage();
         setupUI();
+        setupKeyboardNavigation();
 
         ThemeManager.getInstance().addThemeChangeListener(() -> {
             loadBackgroundImage();
@@ -156,7 +166,7 @@ public class OptionsPanel extends JPanel {
         header.setOpaque(false);
 
         // back button
-        StyledButton backButton = new StyledButton("Zurück", StyledButton.Style.SECONDARY);
+        backButton = new StyledButton("Zurück", StyledButton.Style.SECONDARY);
         backButton.setPreferredSize(new Dimension(140, 40));
         backButton.addActionListener(e -> {
             if (onBackToMenu != null) onBackToMenu.run();
@@ -397,7 +407,7 @@ public class OptionsPanel extends JPanel {
         panel.add(createStyledLabel("Fenstergröße:"), gbc);
 
         gbc.gridx = 1; gbc.weightx = 0.7;
-        StyledComboBox<String> windowSizeCombo = new StyledComboBox<>();
+        windowSizeCombo = new StyledComboBox<>();
         for (String option : WINDOW_SIZE_OPTIONS) {
             windowSizeCombo.addItem(option);
         }
@@ -423,12 +433,12 @@ public class OptionsPanel extends JPanel {
         JPanel footer = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 10));
         footer.setOpaque(false);
 
-        StyledButton resetButton = new StyledButton("Zurücksetzen", StyledButton.Style.DANGER);
+        resetButton = new StyledButton("Zurücksetzen", StyledButton.Style.DANGER);
         resetButton.setPreferredSize(new Dimension(150, 45));
         resetButton.addActionListener(e -> resetToDefaults());
         footer.add(resetButton);
 
-        StyledButton saveButton = new StyledButton("Speichern", StyledButton.Style.PRIMARY);
+        saveButton = new StyledButton("Speichern", StyledButton.Style.PRIMARY);
         saveButton.setPreferredSize(new Dimension(150, 45));
         saveButton.addActionListener(e -> {
             saveSettings();
@@ -586,6 +596,167 @@ public class OptionsPanel extends JPanel {
         Timer timer = new Timer(2000, e -> toast.dispose());
         timer.setRepeats(false);
         timer.start();
+    }
+
+    private void setupKeyboardNavigation() {
+        // Build list of focusable components in order
+        focusableComponents.clear();
+        focusableComponents.add(backButton);
+        focusableComponents.add(musicVolumeSlider);
+        focusableComponents.add(sfxVolumeSlider);
+        focusableComponents.add(serverUrlField);
+        focusableComponents.add(themeToggle);
+        focusableComponents.add(windowSizeCombo);
+        focusableComponents.add(resetButton);
+        focusableComponents.add(saveButton);
+
+        KeyListener navListener = new KeyListener() {
+            @Override
+            public void keyPressed(KeyEvent e) {
+                int keyCode = e.getKeyCode();
+
+                if (keyCode == KeyEvent.VK_ESCAPE) {
+                    e.consume();
+                    if (onBackToMenu != null) onBackToMenu.run();
+                    return;
+                }
+
+                Component focused = KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
+                int currentIndex = findFocusedIndex(focused);
+
+                // Check if focus is in a combo box - let it handle up/down arrows
+                boolean inComboBox = focused instanceof JComboBox || isComboBoxChild(focused);
+
+                if (keyCode == KeyEvent.VK_DOWN || keyCode == KeyEvent.VK_S) {
+                    if (!inComboBox) {
+                        e.consume();
+                        focusNext(currentIndex);
+                    }
+                } else if (keyCode == KeyEvent.VK_UP || keyCode == KeyEvent.VK_W) {
+                    if (!inComboBox) {
+                        e.consume();
+                        focusPrev(currentIndex);
+                    }
+                } else if (keyCode == KeyEvent.VK_LEFT || keyCode == KeyEvent.VK_A) {
+                    // For sliders, decrease value
+                    if (focused instanceof JSlider slider) {
+                        int newValue = Math.max(slider.getMinimum(), slider.getValue() - 5);
+                        slider.setValue(newValue);
+                        e.consume();
+                    }
+                } else if (keyCode == KeyEvent.VK_RIGHT || keyCode == KeyEvent.VK_D) {
+                    // For sliders, increase value
+                    if (focused instanceof JSlider slider) {
+                        int newValue = Math.min(slider.getMaximum(), slider.getValue() + 5);
+                        slider.setValue(newValue);
+                        e.consume();
+                    }
+                } else if (keyCode == KeyEvent.VK_TAB) {
+                    e.consume();
+                    if (e.isShiftDown()) {
+                        focusPrev(currentIndex);
+                    } else {
+                        focusNext(currentIndex);
+                    }
+                } else if (keyCode == KeyEvent.VK_ENTER || keyCode == KeyEvent.VK_SPACE) {
+                    if (focused instanceof AbstractButton button) {
+                        e.consume();
+                        button.doClick();
+                    } else if (focused instanceof JToggleButton toggle) {
+                        e.consume();
+                        toggle.doClick();
+                    }
+                }
+            }
+
+            @Override
+            public void keyTyped(KeyEvent e) {}
+
+            @Override
+            public void keyReleased(KeyEvent e) {}
+        };
+
+        addKeyListener(navListener);
+        for (Component comp : focusableComponents) {
+            if (comp != null) {
+                comp.addKeyListener(navListener);
+                // Disable default Tab traversal so our listener handles it
+                if (comp instanceof JComponent jComp) {
+                    jComp.setFocusTraversalKeysEnabled(false);
+                }
+            }
+        }
+
+        setFocusable(true);
+        setFocusTraversalKeysEnabled(false);
+
+        // Request focus when panel gains focus
+        addFocusListener(new java.awt.event.FocusAdapter() {
+            @Override
+            public void focusGained(java.awt.event.FocusEvent e) {
+                if (backButton != null && backButton.isVisible() && backButton.isEnabled()) {
+                    backButton.requestFocusInWindow();
+                }
+            }
+        });
+        setFocusCycleRoot(true);
+        setFocusTraversalPolicy(KeyboardNavigationHelper.createFocusPolicy(focusableComponents));
+    }
+
+    private int findFocusedIndex(Component focused) {
+        for (int i = 0; i < focusableComponents.size(); i++) {
+            Component comp = focusableComponents.get(i);
+            if (comp == focused || isDescendant(comp, focused)) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    private void focusNext(int currentIndex) {
+        int nextIndex = currentIndex < 0 ? 0 : (currentIndex + 1) % focusableComponents.size();
+        Component next = focusableComponents.get(nextIndex);
+        if (next != null) {
+            next.requestFocusInWindow();
+        }
+    }
+
+    private void focusPrev(int currentIndex) {
+        int prevIndex = currentIndex < 0 ? focusableComponents.size() - 1 : (currentIndex - 1 + focusableComponents.size()) % focusableComponents.size();
+        Component prev = focusableComponents.get(prevIndex);
+        if (prev != null) {
+            prev.requestFocusInWindow();
+        }
+    }
+
+    private boolean isDescendant(Component ancestor, Component descendant) {
+        if (ancestor == null || descendant == null) return false;
+        Component parent = descendant;
+        while (parent != null) {
+            if (parent == ancestor) return true;
+            parent = parent.getParent();
+        }
+        return false;
+    }
+
+    private boolean isComboBoxChild(Component comp) {
+        if (comp == null) return false;
+        Component parent = comp.getParent();
+        while (parent != null) {
+            if (parent instanceof JComboBox) return true;
+            parent = parent.getParent();
+        }
+        return false;
+    }
+
+    @Override
+    public void addNotify() {
+        super.addNotify();
+        SwingUtilities.invokeLater(() -> {
+            if (backButton != null) {
+                backButton.requestFocusInWindow();
+            }
+        });
     }
 
 
