@@ -17,8 +17,6 @@ import org.jspecify.annotations.NonNull;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
-import java.awt.event.KeyEvent;
-import java.awt.event.KeyListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.geom.RoundRectangle2D;
@@ -37,7 +35,6 @@ public class ServerBrowserPanel extends JPanel {
     @Setter
     private Runnable onBackToMenu;
     private Image backgroundImage;
-    private StyledButton backButton;
 
     private final ServersApi serversApi;
 
@@ -71,18 +68,18 @@ public class ServerBrowserPanel extends JPanel {
         JPanel header = new JPanel(new BorderLayout(20, 0));
         header.setOpaque(false);
 
-        backButton = new StyledButton("Zurück", StyledButton.Style.SECONDARY);
-        backButton.setPreferredSize(new Dimension(140, 40));
-        backButton.setFocusPainted(false);
-        backButton.addActionListener(e -> {
+        StyledButton backBtn = new StyledButton("Zurück", StyledButton.Style.SECONDARY);
+        backBtn.setPreferredSize(new Dimension(140, 40));
+        backBtn.setFocusPainted(false);
+        backBtn.addActionListener(e -> {
             onLeaveServerBrowser();
             if (onBackToMenu != null) onBackToMenu.run();
         });
-        StyledTooltipManager.setTooltip(backButton, "Zurück", "Zurück zum Hauptmenü");
-        StyledContextMenu.attachTo(backButton);
+        StyledTooltipManager.setTooltip(backBtn, "Zurück", "Zurück zum Hauptmenü");
+        StyledContextMenu.attachTo(backBtn);
         JPanel leftPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
         leftPanel.setOpaque(false);
-        leftPanel.add(backButton);
+        leftPanel.add(backBtn);
         header.add(leftPanel, BorderLayout.WEST);
 
         JPanel centerPanel = new JPanel();
@@ -176,89 +173,6 @@ public class ServerBrowserPanel extends JPanel {
         listCard.add(sp, BorderLayout.CENTER);
 
         add(listCard, BorderLayout.CENTER);
-
-        setupKeyboardNavigation();
-    }
-
-    private void setupKeyboardNavigation() {
-        // Add keyboard navigation for the server list
-        KeyboardNavigationHelper.setupListNavigation(serverList, server -> {
-            if (onServerSelected != null) {
-                onServerSelected.accept(server);
-            }
-        });
-
-        // Add key listener for navigation between back button and server list
-        KeyListener navListener = new KeyListener() {
-            @Override
-            public void keyPressed(KeyEvent e) {
-                Component focused = KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
-                int keyCode = e.getKeyCode();
-
-                if (keyCode == KeyEvent.VK_ESCAPE) {
-                    e.consume();
-                    onLeaveServerBrowser();
-                    if (onBackToMenu != null) onBackToMenu.run();
-                    return;
-                }
-
-                // Navigate between back button and server list
-                if (focused == backButton) {
-                    if (keyCode == KeyEvent.VK_DOWN || keyCode == KeyEvent.VK_S) {
-                        e.consume();
-                        serverList.requestFocusInWindow();
-                        if (serverList.getModel().getSize() > 0 && serverList.getSelectedIndex() < 0) {
-                            serverList.setSelectedIndex(0);
-                        }
-                    } else if (keyCode == KeyEvent.VK_ENTER || keyCode == KeyEvent.VK_SPACE) {
-                        e.consume();
-                        backButton.doClick();
-                    }
-                } else if (focused == serverList || isDescendant(serverList, focused)) {
-                    if (keyCode == KeyEvent.VK_UP || keyCode == KeyEvent.VK_W) {
-                        if (serverList.getSelectedIndex() <= 0) {
-                            e.consume();
-                            backButton.requestFocusInWindow();
-                        }
-                    }
-                }
-            }
-
-            @Override
-            public void keyTyped(KeyEvent e) {}
-
-            @Override
-            public void keyReleased(KeyEvent e) {}
-        };
-
-        addKeyListener(navListener);
-        backButton.addKeyListener(navListener);
-        serverList.addKeyListener(navListener);
-
-        setFocusable(true);
-    }
-
-    private boolean isDescendant(Component ancestor, Component descendant) {
-        if (ancestor == null || descendant == null) return false;
-        Component parent = descendant;
-        while (parent != null) {
-            if (parent == ancestor) return true;
-            parent = parent.getParent();
-        }
-        return false;
-    }
-
-    @Override
-    public void addNotify() {
-        super.addNotify();
-        SwingUtilities.invokeLater(() -> {
-            if (serverList.getModel().getSize() > 0) {
-                serverList.setSelectedIndex(0);
-                serverList.requestFocusInWindow();
-            } else {
-                backButton.requestFocusInWindow();
-            }
-        });
     }
 
     private @NonNull JPanel getListPanel() {

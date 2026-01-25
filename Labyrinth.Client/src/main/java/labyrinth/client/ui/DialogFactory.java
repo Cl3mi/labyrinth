@@ -9,9 +9,7 @@ import labyrinth.client.ui.theme.ThemeManager;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
-import java.awt.event.KeyListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.geom.RoundRectangle2D;
@@ -349,40 +347,6 @@ public final class DialogFactory {
         mainPanel.add(buttonPanel, BorderLayout.SOUTH);
 
         inputField.addActionListener(e -> confirmButton.doClick());
-
-        // Add keyboard navigation between buttons
-        KeyListener buttonNavListener = new KeyAdapter() {
-            @Override
-            public void keyPressed(KeyEvent e) {
-                int keyCode = e.getKeyCode();
-                if (keyCode == KeyEvent.VK_LEFT || keyCode == KeyEvent.VK_RIGHT ||
-                    keyCode == KeyEvent.VK_TAB) {
-                    e.consume();
-                    Component focused = KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
-                    if (focused == cancelButton) {
-                        confirmButton.requestFocusInWindow();
-                    } else if (focused == confirmButton) {
-                        cancelButton.requestFocusInWindow();
-                    }
-                } else if (keyCode == KeyEvent.VK_UP) {
-                    e.consume();
-                    inputField.requestFocusInWindow();
-                }
-            }
-        };
-        cancelButton.addKeyListener(buttonNavListener);
-        confirmButton.addKeyListener(buttonNavListener);
-
-        // Add down arrow key to go from input field to buttons
-        inputField.addKeyListener(new KeyAdapter() {
-            @Override
-            public void keyPressed(KeyEvent e) {
-                if (e.getKeyCode() == KeyEvent.VK_DOWN) {
-                    e.consume();
-                    confirmButton.requestFocusInWindow();
-                }
-            }
-        });
 
         SwingUtilities.invokeLater(() -> {
             inputField.requestFocusInWindow();
