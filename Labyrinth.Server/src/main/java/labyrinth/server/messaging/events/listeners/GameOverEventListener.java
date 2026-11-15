@@ -4,7 +4,7 @@ import labyrinth.contracts.models.EventType;
 import labyrinth.contracts.models.GameOverEventPayload;
 import labyrinth.contracts.models.RankingEntry;
 import labyrinth.server.game.events.GameOverEvent;
-import labyrinth.server.game.models.Player;
+import labyrinth.server.game.services.PlayerRanking;
 import labyrinth.server.messaging.MessageService;
 import labyrinth.server.messaging.mapper.RankingMapper;
 import lombok.RequiredArgsConstructor;
@@ -14,7 +14,6 @@ import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
-import java.util.List;
 
 @Component
 @RequiredArgsConstructor
@@ -29,46 +28,13 @@ public class GameOverEventListener {
         try {
 
             var ranking = new ArrayList<RankingEntry>();
-
-            List<Player> sortedPlayers = event.players().stream()
-                    .sorted((p1, p2) -> {
-
-                        int scoreCompare = Integer.compare(p2.getStatistics().getScore(), p1.getStatistics().getScore());
-                        if (scoreCompare != 0) return scoreCompare;
-
-                        int treasuresCompare = Integer.compare(p2.getStatistics().getTreasuresCollected(), p1.getStatistics().getTreasuresCollected());
-                        if (treasuresCompare != 0) return treasuresCompare;
-
-                        return Integer.compare(p1.getStatistics().getStepsTaken(), p2.getStatistics().getStepsTaken());
-                    })
-                    .toList();
-
             var payload = new GameOverEventPayload();
-            var rank = 1;
-            int previousScore = -1;
-            int previousTreasures = -1;
-            int actualPosition = 1;
 
-            for (Player p : sortedPlayers) {
-                int currentScore = p.getStatistics().getScore();
-                int currentTreasures = p.getStatistics().getTreasuresCollected();
-
-                if (actualPosition <= 1 ||
-                        currentScore != previousScore ||
-                        currentTreasures != previousTreasures) {
-                    rank = actualPosition;
+            for (var ranked : PlayerRanking.rank(event.players())) {
+                if (ranked.placement() == 1) {
+                    payload.setWinnerId(ranked.player().getId().toString());
                 }
-
-                if (rank == 1) {
-                    payload.setWinnerId(p.getId().toString());
-                }
-
-                var entry = rankingMapper.toDto(p, rank);
-                ranking.add(entry);
-
-                previousScore = currentScore;
-                previousTreasures = currentTreasures;
-                actualPosition++;
+                ranking.add(rankingMapper.toDto(ranked.player(), ranked.placement()));
             }
 
             payload.setType(EventType.GAME_OVER);

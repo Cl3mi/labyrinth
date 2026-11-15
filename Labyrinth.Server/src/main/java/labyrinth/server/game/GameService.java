@@ -20,12 +20,15 @@ import labyrinth.server.game.services.*;
 import labyrinth.server.game.util.GameTimer;
 import labyrinth.server.messaging.events.EventPublisher;
 import labyrinth.server.messaging.events.abstractions.IEvent;
+import labyrinth.server.persistence.GameRecorder;
+import labyrinth.server.persistence.GameRecords;
 import lombok.Getter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.stereotype.Service;
 
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -42,6 +45,10 @@ public class GameService {
     private final TreasureCardFactory treasureCardFactory;
     private final BoardFactory boardFactory;
     private final EventPublisher eventPublisher;
+    private final GameRecorder gameRecorder;
+
+    /** ID of the running game in the database, null while in the lobby. */
+    private UUID currentGameId;
 
     private static final Logger log = LoggerFactory.getLogger(GameService.class);
 
@@ -49,11 +56,13 @@ public class GameService {
                        BoardFactory boardFactory,
                        EventPublisher eventPublisher,
                        TaskScheduler scheduler,
-                       GameInitializerService gameInitializer) {
+                       GameInitializerService gameInitializer,
+                       GameRecorder gameRecorder) {
 
         this.treasureCardFactory = treasureCardFactory;
         this.boardFactory = boardFactory;
         this.eventPublisher = eventPublisher;
+        this.gameRecorder = gameRecorder;
 
         var gameTimer = new GameTimer(scheduler);
         var gameLogger = new GameLogger();
@@ -165,6 +174,7 @@ public class GameService {
             var treasureCards = treasureCardFactory.createTreasureCards(totalTreasures, playersCount);
 
             game.startGame(gameConfig, treasureCards, board);
+            recordGameStarted(gameConfig);
 
             publishEvent(new GameStartedEvent());
 
@@ -202,6 +212,7 @@ public class GameService {
                 }
 
                 var players = getPlayers();
+                recordGameFinished(players, player);
 
                 publishEvent(new GameOverEvent(players));
                 returnToLobbyNoLock();
@@ -343,6 +354,13 @@ public class GameService {
 
 
     private void returnToLobbyNoLock() {
+        if (currentGameId != null) {
+            // Still running, so it ended without a result (e.g. all humans left).
+            if (gameRecorder != null) {
+                gameRecorder.gameAborted(currentGameId, OffsetDateTime.now());
+            }
+            currentGameId = null;
+        }
         game.returnToLobby();
         publishEvent(new ReturnedToLobbyEvent());
     }
@@ -360,6 +378,49 @@ public class GameService {
         }
     }
 
+
+    private void recordGameStarted(GameConfig config) {
+        currentGameId = UUID.randomUUID();
+        if (gameRecorder == null) {
+            return;
+        }
+        gameRecorder.gameStarted(new GameRecords.GameStarted(
+                currentGameId,
+                OffsetDateTime.now(),
+                config.boardWidth(),
+                config.boardHeight(),
+                config.treasureCardCount(),
+                config.totalBonusCount(),
+                config.turnTimeInSeconds(),
+                config.gameDurationInSeconds(),
+                game.getPlayers().size()));
+    }
+
+    private void recordGameFinished(List<Player> players, Player endedBy) {
+        var gameId = currentGameId;
+        currentGameId = null;
+        if (gameRecorder == null || gameId == null) {
+            return;
+        }
+        var results = PlayerRanking.rank(players).stream()
+                .map(r -> {
+                    var p = r.player();
+                    var stats = p.getStatistics();
+                    return new GameRecords.PlayerResult(
+                            p.getId(),
+                            p.getUsername(),
+                            p.isBot(),
+                            r.placement(),
+                            stats.getScore(),
+                            stats.getTreasuresCollected(),
+                            stats.getStepsTaken(),
+                            stats.getTilesPushed(),
+                            stats.getCollectedAchievements().stream().map(Enum::name).toList(),
+                            p == endedBy);
+                })
+                .toList();
+        gameRecorder.gameFinished(new GameRecords.GameFinished(gameId, OffsetDateTime.now(), results));
+    }
 
     private void publishEvent(IEvent event) {
         if (eventPublisher == null) {
