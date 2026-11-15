@@ -12,14 +12,14 @@
 
 **Aufgabe der Stufe:** Eine funktionierende, über Web und Game-Client erreichbare Spieleserver-Anwendung auf einer CloudStack-VM, mit kontrolliertem Zugriff. Ziele: IaaS, Compute, Networking, IAM, Sicherheit (5), Datenschutz (6), Betrieb und Dokumentation (10).
 
-**Kurzfassung:** Der Spieleserver „Das Verrückte Labyrinth“ läuft seit dem 09.11.2026 auf der VM `team02-game-01` und ist mit dem Game-Client über das VPN spielbar. Ein Testspiel mit drei Spielern lief am 11.11. von der Lobby bis zum Spielende. Am 15.11. wurde nachgemessen: Von außen kommen nur die Ports 22 und 8082–8091 durch die Firewall, SSH akzeptiert nur Keys, und nach einem Neustart der VM sind die Spieleserver nach etwa 27 Sekunden ohne Eingriff wieder in der Lobby. Ein abgestürzter Serverprozess ist nach etwa 8 Sekunden wieder spielbereit. Offen sind die Einschränkung der Firewall und die Verschlüsselung der Verbindung.
+**Kurzfassung:** Der Spieleserver „Das Verrückte Labyrinth“ läuft seit dem 09.11.2026 auf der VM `team02-game-01` und ist mit dem Game-Client über das VPN spielbar. Ein Testspiel mit drei Spielern lief am 11.11. von der Lobby bis zum Spielende. Am 15.11. wurde nachgemessen: Von außen kommen nur die Ports 22 und 8082–8091 durch die Firewall, SSH akzeptiert nur Keys, und nach einem Neustart der VM sind die Spieleserver nach etwa 27 Sekunden ohne Eingriff wieder in der Lobby. Ein abgestürzter Serverprozess ist nach etwa 8 Sekunden wieder spielbereit. Seit dem 15.11. lässt die Firewall nur noch Verbindungen aus dem VPN (`10.98.0.0/16`) zu. Offen ist noch die Verschlüsselung der Verbindung.
 
 ### Zielwerte
 
 | Nr. | Zielwert | Status |
 |---|---|---|
 | Z1 | Ein Spiel mit mehreren Spielern läuft über die Cloud-VM von der Lobby bis zum Spielende. | **erreicht** (Test vom 11.11., 3 Spieler, laut Betriebsprotokoll, Abschnitt 4.2) |
-| Z2 | Von außen sind genau die TCP-Ports 22 und 8082–8091 erreichbar, sonst nichts. | **erreicht** (15.11.): Portscan der Ports 1–10000 mit `nc` und mit `nmap`, nur 22 und 8082–8091 kommen durch die Firewall (davon lauschen zum Messzeitpunkt 22, 8082, 8084), 9.989 Ports gefiltert (Abschnitt 4.3) |
+| Z2 | Von außen sind genau die TCP-Ports 22 und 8082–8091 erreichbar, sonst nichts, und nur aus dem VPN. | **erreicht** (15.11.): Portscan der Ports 1–10000 mit `nc` und mit `nmap`, nur 22 und 8082–8091 kommen durch die Firewall (davon lauschen zum Messzeitpunkt 22, 8082, 8084), 9.989 Ports gefiltert (Abschnitt 4.3). Seit 15.11. abends nur noch mit Quelle `10.98.0.0/16` (Abschnitt 4.9) |
 | Z3 | SSH-Login mit Passwort wird abgelehnt, nur Key-Login geht. | **erreicht** (15.11.): SSH bietet von außen nur `publickey` an, Passwort-Login wird abgelehnt (Abschnitt 4.4) |
 | Z4 | Nach einem Neustart der VM sind die Spieleserver ohne Eingriff wieder in der Lobby. | **erreicht** (15.11.): nach einem normalen Neustart ca. 27 s bis zum neuen Lobby-Eintrag (Abschnitt 4.5) |
 | Z5 | Stürzt der Serverprozess ab, startet er selbst neu. | **erreicht** (15.11.): nach `SIGKILL` startet systemd den Prozess nach 5 s neu, nach 7,8 s wieder spielbereit und in der Lobby (Abschnitt 4.6) |
@@ -32,9 +32,9 @@
 | **Game-Client** | **erreicht**, nur über VPN. Der Client holt die Serverliste bei der Lobby und verbindet sich mit `ws://172.16.20.14:<Port>`. | Lobby, Messung |
 | **Web** | **erreicht.** Der Server ist über Web-Technologien erreichbar: HTTPS-Lobby für die Serverliste und WebSocket-Verbindung für den Game-Client. Ein zusätzliches Web-Frontend ist laut Rückfrage beim Betreuer nicht gemeint. | Repo, Lobby |
 | **Networking** | **erreicht.** Isoliertes Netz `team02-net` (10.1.0.0/24), Source NAT über `172.16.20.14`, Firewall und Port-Forwarding für 22 und 8082–8091. | CloudStack |
-| **Kontrollierter Zugriff** | **teilweise.** Erreichbar nur über VPN oder Hochschulnetz, weil `172.16.20.14` eine private Adresse ist. Von außen kommen nur die Ports 22 und 8082–8091 durch, SSH bietet nur `publickey` an. Die Firewall-Quelle ist `0.0.0.0/0`, die Einschränkung ist offen. Das VPN ist eine MCI-Einrichtung, kein eigener Schutz des Teams. | CloudStack, Messung |
+| **Kontrollierter Zugriff** | **erreicht.** Die Firewall lässt nur Verbindungen aus dem NetBird-VPN (`10.98.0.0/16`) durch, und zwar nur auf die Ports 22 und 8082–8091. Ins VPN kommt nur, wer sich per SSO mit dem mci4me-Konto anmeldet und einem Team-Projekt angehört. VMs anderer Teams (`172.16.20.0/24`) und das übrige Netz sind ausgeschlossen. Laptops anderer Teams im VPN erreichen die Ports weiterhin, dort schützt SSH, das nur `publickey` anbietet und nur unsere Keys kennt. | CloudStack, Messung (Abschnitt 4.9) |
 | **IAM** | **erreicht.** Je Person ein eigener Benutzer und Key auf der VM, Passwort-Login aus, Zugang einzeln entziehbar (laut Betriebsanleitung). | Betriebsanleitung |
-| **Sicherheit (5)** | **teilweise.** Dienst als eigener System-User ohne Login-Shell, Systemupdates am 11.11. eingespielt (laut Betriebsanleitung), SSH-Passwort-Login von außen abgelehnt, Git-Historie auf Zugangsdaten geprüft (Abschnitt 4.8). Offen: unverschlüsselte Verbindung (`ws://`) und Firewall-Quelle. | Betriebsanleitung, Messung, Repo, Lobby |
+| **Sicherheit (5)** | **teilweise.** Dienst als eigener System-User ohne Login-Shell, Systemupdates am 11.11. eingespielt (laut Betriebsanleitung), SSH-Passwort-Login von außen abgelehnt, Git-Historie auf Zugangsdaten geprüft (Abschnitt 4.8). Firewall-Quelle auf das VPN eingeschränkt (Abschnitt 4.9). Offen: unverschlüsselte Verbindung (`ws://`). | Betriebsanleitung, Messung, Repo, Lobby |
 | **Datenschutz (6)** | **erreicht im Rahmen des Projekts.** Es werden nur die für den Spielbetrieb nötigen Daten verarbeitet, siehe Abschnitt 2. | Lobby, Repo |
 | **Betrieb und Doku (10)** | **erreicht.** Nach einem Neustart der VM sind die Spieleserver ohne Eingriff nach ca. 27 s wieder in der Lobby (gemessen). Neustart bei Fehler über systemd konfiguriert und getestet (Z5, ca. 8 s), Logs im Journal, Architekturdiagramm vorhanden. Eine Betriebsanleitung für das Anlegen, den Betrieb und das Einspielen neuer Versionen liegt vor und kann bei Bedarf nachgereicht werden. | Messung, Betriebsanleitung |
 
@@ -61,6 +61,7 @@ Die Ressourcen wurden im Projekt `team02` über die Web-Oberfläche und die API 
 | **`server.publichost` = Public IP `172.16.20.14`** | Diese Adresse meldet der Server der Lobby, die Clients verbinden sich damit. Die interne 10.1.0.158 wäre nicht erreichbar. | Betriebsanleitung, Lobby |
 | **Mehrere Prozesse statt mehrerer Spiele pro Prozess** | Der Server verwaltet pro Prozess genau ein Spiel (`GameService` mit einem `Game`). Mehrere Prozesse brauchen keine Code-Änderung und bleiben mit den Clients der anderen Gruppen kompatibel. | Repo, Betriebsanleitung |
 | **VM von 1 vCPU/1 GB auf 2 vCPU/4 GB vergrößert; bis zu 10 Instanzen mit je 256 MB Heap** | Eine Instanz braucht im Leerlauf ca. 180–230 MB, zehn zusammen ca. 1,9 GB. 100 Instanzen wurden verworfen (ca. 20 GB RAM, Projektlimit 12 GB, Lobby überladen). | CloudStack, Betriebsanleitung |
+| **Firewall-Quelle nur VPN (`10.98.0.0/16`) statt `0.0.0.0/0`** | Mit `0.0.0.0/0` konnte jedes andere Team aus `172.16.20.0/24` die VM erreichen. Die Plattform-Doku empfiehlt das VPN-Netz als Quelle. So hängt der Netzzugang an einer persönlichen SSO-Anmeldung. | CloudStack, Plattform-Doku |
 | **Autoscaler als systemd-Timer (alle 30 s)** | Hält immer 2 freie Instanzen bereit, stoppt überzählige nach 5 min Leerlauf, nie unter 2 laufende. Liest den Zustand aus der Lobby (`/servers`). | Betriebsanleitung |
 
 ### Rahmen der Plattform
@@ -98,7 +99,7 @@ Für den Projektrahmen angemessen verarbeitet der Spieleserver nur die Daten, di
 | Public IP | `172.16.20.14` (Source NAT) |
 | VM | `team02-game-01`, KVM, `s2.2c4g`, Template Ubuntu 24.04 LTS (Cloud-Image 20261017), 20-GiB-Systemplatte |
 | SSH-Keypair | `team02-key` |
-| Firewall | TCP 22 und TCP 8082–8091 von `0.0.0.0/0` |
+| Firewall | TCP 22 und TCP 8082–8091, nur von `10.98.0.0/16` (NetBird-VPN), seit 15.11. (vorher `0.0.0.0/0`) |
 | Port-Forwarding | 22 → VM:22 und 8082–8091 → VM:8082–8091 |
 
 *Abbildung 2: CloudStack-Ansichten der VM `team02-game-01`, der Firewall-Regeln und des Port-Forwardings: noch offen.*
@@ -119,7 +120,7 @@ Die Messungen vom 15.11.2026 wurden von einem Laptop im NetBird-VPN gegen die ei
 
 ### 4.1 Übersicht der Tests
 
-Die Abschnitte 4.2 bis 4.6 folgen den Zielwerten Z1 bis Z5, Abschnitt 4.7 und 4.8 enthalten weitere Prüfungen. Was noch nicht erledigt ist, steht mit „noch offen“ an der Stelle, an der das Ergebnis später hingehört. Der Absturztest (Abschnitt 4.6) lief direkt auf der VM.
+Die Abschnitte 4.2 bis 4.6 folgen den Zielwerten Z1 bis Z5, die Abschnitte 4.7 bis 4.9 enthalten weitere Prüfungen. Was noch nicht erledigt ist, steht mit „noch offen“ an der Stelle, an der das Ergebnis später hingehört. Der Absturztest (Abschnitt 4.6) lief direkt auf der VM.
 
 | Datum | Test | Ergebnis | Beleg |
 |---|---|---|---|
@@ -135,6 +136,7 @@ Die Abschnitte 4.2 bis 4.6 folgen den Zielwerten Z1 bis Z5, Abschnitt 4.7 und 4.
 | 15.11. | WebSocket-Handshake | `101 Switching Protocols` | Abschnitt 4.7 |
 | 15.11. | Neustart der VM (Z4) | Lobby nach 27 s wieder da | Abschnitt 4.5 |
 | 15.11. 14:53 | Absturz eines Serverprozesses (Z5) | Neustart durch systemd, nach 7,8 s wieder spielbereit und in der Lobby | Abschnitt 4.6 |
+| 15.11. abends | Firewall auf VPN eingeschränkt, Zugriff über VPN | SSH und WebSocket-Port weiter erreichbar, keine Regel mehr mit `0.0.0.0/0` | Abschnitt 4.9 |
 | 15.11. | Git-Historie auf Zugangsdaten durchsucht | Keine privaten Schlüssel, Tokens oder E-Mail-Adressen | Abschnitt 4.8 |
 
 ### 4.2 Z1: Spiel mit mehreren Spielern
@@ -272,6 +274,38 @@ Connection: upgrade
 
 Die gesamte Historie des öffentlichen Repos `labyrinth` (417 Commits, alle Branches) wurde mit einer Mustersuche auf private Schlüssel, Cloud- und GitHub-Tokens, Passwörter und Zugangsdaten in URLs durchsucht. Ergebnis: keine privaten Schlüssel, Tokens oder personenbezogenen E-Mail-Adressen. Gefunden wurde ein im Klartext hinterlegter Standardwert für ein Deploy-Token in `Labyrinth.Server/deploy.js`, das unser Aufbau nicht nutzt. Grenzen: Die Suche ist kein spezialisiertes Werkzeug und garantiert keine Vollständigkeit, Binärdateien wurden nicht geprüft.
 
+### 4.9 Firewall auf das VPN eingeschränkt
+
+**Ausgangslage:** Auf `172.16.20.14` waren zwei Firewall-Regeln mit der Quelle `0.0.0.0/0` eingetragen, nämlich TCP 22 und TCP 8082–8091. Jeder Host im Plattformnetz `172.16.20.0/24` konnte die VM erreichen, also auch jedes andere Team.
+
+**Umsetzung (15.11.2026, mit `cmk`):** CloudStack erlaubt nicht, die Quelle einer bestehenden Regel zu ändern. Deshalb wurden zuerst die neuen Regeln angelegt, dann der Zugang getestet und erst danach die alten gelöscht. Dabei wurde niemand ausgesperrt.
+
+```
+cmk createFirewallRule ipaddressid=<ID von 172.16.20.14> protocol=tcp startport=22   endport=22   cidrlist=10.98.0.0/16
+cmk createFirewallRule ipaddressid=<ID von 172.16.20.14> protocol=tcp startport=8082 endport=8091 cidrlist=10.98.0.0/16
+# SSH-Test über VPN erfolgreich, danach:
+cmk deleteFirewallRule id=<alte Regel 22, 0.0.0.0/0>
+cmk deleteFirewallRule id=<alte Regel 8082–8091, 0.0.0.0/0>
+```
+
+| Port | Quelle vorher | Quelle nachher |
+|---|---|---|
+| TCP 22 | `0.0.0.0/0` | `10.98.0.0/16` |
+| TCP 8082–8091 | `0.0.0.0/0` | `10.98.0.0/16` |
+
+**Prüfung über VPN (Laptop `10.98.110.20`):**
+
+| Test | Erwartet | Ergebnis |
+|---|---|---|
+| `cmk listFirewallRules` | nur noch Regeln mit `10.98.0.0/16` | 2 Regeln, Status `Active` |
+| `ssh thomas@172.16.20.14` | Login | ok |
+| HTTP auf `172.16.20.14:8082` | Server antwortet | ok (404 auf `/`, Server erreichbar) |
+| Verbindung ohne VPN bzw. aus dem Netz eines anderen Teams | Timeout | _noch offen_ |
+
+**Bewertung:** Die Firewall lässt nur noch Verbindungen aus dem VPN durch. Ins VPN kommt nur, wer sich per SSO mit dem mci4me-Konto anmeldet und einem Team-Projekt der Plattform angehört. Jede Verbindung kommt damit von einer persönlich angemeldeten Person, und auf der VM gibt es eigene Benutzer mit eigenen Keys (IAM). Es entstehen also zwei Schutzschichten: das Netz (VPN plus Firewall) und der Login (SSH-Key je Person).
+
+**Grenzen:** Der Negativtest fehlt noch. Alle VPN-Nutzer der Plattform kommen aus `10.98.0.0/16`, also auch Studierende anderer Teams. Die Firewall unterscheidet nicht zwischen den Teams, die Ports 22 und 8082–8091 sind für sie erreichbar. Für SSH reicht das, weil nur unsere Keys angenommen werden. Die Spiel-Ports sind ohne Anmeldung nutzbar, das ist für einen Spieleserver gewollt. Wer nur team02 zulassen will, müsste die NetBird-IPs der Teammitglieder einzeln eintragen. Diese IPs werden aber von der Plattform vergeben und sind nicht von uns steuerbar.
+
 ---
 
 ## 5. Offene Punkte und Reflexion
@@ -280,7 +314,8 @@ Die gesamte Historie des öffentlichen Repos `labyrinth` (417 Commits, alle Bran
 
 | Punkt | Einordnung |
 |---|---|
-| **Firewall-Quelle `0.0.0.0/0`** | Eingeschränkt wird in Stufe 2 auf das VPN- und Hochschulnetz. Die Plattform-Doku nennt für VPN-Clients das Netz `10.98.0.0/16` als Quelle. Heute schützt nur die private Adresse. |
+| **Negativtest der Firewall** | Die Einschränkung auf `10.98.0.0/16` ist umgesetzt (Abschnitt 4.9). Noch zu zeigen ist, dass ohne VPN bzw. aus dem Netz eines anderen Teams keine Verbindung zustande kommt. |
+| **Spieler anderer Teams** | Wegen der Firewall können andere Teams aus `172.16.20.0/24` nicht mehr auf unsere Spieleserver. Falls das gebraucht wird, z. B. bei der Präsentation, wird für 8082–8091 zusätzlich `172.16.20.0/24` erlaubt, SSH bleibt nur über VPN. |
 | **Unverschlüsselte Verbindung** | Clients verbinden sich mit `ws://`. TLS würde einen vorgeschalteten Proxy und ein Zertifikat brauchen. |
 | **Fehler im Spielcode** | `NextTreasureCardListener` übergibt `event.treasureCard()` ohne Null-Prüfung. Die Exception wird abgefangen und geloggt, das Spiel läuft weiter. Behebung: Prüfung vor dem Versand. |
 | **Standard-Token im Deploy-Skript** | Gefunden beim Scan der Git-Historie (Abschnitt 4.8). Unser Aufbau nutzt das Skript nicht. Das Token gehört aus dem Code entfernt, ist der Endpunkt noch aktiv, auch geändert. |
@@ -297,7 +332,7 @@ Die gesamte Historie des öffentlichen Repos `labyrinth` (417 Commits, alle Bran
 - Containerisierung: Der Branch `docker` enthält bereits `Dockerfile` und `docker-compose.yml`
 - CI/CD erweitern: Die Pipeline baut und testet, deployt aber noch nicht
 - Persistenter Speicher und Snapshot mit Restore-Test
-- Monitoring und Alarm, Firewall einschränken, TLS prüfen
+- Monitoring und Alarm, TLS prüfen
 
 ### Reflexion
 
