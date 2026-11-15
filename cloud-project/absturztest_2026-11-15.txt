@@ -1,0 +1,62 @@
+=== Z5 Absturztest labyrinth@1 – 2026-11-15 13:53:07 UTC ===
+
+--- 1) Status vorher ---
+● labyrinth@1.service - Labyrinth Game Server #1
+     Loaded: loaded (/etc/systemd/system/labyrinth@.service; enabled; preset: enabled)
+     Active: active (running) since Sun 2026-11-15 09:20:23 UTC; 4h 32min ago
+   Main PID: 703 (java)
+      Tasks: 37 (limit: 4653)
+     Memory: 210.5M (peak: 211.0M)
+        CPU: 34.668s
+     CGroup: /system.slice/system-labyrinth.slice/labyrinth@1.service
+             └─703 /usr/bin/java -Xmx256m -jar /opt/labyrinth/labyrinth-server.jar --server.port=8082 "--server.name=Team02 Cloud / Autoscale #1"
+MainPID=703
+NRestarts=0
+ActiveEnterTimestamp=Sun 2026-11-15 09:20:23 UTC
+
+LISTEN 0      100                *:8082            *:*          
+
+--- 2) Absturz simulieren: sudo kill -9 703 (13:53:07.576 UTC) ---
+
+--- 3) Status nachher (13:53:15.329 UTC) ---
+● labyrinth@1.service - Labyrinth Game Server #1
+     Loaded: loaded (/etc/systemd/system/labyrinth@.service; enabled; preset: enabled)
+     Active: active (running) since Sun 2026-11-15 13:53:12 UTC; 2s ago
+   Main PID: 8409 (java)
+      Tasks: 36 (limit: 4653)
+     Memory: 144.1M (peak: 144.2M)
+        CPU: 5.014s
+     CGroup: /system.slice/system-labyrinth.slice/labyrinth@1.service
+             └─8409 /usr/bin/java -Xmx256m -jar /opt/labyrinth/labyrinth-server.jar --server.port=8082 "--server.name=Team02 Cloud / Autoscale #1"
+MainPID=8409
+NRestarts=1
+ActiveEnterTimestamp=Sun 2026-11-15 13:53:12 UTC
+LISTEN 0      100                *:8082            *:*    users:(("java",pid=8409,fd=9))                       
+
+Alte PID: 703, neue PID: 8409, Port 8082 wieder offen nach 7.8 s
+
+--- 4) Journal-Auszug ---
+Nov 15 13:53:07 team02-game-01 systemd[1]: labyrinth@1.service: Main process exited, code=killed, status=9/KILL
+Nov 15 13:53:07 team02-game-01 systemd[1]: labyrinth@1.service: Failed with result 'signal'.
+Nov 15 13:53:07 team02-game-01 systemd[1]: labyrinth@1.service: Consumed 34.682s CPU time, 211.0M memory peak, 0B memory swap peak.
+Nov 15 13:53:12 team02-game-01 systemd[1]: labyrinth@1.service: Scheduled restart job, restart counter is at 1.
+Nov 15 13:53:12 team02-game-01 systemd[1]: Started labyrinth@1.service - Labyrinth Game Server #1.
+Nov 15 13:53:13 team02-game-01 sh[8409]:   .   ____          _            __ _ _
+Nov 15 13:53:13 team02-game-01 sh[8409]:  /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+Nov 15 13:53:13 team02-game-01 sh[8409]: ( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+Nov 15 13:53:13 team02-game-01 sh[8409]:  \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+Nov 15 13:53:13 team02-game-01 sh[8409]:   '  |____| .__|_| |_|_| |_\__, | / / / /
+Nov 15 13:53:13 team02-game-01 sh[8409]:  =========|_|==============|___/=/_/_/_/
+Nov 15 13:53:13 team02-game-01 sh[8409]:  :: Spring Boot ::                (v3.5.7)
+Nov 15 13:53:13 team02-game-01 sh[8409]: 2026-11-15T13:53:13.542Z  INFO 8409 --- [Labyrinth.Server] [           main] labyrinth.server.Application             : Starting Application v1.0.0 using Java 25.0.5.0.3 with PID 8409 (/opt/labyrinth/labyrinth-server.jar started by labyrinth in /opt/labyrinth)
+Nov 15 13:53:13 team02-game-01 sh[8409]: 2026-11-15T13:53:13.546Z  INFO 8409 --- [Labyrinth.Server] [           main] labyrinth.server.Application             : No active profile set, falling back to 1 default profile: "default"
+Nov 15 13:53:14 team02-game-01 sh[8409]: 2026-11-15T13:53:14.544Z  INFO 8409 --- [Labyrinth.Server] [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8082 (http)
+Nov 15 13:53:14 team02-game-01 sh[8409]: 2026-11-15T13:53:14.554Z  INFO 8409 --- [Labyrinth.Server] [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+Nov 15 13:53:14 team02-game-01 sh[8409]: 2026-11-15T13:53:14.554Z  INFO 8409 --- [Labyrinth.Server] [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.48]
+Nov 15 13:53:14 team02-game-01 sh[8409]: 2026-11-15T13:53:14.571Z  INFO 8409 --- [Labyrinth.Server] [           main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+Nov 15 13:53:14 team02-game-01 sh[8409]: 2026-11-15T13:53:14.572Z  INFO 8409 --- [Labyrinth.Server] [           main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 945 ms
+Nov 15 13:53:15 team02-game-01 sh[8409]: 2026-11-15T13:53:14.999Z  INFO 8409 --- [Labyrinth.Server] [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8082 (http) with context path '/'
+Nov 15 13:53:15 team02-game-01 sh[8409]: 2026-11-15T13:53:15.020Z  INFO 8409 --- [Labyrinth.Server] [           main] labyrinth.server.Application             : Started Application in 1.93 seconds (process running for 2.334)
+Nov 15 13:53:15 team02-game-01 sh[8409]: 2026-11-15T13:53:15.021Z  WARN 8409 --- [Labyrinth.Server] [   scheduling-1] l.s.messaging.ServerRegistrationService  : Server not registered yet, retrying...
+Nov 15 13:53:15 team02-game-01 sh[8409]: 2026-11-15T13:53:15.024Z  INFO 8409 --- [Labyrinth.Server] [           main] l.s.messaging.ServerRegistrationService  : Registration already in progress, skipping duplicate attempt.
+Nov 15 13:53:15 team02-game-01 sh[8409]: 2026-11-15T13:53:15.519Z  INFO 8409 --- [Labyrinth.Server] [   scheduling-1] l.s.messaging.ServerRegistrationService  : Server successfully registered. Assigned Server-ID: a3271dbc-8ab2-4e58-98d9-218bfd8675ee

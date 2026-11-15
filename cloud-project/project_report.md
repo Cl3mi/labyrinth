@@ -12,7 +12,7 @@
 
 **Aufgabe der Stufe:** Eine funktionierende, über Web und Game-Client erreichbare Spieleserver-Anwendung auf einer CloudStack-VM, mit kontrolliertem Zugriff. Ziele: IaaS, Compute, Networking, IAM, Sicherheit (5), Datenschutz (6), Betrieb und Dokumentation (10).
 
-**Kurzfassung:** Der Spieleserver „Das Verrückte Labyrinth“ läuft seit dem 09.11.2026 auf der VM `team02-game-01` und ist mit dem Game-Client über das VPN spielbar. Ein Testspiel mit drei Spielern lief am 11.11. von der Lobby bis zum Spielende. Am 15.11. wurde nachgemessen: Von außen kommen nur die Ports 22 und 8082–8091 durch die Firewall, SSH akzeptiert nur Keys, und nach einem Neustart der VM sind die Spieleserver nach etwa 27 Sekunden ohne Eingriff wieder in der Lobby. Offen sind der Absturztest (Z5), die Einschränkung der Firewall und die Verschlüsselung der Verbindung.
+**Kurzfassung:** Der Spieleserver „Das Verrückte Labyrinth“ läuft seit dem 09.11.2026 auf der VM `team02-game-01` und ist mit dem Game-Client über das VPN spielbar. Ein Testspiel mit drei Spielern lief am 11.11. von der Lobby bis zum Spielende. Am 15.11. wurde nachgemessen: Von außen kommen nur die Ports 22 und 8082–8091 durch die Firewall, SSH akzeptiert nur Keys, und nach einem Neustart der VM sind die Spieleserver nach etwa 27 Sekunden ohne Eingriff wieder in der Lobby. Ein abgestürzter Serverprozess ist nach etwa 8 Sekunden wieder spielbereit. Offen sind die Einschränkung der Firewall und die Verschlüsselung der Verbindung.
 
 ### Zielwerte
 
@@ -22,7 +22,7 @@
 | Z2 | Von außen sind genau die TCP-Ports 22 und 8082–8091 erreichbar, sonst nichts. | **erreicht** (15.11.): Portscan der Ports 1–10000 mit `nc` und mit `nmap`, nur 22 und 8082–8091 kommen durch die Firewall (davon lauschen zum Messzeitpunkt 22, 8082, 8084), 9.989 Ports gefiltert (Abschnitt 4.3) |
 | Z3 | SSH-Login mit Passwort wird abgelehnt, nur Key-Login geht. | **erreicht** (15.11.): SSH bietet von außen nur `publickey` an, Passwort-Login wird abgelehnt (Abschnitt 4.4) |
 | Z4 | Nach einem Neustart der VM sind die Spieleserver ohne Eingriff wieder in der Lobby. | **erreicht** (15.11.): nach einem normalen Neustart ca. 27 s bis zum neuen Lobby-Eintrag (Abschnitt 4.5) |
-| Z5 | Stürzt der Serverprozess ab, startet er selbst neu. | **noch offen:** konfiguriert (`Restart=on-failure`, 5 s), der Absturztest steht aus (Abschnitt 4.6) |
+| Z5 | Stürzt der Serverprozess ab, startet er selbst neu. | **erreicht** (15.11.): nach `SIGKILL` startet systemd den Prozess nach 5 s neu, nach 7,8 s wieder spielbereit und in der Lobby (Abschnitt 4.6) |
 
 ### Erreichungsgrad je Ziel der Stufe
 
@@ -36,7 +36,7 @@
 | **IAM** | **erreicht.** Je Person ein eigener Benutzer und Key auf der VM, Passwort-Login aus, Zugang einzeln entziehbar (laut Betriebsanleitung). | Betriebsanleitung |
 | **Sicherheit (5)** | **teilweise.** Dienst als eigener System-User ohne Login-Shell, Systemupdates am 11.11. eingespielt (laut Betriebsanleitung), SSH-Passwort-Login von außen abgelehnt, Git-Historie auf Zugangsdaten geprüft (Abschnitt 4.8). Offen: unverschlüsselte Verbindung (`ws://`) und Firewall-Quelle. | Betriebsanleitung, Messung, Repo, Lobby |
 | **Datenschutz (6)** | **erreicht im Rahmen des Projekts.** Es werden nur die für den Spielbetrieb nötigen Daten verarbeitet, siehe Abschnitt 2. | Lobby, Repo |
-| **Betrieb und Doku (10)** | **erreicht.** Nach einem Neustart der VM sind die Spieleserver ohne Eingriff nach ca. 27 s wieder in der Lobby (gemessen). Neustart bei Fehler über systemd konfiguriert, Logs im Journal, Architekturdiagramm vorhanden. Eine Betriebsanleitung für das Anlegen, den Betrieb und das Einspielen neuer Versionen liegt vor und kann bei Bedarf nachgereicht werden. | Messung, Betriebsanleitung |
+| **Betrieb und Doku (10)** | **erreicht.** Nach einem Neustart der VM sind die Spieleserver ohne Eingriff nach ca. 27 s wieder in der Lobby (gemessen). Neustart bei Fehler über systemd konfiguriert und getestet (Z5, ca. 8 s), Logs im Journal, Architekturdiagramm vorhanden. Eine Betriebsanleitung für das Anlegen, den Betrieb und das Einspielen neuer Versionen liegt vor und kann bei Bedarf nachgereicht werden. | Messung, Betriebsanleitung |
 
 **Vorgriff auf Stufe 3:** Auf der VM laufen bis zu 10 Spielinstanzen, ein Autoscaler startet und stoppt sie nach Bedarf (Abschnitt 2). Das ist **kein** Nachweis für Elastizität im Sinne von Stufe 3, weil es nur innerhalb einer VM skaliert.
 
@@ -119,7 +119,7 @@ Die Messungen vom 15.11.2026 wurden von einem Laptop im NetBird-VPN gegen die ei
 
 ### 4.1 Übersicht der Tests
 
-Die Abschnitte 4.2 bis 4.6 folgen den Zielwerten Z1 bis Z5, Abschnitt 4.7 und 4.8 enthalten weitere Prüfungen. Was noch nicht erledigt ist, steht mit „noch offen“ an der Stelle, an der das Ergebnis später hingehört.
+Die Abschnitte 4.2 bis 4.6 folgen den Zielwerten Z1 bis Z5, Abschnitt 4.7 und 4.8 enthalten weitere Prüfungen. Was noch nicht erledigt ist, steht mit „noch offen“ an der Stelle, an der das Ergebnis später hingehört. Der Absturztest (Abschnitt 4.6) lief direkt auf der VM.
 
 | Datum | Test | Ergebnis | Beleg |
 |---|---|---|---|
@@ -134,7 +134,7 @@ Die Abschnitte 4.2 bis 4.6 folgen den Zielwerten Z1 bis Z5, Abschnitt 4.7 und 4.
 | 15.11. | SSH-Probe (Z3) | Nur `publickey` wird angeboten | Abschnitt 4.4 |
 | 15.11. | WebSocket-Handshake | `101 Switching Protocols` | Abschnitt 4.7 |
 | 15.11. | Neustart der VM (Z4) | Lobby nach 27 s wieder da | Abschnitt 4.5 |
-| noch offen | Absturz eines Serverprozesses (Z5) | noch offen | Abschnitt 4.6 |
+| 15.11. 14:53 | Absturz eines Serverprozesses (Z5) | Neustart durch systemd, nach 7,8 s wieder spielbereit und in der Lobby | Abschnitt 4.6 |
 | 15.11. | Git-Historie auf Zugangsdaten durchsucht | Keine privaten Schlüssel, Tokens oder E-Mail-Adressen | Abschnitt 4.8 |
 
 ### 4.2 Z1: Spiel mit mehreren Spielern
@@ -222,11 +222,34 @@ ubuntu@172.16.20.14: Permission denied (publickey).
 
 ### 4.6 Z5: Absturz eines Serverprozesses
 
-**Methode (geplant):** Ein Serverprozess wird ohne laufendes Spiel mit `kill` beendet (z. B. `sudo systemctl kill -s SIGKILL labyrinth@1`). Das Journal (`journalctl -u labyrinth@1`) zeigt, ob und nach welcher Zeit der Dienst neu startet. Konfiguriert ist `Restart=on-failure` mit 5 s Wartezeit.
+**Methode:** Direkt auf der VM wurde der Java-Prozess von Instanz #1 (`labyrinth@1`, Port 8082, PID 703) mit `sudo kill -9 703` hart beendet (`SIGKILL`, der Prozess kann nicht mehr aufräumen). Vorab stand die Instanz auf `LOBBY` mit 0 Spielern, der Autoscaler meldete `laufend=2 frei=2 belegt=0`. Ein Skript prüfte danach alle 0,5 s die PID des Dienstes und ob Port 8082 wieder lauscht. Konfiguriert ist `Restart=on-failure` mit 5 s Wartezeit.
 
-**Ergebnis:** noch offen
+| Uhrzeit | Ereignis | seit Kill |
+|---|---|---|
+| 14:53:07,6 | `kill -9 703`, systemd erkennt `code=killed, status=9/KILL` | 0 s |
+| 14:53:12 | `Scheduled restart job, restart counter is at 1`, neuer Prozess (PID 8409) | +5 s |
+| 14:53:15,0 | Spring Boot gestartet (1,9 s), **Port 8082 lauscht wieder** | +7,4 s |
+| 14:53:15,5 | **Neu bei der Lobby registriert** (neue Server-ID) | +7,9 s |
 
-**Bewertung:** noch offen
+Auszug aus dem Journal (`journalctl -u labyrinth@1`, Uhrzeiten UTC):
+
+```
+13:53:07 systemd[1]: labyrinth@1.service: Main process exited, code=killed, status=9/KILL
+13:53:07 systemd[1]: labyrinth@1.service: Failed with result 'signal'.
+13:53:12 systemd[1]: labyrinth@1.service: Scheduled restart job, restart counter is at 1.
+13:53:12 systemd[1]: Started labyrinth@1.service - Labyrinth Game Server #1.
+13:53:15 ... TomcatWebServer : Tomcat started on port 8082 (http) with context path '/'
+13:53:15 ... Application : Started Application in 1.93 seconds (process running for 2.334)
+13:53:15 ... ServerRegistrationService : Server successfully registered. Assigned Server-ID: a3271dbc-…
+```
+
+**Ergebnis:** Das Messskript meldete Port 8082 nach **7,8 s** wieder offen (alte PID 703, neue PID 8409, `NRestarts=1`). Die vollständige Ausgabe (Status vorher und nachher, Journal) liegt im Betriebsprotokoll (`absturztest_2026-11-15.txt`).
+
+**Bewertung:** Nach einem harten Absturz startet systemd den Serverprozess ohne Eingriff neu, nach knapp 8 Sekunden ist die Instanz wieder spielbereit und in der Lobby. **Z5 ist erfüllt.**
+
+**Weitere Beobachtung:** Vom Autoscaler regulär gestoppte Instanzen standen bis dahin als `failed` in systemd, weil Java sich bei `SIGTERM` mit Exit-Code 143 beendet. Seit dem 15.11. wertet die Dienstvorlage diesen Code als normales Ende (`SuccessExitStatus=143`). Ein echter Absturz gilt weiterhin als Fehler und löst den Neustart aus.
+
+**Grenzen:** Ein einzelner Test einer Instanz ohne laufendes Spiel. Ein Spiel, das auf der abgestürzten Instanz läuft, geht verloren, weil der Spielstand nur im Arbeitsspeicher liegt, die Spieler müssen sich neu verbinden. Die Instanz meldet sich mit einer neuen Server-ID bei der Lobby an. Getestet wurde nur der Absturz des Prozesses, nicht ein Hängenbleiben ohne Absturz: Das erkennt `Restart=on-failure` nicht.
 
 ### 4.7 Erreichbarkeit: WebSocket-Handshake und Client-Verbindung
 
@@ -257,7 +280,6 @@ Die gesamte Historie des öffentlichen Repos `labyrinth` (417 Commits, alle Bran
 
 | Punkt | Einordnung |
 |---|---|
-| **Absturztest (Z5)** | Noch offen, siehe Abschnitt 4.6. |
 | **Firewall-Quelle `0.0.0.0/0`** | Eingeschränkt wird in Stufe 2 auf das VPN- und Hochschulnetz. Die Plattform-Doku nennt für VPN-Clients das Netz `10.98.0.0/16` als Quelle. Heute schützt nur die private Adresse. |
 | **Unverschlüsselte Verbindung** | Clients verbinden sich mit `ws://`. TLS würde einen vorgeschalteten Proxy und ein Zertifikat brauchen. |
 | **Fehler im Spielcode** | `NextTreasureCardListener` übergibt `event.treasureCard()` ohne Null-Prüfung. Die Exception wird abgefangen und geloggt, das Spiel läuft weiter. Behebung: Prüfung vor dem Versand. |

@@ -329,9 +329,10 @@ Jede Person bekommt einen eigenen User mit eigenem Key. So sieht man, wer was ge
 
 | User | Key | sudo | Warum |
 | --- | --- | --- | --- |
-| `ubuntu` | `team02-key` | ja (cloud-init) | Standarduser des Ubuntu-Images, bleibt als Notfallzugang |
+| `ubuntu` | `team02-key` | ja (cloud-init) | Standarduser des Ubuntu-Images, bleibt als Notfallzugang. Hat seit 15.11. ein Passwort, das nur für „View Console“ in der Web-UI gilt (SSH bleibt Key-only) |
 | `romed` | `team02-key` | ja, ohne Passwort (`/etc/sudoers.d/90-romed`) | Eigener Admin-User für Romed, angelegt am 11.11. |
 | `thomas` | eigener Ed25519-Key (`SHA256:afP4j9…X5I`, `bracketz-pc`) | ja, ohne Passwort (`/etc/sudoers.d/90-thomas`) | Eigener Admin-User für Thomas, angelegt am 11.11. |
+| `fabian` | eigener Ed25519-Key (`SHA256:QmATGy…+bjg`) | ja, ohne Passwort (`/etc/sudoers.d/90-fabian`) | Eigener Admin-User für Fabian, angelegt am 15.11. |
 
 Die neuen User haben kein Passwort. sudo läuft deshalb ohne Passwortabfrage. Geschützt ist der Zugang trotzdem, denn hereinkommen kann nur, wer den privaten Key hat.
 
@@ -377,7 +378,7 @@ Die VM ist nur über das VPN erreichbar, nur die Ports 22 und 8082 sind offen, u
 **Offen:**
 
 - [ ] `team02-key` hat keine Passphrase. Eine Passphrase setzen mit `ssh-keygen -p -f ~/.ssh/id_ed25519`
-- [ ] Notfall-Passwort für `ubuntu` setzen (`sudo passwd ubuntu`), damit „View Console“ in der Web-UI funktioniert, falls SSH ausfällt
+- [x] Notfall-Passwort für `ubuntu` setzen (`sudo passwd ubuntu`), damit „View Console“ in der Web-UI funktioniert, falls SSH ausfällt (erledigt am 15.11., SSH-Passwort-Login bleibt abgelehnt; das Passwort steht nicht im Repo)
 - [ ] Firewall-Regeln von `0.0.0.0/0` auf VPN- und Hochschulnetz einschränken (Stufe 2)
 - [x] JAR auf den aktuellen Code-Stand bringen (erledigt am 11.11., Fix #74 jetzt enthalten)
 - [x] Test mit mehreren Spielern gleichzeitig (erledigt am 11.11.: ganzes Spiel mit 3 Spielern)
