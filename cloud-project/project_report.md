@@ -4,7 +4,7 @@
 
 **Autor:innen:** Miralem Djedovic, Fabian Egger, Clemens Huber, Romed Kelmer, Thomas Klammer, Christian Plattner
 
-**Betreuer:** Hasenjäger · **Stand:** 15.11.2026 · **Abgabe:** 23.11.2026 · **Präsentation:** 26.11.2026
+**Betreuer:** Hasenjäger · **Stand:** 17.11.2026 · **Abgabe:** 23.11.2026 · **Präsentation:** 26.11.2026
 
 ---
 
@@ -137,6 +137,7 @@ Die Abschnitte 4.2 bis 4.6 folgen den Zielwerten Z1 bis Z5, die Abschnitte 4.7 b
 | 15.11. | Neustart der VM (Z4) | Lobby nach 27 s wieder da | Abschnitt 4.5 |
 | 15.11. 14:53 | Absturz eines Serverprozesses (Z5) | Neustart durch systemd, nach 7,8 s wieder spielbereit und in der Lobby | Abschnitt 4.6 |
 | 15.11. abends | Firewall auf VPN eingeschränkt, Zugriff über VPN | SSH und WebSocket-Port weiter erreichbar, keine Regel mehr mit `0.0.0.0/0` | Abschnitt 4.9 |
+| 17.11. 18:34 | Negativtest ohne VPN (`netbird down`) | TCP 22 und 8082 laufen in den Timeout, mit VPN wieder offen | Abschnitt 4.9 |
 | 15.11. | Git-Historie auf Zugangsdaten durchsucht | Keine privaten Schlüssel, Tokens oder E-Mail-Adressen | Abschnitt 4.8 |
 
 ### 4.2 Z1: Spiel mit mehreren Spielern
@@ -300,11 +301,14 @@ cmk deleteFirewallRule id=<alte Regel 8082–8091, 0.0.0.0/0>
 | `cmk listFirewallRules` | nur noch Regeln mit `10.98.0.0/16` | 2 Regeln, Status `Active` |
 | `ssh thomas@172.16.20.14` | Login | ok |
 | HTTP auf `172.16.20.14:8082` | Server antwortet | ok (404 auf `/`, Server erreichbar) |
-| Verbindung ohne VPN bzw. aus dem Netz eines anderen Teams | Timeout | _noch offen_ |
+| Verbindung ohne VPN (17.11., `netbird down`, TCP 22 und 8082) | Timeout | Timeout nach 5 s, nach `netbird up` wieder offen |
+| Verbindung aus dem Netz eines anderen Teams (Quelle `172.16.20.0/24`) | Timeout | _noch offen_ |
+
+Der Test ohne VPN lief am 17.11.2026 um 18:34 in drei Schritten, jeweils mit einem TCP-Verbindungsaufbau über `/dev/tcp` von Bash und 5 s Timeout. Mit VPN waren TCP 22 und 8082 offen. Nach `netbird down` liefen beide in den Timeout. Nach `netbird up` waren beide wieder offen. Ohne VPN führt die Route des Laptops über den Heimrouter ins Internet, und dort ist `172.16.20.14` als private Adresse nicht erreichbar. Der Test zeigt also, dass die VM von außen nicht erreichbar ist. Dass die Firewall Quellen außerhalb des VPN abweist, belegt er nur indirekt. Den direkten Beleg liefert `cmk listFirewallRules`: Es gibt genau zwei Regeln, beide mit `10.98.0.0/16` und Status `Active`.
 
 **Bewertung:** Die Firewall lässt nur noch Verbindungen aus dem VPN durch. Ins VPN kommt nur, wer sich per SSO mit dem mci4me-Konto anmeldet und einem Team-Projekt der Plattform angehört. Jede Verbindung kommt damit von einer persönlich angemeldeten Person, und auf der VM gibt es eigene Benutzer mit eigenen Keys (IAM). Es entstehen also zwei Schutzschichten: das Netz (VPN plus Firewall) und der Login (SSH-Key je Person).
 
-**Grenzen:** Der Negativtest fehlt noch. Alle VPN-Nutzer der Plattform kommen aus `10.98.0.0/16`, also auch Studierende anderer Teams. Die Firewall unterscheidet nicht zwischen den Teams, die Ports 22 und 8082–8091 sind für sie erreichbar. Für SSH reicht das, weil nur unsere Keys angenommen werden. Die Spiel-Ports sind ohne Anmeldung nutzbar, das ist für einen Spieleserver gewollt. Wer nur team02 zulassen will, müsste die NetBird-IPs der Teammitglieder einzeln eintragen. Diese IPs werden aber von der Plattform vergeben und sind nicht von uns steuerbar.
+**Grenzen:** Der Negativtest aus dem Netz eines anderen Teams fehlt noch, dafür braucht es eine VM eines anderen Teams. Alle VPN-Nutzer der Plattform kommen aus `10.98.0.0/16`, also auch Studierende anderer Teams. Die Firewall unterscheidet nicht zwischen den Teams, die Ports 22 und 8082–8091 sind für sie erreichbar. Für SSH reicht das, weil nur unsere Keys angenommen werden. Die Spiel-Ports sind ohne Anmeldung nutzbar, das ist für einen Spieleserver gewollt. Wer nur team02 zulassen will, müsste die NetBird-IPs der Teammitglieder einzeln eintragen. Diese IPs werden aber von der Plattform vergeben und sind nicht von uns steuerbar.
 
 ---
 
@@ -314,7 +318,7 @@ cmk deleteFirewallRule id=<alte Regel 8082–8091, 0.0.0.0/0>
 
 | Punkt | Einordnung |
 |---|---|
-| **Negativtest der Firewall** | Die Einschränkung auf `10.98.0.0/16` ist umgesetzt (Abschnitt 4.9). Noch zu zeigen ist, dass ohne VPN bzw. aus dem Netz eines anderen Teams keine Verbindung zustande kommt. |
+| **Negativtest der Firewall** | Die Einschränkung auf `10.98.0.0/16` ist umgesetzt (Abschnitt 4.9). Ohne VPN kommt keine Verbindung zustande (getestet am 17.11.). Noch zu zeigen ist, dass auch aus dem Netz eines anderen Teams keine Verbindung zustande kommt. |
 | **Spieler anderer Teams** | Wegen der Firewall können andere Teams aus `172.16.20.0/24` nicht mehr auf unsere Spieleserver. Falls das gebraucht wird, z. B. bei der Präsentation, wird für 8082–8091 zusätzlich `172.16.20.0/24` erlaubt, SSH bleibt nur über VPN. |
 | **Unverschlüsselte Verbindung** | Clients verbinden sich mit `ws://`. TLS würde einen vorgeschalteten Proxy und ein Zertifikat brauchen. |
 | **Fehler im Spielcode** | `NextTreasureCardListener` übergibt `event.treasureCard()` ohne Null-Prüfung. Die Exception wird abgefangen und geloggt, das Spiel läuft weiter. Behebung: Prüfung vor dem Versand. |
