@@ -14,6 +14,7 @@ import javax.sql.DataSource;
 import java.net.InetAddress;
 import java.sql.DatabaseMetaData;
 import java.time.OffsetDateTime;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -99,15 +100,70 @@ public class JdbcGameRecorder implements GameRecorder {
                                 String.join(",", p.achievements()), p.endedGame())
                         .update();
             }
+            deleteSnapshot(r.gameId());
         }));
     }
 
     @Override
     public void gameAborted(UUID gameId, OffsetDateTime endedAt) {
-        submit("game aborted " + gameId, () -> jdbc.sql(
-                        "UPDATE game SET status = 'ABORTED', ended_at = ? WHERE id = ? AND status = 'IN_GAME'")
-                .params(endedAt, gameId)
-                .update());
+        submit("game aborted " + gameId, () -> abort(gameId, endedAt));
+    }
+
+    @Override
+    public Optional<GameSnapshot> takeOverRunningGame() {
+        try {
+            return writer.submit(this::findAndAbortRunningGames).get(30, TimeUnit.SECONDS);
+        } catch (Exception ex) {
+            log.error("Could not look for running games of instance '{}': {}", instanceId, ex.getMessage(), ex);
+            return Optional.empty();
+        }
+    }
+
+    private Optional<GameSnapshot> findAndAbortRunningGames() {
+        var rows = jdbc.sql("""
+                        SELECT g.id, CAST(s.state AS VARCHAR) AS state
+                        FROM game g LEFT JOIN game_snapshot s ON s.game_id = g.id
+                        WHERE g.instance_id = ? AND g.status = 'IN_GAME'
+                        ORDER BY g.started_at DESC""")
+                .param(instanceId)
+                .query((rs, i) -> new RunningGame(rs.getObject("id", UUID.class), rs.getString("state")))
+                .list();
+
+        GameSnapshot found = null;
+        for (var row : rows) {
+            if (found == null && row.state() != null) {
+                try {
+                    var snapshot = objectMapper.readValue(row.state(), GameSnapshot.class);
+                    if (snapshot.formatVersion() == GameSnapshot.FORMAT_VERSION) {
+                        found = snapshot;
+                        continue;
+                    }
+                    log.warn("Snapshot of game {} has format {}, cannot continue it", row.id(), snapshot.formatVersion());
+                } catch (Exception ex) {
+                    log.warn("Snapshot of game {} is unreadable: {}", row.id(), ex.getMessage());
+                }
+            }
+            log.info("Marking orphaned game {} as aborted", row.id());
+            abort(row.id(), OffsetDateTime.now());
+        }
+        return Optional.ofNullable(found);
+    }
+
+    private record RunningGame(UUID id, String state) {
+    }
+
+    private void abort(UUID gameId, OffsetDateTime endedAt) {
+        tx.executeWithoutResult(status -> {
+            jdbc.sql("UPDATE game SET status = 'ABORTED', ended_at = ? WHERE id = ? AND status = 'IN_GAME'")
+                    .params(endedAt, gameId)
+                    .update();
+            deleteSnapshot(gameId);
+        });
+    }
+
+    // An ended game is never restored, so its snapshot is no longer needed
+    private void deleteSnapshot(UUID gameId) {
+        jdbc.sql("DELETE FROM game_snapshot WHERE game_id = ?").param(gameId).update();
     }
 
     @Override
@@ -136,9 +192,11 @@ public class JdbcGameRecorder implements GameRecorder {
                 .params(s.version(), s.takenAt(), json, s.gameId(), s.version())
                 .update();
         if (updated == 0) {
+            // only for running games, so a late snapshot cannot bring back the one deleted at game end
             jdbc.sql("INSERT INTO game_snapshot (game_id, version, updated_at, state) SELECT ?, ?, ?, " + jsonExpr
-                            + " WHERE NOT EXISTS (SELECT 1 FROM game_snapshot WHERE game_id = ?)")
-                    .params(s.gameId(), s.version(), s.takenAt(), json, s.gameId())
+                            + " WHERE NOT EXISTS (SELECT 1 FROM game_snapshot WHERE game_id = ?)"
+                            + " AND EXISTS (SELECT 1 FROM game WHERE id = ? AND status = 'IN_GAME')")
+                    .params(s.gameId(), s.version(), s.takenAt(), json, s.gameId(), s.gameId())
                     .update();
         }
     }

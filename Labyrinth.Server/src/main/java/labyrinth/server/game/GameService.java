@@ -202,6 +202,20 @@ public class GameService {
         }
     }
 
+    /** Continues a game from the database after a restart of this instance. */
+    public void restore(UUID gameId, long snapshotVersion, GameSnapshotMapper.RestoredGame r) {
+        rwLock.writeLock().lock();
+        try {
+            game.restore(r.config(), r.board(), r.players(), r.gameStartTime(), r.activeBonus(),
+                    r.currentPlayerIndex(), r.moveState(), r.bonusUsedThisTurn(), r.lastShift());
+            currentGameId = gameId;
+            this.snapshotVersion = snapshotVersion;
+            log.info("Restored game {} at snapshot version {} with {} players", gameId, snapshotVersion, r.players().size());
+        } finally {
+            rwLock.writeLock().unlock();
+        }
+    }
+
     public Player getCurrentPlayer() {
         rwLock.readLock().lock();
         try {

@@ -21,6 +21,13 @@ public class PlayerSessionRegistry implements SessionTokenSource {
         registrations.put(playerId, new PlayerRegistration(playerId, identifierToken, session));
     }
 
+    // After a restore: the client can reconnect with its token, otherwise the cleanup turns the player into AI.
+    public void registerDisconnected(UUID playerId, UUID identifierToken) {
+        var reg = new PlayerRegistration(playerId, identifierToken, null);
+        reg.markDisconnected();
+        registrations.put(playerId, reg);
+    }
+
     public void removePlayer(UUID playerId) {
         registrations.remove(playerId);
     }

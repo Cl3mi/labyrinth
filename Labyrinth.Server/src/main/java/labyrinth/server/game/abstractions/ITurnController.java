@@ -102,6 +102,15 @@ public interface ITurnController {
      * @param expected the expected move state
      * @throws IllegalStateException if state doesn't match and not in freeRoam
      */
+    void restore(int currentPlayerIndex, MoveState moveState, boolean bonusUsedThisTurn, LastShift lastShift);
+
+    void resumeTurn(
+            List<Player> players,
+            RoomState roomState,
+            GameConfig gameConfig,
+            Consumer<Player> aiTurnExecutor
+    );
+
     void guardForMoveState(Board board, MoveState expected);
 
     /**

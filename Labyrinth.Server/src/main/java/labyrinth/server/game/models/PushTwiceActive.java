@@ -34,6 +34,10 @@ public final class PushTwiceActive implements BonusState {
         this.remainingPushes = remainingPushes;
     }
 
+    public static BonusState withRemainingPushes(int remainingPushes) {
+        return remainingPushes <= 0 ? NoBonusActive.getInstance() : new PushTwiceActive(remainingPushes);
+    }
+
     @Override
     public boolean isActive() {
         return true;

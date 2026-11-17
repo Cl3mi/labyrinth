@@ -1,6 +1,7 @@
 package labyrinth.server.persistence;
 
 import java.time.OffsetDateTime;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -18,4 +19,11 @@ public interface GameRecorder {
     void gameAborted(UUID gameId, OffsetDateTime endedAt);
 
     void gameSnapshot(GameSnapshot snapshot);
+
+    /**
+     * Called once at startup, before players connect. Returns the latest running game
+     * of this instance if it can be continued; all other running games of this
+     * instance are marked aborted. Blocks until done.
+     */
+    Optional<GameSnapshot> takeOverRunningGame();
 }

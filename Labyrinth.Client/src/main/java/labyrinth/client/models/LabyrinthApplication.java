@@ -31,6 +31,7 @@ public class LabyrinthApplication {
     private static final Logger log = LoggerFactory.getLogger(LabyrinthApplication.class);
     private volatile boolean loginSent = false;
     private volatile boolean connectAckReceived = false;
+    private volatile boolean reconnectInProgress = false;
 
     private static final String PROFILE = System.getProperty("labyrinth.profile", "default");
 
@@ -321,9 +322,14 @@ public class LabyrinthApplication {
                 });
                 return;
             }
+            reconnectInProgress = true;
             SwingUtilities.invokeLater(() -> {
                 lobbyPanel.setStatusText("Verbindung unterbrochen - Wiederverbinden...",
                         new Color(170, 120, 0));
+                if (boardPanel != null && gameViewShown) {
+                    boardPanel.showWarningToast("connection", "Verbindung unterbrochen",
+                            "Verbinde neu mit dem Server …");
+                }
             });
             reconnectionManager.startAutoReconnect();
         });
@@ -700,6 +706,15 @@ public class LabyrinthApplication {
             ClientIdentityStore.saveUsername(username);
             if (reconnectionManager != null) reconnectionManager.reset();
 
+            if (reconnectInProgress) {
+                reconnectInProgress = false;
+                SwingUtilities.invokeLater(() -> {
+                    if (boardPanel != null && gameViewShown) {
+                        boardPanel.showSuccessToast("connection", "Wieder verbunden", "Das Spiel geht weiter.");
+                    }
+                });
+            }
+
             if (aiController != null) {
                 aiController.setLocalPlayerId(ack.getPlayerId());
             }
@@ -889,7 +904,10 @@ public class LabyrinthApplication {
 
         client.setOnErrorMessage(msg -> {
             SwingUtilities.invokeLater(() -> {
-                if (msg != null && msg.contains("PLAYER_NOT_FOUND")) {
+                if (reconnectInProgress && msg != null && msg.startsWith("Failed to send")) {
+                    // e.g. the AI keeps playing while the connection is down; the reconnect toast covers it
+                    log.debug("[{}] Dropped while reconnecting: {}", PROFILE, msg);
+                } else if (msg != null && msg.contains("PLAYER_NOT_FOUND")) {
                     log.info("[{}] PLAYER_NOT_FOUND - ignoring (token already cleared)", PROFILE);
                     ClientIdentityStore.clearToken();
                 } else if (msg != null && msg.contains("was not connected")) {

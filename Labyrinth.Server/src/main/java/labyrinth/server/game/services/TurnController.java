@@ -179,6 +179,38 @@ public class TurnController implements ITurnController {
         beginTurn(currentPlayer, "Starting turn for player: " + currentPlayer.getUsername(), players, roomState, gameConfig, aiTurnExecutor);
     }
 
+    @Override
+    public void restore(int currentPlayerIndex, MoveState moveState, boolean bonusUsedThisTurn, LastShift lastShift) {
+        stopTimer();
+        this.currentPlayerIndex = currentPlayerIndex;
+        this.currentMoveState = moveState;
+        this.bonusUsedThisTurn = bonusUsedThisTurn;
+        this.lastShift = lastShift;
+    }
+
+    // Unlike startTurn, keeps move state and bonus flag; the turn timer starts over.
+    @Override
+    public void resumeTurn(
+            List<Player> players,
+            RoomState roomState,
+            GameConfig gameConfig,
+            Consumer<Player> aiTurnExecutor
+    ) {
+        guardForRoomState(roomState, RoomState.IN_GAME);
+        Player player = getCurrentPlayer(players);
+        gameLogger.log(GameLogType.NEXT_TURN, "Resuming turn of " + player.getUsername() + " after restore", player, null);
+
+        if (player.shouldMoveBePerformedByAi()) {
+            aiTurnExecutor.accept(player);
+        } else {
+            turnTimer.start(gameConfig.turnTimeInSeconds(), () -> {
+                log.warn("[TurnController] Turn timer exceeded for player: {}. Advancing to next player.", player.getUsername());
+                gameLogger.log(GameLogType.NEXT_TURN, "Turn timer exceeded - auto-advancing", player, null);
+                advanceToNextPlayer(players, roomState, gameConfig, aiTurnExecutor);
+            });
+        }
+    }
+
     /**
      * Guards that the current move state matches the expected state.
      *

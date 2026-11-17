@@ -168,6 +168,11 @@ public class GameClient extends WebSocketClient {
 
         connectionState = ConnectionState.DISCONNECTED;
 
+        if (previousState == ConnectionState.RECONNECTING) {
+            // failed reconnect attempt; ReconnectionManager retries and reports progress
+            return;
+        }
+
         boolean shouldReconnect = !intentionalDisconnect &&
                                   previousState == ConnectionState.CONNECTED;
 
@@ -188,7 +193,11 @@ public class GameClient extends WebSocketClient {
 
     @Override
     public void onError(Exception ex) {
-        ex.printStackTrace();
+        if (connectionState == ConnectionState.RECONNECTING) {
+            log.debug("Reconnect attempt failed: {}", ex.getMessage());
+            return;
+        }
+        log.warn("WebSocket error: {}", ex.getMessage(), ex);
 
         boolean shouldReconnect = (connectionState == ConnectionState.CONNECTED ||
                                    connectionState == ConnectionState.CONNECTING) &&
@@ -498,15 +507,16 @@ public class GameClient extends WebSocketClient {
                 closeBlocking();
             }
 
-            reconnectBlocking();
+            // returns false (no exception) e.g. on "Connection refused" while the server restarts
+            if (!reconnectBlocking()) {
+                connectionState = ConnectionState.DISCONNECTED;
+                return false;
+            }
             sendReconnect(identifierToken);
             return true;
         } catch (Exception e) {
-            e.printStackTrace();
+            log.debug("Reconnect attempt failed: {}", e.getMessage(), e);
             connectionState = ConnectionState.DISCONNECTED;
-            if (onErrorMessage != null) {
-                runOnUiThread(() -> onErrorMessage.accept("Reconnect failed: " + e.getMessage()));
-            }
             return false;
         }
     }
@@ -531,7 +541,10 @@ public class GameClient extends WebSocketClient {
                 closeBlocking();
             }
 
-            reconnectBlocking();
+            if (!reconnectBlocking()) {
+                connectionState = ConnectionState.DISCONNECTED;
+                return false;
+            }
             sendConnect(username);
             return true;
         } catch (Exception e) {

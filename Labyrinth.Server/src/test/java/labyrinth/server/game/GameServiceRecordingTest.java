@@ -3,6 +3,7 @@ package labyrinth.server.game;
 import labyrinth.server.config.JacksonConfig;
 import labyrinth.server.game.enums.Direction;
 import labyrinth.server.game.enums.MoveState;
+import labyrinth.server.game.enums.RoomState;
 import labyrinth.server.game.factories.BoardFactory;
 import labyrinth.server.game.factories.BonusFactory;
 import labyrinth.server.game.factories.TreasureCardFactory;
@@ -12,6 +13,7 @@ import labyrinth.server.game.services.TreasureBonusDistributionService;
 import labyrinth.server.persistence.GameRecorder;
 import labyrinth.server.persistence.GameRecords;
 import labyrinth.server.persistence.GameSnapshot;
+import labyrinth.server.persistence.GameSnapshotMapper;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -22,6 +24,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
 
@@ -29,6 +32,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class GameServiceRecordingTest {
@@ -40,6 +45,7 @@ class GameServiceRecordingTest {
     private final Map<UUID, UUID> tokens = new HashMap<>();
 
     private ThreadPoolTaskScheduler scheduler;
+    private GameRecorder recorder;
     private GameService gameService;
 
     @BeforeEach
@@ -47,14 +53,19 @@ class GameServiceRecordingTest {
         scheduler = new ThreadPoolTaskScheduler();
         scheduler.initialize();
 
-        GameRecorder recorder = new GameRecorder() {
+        recorder = new GameRecorder() {
             public void gameStarted(GameRecords.GameStarted game) { started.add(game); }
             public void gameFinished(GameRecords.GameFinished result) { finished.add(result); }
             public void gameAborted(UUID gameId, OffsetDateTime endedAt) { aborted.add(gameId); }
             public void gameSnapshot(GameSnapshot snapshot) { snapshots.add(snapshot); }
+            public Optional<GameSnapshot> takeOverRunningGame() { return Optional.empty(); }
         };
 
-        gameService = new GameService(
+        gameService = newGameService();
+    }
+
+    private GameService newGameService() {
+        return new GameService(
                 new TreasureCardFactory(),
                 new BoardFactory(),
                 null,
@@ -238,5 +249,119 @@ class GameServiceRecordingTest {
         assertEquals(1, s.turn().currentPlayerIndex(), "snapshot after the timeout shows Ben's turn");
         assertEquals(2, s.version());
         assertNotNull(s.turnEndTime(), "taken after Ben's turn timer started");
+    }
+
+    // Simulates a restart: the snapshot goes through JSON into a fresh server.
+    private GameService restartFrom(GameSnapshot snapshot) throws Exception {
+        var mapper = new JacksonConfig().objectMapper();
+        var parsed = mapper.readValue(mapper.writeValueAsString(snapshot), GameSnapshot.class);
+        var restarted = newGameService();
+        restarted.restore(parsed.gameId(), parsed.version(), GameSnapshotMapper.restore(parsed));
+        return restarted;
+    }
+
+    private static GameSnapshot capture(GameService service, GameSnapshot like) {
+        return GameSnapshotMapper.capture(like.gameId(), like.version(), service.getGame(), Map.of(), like.takenAt());
+    }
+
+    @Test
+    void restoredGameHasTheSameState() throws Exception {
+        var anna = gameService.join("Anna");
+        gameService.join("Ben");
+        gameService.startGame(GameConfig.getDefault());
+        gameService.rotateExtraTileClockwise(anna);
+        assertTrue(gameService.shift(1, Direction.DOWN, anna));
+        var before = lastSnapshot();
+
+        var restarted = restartFrom(before);
+
+        assertEquals(RoomState.IN_GAME, restarted.getGameState());
+        var after = capture(restarted, before);
+        assertEquals(before.config(), after.config());
+        assertEquals(before.board(), after.board());
+        assertEquals(before.treasures(), after.treasures());
+        assertEquals(before.turn(), after.turn());
+        assertEquals(before.activeBonus(), after.activeBonus());
+        assertEquals(before.gameEndTime().toInstant(), after.gameEndTime().toInstant());
+        for (int i = 0; i < before.players().size(); i++) {
+            var b = before.players().get(i);
+            var a = after.players().get(i);
+            assertEquals(b.id(), a.id());
+            assertEquals(b.username(), a.username());
+            assertEquals(b.color(), a.color());
+            assertEquals(b.admin(), a.admin());
+            assertEquals(b.position(), a.position());
+            assertEquals(b.home(), a.home());
+            assertEquals(b.treasureIds(), a.treasureIds());
+            assertEquals(b.bonuses(), a.bonuses());
+            assertEquals(b.statistics(), a.statistics());
+        }
+        assertNotNull(after.turnEndTime(), "turn timer runs again");
+        restarted.getGame().getTurnController().stopTimer();
+    }
+
+    @Test
+    void restoredTreasureIsSharedBetweenTileAndPlayer() throws Exception {
+        gameService.join("Anna");
+        gameService.join("Ben");
+        gameService.startGame(GameConfig.getDefault());
+
+        var restarted = restartFrom(lastSnapshot());
+
+        var board = restarted.getBoard();
+        for (var player : restarted.getPlayers()) {
+            var card = player.getCurrentTreasureCard();
+            var onBoard = board.getTileMap().entrySet().stream()
+                    .map(Map.Entry::getValue)
+                    .filter(t -> card.equals(t.getTreasureCard()))
+                    .findFirst();
+            var tile = onBoard.orElseGet(board::getExtraTile);
+            assertSame(card, tile.getTreasureCard(), "collecting on the tile must mark the player's card");
+        }
+        restarted.getGame().getTurnController().stopTimer();
+    }
+
+    @Test
+    void restoredGameCanBePlayedOn() throws Exception {
+        var anna = gameService.join("Anna");
+        gameService.join("Ben");
+        gameService.startGame(GameConfig.getDefault());
+        assertTrue(gameService.shift(1, Direction.DOWN, anna));
+        var before = lastSnapshot();
+
+        var restarted = restartFrom(before);
+        var restoredAnna = restarted.getPlayer(anna.getId());
+        var pos = restarted.getCurrentPositionOfPlayer(restoredAnna);
+        assertTrue(restarted.movePlayerToTile(pos.row(), pos.column(), restoredAnna));
+
+        var next = lastSnapshot();
+        assertEquals(before.gameId(), next.gameId());
+        assertEquals(before.version() + 1, next.version(), "versions continue, so the database accepts the update");
+        assertEquals(1, next.turn().currentPlayerIndex());
+        restarted.getGame().getTurnController().stopTimer();
+    }
+
+    @Test
+    void restoreNeedsAnEmptyLobby() throws Exception {
+        gameService.join("Anna");
+        gameService.join("Ben");
+        gameService.startGame(GameConfig.getDefault());
+        var snapshot = lastSnapshot();
+
+        var other = newGameService();
+        other.join("Carl");
+        assertThrows(IllegalStateException.class,
+                () -> other.restore(snapshot.gameId(), snapshot.version(), GameSnapshotMapper.restore(snapshot)));
+    }
+
+    @Test
+    void unknownSnapshotFormatIsRejected() throws Exception {
+        gameService.join("Anna");
+        gameService.join("Ben");
+        gameService.startGame(GameConfig.getDefault());
+        var s = lastSnapshot();
+        var future = new GameSnapshot(GameSnapshot.FORMAT_VERSION + 1, s.gameId(), s.version(), s.takenAt(), s.config(),
+                s.gameEndTime(), s.turnEndTime(), s.board(), s.treasures(), s.players(), s.turn(), s.activeBonus());
+        assertThrows(IllegalArgumentException.class, () -> GameSnapshotMapper.restore(future));
     }
 }

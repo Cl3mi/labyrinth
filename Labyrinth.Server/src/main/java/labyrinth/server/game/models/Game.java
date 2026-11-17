@@ -178,6 +178,40 @@ public class Game {
         turnController.startTurn(players, this.roomState, this.gameConfig, aiStrategy::performTurnAsync);
     }
 
+    /**
+     * Continues a game from a snapshot after a server restart, in place of
+     * {@link #startGame}. Players, board and treasure cards must already be linked.
+     */
+    public void restore(GameConfig gameConfig,
+                        Board board,
+                        List<Player> players,
+                        OffsetDateTime gameStartTime,
+                        BonusState activeBonusState,
+                        int currentPlayerIndex,
+                        MoveState moveState,
+                        boolean bonusUsedThisTurn,
+                        LastShift lastShift) {
+        if (roomState != RoomState.LOBBY || !playerRegistry.getPlayers().isEmpty()) {
+            throw new IllegalStateException("A game can only be restored into an empty lobby");
+        }
+        if (currentPlayerIndex < 0 || currentPlayerIndex >= players.size()) {
+            throw new IllegalArgumentException("Current player index " + currentPlayerIndex + " out of range");
+        }
+
+        playerRegistry.getPlayersInternal().addAll(players);
+        this.gameConfig = gameConfig;
+        this.board = board;
+        this.board.setPlayers(playerRegistry.getPlayersInternal());
+        this.gameStartTime = gameStartTime;
+        this.activeBonusState = activeBonusState;
+        this.endGameAchievements = new ArrayList<>();
+        this.roomState = RoomState.IN_GAME;
+
+        turnController.restore(currentPlayerIndex, moveState, bonusUsedThisTurn, lastShift);
+        gameLogger.log(GameLogType.START_GAME, "Game restored from snapshot");
+        turnController.resumeTurn(playerRegistry.getPlayersInternal(), roomState, this.gameConfig, aiStrategy::performTurnAsync);
+    }
+
     public Player getCurrentPlayer() {
         return turnController.getCurrentPlayer(playerRegistry.getPlayersInternal());
     }

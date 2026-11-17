@@ -205,6 +205,115 @@ abstract class AbstractGameRecorderTest {
         assertEquals(9L, storedSnapshot(g2).version());
     }
 
+    private int snapshotCount(UUID gameId) {
+        return jdbc.sql("SELECT count(*) FROM game_snapshot WHERE game_id = ?").param(gameId).query(Integer.class).single();
+    }
+
+    @Test
+    void snapshotIsDeletedWhenGameFinishes() throws Exception {
+        var gameId = UUID.randomUUID();
+        recorderA.gameStarted(started(gameId));
+        recorderA.gameSnapshot(snapshot(gameId, 1));
+        recorderA.flush();
+        assertEquals(1, snapshotCount(gameId));
+
+        recorderA.gameFinished(new GameRecords.GameFinished(gameId, OffsetDateTime.now(), List.of(
+                new GameRecords.PlayerResult(UUID.randomUUID(), "Anna", false, 1, 300, 6, 40, 12, List.of(), true))));
+        recorderA.flush();
+        assertEquals(0, snapshotCount(gameId));
+    }
+
+    @Test
+    void snapshotIsDeletedWhenGameIsAborted() throws Exception {
+        var gameId = UUID.randomUUID();
+        recorderA.gameStarted(started(gameId));
+        recorderA.gameSnapshot(snapshot(gameId, 1));
+        recorderA.gameAborted(gameId, OffsetDateTime.now());
+        recorderA.flush();
+        assertEquals(0, snapshotCount(gameId));
+    }
+
+    @Test
+    void lateSnapshotDoesNotReappearAfterGameEnd() throws Exception {
+        var gameId = UUID.randomUUID();
+        recorderA.gameStarted(started(gameId));
+        recorderA.gameAborted(gameId, OffsetDateTime.now());
+        recorderA.gameSnapshot(snapshot(gameId, 7));
+        recorderA.flush();
+        assertEquals(0, snapshotCount(gameId));
+    }
+
+    private String status(UUID gameId) {
+        return jdbc.sql("SELECT status FROM game WHERE id = ?").param(gameId).query(String.class).single();
+    }
+
+    private void startedAt(UUID gameId, OffsetDateTime at) {
+        jdbc.sql("UPDATE game SET started_at = ? WHERE id = ?").params(at, gameId).update();
+    }
+
+    @Test
+    void latestRunningGameIsTakenOverAndOlderOnesAborted() throws Exception {
+        var t = OffsetDateTime.now();
+        var old = UUID.randomUUID();
+        var withoutSnapshot = UUID.randomUUID();
+        var latest = UUID.randomUUID();
+        var otherInstance = UUID.randomUUID();
+        recorderA.gameStarted(started(old));
+        recorderA.gameStarted(started(withoutSnapshot));
+        recorderA.gameStarted(started(latest));
+        recorderB.gameStarted(started(otherInstance));
+        recorderA.gameSnapshot(snapshot(old, 3));
+        recorderA.flush();
+        recorderA.gameSnapshot(snapshot(latest, 8));
+        recorderB.gameSnapshot(snapshot(otherInstance, 2));
+        recorderA.flush();
+        recorderB.flush();
+        startedAt(old, t.minusMinutes(30));
+        startedAt(withoutSnapshot, t.minusMinutes(20));
+        startedAt(latest, t.minusMinutes(10));
+
+        var taken = recorderA.takeOverRunningGame();
+
+        assertTrue(taken.isPresent());
+        assertEquals(latest, taken.get().gameId());
+        assertEquals(8L, taken.get().version());
+        assertEquals("IN_GAME", status(latest));
+        assertEquals("ABORTED", status(old));
+        assertEquals("ABORTED", status(withoutSnapshot));
+        assertEquals(0, snapshotCount(old));
+        assertEquals("IN_GAME", status(otherInstance), "games of other instances are left alone");
+    }
+
+    @Test
+    void runningGameWithoutSnapshotIsAborted() throws Exception {
+        var gameId = UUID.randomUUID();
+        recorderA.gameStarted(started(gameId));
+        recorderA.flush();
+
+        assertTrue(recorderA.takeOverRunningGame().isEmpty());
+        assertEquals("ABORTED", status(gameId));
+    }
+
+    @Test
+    void unreadableSnapshotIsAborted() throws Exception {
+        var gameId = UUID.randomUUID();
+        recorderA.gameStarted(started(gameId));
+        recorderA.gameSnapshot(snapshot(gameId, 1));
+        recorderA.flush();
+        var json = jdbc.sql("SELECT CAST(state AS VARCHAR) FROM game_snapshot WHERE game_id = ?")
+                .param(gameId).query(String.class).single();
+        // PostgreSQL prints jsonb with a space after the colon
+        var newer = json.replaceFirst("\"formatVersion\":\\s*\\d+",
+                "\"formatVersion\":" + (GameSnapshot.FORMAT_VERSION + 1));
+        assertTrue(!newer.equals(json));
+        jdbc.sql("UPDATE game_snapshot SET state = " + (dataSource().getUrl().startsWith("jdbc:h2") ? "? FORMAT JSON" : "CAST(? AS jsonb)")
+                        + " WHERE game_id = ?")
+                .params(newer, gameId).update();
+
+        assertTrue(recorderA.takeOverRunningGame().isEmpty());
+        assertEquals("ABORTED", status(gameId));
+    }
+
     @Test
     void snapshotOfUnknownGameIsOnlyLogged() throws Exception {
         recorderA.gameSnapshot(snapshot(UUID.randomUUID(), 1));
