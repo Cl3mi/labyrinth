@@ -1,5 +1,6 @@
 package labyrinth.server.persistence;
 
+import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.Optional;
 import java.util.UUID;
@@ -22,8 +23,9 @@ public interface GameRecorder {
 
     /**
      * Called once at startup, before players connect. Returns the latest running game
-     * of this instance if it can be continued; all other running games of this
-     * instance are marked aborted. Blocks until done.
+     * of this instance if it can be continued and its snapshot is not older than
+     * {@code maxAge}; all other running games of this instance are marked aborted.
+     * Blocks until done.
      */
-    Optional<GameSnapshot> takeOverRunningGame();
+    Optional<GameSnapshot> takeOverRunningGame(Duration maxAge);
 }

@@ -58,7 +58,7 @@ class GameServiceRecordingTest {
             public void gameFinished(GameRecords.GameFinished result) { finished.add(result); }
             public void gameAborted(UUID gameId, OffsetDateTime endedAt) { aborted.add(gameId); }
             public void gameSnapshot(GameSnapshot snapshot) { snapshots.add(snapshot); }
-            public Optional<GameSnapshot> takeOverRunningGame() { return Optional.empty(); }
+            public Optional<GameSnapshot> takeOverRunningGame(java.time.Duration maxAge) { return Optional.empty(); }
         };
 
         gameService = newGameService();

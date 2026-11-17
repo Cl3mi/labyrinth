@@ -14,6 +14,7 @@ import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.EnumSet;
@@ -26,6 +27,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** Runs the same checks against every supported database (H2 and PostgreSQL). */
 abstract class AbstractGameRecorderTest {
+
+    // test snapshots carry a fixed timestamp, so age checks are off unless a test enables them
+    private static final Duration ANY_AGE = Duration.ofDays(36500);
 
     private final ObjectMapper objectMapper = new JacksonConfig().objectMapper();
     private JdbcClient jdbc;
@@ -272,7 +276,7 @@ abstract class AbstractGameRecorderTest {
         startedAt(withoutSnapshot, t.minusMinutes(20));
         startedAt(latest, t.minusMinutes(10));
 
-        var taken = recorderA.takeOverRunningGame();
+        var taken = recorderA.takeOverRunningGame(ANY_AGE);
 
         assertTrue(taken.isPresent());
         assertEquals(latest, taken.get().gameId());
@@ -285,12 +289,39 @@ abstract class AbstractGameRecorderTest {
     }
 
     @Test
+    void tooOldSnapshotIsAbortedInsteadOfContinued() throws Exception {
+        var gameId = UUID.randomUUID();
+        recorderA.gameStarted(started(gameId));
+        recorderA.gameSnapshot(snapshot(gameId, 1));
+        recorderA.flush();
+        jdbc.sql("UPDATE game_snapshot SET updated_at = ? WHERE game_id = ?")
+                .params(OffsetDateTime.now().minusMinutes(5), gameId).update();
+
+        assertTrue(recorderA.takeOverRunningGame(Duration.ofMinutes(2)).isEmpty());
+        assertEquals("ABORTED", status(gameId));
+        assertEquals(0, snapshotCount(gameId));
+    }
+
+    @Test
+    void recentSnapshotIsContinued() throws Exception {
+        var gameId = UUID.randomUUID();
+        recorderA.gameStarted(started(gameId));
+        recorderA.gameSnapshot(snapshot(gameId, 1));
+        recorderA.flush();
+        jdbc.sql("UPDATE game_snapshot SET updated_at = ? WHERE game_id = ?")
+                .params(OffsetDateTime.now().minusSeconds(10), gameId).update();
+
+        assertTrue(recorderA.takeOverRunningGame(Duration.ofMinutes(2)).isPresent());
+        assertEquals("IN_GAME", status(gameId));
+    }
+
+    @Test
     void runningGameWithoutSnapshotIsAborted() throws Exception {
         var gameId = UUID.randomUUID();
         recorderA.gameStarted(started(gameId));
         recorderA.flush();
 
-        assertTrue(recorderA.takeOverRunningGame().isEmpty());
+        assertTrue(recorderA.takeOverRunningGame(ANY_AGE).isEmpty());
         assertEquals("ABORTED", status(gameId));
     }
 
@@ -310,7 +341,7 @@ abstract class AbstractGameRecorderTest {
                         + " WHERE game_id = ?")
                 .params(newer, gameId).update();
 
-        assertTrue(recorderA.takeOverRunningGame().isEmpty());
+        assertTrue(recorderA.takeOverRunningGame(ANY_AGE).isEmpty());
         assertEquals("ABORTED", status(gameId));
     }
 

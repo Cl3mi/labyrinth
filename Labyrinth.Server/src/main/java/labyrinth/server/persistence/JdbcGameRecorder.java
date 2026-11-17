@@ -13,6 +13,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 import javax.sql.DataSource;
 import java.net.InetAddress;
 import java.sql.DatabaseMetaData;
+import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.Optional;
 import java.util.UUID;
@@ -110,28 +111,33 @@ public class JdbcGameRecorder implements GameRecorder {
     }
 
     @Override
-    public Optional<GameSnapshot> takeOverRunningGame() {
+    public Optional<GameSnapshot> takeOverRunningGame(Duration maxAge) {
         try {
-            return writer.submit(this::findAndAbortRunningGames).get(30, TimeUnit.SECONDS);
+            return writer.submit(() -> findAndAbortRunningGames(maxAge)).get(30, TimeUnit.SECONDS);
         } catch (Exception ex) {
             log.error("Could not look for running games of instance '{}': {}", instanceId, ex.getMessage(), ex);
             return Optional.empty();
         }
     }
 
-    private Optional<GameSnapshot> findAndAbortRunningGames() {
+    private Optional<GameSnapshot> findAndAbortRunningGames(Duration maxAge) {
+        var oldest = OffsetDateTime.now().minus(maxAge);
         var rows = jdbc.sql("""
-                        SELECT g.id, CAST(s.state AS VARCHAR) AS state
+                        SELECT g.id, s.updated_at, CAST(s.state AS VARCHAR) AS state
                         FROM game g LEFT JOIN game_snapshot s ON s.game_id = g.id
                         WHERE g.instance_id = ? AND g.status = 'IN_GAME'
                         ORDER BY g.started_at DESC""")
                 .param(instanceId)
-                .query((rs, i) -> new RunningGame(rs.getObject("id", UUID.class), rs.getString("state")))
+                .query((rs, i) -> new RunningGame(rs.getObject("id", UUID.class),
+                        rs.getObject("updated_at", OffsetDateTime.class), rs.getString("state")))
                 .list();
 
         GameSnapshot found = null;
         for (var row : rows) {
-            if (found == null && row.state() != null) {
+            if (found == null && row.state() != null && row.updatedAt().isBefore(oldest)) {
+                // clients stop reconnecting after about 30 s, nobody would come back
+                log.info("Snapshot of game {} is from {}, too old to continue", row.id(), row.updatedAt());
+            } else if (found == null && row.state() != null) {
                 try {
                     var snapshot = objectMapper.readValue(row.state(), GameSnapshot.class);
                     if (snapshot.formatVersion() == GameSnapshot.FORMAT_VERSION) {
@@ -149,7 +155,7 @@ public class JdbcGameRecorder implements GameRecorder {
         return Optional.ofNullable(found);
     }
 
-    private record RunningGame(UUID id, String state) {
+    private record RunningGame(UUID id, OffsetDateTime updatedAt, String state) {
     }
 
     private void abort(UUID gameId, OffsetDateTime endedAt) {

@@ -5,8 +5,10 @@ import labyrinth.server.messaging.PlayerSessionRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.SmartInitializingSingleton;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import java.time.Duration;
 import java.time.OffsetDateTime;
 
 /**
@@ -22,16 +24,19 @@ public class GameRestorer implements SmartInitializingSingleton {
     private final GameRecorder recorder;
     private final GameService gameService;
     private final PlayerSessionRegistry sessions;
+    private final Duration maxSnapshotAge;
 
-    public GameRestorer(GameRecorder recorder, GameService gameService, PlayerSessionRegistry sessions) {
+    public GameRestorer(GameRecorder recorder, GameService gameService, PlayerSessionRegistry sessions,
+                        @Value("${labyrinth.restore.max-snapshot-age:120s}") Duration maxSnapshotAge) {
         this.recorder = recorder;
         this.gameService = gameService;
         this.sessions = sessions;
+        this.maxSnapshotAge = maxSnapshotAge;
     }
 
     @Override
     public void afterSingletonsInstantiated() {
-        recorder.takeOverRunningGame().ifPresent(this::restore);
+        recorder.takeOverRunningGame(maxSnapshotAge).ifPresent(this::restore);
     }
 
     private void restore(GameSnapshot snapshot) {
