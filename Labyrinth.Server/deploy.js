@@ -10,11 +10,16 @@ const countArg = args[1];
 const CONFIG = {
     LOCAL_JAR: path.join(__dirname, 'target', 'labyrinth-server-1.0.0.jar'),
     DEPLOY_URL: 'https://lab.suda.sh/deploy',
-    SECRET_TOKEN: tokenArg || 'group1serverpw',
+    SECRET_TOKEN: tokenArg || process.env.DEPLOY_TOKEN,
     COUNT: countArg || '1'
 };
 
 async function main() {
+    if (!CONFIG.SECRET_TOKEN) {
+        console.error("No deployment token: pass it as first argument or set DEPLOY_TOKEN.");
+        process.exit(1);
+    }
+
     console.log(`Using Deployment Token: ${CONFIG.SECRET_TOKEN.substring(0, 3)}... (masked)`);
     console.log(`Target Instance Count: ${CONFIG.COUNT}`);
 
