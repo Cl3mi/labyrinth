@@ -1,19 +1,24 @@
 package labyrinth.server.persistence;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PreDestroy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.jdbc.support.JdbcUtils;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import javax.sql.DataSource;
 import java.net.InetAddress;
+import java.sql.DatabaseMetaData;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Writes games and results with plain JDBC.
@@ -27,8 +32,12 @@ public class JdbcGameRecorder implements GameRecorder {
 
     private static final Logger log = LoggerFactory.getLogger(JdbcGameRecorder.class);
 
+    private final DataSource dataSource;
     private final JdbcClient jdbc;
     private final TransactionTemplate tx;
+    private final ObjectMapper objectMapper;
+    private final AtomicReference<GameSnapshot> pendingSnapshot = new AtomicReference<>();
+    private String jsonParameter;
     private final String instanceId;
     private final String serverName;
     private final ExecutorService writer = Executors.newSingleThreadExecutor(r -> {
@@ -37,13 +46,16 @@ public class JdbcGameRecorder implements GameRecorder {
         return t;
     });
 
-    public JdbcGameRecorder(JdbcClient jdbc,
+    public JdbcGameRecorder(DataSource dataSource,
                             TransactionTemplate tx,
+                            ObjectMapper objectMapper,
                             @Value("${labyrinth.instance-id:}") String instanceId,
                             @Value("${server.name:Random Server}") String serverName,
                             @Value("${server.port:8080}") int serverPort) {
-        this.jdbc = jdbc;
+        this.dataSource = dataSource;
+        this.jdbc = JdbcClient.create(dataSource);
         this.tx = tx;
+        this.objectMapper = objectMapper;
         this.serverName = serverName;
         this.instanceId = (instanceId == null || instanceId.isBlank())
                 ? hostname() + ":" + serverPort
@@ -96,6 +108,53 @@ public class JdbcGameRecorder implements GameRecorder {
                         "UPDATE game SET status = 'ABORTED', ended_at = ? WHERE id = ? AND status = 'IN_GAME'")
                 .params(endedAt, gameId)
                 .update());
+    }
+
+    @Override
+    public void gameSnapshot(GameSnapshot snapshot) {
+        if (pendingSnapshot.getAndSet(snapshot) != null) {
+            return; // queued write will pick up the newer snapshot
+        }
+        submit("snapshot " + snapshot.gameId(), this::writePendingSnapshot);
+    }
+
+    private void writePendingSnapshot() {
+        var s = pendingSnapshot.getAndSet(null);
+        if (s == null) {
+            return;
+        }
+        String json;
+        try {
+            json = objectMapper.writeValueAsString(s);
+        } catch (Exception ex) {
+            throw new IllegalStateException("Snapshot could not be serialized", ex);
+        }
+        var jsonExpr = jsonParameter();
+        // H2 has no ON CONFLICT ... DO UPDATE; single writer thread, so update-then-insert is race-free
+        int updated = jdbc.sql("UPDATE game_snapshot SET version = ?, updated_at = ?, state = " + jsonExpr
+                        + " WHERE game_id = ? AND version < ?")
+                .params(s.version(), s.takenAt(), json, s.gameId(), s.version())
+                .update();
+        if (updated == 0) {
+            jdbc.sql("INSERT INTO game_snapshot (game_id, version, updated_at, state) SELECT ?, ?, ?, " + jsonExpr
+                            + " WHERE NOT EXISTS (SELECT 1 FROM game_snapshot WHERE game_id = ?)")
+                    .params(s.gameId(), s.version(), s.takenAt(), json, s.gameId())
+                    .update();
+        }
+    }
+
+    // H2 stores CAST(? AS JSONB) as a JSON string instead of an object
+    private String jsonParameter() {
+        if (jsonParameter == null) {
+            String product;
+            try {
+                product = JdbcUtils.extractDatabaseMetaData(dataSource, DatabaseMetaData::getDatabaseProductName);
+            } catch (Exception ex) {
+                throw new IllegalStateException("Database type could not be determined", ex);
+            }
+            jsonParameter = "H2".equalsIgnoreCase(product) ? "? FORMAT JSON" : "CAST(? AS jsonb)";
+        }
+        return jsonParameter;
     }
 
     private void submit(String what, Runnable write) {

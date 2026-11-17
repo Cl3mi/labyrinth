@@ -22,16 +22,19 @@ import labyrinth.server.messaging.events.EventPublisher;
 import labyrinth.server.messaging.events.abstractions.IEvent;
 import labyrinth.server.persistence.GameRecorder;
 import labyrinth.server.persistence.GameRecords;
+import labyrinth.server.persistence.GameSnapshotMapper;
+import labyrinth.server.persistence.SessionTokenSource;
 import lombok.Getter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Function;
 
@@ -40,15 +43,18 @@ public class GameService {
 
     @Getter
     private final Game game;
-    private final ReadWriteLock rwLock = new ReentrantReadWriteLock();
+    private final ReentrantReadWriteLock rwLock = new ReentrantReadWriteLock();
 
     private final TreasureCardFactory treasureCardFactory;
     private final BoardFactory boardFactory;
     private final EventPublisher eventPublisher;
     private final GameRecorder gameRecorder;
+    private final SessionTokenSource sessionTokens;
+    private final TaskScheduler scheduler;
 
     /** ID of the running game in the database, null while in the lobby. */
     private UUID currentGameId;
+    private long snapshotVersion;
 
     private static final Logger log = LoggerFactory.getLogger(GameService.class);
 
@@ -57,12 +63,15 @@ public class GameService {
                        EventPublisher eventPublisher,
                        TaskScheduler scheduler,
                        GameInitializerService gameInitializer,
-                       GameRecorder gameRecorder) {
+                       GameRecorder gameRecorder,
+                       SessionTokenSource sessionTokens) {
 
         this.treasureCardFactory = treasureCardFactory;
         this.boardFactory = boardFactory;
         this.eventPublisher = eventPublisher;
         this.gameRecorder = gameRecorder;
+        this.sessionTokens = sessionTokens;
+        this.scheduler = scheduler;
 
         var gameTimer = new GameTimer(scheduler);
         var gameLogger = new GameLogger();
@@ -86,9 +95,13 @@ public class GameService {
                 gameInitializer
         );
 
-        turnController.setOnNextPlayer(player ->
-                publishEvent(new NextPlayerEvent(player))
-        );
+        turnController.setOnNextPlayer(player -> {
+            publishEvent(new NextPlayerEvent(player));
+            if (!rwLock.isWriteLockedByCurrentThread() && scheduler != null) {
+                // turn timer fired outside the lock: snapshot after the new turn has started
+                scheduler.schedule(this::recordSnapshotWithLock, Instant.now());
+            }
+        });
     }
 
     public Player join(String username) throws UsernameTakenException, GameAlreadyStartedException {
@@ -111,6 +124,7 @@ public class GameService {
             }
 
             publishEvent(new PlayerLeftEvent());
+            recordSnapshot();
         } finally {
             rwLock.writeLock().unlock();
         }
@@ -175,6 +189,7 @@ public class GameService {
 
             game.startGame(gameConfig, treasureCards, board);
             recordGameStarted(gameConfig);
+            recordSnapshot();
 
             publishEvent(new GameStartedEvent());
 
@@ -220,6 +235,7 @@ public class GameService {
             }
 
             publishEvent(new PlayerMovedEvent());
+            recordSnapshot();
 
             if (result.treasureCollected()) {
                 var treasureCardEvent = new NextTreasureCardEvent(player, player.getCurrentTreasureCard());
@@ -238,6 +254,7 @@ public class GameService {
         try {
             game.rotateExtraTileClockwise(player);
             publishEvent(new ExtraTileRotatedEvent());
+            recordSnapshot();
         } finally {
             rwLock.writeLock().unlock();
         }
@@ -250,6 +267,7 @@ public class GameService {
 
             if (pushResult.shiftSuccess()) {
                 publishEvent(new BoardShiftedEvent());
+                recordSnapshot();
             }
 
             return pushResult.shiftSuccess();
@@ -279,6 +297,7 @@ public class GameService {
                 if(getCurrentPlayer() == player) {
                     game.performAiTurn(player);
                 }
+                recordSnapshot();
             }
 
 
@@ -294,6 +313,7 @@ public class GameService {
         try {
             game.toggleAiForPlayer(player);
             publishEvent(new PlayerUpdatedEvent(player));
+            recordSnapshot();
         } finally {
             rwLock.writeLock().unlock();
         }
@@ -307,6 +327,7 @@ public class GameService {
             if (success) {
                 player.getStatistics().increaseScore(PointRewards.REWARD_SHIFT_TILE);
                 publishEvent(new BonusUsedEvent());
+                recordSnapshot();
             }
         } finally {
             rwLock.writeLock().unlock();
@@ -318,6 +339,7 @@ public class GameService {
         try {
             game.useBonus(BonusTypes.SWAP, targetPlayer);
             publishEvent(new BonusUsedEvent());
+            recordSnapshot();
         } finally {
             rwLock.writeLock().unlock();
         }
@@ -328,6 +350,7 @@ public class GameService {
         try {
             game.useBonus(BonusTypes.PUSH_TWICE);
             publishEvent(new BonusUsedEvent());
+            recordSnapshot();
         } finally {
             rwLock.writeLock().unlock();
         }
@@ -338,6 +361,7 @@ public class GameService {
         try {
             game.useBonus(BonusTypes.PUSH_FIXED);
             publishEvent(new BonusUsedEvent());
+            recordSnapshot();
         } finally {
             rwLock.writeLock().unlock();
         }
@@ -381,6 +405,7 @@ public class GameService {
 
     private void recordGameStarted(GameConfig config) {
         currentGameId = UUID.randomUUID();
+        snapshotVersion = 0;
         if (gameRecorder == null) {
             return;
         }
@@ -420,6 +445,28 @@ public class GameService {
                 })
                 .toList();
         gameRecorder.gameFinished(new GameRecords.GameFinished(gameId, OffsetDateTime.now(), results));
+    }
+
+    private void recordSnapshot() {
+        if (gameRecorder == null || currentGameId == null || game.getRoomState() != RoomState.IN_GAME) {
+            return;
+        }
+        try {
+            Map<UUID, UUID> tokens = sessionTokens == null ? Map.of() : sessionTokens.identifierTokensByPlayerId();
+            gameRecorder.gameSnapshot(GameSnapshotMapper.capture(
+                    currentGameId, ++snapshotVersion, game, tokens, OffsetDateTime.now()));
+        } catch (Exception ex) {
+            log.error("Could not take snapshot of game {}: {}", currentGameId, ex.getMessage(), ex);
+        }
+    }
+
+    private void recordSnapshotWithLock() {
+        rwLock.writeLock().lock();
+        try {
+            recordSnapshot();
+        } finally {
+            rwLock.writeLock().unlock();
+        }
     }
 
     private void publishEvent(IEvent event) {

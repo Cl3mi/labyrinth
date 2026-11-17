@@ -1,6 +1,7 @@
 package labyrinth.server.messaging;
 
 import labyrinth.server.messaging.models.PlayerRegistration;
+import labyrinth.server.persistence.SessionTokenSource;
 import org.springframework.stereotype.Service;
 import org.springframework.web.socket.WebSocketSession;
 
@@ -9,7 +10,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 @Service
-public class PlayerSessionRegistry {
+public class PlayerSessionRegistry implements SessionTokenSource {
 
     private final Map<UUID, PlayerRegistration> registrations = new ConcurrentHashMap<>();
 
@@ -105,5 +106,14 @@ public class PlayerSessionRegistry {
                 }
             }
         }
+    }
+
+    @Override
+    public Map<UUID, UUID> identifierTokensByPlayerId() {
+        Map<UUID, UUID> result = new HashMap<>();
+        for (PlayerRegistration reg : registrations.values()) {
+            result.put(reg.getPlayerId(), reg.getIdentifierToken());
+        }
+        return result;
     }
 }

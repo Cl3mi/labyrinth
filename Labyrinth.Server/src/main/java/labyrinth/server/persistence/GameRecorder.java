@@ -16,4 +16,6 @@ public interface GameRecorder {
 
     /** The game ended without a result, e.g. all human players left. */
     void gameAborted(UUID gameId, OffsetDateTime endedAt);
+
+    void gameSnapshot(GameSnapshot snapshot);
 }

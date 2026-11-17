@@ -56,7 +56,6 @@ public class Game {
     private BonusState activeBonusState;
 
     @Setter(AccessLevel.NONE)
-    @Getter(AccessLevel.NONE)
     private GameConfig gameConfig;
 
     @Setter(AccessLevel.PRIVATE)

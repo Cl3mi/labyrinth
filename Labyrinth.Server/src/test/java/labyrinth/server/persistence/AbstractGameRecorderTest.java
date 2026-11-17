@@ -1,5 +1,11 @@
 package labyrinth.server.persistence;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import labyrinth.contracts.models.PlayerColor;
+import labyrinth.server.config.JacksonConfig;
+import labyrinth.server.game.enums.BonusTypes;
+import labyrinth.server.game.enums.Direction;
+import labyrinth.server.game.enums.MoveState;
 import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -9,6 +15,8 @@ import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.UUID;
 
@@ -19,6 +27,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /** Runs the same checks against every supported database (H2 and PostgreSQL). */
 abstract class AbstractGameRecorderTest {
 
+    private final ObjectMapper objectMapper = new JacksonConfig().objectMapper();
     private JdbcClient jdbc;
     private JdbcGameRecorder recorderA;
     private JdbcGameRecorder recorderB;
@@ -33,8 +42,8 @@ abstract class AbstractGameRecorderTest {
         jdbc = JdbcClient.create(ds);
         var tx = new TransactionTemplate(new DataSourceTransactionManager(ds));
         // Two server instances writing into the same database
-        recorderA = new JdbcGameRecorder(jdbc, tx, "vm1:8082", "Team02 #1", 8082);
-        recorderB = new JdbcGameRecorder(jdbc, tx, "", "Team02 #2", 8083);
+        recorderA = new JdbcGameRecorder(ds, tx, objectMapper, "vm1:8082", "Team02 #1", 8082);
+        recorderB = new JdbcGameRecorder(ds, tx, objectMapper, "", "Team02 #2", 8083);
     }
 
     private static GameRecords.GameStarted started(UUID id) {
@@ -107,5 +116,99 @@ abstract class AbstractGameRecorderTest {
                 new GameRecords.PlayerResult(UUID.randomUUID(), "x", false, 1, 0, 0, 0, 0, List.of(), true))));
         recorderA.flush();
         assertEquals(0, jdbc.sql("SELECT count(*) FROM player_result").query(Integer.class).single());
+    }
+
+    // UTC times, Jackson normalizes offsets to UTC on read
+    private static GameSnapshot snapshot(UUID gameId, long version) {
+        var t = OffsetDateTime.of(2026, 11, 17, 18, 0, 0, 0, ZoneOffset.UTC);
+        var straight = new GameSnapshot.TileState(EnumSet.of(Direction.UP, Direction.DOWN), false, null, null);
+        var corner = new GameSnapshot.TileState(EnumSet.of(Direction.RIGHT, Direction.DOWN), true, null, null);
+        var withTreasure = new GameSnapshot.TileState(EnumSet.of(Direction.LEFT, Direction.RIGHT, Direction.UP), false, 7, null);
+        var withBonus = new GameSnapshot.TileState(EnumSet.of(Direction.LEFT, Direction.UP), false, null, BonusTypes.BEAM);
+        var row = List.of(corner, straight, corner);
+        var board = new GameSnapshot.BoardState(3, 3, false,
+                List.of(row, List.of(straight, withTreasure, withBonus), row), straight);
+        var player = new GameSnapshot.PlayerState(UUID.randomUUID(), "Anna", UUID.randomUUID(), PlayerColor.values()[0],
+                t.minusMinutes(5), true, false, false,
+                new GameSnapshot.Position(1, 1), new GameSnapshot.Position(0, 0),
+                List.of(7), List.of(BonusTypes.SWAP),
+                new GameSnapshot.Statistics(12, 3, 1, 0, List.of()));
+        return new GameSnapshot(GameSnapshot.FORMAT_VERSION, gameId, version, t.plusSeconds(version),
+                new GameSnapshot.Config(3, 3, 1, 1800, 1, 30),
+                t.plusMinutes(30), t.plusSeconds(30), board,
+                List.of(new GameSnapshot.Treasure(7, "Ghost", false)),
+                List.of(player),
+                new GameSnapshot.TurnState(0, MoveState.MOVE, false, new GameSnapshot.Shift(1, Direction.DOWN)),
+                new GameSnapshot.BonusState(BonusTypes.PUSH_TWICE, 1));
+    }
+
+    private GameSnapshot storedSnapshot(UUID gameId) throws Exception {
+        var json = jdbc.sql("SELECT CAST(state AS VARCHAR) FROM game_snapshot WHERE game_id = ?")
+                .param(gameId).query(String.class).single();
+        return objectMapper.readValue(json, GameSnapshot.class);
+    }
+
+    @Test
+    void snapshotIsStoredAndReplacedByNewerOne() throws Exception {
+        var gameId = UUID.randomUUID();
+        recorderA.gameStarted(started(gameId));
+        recorderA.gameSnapshot(snapshot(gameId, 1));
+        recorderA.flush();
+        assertEquals(snapshot(gameId, 1).turn(), storedSnapshot(gameId).turn());
+
+        var newer = snapshot(gameId, 2);
+        recorderA.gameSnapshot(newer);
+        recorderA.flush();
+
+        assertEquals(1, jdbc.sql("SELECT count(*) FROM game_snapshot WHERE game_id = ?").param(gameId).query(Integer.class).single());
+        assertEquals(2L, jdbc.sql("SELECT version FROM game_snapshot WHERE game_id = ?").param(gameId).query(Long.class).single());
+        var stored = storedSnapshot(gameId);
+        assertEquals(newer.board(), stored.board());
+        assertEquals(newer.players(), stored.players());
+        assertEquals(newer.activeBonus(), stored.activeBonus());
+        assertEquals(newer.gameEndTime().toInstant(), stored.gameEndTime().toInstant());
+    }
+
+    @Test
+    void stateIsStoredAsJsonObject() throws Exception {
+        var gameId = UUID.randomUUID();
+        recorderA.gameStarted(started(gameId));
+        recorderA.gameSnapshot(snapshot(gameId, 1));
+        recorderA.flush();
+        var json = jdbc.sql("SELECT CAST(state AS VARCHAR) FROM game_snapshot WHERE game_id = ?")
+                .param(gameId).query(String.class).single();
+        assertTrue(json.startsWith("{"), json.substring(0, Math.min(40, json.length())));
+    }
+
+    @Test
+    void olderSnapshotDoesNotReplaceNewerOne() throws Exception {
+        var gameId = UUID.randomUUID();
+        recorderA.gameStarted(started(gameId));
+        recorderA.gameSnapshot(snapshot(gameId, 5));
+        recorderA.flush();
+        recorderA.gameSnapshot(snapshot(gameId, 3));
+        recorderA.flush();
+        assertEquals(5L, jdbc.sql("SELECT version FROM game_snapshot WHERE game_id = ?").param(gameId).query(Long.class).single());
+    }
+
+    @Test
+    void snapshotsOfSeveralGamesAreKeptApart() throws Exception {
+        var g1 = UUID.randomUUID();
+        var g2 = UUID.randomUUID();
+        recorderA.gameStarted(started(g1));
+        recorderB.gameStarted(started(g2));
+        recorderA.gameSnapshot(snapshot(g1, 4));
+        recorderB.gameSnapshot(snapshot(g2, 9));
+        recorderA.flush();
+        recorderB.flush();
+        assertEquals(4L, storedSnapshot(g1).version());
+        assertEquals(9L, storedSnapshot(g2).version());
+    }
+
+    @Test
+    void snapshotOfUnknownGameIsOnlyLogged() throws Exception {
+        recorderA.gameSnapshot(snapshot(UUID.randomUUID(), 1));
+        recorderA.flush();
+        assertEquals(0, jdbc.sql("SELECT count(*) FROM game_snapshot").query(Integer.class).single());
     }
 }
