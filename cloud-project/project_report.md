@@ -74,7 +74,13 @@ Die Ressourcen wurden im Projekt `team02` über die Web-Oberfläche und die API 
 
 *Abbildung 1: Architektur Stufe 1 (Stand 15.11.2026).*
 
-<!-- TODO Abbildung 2: Screenshot CloudStack (VM, Firewall-Regeln, Port-Forwarding) einfügen oder diesen Kommentar löschen -->
+![Firewall-Regeln der Public IP 172.16.20.14: TCP 22 und 8082–8091 nur aus 10.98.0.0/16](Abbildung%202.1.png)
+
+*Abbildung 2.1: Firewall der Public IP `172.16.20.14`, beide Regeln nur für das VPN (`10.98.0.0/16`).*
+
+![Port-Forwarding der Public IP 172.16.20.14 auf team02-game-01](Abbildung%202.2.png)
+
+*Abbildung 2.2: Port-Forwarding 22 und 8082–8091 auf `team02-game-01` (`10.1.0.158`).*
 
 | Ressource | Wert |
 |---|---|
@@ -118,7 +124,9 @@ Gemessen am 15.11.2026 von einem Laptop im NetBird-VPN gegen die eigene Public I
 
 Drei Instanzen des echten Game-Clients (Test1 bis Test3) verbanden sich am 11.11. um 19:45 über das VPN mit „Team02 Cloud“ und spielten bis `GAME_OVER` (Gewinner Test3, alle 6 Schätze). Danach waren alle zurück in der Lobby und sauber getrennt. Davor liefen ein Protokolltest mit 2 Spielern und ein Test mit 1 Spieler (BA, Testprotokoll). **Z1 ist erfüllt.** Grenze: ein einzelnes Testspiel.
 
-<!-- TODO Abbildung 3: Screenshot Testspiel/Client mit Verbindung zu „Team02 Cloud“ einfügen oder diesen Kommentar löschen -->
+![Serverliste im Game-Client mit Team02 Cloud / Autoscale #1 und #2](Abbildung%203.png)
+
+*Abbildung 3: Serverliste im Game-Client über das VPN (21.11.2026): die beiden freien Instanzen „Team02 Cloud / Autoscale #1“ und „#2“ stehen in der Lobby.*
 
 ### 4.3 Z2: Portscan der eigenen Public IP
 

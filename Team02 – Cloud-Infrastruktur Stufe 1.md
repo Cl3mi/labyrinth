@@ -1,6 +1,6 @@
 # Team02 – Cloud-Infrastruktur Stufe 1
 
-Stand: Nov 11, 2026 · @Romed
+Stand: Nov 21, 2026 · @Romed
 
 ## Überblick
 
@@ -8,12 +8,12 @@ Unser Labyrinth-Spieleserver läuft seit dem 09.11.2026 (seit 11.11. als 2 bis 1
 
 - **Plattform:** Apache CloudStack unter [cloud.dibse.at](https://cloud.dibse.at), Projekt `team02`, Zone `zone1`
 - **Steuerung:** per Web-UI oder per CloudMonkey (`cmk`) über die API
-- **Belegung:** 1 von 6 VMs, 2 von 8 vCPUs, 4 von 12 GB RAM, 1 von 4 Netzwerken, 1 von 3 Public IPs
+- **Belegung:** 1 von 7 VMs, 2 von 12 vCPUs, 4 von 12 GB RAM, 1 von 4 Netzwerken, 1 von 3 Public IPs (Stand 21.11.)
 - **Termine:** Doku Stufe 1 am 23.11.2026, Präsentation am 26.11.2026
 
 &#91;embedded content: Architektur Stufe 1 · Client, CloudStack, Lobby\]
 
-Der Client holt die Serverliste bei der Lobby und verbindet sich dann über die Public IP. CloudStack leitet die Ports 22 und 8082 an die VM im isolierten Netz weiter.
+Der Client holt die Serverliste bei der Lobby und verbindet sich dann über die Public IP. CloudStack leitet die Ports 22 und 8082–8091 an die VM im isolierten Netz weiter. Die Firewall lässt sie seit dem 15.11. nur aus dem VPN (`10.98.0.0/16`) durch.
 
 In den folgenden Abschnitten steht zu jeder Ressource, was angelegt wurde, **wie** (mit den genauen Befehlen) und **warum**.
 
@@ -47,8 +47,8 @@ Alles liegt im Projekt `team02` (`cd9db827-32a4-4680-a337-da9002ed7888`). Alle B
 | Public IP | `172.16.20.14` (Source-NAT) | `746aa0a9-7f65-4cf2-b0f8-b64795d08fc6` | Gehört zum Netz. Einzige Adresse, über die die VM von außen erreichbar ist |
 | SSH-Keypair | `team02-key`, Ed25519 | `SHA256:WRR5pEx1…IJm0` | Login per Key statt Passwort. Wird beim Deploy auf die VM gespielt |
 | VM | `team02-game-01`, Ubuntu 24.04, `s2.1c1g` (1 vCPU, 1 GB), seit 11.11. s2.2c4g (2 vCPU, 4 GB), IP 10.1.0.158 | `4914418f-8c82-4fd2-9dd6-75abaec33c9e` | Der Spieleserver. 1 GB reicht, weil das fertige JAR hochgeladen und nicht auf der VM gebaut wird |
-| Firewall TCP 22 | 0.0.0.0/0 | `82bb5dbd-508f-49f6-9cb8-f609973def35` | SSH zur Verwaltung |
-| Firewall TCP 8082–8091 | 0.0.0.0/0 | `d5de031b-892a-489d-96df-f75815967edd` | Ports der 10 Spielinstanzen (WebSocket `/game`) |
+| Firewall TCP 22 | nur `10.98.0.0/16` (VPN), seit 15.11. | `3e0ab4e1-e6c5-4f46-98d2-e8bd2df25086` | SSH zur Verwaltung |
+| Firewall TCP 8082–8091 | nur `10.98.0.0/16` (VPN), seit 15.11. | `6c6705c3-28f3-4544-96bb-f7e37b473de8` | Ports der 10 Spielinstanzen (WebSocket `/game`) |
 | Port-Forwarding 22 | 172.16.20.14:22 → VM:22 | `fbedff7e-945d-4586-8156-9742d2edc648` | Leitet SSH von der Public IP an die VM weiter |
 | Port-Forwarding 8082–8091 | 172.16.20.14:8082–8091 → VM:8082–8091 | `07187bd7-4c9c-498b-9c50-5f91004a79a8` | Leitet die Spieler an die 10 Instanzen weiter, eine Regel für den ganzen Bereich |
 
@@ -86,6 +86,18 @@ cmk create portforwardingrule ipaddressid=746aa0a9-7f65-4cf2-b0f8-b64795d08fc6 p
 `openfirewall=false` bedeutet: CloudStack legt keine zusätzliche Firewall-Regel an, weil wir sie selbst verwalten.
 
 In der Web-UI geht dasselbe unter *Instances → Add Instance* sowie *Network → team02-net → Public IP → Firewall / Port Forwarding*.
+
+5. **Firewall auf das VPN einschränken** (15.11.). Die Regeln mit `0.0.0.0/0` ließen jedes andere Team aus `172.16.20.0/24` auf die VM. Zuerst wurden neue Regeln nur für das NetBird-VPN angelegt und getestet, erst dann die alten gelöscht, damit niemand ausgesperrt wird:
+
+```powershell
+cmk create firewallrule ipaddressid=746aa0a9-7f65-4cf2-b0f8-b64795d08fc6 protocol=tcp startport=22 endport=22 cidrlist=10.98.0.0/16
+cmk create firewallrule ipaddressid=746aa0a9-7f65-4cf2-b0f8-b64795d08fc6 protocol=tcp startport=8082 endport=8091 cidrlist=10.98.0.0/16
+# SSH und Port 8082 über VPN getestet, danach die alten Regeln entfernt
+cmk delete firewallrule id=82bb5dbd-508f-49f6-9cb8-f609973def35
+cmk delete firewallrule id=d5de031b-892a-489d-96df-f75815967edd
+```
+
+Prüfen mit `cmk list firewallrules projectid=cd9db827-32a4-4680-a337-da9002ed7888 filter=startport,endport,cidrlist,state`. Es dürfen nur die zwei Regeln mit `10.98.0.0/16` übrig sein.
 
 ## Einrichtung auf der VM
 
@@ -207,7 +219,7 @@ Seit dem 11.11.2026 können auf der VM bis zu 10 Spieleserver nebeneinander lauf
 | Speicher pro Instanz | `-Xmx256m` | Genügend für ein Spiel, alle 10 passen sicher in 4 GB |
 | Ports | 8082–8091, eine Firewall- und eine Port-Forwarding-Regel für den ganzen Bereich | Neue Instanzen bis #10 brauchen keine Änderung in CloudStack |
 | Dienst | systemd-Vorlage `labyrinth@.service`, Instanz `labyrinth@N` = Port 8081+N | Ein Dienst-Muster für alle Instanzen, einzeln start- und stoppbar |
-| Projekt-Belegung | 1/6 VMs, 2/8 vCPUs, 4/12 GB RAM | Genug Reserve für Stufe 2 und 3 |
+| Projekt-Belegung | 1/7 VMs, 2/12 vCPUs, 4/12 GB RAM | Genug Reserve für Stufe 2 und 3 |
 
 100 Instanzen wurden geprüft und verworfen: Sie bräuchten ca. 20 GB RAM (Projektlimit 12 GB), und die gemeinsame Lobby wäre für alle Gruppen mit 100 Einträgen überladen.
 
@@ -366,7 +378,7 @@ sudo visudo -cf /etc/sudoers.d/90-thomas
 
 ## Sicherheit und offene Punkte
 
-Die VM ist nur über das VPN erreichbar, nur die Ports 22 und 8082 sind offen, und SSH lässt nur Keys zu. Für Stufe 1 reicht das. Die folgenden Punkte sind noch offen.
+Die VM ist nur über das VPN erreichbar (Firewall nur für `10.98.0.0/16`), nur die Ports 22 und 8082–8091 sind offen, und SSH lässt nur Keys zu. Für Stufe 1 reicht das. Die folgenden Punkte sind noch offen.
 
 **Umgesetzt:**
 
@@ -379,11 +391,11 @@ Die VM ist nur über das VPN erreichbar, nur die Ports 22 und 8082 sind offen, u
 
 - [ ] `team02-key` hat keine Passphrase. Eine Passphrase setzen mit `ssh-keygen -p -f ~/.ssh/id_ed25519`
 - [x] Notfall-Passwort für `ubuntu` setzen (`sudo passwd ubuntu`), damit „View Console“ in der Web-UI funktioniert, falls SSH ausfällt (erledigt am 15.11., SSH-Passwort-Login bleibt abgelehnt; das Passwort steht nicht im Repo)
-- [ ] Firewall-Regeln von `0.0.0.0/0` auf VPN- und Hochschulnetz einschränken (Stufe 2)
+- [x] Firewall-Regeln von `0.0.0.0/0` auf das VPN (`10.98.0.0/16`) einschränken (erledigt am 15.11., ohne VPN Timeout, mit VPN erreichbar)
 - [x] JAR auf den aktuellen Code-Stand bringen (erledigt am 11.11., Fix #74 jetzt enthalten)
 - [x] Test mit mehreren Spielern gleichzeitig (erledigt am 11.11.: ganzes Spiel mit 3 Spielern)
 - [ ] Fehler im Spielcode beheben: `NextTreasureCardListener` wirft gegen Spielende eine `NullPointerException` (`treasureCard` ist null), wahrscheinlich sobald ein Spieler alle Schätze hat. Das Spiel läuft trotzdem weiter. Behebung: Prüfung auf `null` vor dem Versand
-- [ ] Bei der Q&A klären, was „über Web erreichbar“ meint, denn ein Web-Frontend gibt es im Repo nicht
+- [x] Klären, was „über Web erreichbar“ meint (geklärt mit dem Betreuer: HTTPS-Lobby plus WebSocket genügt, ein eigenes Web-Frontend ist nicht gefordert)
 - [ ] Für die Präsentation müssen alle Clients im VPN sein
 - [ ] Spielstand liegt nur im Speicher und ist nach einem Neustart weg. Persistenter Speicher kommt in Stufe 2
 - [x] Ubuntu-Updates einspielen, erledigt am 11.11.: 8 Pakete inkl. Kernel 6.8.0-149, danach Neustart (`sudo apt-get update && sudo apt-get upgrade`)
