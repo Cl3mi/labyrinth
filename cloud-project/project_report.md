@@ -4,9 +4,7 @@
 
 **Autor:innen:** Miralem Djedovic, Fabian Egger, Clemens Huber, Romed Kelmer, Thomas Klammer, Christian Plattner
 
-**Betreuer:** Hasenjäger · **Stand:** 17.11.2026 · **Abgabe:** 23.11.2026 · **Präsentation:** 26.11.2026
-
-**Betriebsanleitung:** `Team02 – Cloud-Infrastruktur Stufe 1.md` im Repo `labyrinth`, Branch `cloud-project`. Sie beschreibt Anlegen, Einrichtung, Betrieb und Aktualisierung mit allen Befehlen und enthält das Protokoll der Tests vom 09. und 11.11. Verweise „(BA)“ beziehen sich darauf.
+**Stand:** 17.11.2026
 
 ---
 
